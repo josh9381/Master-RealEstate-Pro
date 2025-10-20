@@ -105,6 +105,15 @@ import VideoTutorialLibrary from './pages/help/VideoTutorialLibrary'
 
 // Integrations
 import IntegrationsHub from './pages/integrations/IntegrationsHub'
+import APIIntegrationsPage from './pages/integrations/APIIntegrationsPage'
+
+// New Pages
+import LeadCreate from './pages/leads/LeadCreate'
+import CalendarPage from './pages/calendar/CalendarPage'
+import ActivityPage from './pages/activity/ActivityPage'
+import TasksPage from './pages/tasks/TasksPage'
+import PasswordSecurityPage from './pages/settings/PasswordSecurityPage'
+import BillingSubscriptionPage from './pages/billing/BillingSubscriptionPage'
 
 // Phase 5 - New Components
 import { TagsManager } from './components/settings/TagsManager'
@@ -132,6 +141,7 @@ function App() {
         
         {/* Leads */}
         <Route path="/leads" element={<LeadsList />} />
+        <Route path="/leads/create" element={<LeadCreate />} />
         <Route path="/leads/:id" element={<LeadDetail />} />
         <Route path="/leads/pipeline" element={<LeadsPipeline />} />
         <Route path="/leads/import" element={<LeadsImport />} />
@@ -139,6 +149,11 @@ function App() {
         <Route path="/leads/followups" element={<LeadsFollowups />} />
         <Route path="/leads/history" element={<LeadHistory />} />
         <Route path="/leads/merge" element={<LeadsMerge />} />
+        
+        {/* Calendar & Tasks */}
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/activity" element={<ActivityPage />} />
+        <Route path="/tasks" element={<TasksPage />} />
         
         {/* Campaigns */}
         <Route path="/campaigns" element={<CampaignsList />} />
@@ -199,6 +214,7 @@ function App() {
         <Route path="/settings/demo-data" element={<DemoDataGenerator />} />
         <Route path="/settings/tags" element={<TagsManager />} />
         <Route path="/settings/custom-fields" element={<CustomFieldsManager />} />
+        <Route path="/settings/security/password" element={<PasswordSecurityPage />} />
         
         {/* Notifications */}
         <Route path="/notifications" element={<NotificationsPage />} />
@@ -217,6 +233,7 @@ function App() {
         
         {/* Billing */}
         <Route path="/billing" element={<BillingPage />} />
+        <Route path="/billing/subscription" element={<BillingSubscriptionPage />} />
         <Route path="/billing/invoices/:id" element={<InvoiceDetail />} />
         <Route path="/billing/usage" element={<UsageDashboard />} />
         <Route path="/billing/upgrade" element={<UpgradeWizard />} />
@@ -230,6 +247,7 @@ function App() {
         
         {/* Integrations */}
         <Route path="/integrations" element={<IntegrationsHub />} />
+        <Route path="/integrations/api" element={<APIIntegrationsPage />} />
         
         {/* Settings */}
         <Route path="/settings" element={<SettingsHub />} />
