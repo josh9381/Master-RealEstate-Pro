@@ -1,0 +1,108 @@
+import { Link, useLocation } from 'react-router-dom'
+import { useUIStore } from '@/store/uiStore'
+import { cn } from '@/lib/utils'
+import {
+  LayoutDashboard,
+  Users,
+  Megaphone,
+  Brain,
+  BarChart3,
+  MessageSquare,
+  Zap,
+  Link as LinkIcon,
+  Settings,
+  Shield,
+  CreditCard,
+  HelpCircle,
+  X,
+} from 'lucide-react'
+
+const navigation = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Leads', href: '/leads', icon: Users },
+  { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
+  { name: 'AI Hub', href: '/ai', icon: Brain },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Communications', href: '/communication', icon: MessageSquare },
+  { name: 'Automation', href: '/workflows', icon: Zap },
+  { name: 'Integrations', href: '/integrations', icon: LinkIcon },
+  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Admin', href: '/admin', icon: Shield },
+  { name: 'Billing', href: '/billing', icon: CreditCard },
+  { name: 'Help', href: '/help', icon: HelpCircle },
+]
+
+export function Sidebar() {
+  const location = useLocation()
+  const { sidebarOpen, setSidebarOpen } = useUIStore()
+
+  if (!sidebarOpen) return null
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      <div
+        className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r bg-card shadow-lg transition-transform duration-300 lg:translate-x-0">
+        {/* Logo & Close */}
+        <div className="flex h-16 items-center justify-between border-b px-6">
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <LayoutDashboard className="h-5 w-5" />
+            </div>
+            <span className="text-lg font-bold">CRM Platform</span>
+          </Link>
+          
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-4">
+          <ul className="space-y-1">
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href || 
+                (item.href !== '/' && location.pathname.startsWith(item.href))
+              
+              return (
+                <li key={item.name}>
+                  <Link
+                    to={item.href}
+                    className={cn(
+                      'flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
+
+        {/* User section */}
+        <div className="border-t p-4">
+          <div className="flex items-center space-x-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">User Name</p>
+              <p className="text-xs text-muted-foreground">user@example.com</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  )
+}
