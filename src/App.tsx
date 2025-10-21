@@ -41,6 +41,7 @@ import Segmentation from './pages/ai/Segmentation'
 import PredictiveAnalytics from './pages/ai/PredictiveAnalytics'
 import ModelTraining from './pages/ai/ModelTraining'
 import IntelligenceInsights from './pages/ai/IntelligenceInsights'
+import AIAnalytics from './pages/ai/AIAnalytics'
 
 // Analytics
 import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard'
@@ -175,6 +176,7 @@ function App() {
         <Route path="/ai/predictive" element={<PredictiveAnalytics />} />
         <Route path="/ai/training" element={<ModelTraining />} />
         <Route path="/ai/insights" element={<IntelligenceInsights />} />
+        <Route path="/ai/analytics" element={<AIAnalytics />} />
         
         {/* Analytics */}
         <Route path="/analytics" element={<AnalyticsDashboard />} />

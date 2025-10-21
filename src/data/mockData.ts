@@ -1,9 +1,11 @@
 // Comprehensive Mock Data for CRM Frontend
 // This file contains all mock data used across the application
 
+import { Lead } from '@/types'
+
 // ==================== LEADS ====================
 
-export const mockLeads = [
+export const mockLeads: Lead[] = [
   {
     id: 1,
     name: 'John Doe',
@@ -119,12 +121,76 @@ export const mockLeads = [
       companySize: 180,
       budget: 40000
     }
-  }
+  },
+  ...generateAdditionalLeads(95)
 ]
+
+// Helper function to generate additional leads
+function generateAdditionalLeads(count: number): Lead[] {
+  const firstNames = ['Michael', 'Sarah', 'David', 'Emily', 'James', 'Lisa', 'Robert', 'Jennifer', 'William', 'Jessica', 'Richard', 'Amanda', 'Thomas', 'Ashley', 'Daniel', 'Nicole', 'Matthew', 'Michelle', 'Christopher', 'Stephanie', 'Andrew', 'Rebecca', 'Joseph', 'Laura', 'Ryan', 'Elizabeth', 'Kevin', 'Melissa', 'Jason', 'Amy', 'Brian', 'Angela', 'Eric', 'Kimberly', 'Steven', 'Rachel', 'Brandon', 'Heather', 'Timothy', 'Kelly', 'Anthony', 'Christina', 'Mark', 'Lauren', 'Joshua', 'Brittany', 'Justin', 'Katherine', 'Paul', 'Victoria']
+  const lastNames = ['Anderson', 'Baker', 'Clark', 'Davis', 'Evans', 'Foster', 'Garcia', 'Harris', 'Jackson', 'King', 'Lopez', 'Martinez', 'Nelson', 'O\'Brien', 'Parker', 'Quinn', 'Roberts', 'Stewart', 'Turner', 'Walker', 'White', 'Young', 'Allen', 'Bennett', 'Campbell', 'Collins', 'Cooper', 'Edwards', 'Fisher', 'Gray', 'Henderson', 'Hughes', 'Jenkins', 'Kelly', 'Long', 'Mitchell', 'Moore', 'Morgan', 'Murphy', 'Phillips', 'Powell', 'Reed', 'Rogers', 'Ross', 'Russell', 'Sanders', 'Simpson', 'Taylor', 'Thompson', 'Watson']
+  const companies = ['Tech Innovations', 'Digital Solutions', 'Smart Systems', 'Future Corp', 'Bright Ideas', 'Global Partners', 'Elite Enterprises', 'Prime Industries', 'Summit Group', 'Apex Solutions', 'Nexus Technologies', 'Quantum Corp', 'Vision Systems', 'Catalyst Group', 'Momentum Inc', 'Synergy Partners', 'Velocity Corp', 'Zenith Solutions', 'Phoenix Tech', 'Horizon Enterprises', 'Infinity Systems', 'Pulse Digital', 'Radiant Group', 'Stellar Corp', 'Titan Industries', 'Unity Solutions', 'Vanguard Tech', 'Westgate Corp', 'Xcel Systems', 'Yield Partners']
+  const positions = ['CEO', 'CTO', 'VP of Sales', 'VP of Marketing', 'Director of IT', 'Product Manager', 'Sales Manager', 'Marketing Director', 'Operations Manager', 'Account Executive', 'Business Development Manager', 'Chief Revenue Officer', 'Head of Growth', 'Regional Manager', 'General Manager']
+  const statuses: Lead['status'][] = ['new', 'contacted', 'qualified', 'proposal', 'negotiation']
+  const sources = ['website', 'referral', 'social', 'email', 'linkedin', 'event', 'partner', 'cold_call']
+  const industries = ['Technology', 'Finance', 'Healthcare', 'Retail', 'Manufacturing', 'Education', 'Real Estate', 'Consulting', 'E-commerce', 'SaaS']
+  const tags = [
+    ['Hot Lead', 'Enterprise'], ['Follow-up'], ['VIP', 'High Priority'], ['Startup'], 
+    ['Long-term'], ['Demo Scheduled'], ['Proposal Sent'], ['Negotiating'], 
+    ['Budget Approved'], ['Decision Maker'], ['Champion'], ['Competitor'],
+    ['SMB'], ['Mid-Market'], ['Enterprise'], ['Warm Lead'], ['Cold Lead']
+  ]
+
+  const leads = []
+  for (let i = 0; i < count; i++) {
+    const id = i + 6
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+    const company = companies[Math.floor(Math.random() * companies.length)]
+    const status = statuses[Math.floor(Math.random() * statuses.length)]
+    const source = sources[Math.floor(Math.random() * sources.length)]
+    const score = Math.floor(Math.random() * 40) + 60 // 60-100
+    const companySize = [10, 25, 50, 100, 250, 500, 1000, 2000][Math.floor(Math.random() * 8)]
+    const value = Math.floor(Math.random() * 150000) + 10000
+    const daysAgo = Math.floor(Math.random() * 30) + 1
+    const createdDate = new Date()
+    createdDate.setDate(createdDate.getDate() - daysAgo)
+    
+    const hasContact = Math.random() > 0.3
+    const lastContactDate = hasContact ? new Date(createdDate.getTime() + Math.random() * daysAgo * 24 * 60 * 60 * 1000) : null
+    
+    leads.push({
+      id,
+      name: `${firstName} ${lastName}`,
+      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${company.toLowerCase().replace(/\s/g, '')}.com`,
+      phone: `+1 (555) ${String(Math.floor(Math.random() * 900) + 100)}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+      company,
+      position: positions[Math.floor(Math.random() * positions.length)],
+      score,
+      status,
+      source,
+      value,
+      stage: status === 'new' ? 'New' : status === 'contacted' ? 'Contacted' : status === 'qualified' ? 'Qualified' : status === 'proposal' ? 'Proposal' : 'Negotiation',
+      assignedTo: ['Sarah Johnson', 'Mike Chen', 'David Lee', 'Emma Rodriguez', null][Math.floor(Math.random() * 5)],
+      createdAt: createdDate.toISOString(),
+      lastContact: lastContactDate ? lastContactDate.toISOString() : null,
+      tags: tags[Math.floor(Math.random() * tags.length)],
+      notes: hasContact ? 'Follow up scheduled.' : 'Initial contact pending.',
+      customFields: {
+        industry: industries[Math.floor(Math.random() * industries.length)],
+        companySize,
+        budget: value * (1 + Math.random() * 0.5)
+      }
+    })
+  }
+  return leads
+}
 
 // ==================== CAMPAIGNS ====================
 
-export const mockCampaigns = [
+import { Campaign } from '@/types'
+
+export const mockCampaigns: Campaign[] = [
   {
     id: 1,
     name: 'Q4 Product Launch',
@@ -229,8 +295,99 @@ export const mockCampaigns = [
     tags: ['Re-engagement', 'Completed'],
     subject: 'We Miss You! Here\'s a Special Offer',
     previewText: 'Come back and get 20% off your next purchase'
-  }
+  },
+  ...generateAdditionalCampaigns(50)
 ]
+
+function generateAdditionalCampaigns(count: number): Campaign[] {
+  const types: Campaign['type'][] = ['email', 'sms', 'phone', 'social']
+  const statuses: Campaign['status'][] = ['active', 'scheduled', 'paused', 'completed', 'draft']
+  const names = [
+    'Newsletter',
+    'Product Update',
+    'Flash Sale',
+    'Event Invitation',
+    'Customer Survey',
+    'Thank You',
+    'Announcement',
+    'Limited Offer',
+    'New Feature',
+    'Case Study',
+    'Tips & Tricks',
+    'Industry Report',
+    'Partnership',
+    'Referral Program',
+    'VIP Exclusive'
+  ]
+  const suffixes = ['Series', 'Campaign', 'Blast', 'Outreach', 'Drive', 'Initiative', 'Push', 'Promo']
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const creators = ['Sarah Johnson', 'Mike Chen', 'David Lee', 'Emma Rodriguez']
+  
+  const campaigns: Campaign[] = []
+  
+  for (let i = 0; i < count; i++) {
+    const type = types[i % types.length]
+    const status = statuses[i % statuses.length]
+    const name = `${names[i % names.length]} ${suffixes[i % suffixes.length]}`
+    const month = months[i % months.length]
+    
+    // Generate dates
+    const startDay = (i % 28) + 1
+    const startMonth = (i % 12) + 1
+    const startDate = `2025-${String(startMonth).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`
+    const endDay = Math.min(startDay + 14, 28)
+    const endDate = `2025-${String(startMonth).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`
+    
+    // Generate metrics
+    const audience = Math.floor(Math.random() * 5000) + 500
+    const sent = status === 'scheduled' || status === 'draft' ? 0 : Math.floor(audience * (0.8 + Math.random() * 0.2))
+    const opens = status === 'scheduled' || status === 'draft' ? 0 : Math.floor(sent * (0.15 + Math.random() * 0.45))
+    const clicks = Math.floor(opens * (0.1 + Math.random() * 0.4))
+    const conversions = Math.floor(clicks * (0.05 + Math.random() * 0.25))
+    const budget = Math.floor(Math.random() * 8000) + 1000
+    const spent = status === 'scheduled' || status === 'draft' ? 0 : Math.floor(budget * (status === 'completed' ? 1 : 0.3 + Math.random() * 0.6))
+    const revenue = conversions * (200 + Math.floor(Math.random() * 800))
+    const roi = spent > 0 ? `${Math.floor((revenue / spent) * 100)}%` : '0%'
+    
+    // A/B test data for some campaigns
+    const hasABTest = i % 5 === 0 && type === 'email'
+    
+    campaigns.push({
+      id: i + 6,
+      name: `${name} - ${month}`,
+      type,
+      status,
+      startDate,
+      endDate: status === 'completed' || status === 'active' ? endDate : undefined,
+      budget,
+      spent,
+      audience,
+      sent,
+      opens,
+      clicks,
+      conversions,
+      revenue,
+      roi,
+      createdBy: creators[i % creators.length],
+      tags: [
+        type === 'email' ? 'Email Marketing' : type === 'sms' ? 'SMS' : type === 'phone' ? 'Cold Calling' : 'Social Media',
+        status === 'active' ? 'Active' : status === 'completed' ? 'Completed' : 'Upcoming'
+      ],
+      subject: type === 'email' ? `${name} - Don't Miss Out!` : null,
+      previewText: type === 'email' || type === 'sms' ? `Special ${name.toLowerCase()} for you` : undefined,
+      abTest: hasABTest ? {
+        variant: 'A',
+        winner: Math.random() > 0.5 ? 'A' : 'B',
+        aOpens: Math.floor(opens * 0.48),
+        bOpens: Math.floor(opens * 0.52),
+        aClicks: Math.floor(clicks * 0.45),
+        bClicks: Math.floor(clicks * 0.55)
+      } : undefined
+    })
+  }
+  
+  return campaigns
+}
 
 // ==================== ACTIVITIES ====================
 

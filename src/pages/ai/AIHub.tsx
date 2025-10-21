@@ -1,10 +1,85 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, Target, Users, TrendingUp, Sparkles, BarChart3 } from 'lucide-react';
+import { Brain, Target, Users, TrendingUp, Sparkles, BarChart3, Upload, RefreshCw, Activity, AlertCircle, CheckCircle, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const AIHub = () => {
+  const [uploading, setUploading] = useState(false)
+  
+  // Model performance data
+  const modelPerformance = [
+    { month: 'Jan', accuracy: 85, predictions: 450 },
+    { month: 'Feb', accuracy: 87, predictions: 520 },
+    { month: 'Mar', accuracy: 89, predictions: 610 },
+    { month: 'Apr', accuracy: 91, predictions: 680 },
+    { month: 'May', accuracy: 92, predictions: 750 },
+    { month: 'Jun', accuracy: 94, predictions: 820 },
+  ]
+
+  // Feature importance data
+  const featureImportance = [
+    { name: 'Email Engagement', value: 28, color: '#3b82f6' },
+    { name: 'Response Time', value: 22, color: '#10b981' },
+    { name: 'Budget Range', value: 18, color: '#f59e0b' },
+    { name: 'Company Size', value: 15, color: '#8b5cf6' },
+    { name: 'Lead Source', value: 12, color: '#ec4899' },
+    { name: 'Other', value: 5, color: '#6b7280' },
+  ]
+
+  // Training progress data
+  const trainingModels = [
+    { name: 'Lead Scoring v2', progress: 85, eta: '2 hours', status: 'training' },
+    { name: 'Churn Prediction', progress: 45, eta: '6 hours', status: 'training' },
+    { name: 'Email Optimization', progress: 100, eta: 'Complete', status: 'complete' },
+  ]
+
+  // Data quality metrics
+  const dataQuality = [
+    { metric: 'Completeness', score: 92, status: 'good' },
+    { metric: 'Accuracy', score: 88, status: 'good' },
+    { metric: 'Consistency', score: 75, status: 'warning' },
+    { metric: 'Timeliness', score: 95, status: 'excellent' },
+  ]
+
+  // Recommendations
+  const recommendations = [
+    {
+      id: 1,
+      title: 'Focus on high-value leads',
+      description: 'Prioritize 15 leads with >85% conversion probability',
+      impact: 'High',
+      action: 'View Leads',
+      icon: Target,
+    },
+    {
+      id: 2,
+      title: 'Optimize email send times',
+      description: 'Best engagement at 10 AM and 3 PM on Tuesdays',
+      impact: 'Medium',
+      action: 'Schedule Campaign',
+      icon: Sparkles,
+    },
+    {
+      id: 3,
+      title: 'Re-engage dormant leads',
+      description: '23 qualified leads inactive for 30+ days',
+      impact: 'Medium',
+      action: 'Create Workflow',
+      icon: RefreshCw,
+    },
+  ]
+
+  const handleUploadData = () => {
+    setUploading(true)
+    setTimeout(() => {
+      setUploading(false)
+      alert('Training data uploaded successfully!')
+    }, 2000)
+  }
+
   const aiFeatures = [
     {
       id: 1,
@@ -274,6 +349,217 @@ const AIHub = () => {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Model Performance Chart */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Model Accuracy Trend</CardTitle>
+            <CardDescription>Prediction accuracy over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={modelPerformance}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="accuracy" stroke="#3b82f6" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Feature Importance</CardTitle>
+            <CardDescription>Factors affecting predictions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={featureImportance}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {featureImportance.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Training Progress */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Model Training</CardTitle>
+              <CardDescription>Active training sessions</CardDescription>
+            </div>
+            <Button onClick={handleUploadData} disabled={uploading}>
+              <Upload className="mr-2 h-4 w-4" />
+              {uploading ? 'Uploading...' : 'Upload Training Data'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {trainingModels.map((model, index) => (
+              <div key={index} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{model.name}</span>
+                    <Badge
+                      variant={
+                        model.status === 'complete'
+                          ? 'success'
+                          : model.status === 'training'
+                          ? 'default'
+                          : 'secondary'
+                      }
+                    >
+                      {model.status}
+                    </Badge>
+                  </div>
+                  <span className="text-sm text-muted-foreground">ETA: {model.eta}</span>
+                </div>
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full transition-all ${
+                      model.status === 'complete' ? 'bg-green-500' : 'bg-blue-500'
+                    }`}
+                    style={{ width: `${model.progress}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{model.progress}% complete</span>
+                  {model.status === 'training' && (
+                    <span className="flex items-center gap-1">
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      Training...
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Quality Indicators */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Quality Metrics</CardTitle>
+          <CardDescription>Quality assessment of training data</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            {dataQuality.map((item, index) => (
+              <div key={index} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{item.metric}</span>
+                  {item.status === 'excellent' ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : item.status === 'good' ? (
+                    <CheckCircle className="h-4 w-4 text-blue-500" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-yellow-500" />
+                  )}
+                </div>
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full ${
+                      item.status === 'excellent'
+                        ? 'bg-green-500'
+                        : item.status === 'good'
+                        ? 'bg-blue-500'
+                        : 'bg-yellow-500'
+                    }`}
+                    style={{ width: `${item.score}%` }}
+                  />
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold">{item.score}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Recommendations */}
+      <Card>
+        <CardHeader>
+          <CardTitle>AI-Powered Recommendations</CardTitle>
+          <CardDescription>Actionable insights based on AI analysis</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            {recommendations.map((rec) => {
+              const Icon = rec.icon
+              return (
+                <div key={rec.id} className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <Badge
+                      variant={
+                        rec.impact === 'High'
+                          ? 'destructive'
+                          : rec.impact === 'Medium'
+                          ? 'warning'
+                          : 'secondary'
+                      }
+                    >
+                      {rec.impact} Impact
+                    </Badge>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">{rec.title}</h4>
+                    <p className="text-sm text-muted-foreground">{rec.description}</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Zap className="mr-2 h-4 w-4" />
+                    {rec.action}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Prediction Volume Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Monthly Predictions</CardTitle>
+          <CardDescription>Total predictions generated per month</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={modelPerformance}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="predictions" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>

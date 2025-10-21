@@ -10,36 +10,73 @@ export interface User {
 }
 
 export interface Lead {
-  id: string
+  id: number
   name: string
   email: string
   phone?: string
   company?: string
-  status: 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
+  position?: string
+  status: 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost' | 'negotiation'
   score: number
   source: string
-  assignedTo?: string
+  value?: number
+  stage?: string
+  assignedTo?: string | null
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
+  lastContact?: string | null
   tags?: string[]
-  notes?: Note[]
+  notes?: string | Note[]
+  customFields?: {
+    industry?: string
+    companySize?: number
+    budget?: number
+    website?: string
+    address?: {
+      street?: string
+      city?: string
+      state?: string
+      zip?: string
+      country?: string
+    }
+    [key: string]: unknown
+  }
 }
 
 export interface Campaign {
-  id: string
+  id: number | string
   name: string
   type: 'email' | 'sms' | 'phone' | 'social'
   status: 'draft' | 'scheduled' | 'active' | 'paused' | 'completed'
-  startDate?: string
+  startDate: string
   endDate?: string
-  recipients: number
-  sent: number
-  opened: number
-  clicked: number
-  converted: number
   budget?: number
-  createdAt: string
-  updatedAt: string
+  spent?: number
+  audience?: number
+  recipients?: number
+  sent: number
+  opens?: number
+  opened?: number
+  clicks?: number
+  clicked?: number
+  conversions?: number
+  converted?: number
+  revenue?: number
+  roi?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+  tags?: string[]
+  subject?: string | null
+  previewText?: string
+  abTest?: {
+    variant: 'A' | 'B'
+    winner?: 'A' | 'B'
+    aOpens?: number
+    bOpens?: number
+    aClicks?: number
+    bClicks?: number
+  }
 }
 
 export interface Note {

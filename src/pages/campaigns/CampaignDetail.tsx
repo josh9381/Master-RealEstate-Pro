@@ -1,13 +1,14 @@
-import { useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Edit, Pause, Play, Trash2 } from 'lucide-react'
+import { Input } from '@/components/ui/Input'
+import { Edit, Pause, Trash2, X } from 'lucide-react'
+import { useToast } from '@/hooks/useToast'
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -26,19 +27,87 @@ const performanceData = [
 
 function CampaignDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const { toast } = useToast()
 
-  const campaign = {
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showContentModal, setShowContentModal] = useState(false)
+  const [campaignData, setCampaignData] = useState({
     id,
     name: 'Summer Email Campaign',
-    type: 'email',
-    status: 'active',
+    type: 'email' as 'email' | 'sms' | 'phone' | 'social',
+    status: 'active' as 'active' | 'paused' | 'completed' | 'draft' | 'scheduled',
     sent: 1250,
     opened: 625,
     clicked: 187,
     converted: 45,
     startDate: '2024-01-15',
     endDate: '2024-02-15',
+    subject: 'Summer Sale - 50% Off!',
+    content: "Don't miss our biggest summer sale. Get 50% off on all products...",
+    fullContent: `
+      <h1>🌞 Summer Sale - 50% Off Everything!</h1>
+      
+      <p>Dear Valued Customer,</p>
+      
+      <p>We're excited to announce our biggest sale of the year! For a limited time, enjoy <strong>50% OFF</strong> on all our premium real estate services.</p>
+      
+      <h2>What's Included:</h2>
+      <ul>
+        <li>Premium Property Listings</li>
+        <li>Virtual Property Tours</li>
+        <li>Professional Photography Services</li>
+        <li>Marketing & Advertising Packages</li>
+        <li>Legal Documentation Support</li>
+      </ul>
+      
+      <h2>Why Choose Us?</h2>
+      <p>With over 10 years of experience in the real estate market, we've helped thousands of clients find their dream homes. Our expert team is dedicated to making your property journey smooth and successful.</p>
+      
+      <h2>Special Bonuses:</h2>
+      <ul>
+        <li>Free property valuation</li>
+        <li>Complimentary staging consultation</li>
+        <li>Priority listing on top real estate platforms</li>
+      </ul>
+      
+      <p><strong>This offer ends soon!</strong> Don't miss out on this incredible opportunity to save on our premium services.</p>
+      
+      <p>Click the button below to schedule a free consultation with one of our expert agents.</p>
+      
+      <p>Best regards,<br>
+      The Real Estate Pro Team</p>
+    `,
+    budget: 5000,
+    spent: 3200,
+  })
+
+  const [editForm, setEditForm] = useState(campaignData)
+
+  const handleStatusToggle = () => {
+    const newStatus = campaignData.status === 'active' ? 'paused' : 'active'
+    setCampaignData({ ...campaignData, status: newStatus })
+    toast.success(`Campaign ${newStatus === 'active' ? 'resumed' : 'paused'} successfully`)
   }
+
+  const handleEditClick = () => {
+    setEditForm(campaignData)
+    setShowEditModal(true)
+  }
+
+  const handleSaveEdit = () => {
+    setCampaignData(editForm)
+    setShowEditModal(false)
+    toast.success('Campaign updated successfully')
+  }
+
+  const handleDelete = () => {
+    toast.success('Campaign deleted successfully')
+    setTimeout(() => navigate('/campaigns'), 1000)
+  }
+
+  const campaign = campaignData
 
   const openRate = ((campaign.opened / campaign.sent) * 100).toFixed(1)
   const clickRate = ((campaign.clicked / campaign.sent) * 100).toFixed(1)
@@ -58,15 +127,15 @@ function CampaignDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleEditClick}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleStatusToggle}>
             <Pause className="mr-2 h-4 w-4" />
-            Pause
+            {campaign.status === 'active' ? 'Pause' : 'Resume'}
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowDeleteModal(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
@@ -147,14 +216,237 @@ function CampaignDetail() {
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border p-6 bg-muted/30">
-            <h3 className="text-lg font-semibold mb-2">Summer Sale - 50% Off!</h3>
+            <h3 className="text-lg font-semibold mb-2">{campaign.subject}</h3>
             <p className="text-muted-foreground">
-              Don't miss our biggest summer sale. Get 50% off on all products...
+              {campaign.content}
             </p>
-            <Button className="mt-4">View Full Content</Button>
+            <Button className="mt-4" onClick={() => setShowContentModal(true)}>View Full Content</Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Full Content Modal */}
+      {showContentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 max-w-4xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold">Full Campaign Content</h3>
+              <button
+                onClick={() => setShowContentModal(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <div className="bg-white dark:bg-gray-900 p-8 rounded-lg border">
+                <div dangerouslySetInnerHTML={{ __html: campaign.fullContent }} />
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowContentModal(false)}
+              >
+                Close
+              </Button>
+              <Button onClick={() => {
+                setShowContentModal(false)
+                setShowEditModal(true)
+              }}>
+                Edit Content
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold">Edit Campaign</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Basic Information</h4>
+                <div className="grid gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Campaign Name</label>
+                    <Input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      placeholder="Enter campaign name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Type</label>
+                      <select
+                        className="w-full rounded-md border border-input bg-background px-3 py-2"
+                        value={editForm.type}
+                        onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'email' | 'sms' | 'phone' | 'social' })}
+                      >
+                        <option value="email">Email</option>
+                        <option value="sms">SMS</option>
+                        <option value="phone">Phone</option>
+                        <option value="social">Social Media</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Status</label>
+                      <select
+                        className="w-full rounded-md border border-input bg-background px-3 py-2"
+                        value={editForm.status}
+                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'active' | 'paused' | 'completed' | 'draft' | 'scheduled' })}
+                      >
+                        <option value="active">Active</option>
+                        <option value="paused">Paused</option>
+                        <option value="completed">Completed</option>
+                        <option value="draft">Draft</option>
+                        <option value="scheduled">Scheduled</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Start Date</label>
+                      <Input
+                        type="date"
+                        value={editForm.startDate}
+                        onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">End Date</label>
+                      <Input
+                        type="date"
+                        value={editForm.endDate}
+                        onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Budget */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Budget</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Total Budget</label>
+                    <Input
+                      type="number"
+                      value={editForm.budget}
+                      onChange={(e) => setEditForm({ ...editForm, budget: Number(e.target.value) })}
+                      placeholder="Enter budget"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Amount Spent</label>
+                    <Input
+                      type="number"
+                      value={editForm.spent}
+                      onChange={(e) => setEditForm({ ...editForm, spent: Number(e.target.value) })}
+                      placeholder="Enter amount spent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Campaign Content</h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Subject/Title</label>
+                    <Input
+                      value={editForm.subject}
+                      onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                      placeholder="Enter subject or title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Preview Content</label>
+                    <textarea
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[100px]"
+                      value={editForm.content}
+                      onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+                      placeholder="Enter preview content"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Full Content (HTML)</label>
+                    <textarea
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[200px] font-mono text-sm"
+                      value={editForm.fullContent}
+                      onChange={(e) => setEditForm({ ...editForm, fullContent: e.target.value })}
+                      placeholder="Enter full HTML content"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-red-600">Delete Campaign</h3>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-6">
+              Are you sure you want to delete "{campaign.name}"? This action cannot be undone and all campaign data will be permanently removed.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+              >
+                Delete Campaign
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
