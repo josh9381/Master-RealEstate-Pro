@@ -2,8 +2,64 @@ import { Phone, MessageSquare, Settings, Power } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useState } from 'react';
+import { useToast } from '@/hooks/useToast';
 
 const TwilioSetup = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [connected, setConnected] = useState(true);
+  const [accountSid, setAccountSid] = useState('AC1234567890abcdef1234567890abcd');
+  const [authToken, setAuthToken] = useState('abcdef1234567890abcdef123456');
+  const [phoneNumbers] = useState([
+    {
+      id: '1',
+      number: '+1 (555) 123-4567',
+      type: 'Toll-Free',
+      capabilities: ['SMS', 'Voice'],
+      status: 'active',
+    },
+    {
+      id: '2',
+      number: '+1 (555) 234-5678',
+      type: 'Local',
+      capabilities: ['SMS', 'Voice', 'MMS'],
+      status: 'active',
+    },
+  ]);
+
+  const handleSaveCredentials = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Credentials Saved', 'Twilio credentials have been updated successfully.');
+    } catch (error) {
+      toast.error('Error', 'Failed to save credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setConnected(true);
+      toast.success('Connection Successful', 'Successfully connected to Twilio API.');
+    } catch (error) {
+      setConnected(false);
+      toast.error('Connection Failed', 'Unable to connect to Twilio. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddNumber = () => {
+    toast.info('Add Number', 'Opening Twilio phone number purchase flow...');
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -21,18 +77,22 @@ const TwilioSetup = () => {
               <CardTitle>Connection Status</CardTitle>
               <CardDescription>Current Twilio API connection</CardDescription>
             </div>
-            <Badge variant="success">Connected</Badge>
+            <Badge variant={connected ? "success" : "secondary"}>
+              {connected ? 'Connected' : 'Disconnected'}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-green-100">
-              <Power className="h-6 w-6 text-green-600" />
+            <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-green-100' : 'bg-gray-100'}`}>
+              <Power className={`h-6 w-6 ${connected ? 'text-green-600' : 'text-gray-400'}`} />
             </div>
             <div>
-              <p className="font-medium">Successfully connected to Twilio</p>
+              <p className="font-medium">
+                {connected ? 'Successfully connected to Twilio' : 'Not connected'}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Last verified: 2 minutes ago
+                {connected ? 'Last verified: 2 minutes ago' : 'Connect to verify'}
               </p>
             </div>
           </div>
@@ -51,7 +111,8 @@ const TwilioSetup = () => {
             <input
               type="text"
               placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              defaultValue="AC1234567890abcdef1234567890abcd"
+              value={accountSid}
+              onChange={(e) => setAccountSid(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
             />
           </div>
@@ -60,13 +121,14 @@ const TwilioSetup = () => {
             <input
               type="password"
               placeholder="••••••••••••••••••••••••••••••••"
-              defaultValue="abcdef1234567890abcdef123456"
+              value={authToken}
+              onChange={(e) => setAuthToken(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
             />
           </div>
           <div className="flex space-x-2">
-            <Button>Save Credentials</Button>
-            <Button variant="outline">Test Connection</Button>
+            <Button onClick={handleSaveCredentials} loading={loading}>Save Credentials</Button>
+            <Button variant="outline" onClick={handleTestConnection} loading={loading}>Test Connection</Button>
           </div>
         </CardContent>
       </Card>
@@ -79,7 +141,7 @@ const TwilioSetup = () => {
               <CardTitle>Twilio Phone Numbers</CardTitle>
               <CardDescription>Phone numbers registered with your account</CardDescription>
             </div>
-            <Button>
+            <Button onClick={handleAddNumber}>
               <Phone className="h-4 w-4 mr-2" />
               Add Number
             </Button>
@@ -87,48 +149,19 @@ const TwilioSetup = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              {
-                number: '+1 (555) 123-4567',
-                type: 'Toll-Free',
-                capabilities: ['SMS', 'Voice'],
-                status: 'active',
-              },
-              {
-                number: '+1 (555) 234-5678',
-                type: 'Local',
-                capabilities: ['SMS', 'Voice', 'MMS'],
-                status: 'active',
-              },
-              {
-                number: '+1 (555) 345-6789',
-                type: 'Mobile',
-                capabilities: ['SMS', 'MMS'],
-                status: 'active',
-              },
-            ].map((phone, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-blue-100">
-                    <Phone className="h-5 w-5 text-blue-600" />
-                  </div>
+            {phoneNumbers.map((phone) => (
+              <div key={phone.id} className="p-4 border rounded-lg">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{phone.number}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Badge variant="secondary">{phone.type}</Badge>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Badge variant="outline">{phone.type}</Badge>
                       {phone.capabilities.map((cap) => (
-                        <Badge key={cap} variant="outline">
-                          {cap}
-                        </Badge>
+                        <Badge key={cap} variant="secondary">{cap}</Badge>
                       ))}
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
                   <Badge variant="success">{phone.status}</Badge>
-                  <Button variant="outline" size="sm">
-                    Configure
-                  </Button>
                 </div>
               </div>
             ))}

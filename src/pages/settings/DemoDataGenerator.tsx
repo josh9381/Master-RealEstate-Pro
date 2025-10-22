@@ -2,8 +2,46 @@ import { Database, Trash2, Download, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useState } from 'react';
+import { useToast } from '@/hooks/useToast';
 
 const DemoDataGenerator = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [leadsCount, setLeadsCount] = useState('100');
+  const [campaignsCount, setCampaignsCount] = useState('10');
+  const [activitiesCount, setActivitiesCount] = useState('500');
+
+  const handleGenerate = async (type: string, count: string) => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success('Data Generated', `Successfully generated ${count} sample ${type}.`);
+    } catch (error) {
+      toast.error('Generation Failed', `Failed to generate ${type}.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!confirm('Are you sure you want to delete ALL demo data? This action cannot be undone.')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast.success('Data Cleared', 'All demo data has been deleted successfully.');
+    } catch (error) {
+      toast.error('Error', 'Failed to clear demo data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -97,7 +135,8 @@ const DemoDataGenerator = () => {
                 <input
                   type="number"
                   placeholder="100"
-                  defaultValue="100"
+                  value={leadsCount}
+                  onChange={(e) => setLeadsCount(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
@@ -134,7 +173,9 @@ const DemoDataGenerator = () => {
                 <span className="text-sm">Include company info</span>
               </label>
             </div>
-            <Button>Generate Leads</Button>
+            <Button onClick={() => handleGenerate('leads', leadsCount)} loading={loading}>
+              Generate Leads
+            </Button>
           </div>
 
           <div className="border-t pt-6">
@@ -153,7 +194,8 @@ const DemoDataGenerator = () => {
                   <input
                     type="number"
                     placeholder="10"
-                    defaultValue="10"
+                    value={campaignsCount}
+                    onChange={(e) => setCampaignsCount(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg"
                   />
                 </div>
@@ -186,7 +228,9 @@ const DemoDataGenerator = () => {
                   <span className="text-sm">Include conversions</span>
                 </label>
               </div>
-              <Button>Generate Campaigns</Button>
+              <Button onClick={() => handleGenerate('campaigns', campaignsCount)} loading={loading}>
+                Generate Campaigns
+              </Button>
             </div>
           </div>
 
@@ -206,7 +250,8 @@ const DemoDataGenerator = () => {
                   <input
                     type="number"
                     placeholder="500"
-                    defaultValue="500"
+                    value={activitiesCount}
+                    onChange={(e) => setActivitiesCount(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg"
                   />
                 </div>
@@ -228,7 +273,9 @@ const DemoDataGenerator = () => {
                   </select>
                 </div>
               </div>
-              <Button>Generate Activities</Button>
+              <Button onClick={() => handleGenerate('activities', activitiesCount)} loading={loading}>
+                Generate Activities
+              </Button>
             </div>
           </div>
 
@@ -297,7 +344,7 @@ const DemoDataGenerator = () => {
                 Load from template file
               </span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col text-red-600 hover:text-red-700">
+            <Button variant="outline" className="h-auto py-4 flex-col text-red-600 hover:text-red-700" onClick={handleClearAll} loading={loading}>
               <Trash2 className="h-6 w-6 mb-2" />
               <span className="font-semibold">Clear All Demo Data</span>
               <span className="text-xs text-muted-foreground mt-1">

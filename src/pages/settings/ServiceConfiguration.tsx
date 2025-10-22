@@ -2,8 +2,44 @@ import { Settings, Database, Zap, Bell, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useState } from 'react';
+import { useToast } from '@/hooks/useToast';
 
 const ServiceConfiguration = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [storageProvider, setStorageProvider] = useState('s3');
+  const [accessKeyId, setAccessKeyId] = useState('');
+  const [secretAccessKey, setSecretAccessKey] = useState('');
+  const [bucketName, setBucketName] = useState('');
+  const [region, setRegion] = useState('us-east-1');
+
+  const handleSaveSettings = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Settings Saved', 'Service configuration has been updated successfully.');
+    } catch (error) {
+      toast.error('Error', 'Failed to save service configuration.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestConnection = async (service: string) => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast.success('Connection Successful', `Successfully connected to ${service}.`);
+    } catch (error) {
+      toast.error('Connection Failed', `Unable to connect to ${service}.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -66,7 +102,11 @@ const ServiceConfiguration = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Storage Provider</label>
-            <select className="w-full px-3 py-2 border rounded-lg" defaultValue="s3">
+            <select 
+              className="w-full px-3 py-2 border rounded-lg" 
+              value={storageProvider}
+              onChange={(e) => setStorageProvider(e.target.value)}
+            >
               <option value="local">Local Storage</option>
               <option value="s3">Amazon S3</option>
               <option value="azure">Azure Blob Storage</option>
@@ -79,6 +119,8 @@ const ServiceConfiguration = () => {
               <input
                 type="text"
                 placeholder="AKIAIOSFODNN7EXAMPLE"
+                value={accessKeyId}
+                onChange={(e) => setAccessKeyId(e.target.value)}
                 defaultValue="AKIA••••••••••••MPLE"
                 className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
               />
@@ -88,7 +130,8 @@ const ServiceConfiguration = () => {
               <input
                 type="password"
                 placeholder="••••••••••••••••••••"
-                defaultValue="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                value={secretAccessKey}
+                onChange={(e) => setSecretAccessKey(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
               />
             </div>
@@ -99,13 +142,18 @@ const ServiceConfiguration = () => {
               <input
                 type="text"
                 placeholder="my-crm-bucket"
-                defaultValue="yourcrm-storage"
+                value={bucketName}
+                onChange={(e) => setBucketName(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Region</label>
-              <select className="w-full px-3 py-2 border rounded-lg" defaultValue="us-east-1">
+              <select 
+                className="w-full px-3 py-2 border rounded-lg" 
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+              >
                 <option value="us-east-1">US East (N. Virginia)</option>
                 <option value="us-west-2">US West (Oregon)</option>
                 <option value="eu-west-1">Europe (Ireland)</option>
@@ -113,7 +161,10 @@ const ServiceConfiguration = () => {
               </select>
             </div>
           </div>
-          <Button>Save Storage Settings</Button>
+          <div className="flex space-x-2">
+            <Button onClick={handleSaveSettings} loading={loading}>Save Storage Settings</Button>
+            <Button variant="outline" onClick={() => handleTestConnection('Storage')} loading={loading}>Test Connection</Button>
+          </div>
         </CardContent>
       </Card>
 

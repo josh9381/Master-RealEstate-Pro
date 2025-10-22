@@ -1,9 +1,55 @@
-import { Building, Mail, Phone, Globe, MapPin, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { Building } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { useToast } from '@/hooks/useToast';
 
 const BusinessSettings = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  
+  // Company Information
+  const [companyName, setCompanyName] = useState('Acme Corporation');
+  const [industry, setIndustry] = useState('Technology');
+  const [companySize, setCompanySize] = useState('11-50 employees');
+  const [taxId, setTaxId] = useState('12-3456789');
+  const [website, setWebsite] = useState('https://www.acmecorp.com');
+  
+  // Contact Information
+  const [email, setEmail] = useState('contact@acmecorp.com');
+  const [phone, setPhone] = useState('+1 (555) 123-4567');
+  const [address, setAddress] = useState('123 Business Ave');
+  const [city, setCity] = useState('San Francisco');
+  const [state, setState] = useState('CA');
+  const [zipCode, setZipCode] = useState('94105');
+  const [country, setCountry] = useState('United States');
+  
+  // Preferences
+  const [timezone, setTimezone] = useState('America/Los_Angeles');
+  const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
+  const [currency, setCurrency] = useState('USD');
+  
+  const handleLogoUpload = () => {
+    toast.info('Logo upload feature coming soon!');
+  };
+  
+  const handleSave = async () => {
+    if (!companyName || !email) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Business settings saved successfully');
+    } catch (error) {
+      toast.error('Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
@@ -23,7 +69,7 @@ const BusinessSettings = () => {
               <Building className="h-10 w-10 text-muted-foreground" />
             </div>
             <div className="space-y-2">
-              <Button variant="outline">Upload Logo</Button>
+              <Button variant="outline" onClick={handleLogoUpload}>Upload Logo</Button>
               <p className="text-xs text-muted-foreground">
                 PNG or JPG. Max 2MB. Recommended: 200x200px
               </p>
@@ -41,12 +87,16 @@ const BusinessSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Company Name</label>
-            <Input defaultValue="Acme Corporation" />
+            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Industry</label>
-              <select className="w-full p-2 border rounded-md">
+              <select 
+                className="w-full p-2 border rounded-md"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+              >
                 <option>Technology</option>
                 <option>Healthcare</option>
                 <option>Finance</option>
@@ -56,7 +106,11 @@ const BusinessSettings = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Company Size</label>
-              <select className="w-full p-2 border rounded-md">
+              <select 
+                className="w-full p-2 border rounded-md"
+                value={companySize}
+                onChange={(e) => setCompanySize(e.target.value)}
+              >
                 <option>1-10 employees</option>
                 <option>11-50 employees</option>
                 <option>51-200 employees</option>
@@ -66,12 +120,12 @@ const BusinessSettings = () => {
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Description</label>
-            <textarea
-              className="w-full min-h-[100px] p-3 border rounded-md"
-              placeholder="Brief description of your business..."
-              defaultValue="Leading provider of innovative CRM solutions for modern businesses."
-            />
+            <label className="text-sm font-medium mb-2 block">Tax ID</label>
+            <Input value={taxId} onChange={(e) => setTaxId(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Website</label>
+            <Input value={website} onChange={(e) => setWebsite(e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -86,16 +140,16 @@ const BusinessSettings = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Phone</label>
-              <Input type="tel" defaultValue="+1 (555) 123-4567" />
+              <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Email</label>
-              <Input type="email" defaultValue="contact@acmecorp.com" />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Website</label>
-            <Input type="url" defaultValue="https://acmecorp.com" />
+            <Input value={website} onChange={(e) => setWebsite(e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -109,30 +163,30 @@ const BusinessSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Street Address</label>
-            <Input defaultValue="123 Main Street" />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Address Line 2</label>
-            <Input placeholder="Suite, floor, etc. (optional)" />
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">City</label>
-              <Input defaultValue="San Francisco" />
+              <Input value={city} onChange={(e) => setCity(e.target.value)} />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">State / Province</label>
-              <Input defaultValue="California" />
+              <Input value={state} onChange={(e) => setState(e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">ZIP / Postal Code</label>
-              <Input defaultValue="94105" />
+              <Input value={zipCode} onChange={(e) => setZipCode(e.target.value)} />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Country</label>
-              <select className="w-full p-2 border rounded-md">
+              <select 
+                className="w-full p-2 border rounded-md"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+              >
                 <option>United States</option>
                 <option>Canada</option>
                 <option>United Kingdom</option>
@@ -144,33 +198,58 @@ const BusinessSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Business Hours */}
+      {/* Regional Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Business Hours</CardTitle>
-          <CardDescription>When your business is open</CardDescription>
+          <CardTitle>Regional Settings</CardTitle>
+          <CardDescription>Timezone and currency preferences</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(
-            (day) => (
-              <div key={day} className="flex items-center space-x-4">
-                <label className="flex items-center space-x-2 w-32">
-                  <input type="checkbox" defaultChecked={day !== 'Sunday'} className="rounded" />
-                  <span className="text-sm font-medium">{day}</span>
-                </label>
-                <Input type="time" defaultValue="09:00" className="w-32" />
-                <span className="text-muted-foreground">to</span>
-                <Input type="time" defaultValue="17:00" className="w-32" />
-              </div>
-            )
-          )}
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Timezone</label>
+            <select 
+              className="w-full p-2 border rounded-md"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+            >
+              <option value="America/Los_Angeles">Pacific Time (PT)</option>
+              <option value="America/Denver">Mountain Time (MT)</option>
+              <option value="America/Chicago">Central Time (CT)</option>
+              <option value="America/New_York">Eastern Time (ET)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Date Format</label>
+            <select 
+              className="w-full p-2 border rounded-md"
+              value={dateFormat}
+              onChange={(e) => setDateFormat(e.target.value)}
+            >
+              <option>MM/DD/YYYY</option>
+              <option>DD/MM/YYYY</option>
+              <option>YYYY-MM-DD</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Currency</label>
+            <select 
+              className="w-full p-2 border rounded-md"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+            >
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="CAD">CAD - Canadian Dollar</option>
+            </select>
+          </div>
         </CardContent>
       </Card>
 
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline">Cancel</Button>
-        <Button>Save Changes</Button>
+        <Button onClick={handleSave} loading={loading}>Save Changes</Button>
       </div>
     </div>
   );

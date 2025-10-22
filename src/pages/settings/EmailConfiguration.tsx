@@ -1,9 +1,86 @@
+import { useState } from 'react';
 import { Mail, Server, Shield, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const EmailConfiguration = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  
+  // SMTP Settings
+  const [smtpHost, setSmtpHost] = useState('smtp.sendgrid.net');
+  const [smtpPort, setSmtpPort] = useState('587');
+  const [username, setUsername] = useState('apikey');
+  const [password, setPassword] = useState('SG.xxxxxxxxxxxxxxxxxxxxxxxx');
+  const [encryption, setEncryption] = useState('tls');
+  
+  // Sender Information
+  const [fromName, setFromName] = useState('Your CRM Team');
+  const [fromEmail, setFromEmail] = useState('noreply@yourcrm.com');
+  const [replyToEmail, setReplyToEmail] = useState('support@yourcrm.com');
+  const [bccEmail, setBccEmail] = useState('');
+  
+  // Domain Authentication
+  const [domain, setDomain] = useState('yourcrm.com');
+  
+  // Template Settings
+  const [includeUnsubscribe, setIncludeUnsubscribe] = useState(true);
+  const [trackOpens, setTrackOpens] = useState(true);
+  const [trackClicks, setTrackClicks] = useState(true);
+  const [includeLogo, setIncludeLogo] = useState(false);
+  const [includeSocial, setIncludeSocial] = useState(false);
+  
+  // Delivery Settings
+  const [dailyLimit, setDailyLimit] = useState('10000');
+  const [rateLimit, setRateLimit] = useState('No limit');
+  const [bounceHandling, setBounceHandling] = useState('Mark as bounced after 1 failure');
+  
+  const handleTestConnection = async () => {
+    if (!smtpHost || !smtpPort || !username || !password) {
+      toast.error('Please fill in all SMTP settings');
+      return;
+    }
+    
+    setTestingConnection(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success('SMTP connection successful! Test email sent.');
+    } catch (error) {
+      toast.error('Failed to connect to SMTP server');
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+  
+  const handleSaveSettings = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Email configuration saved successfully');
+    } catch (error) {
+      toast.error('Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleVerifyDNS = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast.success('DNS records verified successfully');
+    } catch (error) {
+      toast.error('Failed to verify DNS records');
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6">
       <div>
@@ -67,13 +144,18 @@ const EmailConfiguration = () => {
               <input
                 type="text"
                 placeholder="smtp.gmail.com"
-                defaultValue="smtp.sendgrid.net"
+                value={smtpHost}
+                onChange={(e) => setSmtpHost(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">SMTP Port</label>
-              <select className="w-full px-3 py-2 border rounded-lg" defaultValue="587">
+              <select 
+                className="w-full px-3 py-2 border rounded-lg" 
+                value={smtpPort}
+                onChange={(e) => setSmtpPort(e.target.value)}
+              >
                 <option value="25">25 (Default)</option>
                 <option value="587">587 (TLS)</option>
                 <option value="465">465 (SSL)</option>
@@ -87,7 +169,8 @@ const EmailConfiguration = () => {
               <input
                 type="text"
                 placeholder="your-username"
-                defaultValue="apikey"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
@@ -96,22 +179,29 @@ const EmailConfiguration = () => {
               <input
                 type="password"
                 placeholder="••••••••••••"
-                defaultValue="SG.xxxxxxxxxxxxxxxxxxxxxxxx"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg font-mono"
               />
             </div>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Encryption</label>
-            <select className="w-full px-3 py-2 border rounded-lg" defaultValue="tls">
+            <select 
+              className="w-full px-3 py-2 border rounded-lg" 
+              value={encryption}
+              onChange={(e) => setEncryption(e.target.value)}
+            >
               <option value="none">None</option>
               <option value="tls">TLS</option>
               <option value="ssl">SSL</option>
             </select>
           </div>
           <div className="flex space-x-2">
-            <Button>Save Settings</Button>
-            <Button variant="outline">Send Test Email</Button>
+            <Button onClick={handleSaveSettings} loading={loading}>Save Settings</Button>
+            <Button variant="outline" onClick={handleTestConnection} loading={testingConnection}>
+              Send Test Email
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -132,7 +222,8 @@ const EmailConfiguration = () => {
               <input
                 type="text"
                 placeholder="Your Company Name"
-                defaultValue="Your CRM Team"
+                value={fromName}
+                onChange={(e) => setFromName(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
@@ -141,7 +232,8 @@ const EmailConfiguration = () => {
               <input
                 type="email"
                 placeholder="noreply@yourcompany.com"
-                defaultValue="noreply@yourcrm.com"
+                value={fromEmail}
+                onChange={(e) => setFromEmail(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
@@ -152,7 +244,8 @@ const EmailConfiguration = () => {
               <input
                 type="email"
                 placeholder="support@yourcompany.com"
-                defaultValue="support@yourcrm.com"
+                value={replyToEmail}
+                onChange={(e) => setReplyToEmail(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
@@ -161,6 +254,8 @@ const EmailConfiguration = () => {
               <input
                 type="email"
                 placeholder="archive@yourcompany.com"
+                value={bccEmail}
+                onChange={(e) => setBccEmail(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
@@ -183,7 +278,8 @@ const EmailConfiguration = () => {
             <input
               type="text"
               placeholder="yourcompany.com"
-              defaultValue="yourcrm.com"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
@@ -230,7 +326,7 @@ const EmailConfiguration = () => {
             </div>
           </div>
 
-          <Button>Verify DNS Records</Button>
+          <Button onClick={handleVerifyDNS} loading={loading}>Verify DNS Records</Button>
         </CardContent>
       </Card>
 
@@ -243,31 +339,56 @@ const EmailConfiguration = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={includeUnsubscribe}
+                onChange={(e) => setIncludeUnsubscribe(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Include unsubscribe link in all emails</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={trackOpens}
+                onChange={(e) => setTrackOpens(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Track email opens</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={trackClicks}
+                onChange={(e) => setTrackClicks(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Track link clicks</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={includeLogo}
+                onChange={(e) => setIncludeLogo(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Include company logo in header</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={includeSocial}
+                onChange={(e) => setIncludeSocial(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Add social media links in footer</span>
             </label>
           </div>
@@ -286,7 +407,8 @@ const EmailConfiguration = () => {
             <input
               type="number"
               placeholder="10000"
-              defaultValue="10000"
+              value={dailyLimit}
+              onChange={(e) => setDailyLimit(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg"
             />
             <p className="text-xs text-muted-foreground mt-1">
@@ -295,7 +417,11 @@ const EmailConfiguration = () => {
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Rate Limit</label>
-            <select className="w-full px-3 py-2 border rounded-lg">
+            <select 
+              className="w-full px-3 py-2 border rounded-lg"
+              value={rateLimit}
+              onChange={(e) => setRateLimit(e.target.value)}
+            >
               <option>No limit</option>
               <option>100 emails per hour</option>
               <option>500 emails per hour</option>
@@ -304,7 +430,11 @@ const EmailConfiguration = () => {
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Bounce Handling</label>
-            <select className="w-full px-3 py-2 border rounded-lg">
+            <select 
+              className="w-full px-3 py-2 border rounded-lg"
+              value={bounceHandling}
+              onChange={(e) => setBounceHandling(e.target.value)}
+            >
               <option>Mark as bounced after 1 failure</option>
               <option>Mark as bounced after 3 failures</option>
               <option>Mark as bounced after 5 failures</option>

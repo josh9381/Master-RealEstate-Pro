@@ -1,9 +1,41 @@
+import { useState } from 'react';
 import { Bell, Mail, MessageSquare, TrendingUp, Users, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/hooks/useToast';
+
+import { LucideIcon } from 'lucide-react';
+
+interface NotificationSetting {
+  id: string;
+  label: string;
+  email: boolean;
+  push: boolean;
+  sms: boolean;
+}
+
+interface NotificationCategory {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  settings: NotificationSetting[];
+}
 
 const NotificationSettings = () => {
-  const notificationCategories = [
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  
+  // Channel toggles
+  const [emailEnabled, setEmailEnabled] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [smsEnabled, setSmsEnabled] = useState(true);
+  
+  // Quiet hours
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
+  const [quietStart, setQuietStart] = useState('22:00');
+  const [quietEnd, setQuietEnd] = useState('08:00');
+
+  const [notificationCategories, setNotificationCategories] = useState<NotificationCategory[]>([
     {
       icon: Users,
       title: 'Lead Notifications',
@@ -45,7 +77,85 @@ const NotificationSettings = () => {
         { id: 'meeting-reminder', label: 'Meeting reminder', email: true, push: true, sms: true },
       ],
     },
-  ];
+  ]);
+
+  const handleToggleNotification = (categoryIndex: number, settingIndex: number, channel: 'email' | 'push' | 'sms') => {
+    setNotificationCategories(prev => {
+      const updated = [...prev];
+      updated[categoryIndex].settings[settingIndex][channel] = !updated[categoryIndex].settings[settingIndex][channel];
+      return updated;
+    });
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Notification preferences saved successfully');
+    } catch (error) {
+      toast.error('Failed to save preferences');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    // Reset to default values
+    setEmailEnabled(true);
+    setPushEnabled(true);
+    setSmsEnabled(true);
+    setQuietHoursEnabled(false);
+    setQuietStart('22:00');
+    setQuietEnd('08:00');
+    
+    // Reset all notification settings to defaults
+    setNotificationCategories([
+      {
+        icon: Users,
+        title: 'Lead Notifications',
+        description: 'Get notified about new leads and lead activities',
+        settings: [
+          { id: 'new-lead', label: 'New lead created', email: true, push: true, sms: false },
+          { id: 'lead-updated', label: 'Lead status updated', email: true, push: false, sms: false },
+          { id: 'lead-assigned', label: 'Lead assigned to you', email: true, push: true, sms: true },
+          { id: 'lead-converted', label: 'Lead converted to customer', email: true, push: true, sms: false },
+        ],
+      },
+      {
+        icon: TrendingUp,
+        title: 'Campaign Notifications',
+        description: 'Stay updated on your campaign performance',
+        settings: [
+          { id: 'campaign-sent', label: 'Campaign sent successfully', email: true, push: false, sms: false },
+          { id: 'campaign-milestone', label: 'Campaign milestone reached', email: true, push: true, sms: false },
+          { id: 'campaign-issue', label: 'Campaign issues or errors', email: true, push: true, sms: true },
+        ],
+      },
+      {
+        icon: MessageSquare,
+        title: 'Communication',
+        description: 'Notifications for messages and responses',
+        settings: [
+          { id: 'new-message', label: 'New message received', email: true, push: true, sms: false },
+          { id: 'message-replied', label: 'Someone replied to your message', email: true, push: true, sms: false },
+          { id: 'missed-call', label: 'Missed call notification', email: false, push: true, sms: true },
+        ],
+      },
+      {
+        icon: Calendar,
+        title: 'Reminders & Tasks',
+        description: 'Get reminded about important tasks',
+        settings: [
+          { id: 'task-due', label: 'Task due date approaching', email: true, push: true, sms: false },
+          { id: 'followup-reminder', label: 'Follow-up reminder', email: true, push: true, sms: true },
+          { id: 'meeting-reminder', label: 'Meeting reminder', email: true, push: true, sms: true },
+        ],
+      },
+    ]);
+    
+    toast.success('Reset to default preferences');
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -75,7 +185,12 @@ const NotificationSettings = () => {
                 </div>
               </div>
               <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" defaultChecked className="rounded" />
+                <input 
+                  type="checkbox" 
+                  checked={emailEnabled}
+                  onChange={(e) => setEmailEnabled(e.target.checked)}
+                  className="rounded" 
+                />
                 <span className="text-sm">Enable email notifications</span>
               </label>
             </div>
@@ -90,7 +205,12 @@ const NotificationSettings = () => {
                 </div>
               </div>
               <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" defaultChecked className="rounded" />
+                <input 
+                  type="checkbox" 
+                  checked={pushEnabled}
+                  onChange={(e) => setPushEnabled(e.target.checked)}
+                  className="rounded" 
+                />
                 <span className="text-sm">Enable push notifications</span>
               </label>
             </div>
@@ -105,7 +225,12 @@ const NotificationSettings = () => {
                 </div>
               </div>
               <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" defaultChecked className="rounded" />
+                <input 
+                  type="checkbox" 
+                  checked={smsEnabled}
+                  onChange={(e) => setSmsEnabled(e.target.checked)}
+                  className="rounded" 
+                />
                 <span className="text-sm">Enable SMS notifications</span>
               </label>
             </div>
@@ -114,7 +239,7 @@ const NotificationSettings = () => {
       </Card>
 
       {/* Notification Preferences */}
-      {notificationCategories.map((category) => {
+      {notificationCategories.map((category, categoryIndex) => {
         const Icon = category.icon;
         return (
           <Card key={category.title}>
@@ -137,27 +262,30 @@ const NotificationSettings = () => {
                   <div className="text-center">Push</div>
                   <div className="text-center">SMS</div>
                 </div>
-                {category.settings.map((setting) => (
+                {category.settings.map((setting, settingIndex) => (
                   <div key={setting.id} className="grid grid-cols-4 gap-4 items-center">
                     <div className="col-span-1 text-sm">{setting.label}</div>
                     <div className="flex justify-center">
                       <input
                         type="checkbox"
-                        defaultChecked={setting.email}
+                        checked={setting.email}
+                        onChange={() => handleToggleNotification(categoryIndex, settingIndex, 'email')}
                         className="rounded"
                       />
                     </div>
                     <div className="flex justify-center">
                       <input
                         type="checkbox"
-                        defaultChecked={setting.push}
+                        checked={setting.push}
+                        onChange={() => handleToggleNotification(categoryIndex, settingIndex, 'push')}
                         className="rounded"
                       />
                     </div>
                     <div className="flex justify-center">
                       <input
                         type="checkbox"
-                        defaultChecked={setting.sms}
+                        checked={setting.sms}
+                        onChange={() => handleToggleNotification(categoryIndex, settingIndex, 'sms')}
                         className="rounded"
                       />
                     </div>
@@ -177,17 +305,34 @@ const NotificationSettings = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" className="rounded" />
+            <input 
+              type="checkbox" 
+              checked={quietHoursEnabled}
+              onChange={(e) => setQuietHoursEnabled(e.target.checked)}
+              className="rounded" 
+            />
             <span className="text-sm font-medium">Enable quiet hours</span>
           </label>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Start Time</label>
-              <input type="time" className="w-full p-2 border rounded-md" defaultValue="22:00" />
+              <input 
+                type="time" 
+                className="w-full p-2 border rounded-md" 
+                value={quietStart}
+                onChange={(e) => setQuietStart(e.target.value)}
+                disabled={!quietHoursEnabled}
+              />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">End Time</label>
-              <input type="time" className="w-full p-2 border rounded-md" defaultValue="08:00" />
+              <input 
+                type="time" 
+                className="w-full p-2 border rounded-md" 
+                value={quietEnd}
+                onChange={(e) => setQuietEnd(e.target.value)}
+                disabled={!quietHoursEnabled}
+              />
             </div>
           </div>
         </CardContent>
@@ -195,8 +340,8 @@ const NotificationSettings = () => {
 
       {/* Actions */}
       <div className="flex justify-between">
-        <Button variant="outline">Reset to Default</Button>
-        <Button>Save Preferences</Button>
+        <Button variant="outline" onClick={handleReset}>Reset to Default</Button>
+        <Button onClick={handleSave} loading={loading}>Save Preferences</Button>
       </div>
     </div>
   );

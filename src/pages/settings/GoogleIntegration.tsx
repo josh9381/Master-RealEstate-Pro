@@ -1,9 +1,70 @@
+import { useState } from 'react';
 import { Chrome, Calendar, Mail, Shield, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const GoogleIntegration = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [connected, setConnected] = useState(true);
+  
+  // Gmail settings
+  const [gmailEnabled, setGmailEnabled] = useState(true);
+  const [syncEmails, setSyncEmails] = useState(true);
+  const [trackEmails, setTrackEmails] = useState(true);
+  const [createLeads, setCreateLeads] = useState(false);
+  
+  // Calendar settings
+  const [calendarEnabled, setCalendarEnabled] = useState(true);
+  const [syncCalendar, setSyncCalendar] = useState(true);
+  const [autoCreateEvents, setAutoCreateEvents] = useState(false);
+  
+  // Contacts settings
+  const [contactsEnabled, setContactsEnabled] = useState(true);
+  const [syncContacts, setSyncContacts] = useState(true);
+  const [autoImport, setAutoImport] = useState(false);
+  
+  const handleConnect = async () => {
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setConnected(true);
+      toast.success('Connected to Google Workspace successfully');
+    } catch (error) {
+      toast.error('Failed to connect to Google');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleDisconnect = async () => {
+    if (!confirm('Are you sure you want to disconnect Google Workspace?')) return;
+    
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setConnected(false);
+      toast.success('Disconnected from Google Workspace');
+    } catch (error) {
+      toast.error('Failed to disconnect');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleSaveSettings = async () => {
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Google integration settings saved');
+    } catch (error) {
+      toast.error('Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6">
       <div>
@@ -21,62 +82,87 @@ const GoogleIntegration = () => {
               <CardTitle>Google Account Connection</CardTitle>
               <CardDescription>Your connected Google Workspace account</CardDescription>
             </div>
-            <Badge variant="success">Connected</Badge>
+            <Badge variant={connected ? "success" : "secondary"}>
+              {connected ? 'Connected' : 'Disconnected'}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
-                <Chrome className="h-6 w-6 text-blue-600" />
+          {connected ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
+                  <Chrome className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium">admin@yourcompany.com</p>
+                  <p className="text-sm text-muted-foreground">
+                    Connected on January 15, 2024
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium">admin@yourcompany.com</p>
-                <p className="text-sm text-muted-foreground">
-                  Connected on January 15, 2024
-                </p>
-              </div>
+              <Button variant="outline" onClick={handleDisconnect} loading={loading}>
+                Disconnect
+              </Button>
             </div>
-            <Button variant="outline">Disconnect</Button>
-          </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-muted-foreground mb-4">
+                Connect your Google Workspace account to enable integrations
+              </p>
+              <Button onClick={handleConnect} loading={loading}>
+                <Chrome className="h-4 w-4 mr-2" />
+                Connect Google Account
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Gmail Integration */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>
-                <Mail className="h-5 w-5 inline mr-2" />
-                Gmail Integration
-              </CardTitle>
-              <CardDescription>Send and receive emails through Gmail</CardDescription>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant="success">Active</Badge>
-              <label className="relative inline-block w-12 h-6">
-                <input type="checkbox" defaultChecked className="sr-only peer" />
-                <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <h4 className="font-semibold">Sync Emails</h4>
+      {connected && (
+        <>
+          {/* Gmail Integration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>
+                    <Mail className="h-5 w-5 inline mr-2" />
+                    Gmail Integration
+                  </CardTitle>
+                  <CardDescription>Send and receive emails through Gmail</CardDescription>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant={gmailEnabled ? "success" : "secondary"}>
+                    {gmailEnabled ? 'Active' : 'Inactive'}
+                  </Badge>
+                  <label className="relative inline-block w-12 h-6">
+                    <input 
+                      type="checkbox" 
+                      checked={gmailEnabled}
+                      onChange={(e) => setGmailEnabled(e.target.checked)}
+                      className="sr-only peer" 
+                    />
+                    <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Automatically sync emails with CRM contacts
-              </p>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <h4 className="font-semibold">Send from CRM</h4>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <h4 className="font-semibold">Sync Emails</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically sync emails with CRM contacts
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <h4 className="font-semibold">Send from CRM</h4>
               </div>
               <p className="text-sm text-muted-foreground">
                 Send emails directly from the CRM interface
@@ -85,19 +171,34 @@ const GoogleIntegration = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={syncEmails}
+                onChange={(e) => setSyncEmails(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Sync all emails automatically</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={trackEmails}
+                onChange={(e) => setTrackEmails(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Track email opens and clicks</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={createLeads}
+                onChange={(e) => setCreateLeads(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Create leads from new email contacts</span>
             </label>
           </div>
@@ -116,9 +217,16 @@ const GoogleIntegration = () => {
               <CardDescription>Sync meetings and tasks with Google Calendar</CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant="success">Active</Badge>
+              <Badge variant={calendarEnabled ? "success" : "secondary"}>
+                {calendarEnabled ? 'Active' : 'Inactive'}
+              </Badge>
               <label className="relative inline-block w-12 h-6">
-                <input type="checkbox" defaultChecked className="sr-only peer" />
+                <input 
+                  type="checkbox" 
+                  checked={calendarEnabled}
+                  onChange={(e) => setCalendarEnabled(e.target.checked)}
+                  className="sr-only peer" 
+                />
                 <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
@@ -155,19 +263,34 @@ const GoogleIntegration = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={syncCalendar}
+                onChange={(e) => setSyncCalendar(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Sync CRM tasks to Calendar</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={autoCreateEvents}
+                onChange={(e) => setAutoCreateEvents(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Add attendees from lead contacts</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={autoImport}
+                onChange={(e) => setAutoImport(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Send calendar invites automatically</span>
             </label>
           </div>
@@ -183,9 +306,16 @@ const GoogleIntegration = () => {
               <CardDescription>Sync contacts between CRM and Google</CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant="secondary">Inactive</Badge>
+              <Badge variant={contactsEnabled ? "success" : "secondary"}>
+                {contactsEnabled ? 'Active' : 'Inactive'}
+              </Badge>
               <label className="relative inline-block w-12 h-6">
-                <input type="checkbox" className="sr-only peer" />
+                <input 
+                  type="checkbox" 
+                  checked={contactsEnabled}
+                  onChange={(e) => setContactsEnabled(e.target.checked)}
+                  className="sr-only peer" 
+                />
                 <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
@@ -207,7 +337,12 @@ const GoogleIntegration = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={syncContacts}
+                onChange={(e) => setSyncContacts(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Sync contact photos</span>
             </label>
           </div>
@@ -314,6 +449,17 @@ const GoogleIntegration = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
+      
+      {/* Save Button */}
+      {connected && (
+        <div className="flex justify-end">
+          <Button onClick={handleSaveSettings} loading={loading}>
+            Save Integration Settings
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

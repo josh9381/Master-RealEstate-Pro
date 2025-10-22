@@ -1,9 +1,38 @@
 import { Shield, CheckCircle, AlertTriangle, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { useState } from 'react';
+import { useToast } from '@/hooks/useToast';
 
 const ComplianceSettings = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [tcpaEnabled, setTcpaEnabled] = useState(true);
+  const [requireConsent, setRequireConsent] = useState(true);
+  const [blockRevokedConsent, setBlockRevokedConsent] = useState(true);
+  const [dncEnabled, setDncEnabled] = useState(true);
+  const [autoCheckDnc, setAutoCheckDnc] = useState(true);
+  const [blockDncNumbers, setBlockDncNumbers] = useState(true);
+  const [gdprEnabled, setGdprEnabled] = useState(true);
+  const [rightToErasure, setRightToErasure] = useState(true);
+  const [dataPortability, setDataPortability] = useState(true);
+  const [auditEnabled, setAuditEnabled] = useState(true);
+  const [logAllChanges, setLogAllChanges] = useState(true);
+  const [retentionDays, setRetentionDays] = useState('365');
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Settings Saved', 'Compliance settings have been updated successfully.');
+    } catch (error) {
+      toast.error('Error', 'Failed to save compliance settings.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -81,7 +110,12 @@ const ComplianceSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={requireConsent}
+                onChange={(e) => setRequireConsent(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">
                 Require express written consent before calling/texting
               </span>
@@ -89,7 +123,12 @@ const ComplianceSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={blockRevokedConsent}
+                onChange={(e) => setBlockRevokedConsent(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">
                 Block calls/texts outside of 8 AM - 9 PM local time
               </span>
@@ -97,7 +136,12 @@ const ComplianceSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={tcpaEnabled}
+                onChange={(e) => setTcpaEnabled(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">
                 Include opt-out instructions in all SMS messages
               </span>
@@ -123,7 +167,12 @@ const ComplianceSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-pointer mb-4">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={dncEnabled}
+                onChange={(e) => setDncEnabled(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">Enable DNC registry checking</span>
             </label>
           </div>
@@ -172,13 +221,23 @@ const ComplianceSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-pointer mb-4">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={gdprEnabled}
+                onChange={(e) => setGdprEnabled(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">Enable GDPR compliance features</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={autoCheckDnc}
+                onChange={(e) => setAutoCheckDnc(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">
                 Allow users to request their data (Right to Access)
               </span>
@@ -186,7 +245,12 @@ const ComplianceSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={rightToErasure}
+                onChange={(e) => setRightToErasure(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">
                 Allow users to delete their data (Right to Erasure)
               </span>
@@ -194,7 +258,12 @@ const ComplianceSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={dataPortability}
+                onChange={(e) => setDataPortability(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">
                 Allow users to export their data (Data Portability)
               </span>
@@ -202,7 +271,12 @@ const ComplianceSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={blockDncNumbers}
+                onChange={(e) => setBlockDncNumbers(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">
                 Require explicit consent for data processing
               </span>
@@ -212,7 +286,8 @@ const ComplianceSettings = () => {
             <label className="text-sm font-medium mb-2 block">Data Retention Period (days)</label>
             <input
               type="number"
-              defaultValue="730"
+              value={retentionDays}
+              onChange={(e) => setRetentionDays(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg"
             />
             <p className="text-xs text-muted-foreground mt-1">
@@ -303,10 +378,34 @@ const ComplianceSettings = () => {
       {/* Audit Logs */}
       <Card>
         <CardHeader>
-          <CardTitle>Compliance Audit Logs</CardTitle>
-          <CardDescription>Recent compliance-related activities</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Compliance Audit Logs</CardTitle>
+              <CardDescription>Recent compliance-related activities</CardDescription>
+            </div>
+            <label className="relative inline-block w-12 h-6">
+              <input 
+                type="checkbox" 
+                checked={auditEnabled}
+                onChange={(e) => setAuditEnabled(e.target.checked)}
+                className="sr-only peer" 
+              />
+              <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={logAllChanges}
+                onChange={(e) => setLogAllChanges(e.target.checked)}
+                className="rounded" 
+              />
+              <span className="text-sm font-medium">Log all compliance-related changes</span>
+            </label>
+          </div>
           <div className="space-y-3">
             {[
               {
@@ -398,6 +497,12 @@ const ComplianceSettings = () => {
           <Button>Save Policy URLs</Button>
         </CardContent>
       </Card>
+
+      {/* Save Settings */}
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline">Reset to Defaults</Button>
+        <Button onClick={handleSave} loading={loading}>Save All Settings</Button>
+      </div>
     </div>
   );
 };

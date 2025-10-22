@@ -3,8 +3,10 @@ import { Lock, Key, Shield, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { useToast } from '@/hooks/useToast'
 
 export default function PasswordSecurityPage() {
+  const { toast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -12,18 +14,39 @@ export default function PasswordSecurityPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    
     setLoading(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    console.log('Password updated')
-    setLoading(false)
-    
-    // Reset form
-    setCurrentPassword('')
-    setNewPassword('')
-    setConfirmPassword('')
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Reset form
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      
+      toast.success('Password updated successfully');
+    } catch (error) {
+      toast.error('Failed to update password');
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

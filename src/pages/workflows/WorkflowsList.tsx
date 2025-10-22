@@ -1,16 +1,21 @@
-import { Workflow, Plus, Play, Pause, Edit, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Workflow, Plus, Play, Pause, Edit, Trash2, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/useToast';
 
 const WorkflowsList = () => {
-  const workflows = [
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
+  const [workflows, setWorkflows] = useState([
     {
       id: 1,
       name: 'Welcome Email Sequence',
       description: 'Send 3 welcome emails over 5 days to new signups',
-      status: 'active',
+      status: 'active' as const,
       triggers: 'New Lead Created',
       actions: 5,
       leads: 234,
@@ -20,7 +25,7 @@ const WorkflowsList = () => {
       id: 2,
       name: 'Lead Nurturing Campaign',
       description: 'Automated nurturing sequence for cold leads',
-      status: 'active',
+      status: 'active' as const,
       triggers: 'Lead Score < 50',
       actions: 8,
       leads: 567,
@@ -30,7 +35,7 @@ const WorkflowsList = () => {
       id: 3,
       name: 'Abandoned Cart Recovery',
       description: 'Follow up with leads who did not complete purchase',
-      status: 'active',
+      status: 'active' as const,
       triggers: 'Trial Started, No Purchase',
       actions: 4,
       leads: 128,
@@ -40,7 +45,7 @@ const WorkflowsList = () => {
       id: 4,
       name: 'High-Value Lead Alert',
       description: 'Notify sales team when high-value lead detected',
-      status: 'active',
+      status: 'active' as const,
       triggers: 'Lead Score > 80',
       actions: 3,
       leads: 89,
@@ -50,13 +55,40 @@ const WorkflowsList = () => {
       id: 5,
       name: 'Re-engagement Campaign',
       description: 'Win back inactive customers',
-      status: 'paused',
+      status: 'paused' as const,
       triggers: 'No Activity for 60 Days',
       actions: 6,
       leads: 445,
       conversionRate: 8.9,
     },
-  ];
+  ]);
+
+  const toggleWorkflowStatus = (workflowId: number) => {
+    setWorkflows(workflows.map(w => 
+      w.id === workflowId 
+        ? { ...w, status: w.status === 'active' ? 'paused' as const : 'active' as const }
+        : w
+    ));
+    const workflow = workflows.find(w => w.id === workflowId);
+    if (workflow) {
+      toast.success(`Workflow ${workflow.status === 'active' ? 'paused' : 'activated'}`);
+    }
+  };
+
+  const deleteWorkflow = (workflowId: number) => {
+    setWorkflows(workflows.filter(w => w.id !== workflowId));
+    toast.success('Workflow deleted successfully');
+  };
+
+  const viewAnalytics = (workflowId: number) => {
+    toast.info(`Analytics for workflow ${workflowId}`);
+    // In a real app: navigate(`/workflows/analytics/${workflowId}`);
+  };
+
+  const applyTemplate = (templateName: string) => {
+    toast.success(`Creating workflow from template: ${templateName}`);
+    navigate('/workflows/builder');
+  };
 
   return (
     <div className="space-y-6">
@@ -168,12 +200,20 @@ const WorkflowsList = () => {
 
                     <div className="flex items-center space-x-2">
                       {workflow.status === 'active' ? (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => toggleWorkflowStatus(workflow.id)}
+                        >
                           <Pause className="h-4 w-4 mr-2" />
                           Pause
                         </Button>
                       ) : (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => toggleWorkflowStatus(workflow.id)}
+                        >
                           <Play className="h-4 w-4 mr-2" />
                           Activate
                         </Button>
@@ -184,10 +224,19 @@ const WorkflowsList = () => {
                           Edit
                         </Button>
                       </Link>
-                      <Button variant="ghost" size="sm">
-                        View Analytics
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => viewAnalytics(workflow.id)}
+                      >
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Analytics
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => deleteWorkflow(workflow.id)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -223,7 +272,12 @@ const WorkflowsList = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Pre-configured workflow ready to use
                 </p>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => applyTemplate(template)}
+                >
                   Use Template
                 </Button>
               </div>

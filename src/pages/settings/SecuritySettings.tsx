@@ -1,10 +1,147 @@
-import { Lock, Shield, Key, Smartphone, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { Shield, Key, Smartphone, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const SecuritySettings = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // 2FA state
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
+  const [showBackupCodes, setShowBackupCodes] = useState(false);
+  
+  // Sessions state
+  const [sessions] = useState([
+    { id: 1, device: 'Windows • Chrome', location: 'San Francisco, CA', time: 'Active now', current: true },
+    { id: 2, device: 'iPhone • Safari', location: 'San Francisco, CA', time: '2 hours ago', current: false },
+    { id: 3, device: 'macOS • Firefox', location: 'San Jose, CA', time: '1 day ago', current: false },
+  ]);
+  
+  const handlePasswordChange = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('Please fill in all password fields');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Password updated successfully');
+    } catch (error) {
+      toast.error('Failed to update password');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleToggle2FA = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setTwoFactorEnabled(!twoFactorEnabled);
+      toast.success(twoFactorEnabled ? '2FA disabled' : '2FA enabled successfully');
+    } catch (error) {
+      toast.error('Failed to update 2FA settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleRemove2FA = async () => {
+    if (!confirm('Are you sure you want to remove 2FA? This will make your account less secure.')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setTwoFactorEnabled(false);
+      toast.success('2FA removed successfully');
+    } catch (error) {
+      toast.error('Failed to remove 2FA');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleReconfigure2FA = () => {
+    toast.info('Opening 2FA reconfiguration wizard...');
+    // In a real app, this would open a modal with QR code
+  };
+  
+  const handleViewBackupCodes = () => {
+    setShowBackupCodes(!showBackupCodes);
+  };
+  
+  const handleRevokeSession = async (_sessionId: number) => {
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      toast.success('Session revoked successfully');
+    } catch (error) {
+      toast.error('Failed to revoke session');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleSignOutAllSessions = async () => {
+    if (!confirm('Are you sure you want to sign out all other sessions?')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('All other sessions signed out');
+    } catch (error) {
+      toast.error('Failed to sign out sessions');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleDeleteAccount = async () => {
+    const confirmation = prompt('Type "DELETE" to confirm account deletion:');
+    if (confirmation !== 'DELETE') {
+      toast.error('Account deletion cancelled');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast.success('Account deletion initiated. You will receive a confirmation email.');
+    } catch (error) {
+      toast.error('Failed to delete account');
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
@@ -58,15 +195,27 @@ const SecuritySettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Current Password</label>
-            <Input type="password" />
+            <Input 
+              type="password" 
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">New Password</label>
-            <Input type="password" />
+            <Input 
+              type="password" 
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Confirm New Password</label>
-            <Input type="password" />
+            <Input 
+              type="password" 
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
           </div>
           <div className="bg-muted p-3 rounded-md text-sm">
             <p className="font-medium mb-2">Password requirements:</p>
@@ -77,7 +226,7 @@ const SecuritySettings = () => {
               <li>• Contains at least one special character</li>
             </ul>
           </div>
-          <Button>Update Password</Button>
+          <Button onClick={handlePasswordChange} loading={loading}>Update Password</Button>
         </CardContent>
       </Card>
 
@@ -89,33 +238,59 @@ const SecuritySettings = () => {
               <CardTitle>Two-Factor Authentication (2FA)</CardTitle>
               <CardDescription>Add an extra layer of security to your account</CardDescription>
             </div>
-            <Badge variant="success">Enabled</Badge>
+            <Badge variant={twoFactorEnabled ? "success" : "secondary"}>
+              {twoFactorEnabled ? 'Enabled' : 'Disabled'}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-start space-x-4 p-4 bg-muted rounded-lg">
-            <Smartphone className="h-5 w-5 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-medium mb-1">Authenticator App</h4>
-              <p className="text-sm text-muted-foreground mb-3">
-                Using Google Authenticator ending in ••••789
-              </p>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm">Reconfigure</Button>
-                <Button variant="ghost" size="sm">Remove</Button>
+          {twoFactorEnabled ? (
+            <>
+              <div className="flex items-start space-x-4 p-4 bg-muted rounded-lg">
+                <Smartphone className="h-5 w-5 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-medium mb-1">Authenticator App</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Using Google Authenticator ending in ••••789
+                  </p>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={handleReconfigure2FA}>Reconfigure</Button>
+                    <Button variant="ghost" size="sm" onClick={handleRemove2FA}>Remove</Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="flex items-start space-x-4 p-4 border rounded-lg">
-            <Key className="h-5 w-5 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-medium mb-1">Backup Codes</h4>
-              <p className="text-sm text-muted-foreground mb-3">
-                5 backup codes available for emergency access
+              <div className="flex items-start space-x-4 p-4 border rounded-lg">
+                <Key className="h-5 w-5 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-medium mb-1">Backup Codes</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    5 backup codes available for emergency access
+                  </p>
+                  <Button variant="outline" size="sm" onClick={handleViewBackupCodes}>
+                    {showBackupCodes ? 'Hide Codes' : 'View Codes'}
+                  </Button>
+                  {showBackupCodes && (
+                    <div className="mt-3 p-3 bg-muted rounded-md font-mono text-sm space-y-1">
+                      <div>XXXX-XXXX-XXXX-0001</div>
+                      <div>XXXX-XXXX-XXXX-0002</div>
+                      <div>XXXX-XXXX-XXXX-0003</div>
+                      <div>XXXX-XXXX-XXXX-0004</div>
+                      <div>XXXX-XXXX-XXXX-0005</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="p-4 border-2 border-dashed rounded-lg text-center">
+              <Shield className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+              <h4 className="font-medium mb-2">Two-Factor Authentication Not Enabled</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Protect your account with an additional layer of security
               </p>
-              <Button variant="outline" size="sm">View Codes</Button>
+              <Button onClick={handleToggle2FA}>Enable 2FA</Button>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -127,34 +302,43 @@ const SecuritySettings = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-start space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Shield className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <h4 className="font-medium">Windows • Chrome</h4>
-                    <Badge variant="success" className="text-xs">Current</Badge>
+            {sessions.map((session) => (
+              <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <div className={`p-2 ${session.current ? 'bg-green-100' : 'bg-secondary'} rounded-lg`}>
+                    {session.device.includes('iPhone') || session.device.includes('iOS') ? (
+                      <Smartphone className={`h-5 w-5 ${session.current ? 'text-green-600' : ''}`} />
+                    ) : (
+                      <Shield className={`h-5 w-5 ${session.current ? 'text-green-600' : ''}`} />
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">San Francisco, CA • Active now</p>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-medium">{session.device}</h4>
+                      {session.current && (
+                        <Badge variant="success" className="text-xs">Current</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{session.location} • {session.time}</p>
+                  </div>
                 </div>
+                {!session.current && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleRevokeSession(session.id)}
+                  >
+                    Revoke
+                  </Button>
+                )}
               </div>
-            </div>
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-start space-x-3">
-                <div className="p-2 bg-secondary rounded-lg">
-                  <Smartphone className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="font-medium">iPhone • Safari</h4>
-                  <p className="text-sm text-muted-foreground">San Francisco, CA • 2 hours ago</p>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm">Revoke</Button>
-            </div>
+            ))}
           </div>
-          <Button variant="outline" className="w-full mt-4">
+          <Button 
+            variant="outline" 
+            className="w-full mt-4"
+            onClick={handleSignOutAllSessions}
+          >
             Sign Out All Other Sessions
           </Button>
         </CardContent>
@@ -177,7 +361,7 @@ const SecuritySettings = () => {
                 Permanently delete your account and all data
               </p>
             </div>
-            <Button variant="destructive">Delete Account</Button>
+            <Button variant="destructive" onClick={handleDeleteAccount}>Delete Account</Button>
           </div>
         </CardContent>
       </Card>

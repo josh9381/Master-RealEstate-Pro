@@ -1,17 +1,28 @@
-import { Zap, Plus, Clock, Target, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Zap, Plus, Clock, Target, CheckCircle, X, Edit2, Trash2, Pause, Play, Filter as FilterIcon, ArrowUpDown, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
+import { useToast } from '@/hooks/useToast';
 
 const AutomationRules = () => {
-  const automationRules = [
+  const { toast } = useToast();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'executions' | 'lastRun'>('name');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'paused'>('all');
+  const [newRuleName, setNewRuleName] = useState('');
+  const [newRuleDescription, setNewRuleDescription] = useState('');
+
+  const [automationRules, setAutomationRules] = useState([
     {
       id: 1,
       name: 'Welcome New Leads',
       description: 'Send welcome email when lead is created',
       trigger: 'Lead Created',
       actions: ['Send Email', 'Create Task'],
-      status: 'active',
+      status: 'active' as const,
       executions: 1234,
       lastRun: '2 min ago',
     },
@@ -21,7 +32,7 @@ const AutomationRules = () => {
       description: 'Create task when lead status changes to qualified',
       trigger: 'Status Changed',
       actions: ['Create Task', 'Assign User'],
-      status: 'active',
+      status: 'active' as const,
       executions: 567,
       lastRun: '15 min ago',
     },
@@ -31,14 +42,139 @@ const AutomationRules = () => {
       description: 'Send reminder if no activity for 7 days',
       trigger: 'Schedule',
       actions: ['Send Notification'],
-      status: 'paused',
+      status: 'paused' as const,
       executions: 89,
       lastRun: '2 days ago',
     },
-  ];
+  ]);
+
+  const toggleRuleStatus = (ruleId: number) => {
+    setAutomationRules(automationRules.map(rule => 
+      rule.id === ruleId 
+        ? { ...rule, status: rule.status === 'active' ? 'paused' as const : 'active' as const }
+        : rule
+    ));
+    const rule = automationRules.find(r => r.id === ruleId);
+    if (rule) {
+      toast.success(`Rule ${rule.status === 'active' ? 'paused' : 'activated'}`);
+    }
+  };
+
+  const deleteRule = (ruleId: number) => {
+    setAutomationRules(automationRules.filter(rule => rule.id !== ruleId));
+    toast.success('Rule deleted successfully');
+  };
+
+  const editRule = (_ruleId: number) => {
+    toast.info('Edit functionality - opens rule editor');
+  };
+
+  const createRule = () => {
+    if (!newRuleName.trim()) {
+      toast.error('Please enter a rule name');
+      return;
+    }
+    const newRule = {
+      id: Math.max(...automationRules.map(r => r.id)) + 1,
+      name: newRuleName,
+      description: newRuleDescription || 'No description',
+      trigger: 'Lead Created',
+      actions: ['Send Email'],
+      status: 'active' as const,
+      executions: 0,
+      lastRun: 'Never',
+    };
+    setAutomationRules([...automationRules, newRule]);
+    toast.success('Rule created successfully');
+    setShowCreateModal(false);
+    setNewRuleName('');
+    setNewRuleDescription('');
+  };
+
+  const applyTemplate = (templateName: string) => {
+    toast.success(`Applied template: ${templateName}`);
+    setShowCreateModal(true);
+    setNewRuleName(templateName);
+  };
+
+  const handleSort = () => {
+    const nextSort = sortBy === 'name' ? 'executions' : sortBy === 'executions' ? 'lastRun' : 'name';
+    setSortBy(nextSort);
+    toast.info(`Sorted by: ${nextSort}`);
+  };
+
+  const handleFilter = () => {
+    setShowFilters(!showFilters);
+  };
+
+  const exportRules = () => {
+    toast.success('Rules exported to CSV');
+  };
+
+  const filteredRules = filterStatus === 'all' 
+    ? automationRules 
+    : automationRules.filter(rule => rule.status === filterStatus);
 
   return (
     <div className="space-y-6">
+      {/* Create Rule Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Create New Rule</CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setNewRuleName('');
+                    setNewRuleDescription('');
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Rule Name</label>
+                <Input 
+                  value={newRuleName}
+                  onChange={(e) => setNewRuleName(e.target.value)}
+                  placeholder="Enter rule name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Description</label>
+                <Input 
+                  value={newRuleDescription}
+                  onChange={(e) => setNewRuleDescription(e.target.value)}
+                  placeholder="Enter description"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={createRule}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Rule
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setNewRuleName('');
+                    setNewRuleDescription('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Automation Rules</h1>
@@ -46,10 +182,16 @@ const AutomationRules = () => {
             Automate your workflow with custom rules
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Rule
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportRules}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Rule
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -105,14 +247,48 @@ const AutomationRules = () => {
               <CardDescription>Manage your automated workflows</CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">Filter</Button>
-              <Button variant="outline" size="sm">Sort</Button>
+              <Button variant="outline" size="sm" onClick={handleFilter}>
+                <FilterIcon className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSort}>
+                <ArrowUpDown className="h-4 w-4 mr-2" />
+                Sort
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {showFilters && (
+            <div className="mb-4 p-4 border rounded-lg">
+              <p className="text-sm font-medium mb-2">Filter by Status:</p>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant={filterStatus === 'all' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('all')}
+                >
+                  All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={filterStatus === 'active' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('active')}
+                >
+                  Active
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={filterStatus === 'paused' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('paused')}
+                >
+                  Paused
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="space-y-4">
-            {automationRules.map((rule) => (
+            {filteredRules.map((rule) => (
               <div key={rule.id} className="p-4 border rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -141,11 +317,38 @@ const AutomationRules = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    <Button variant="outline" size="sm">Edit</Button>
-                    <Button variant="outline" size="sm">
-                      {rule.status === 'active' ? 'Pause' : 'Activate'}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => editRule(rule.id)}
+                    >
+                      <Edit2 className="h-4 w-4 mr-1" />
+                      Edit
                     </Button>
-                    <Button variant="ghost" size="sm">Delete</Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => toggleRuleStatus(rule.id)}
+                    >
+                      {rule.status === 'active' ? (
+                        <>
+                          <Pause className="h-4 w-4 mr-1" />
+                          Pause
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-1" />
+                          Activate
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => deleteRule(rule.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -202,7 +405,13 @@ const AutomationRules = () => {
                 <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{template.uses} uses</span>
-                  <Button variant="outline" size="sm">Use Template</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => applyTemplate(template.name)}
+                  >
+                    Use Template
+                  </Button>
                 </div>
               </div>
             ))}
