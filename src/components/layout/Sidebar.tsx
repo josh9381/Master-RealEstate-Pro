@@ -1,6 +1,7 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUIStore } from '@/store/uiStore'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
 import {
   LayoutDashboard,
   Users,
@@ -15,6 +16,9 @@ import {
   CreditCard,
   HelpCircle,
   X,
+  User,
+  LogOut,
+  ChevronUp,
 } from 'lucide-react'
 
 const navigation = [
@@ -34,7 +38,9 @@ const navigation = [
 
 export function Sidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   if (!sidebarOpen) return null
 
@@ -94,12 +100,64 @@ export function Sidebar() {
 
         {/* User section */}
         <div className="border-t p-4">
-          <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">User Name</p>
-              <p className="text-xs text-muted-foreground">user@example.com</p>
-            </div>
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center space-x-3 w-full rounded-lg p-2 hover:bg-accent transition-colors"
+            >
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium">User Name</p>
+                <p className="text-xs text-muted-foreground">user@example.com</p>
+              </div>
+              <ChevronUp className={cn(
+                "h-4 w-4 transition-transform",
+                showProfileMenu && "rotate-180"
+              )} />
+            </button>
+
+            {/* Profile Menu */}
+            {showProfileMenu && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border rounded-lg shadow-lg">
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false)
+                      navigate('/settings/profile')
+                      setSidebarOpen(false)
+                    }}
+                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>Profile Settings</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false)
+                      navigate('/settings')
+                      setSidebarOpen(false)
+                    }}
+                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </button>
+                  <div className="border-t my-2" />
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false)
+                      navigate('/auth/login')
+                    }}
+                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent text-red-600"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </aside>

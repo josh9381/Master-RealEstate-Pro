@@ -145,6 +145,7 @@ function Dashboard() {
   const navigate = useNavigate()
   const [dateRange, setDateRange] = useState('30d')
   const [refreshing, setRefreshing] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
 
   const handleRefresh = () => {
     setRefreshing(true)
@@ -177,7 +178,7 @@ function Dashboard() {
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
@@ -279,7 +280,7 @@ function Dashboard() {
               <CardTitle>Revenue & Leads Trend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">6-month overview</p>
             </div>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/analytics')}>
               <ArrowUpRight className="h-4 w-4" />
             </Button>
           </CardHeader>

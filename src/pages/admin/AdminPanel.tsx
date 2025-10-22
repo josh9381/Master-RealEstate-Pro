@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Users, Shield, Database, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/useToast';
 import {
   Table,
   TableBody,
@@ -12,6 +15,9 @@ import {
 } from '@/components/ui/Table';
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const users = [
     {
       id: 1,
@@ -56,12 +62,56 @@ const AdminPanel = () => {
 
   return (
     <div className="space-y-6">
+      {/* Invite User Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle>Invite New User</CardTitle>
+              <CardDescription>Send an invitation to join the team</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Email</label>
+                <input
+                  type="email"
+                  placeholder="user@company.com"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Role</label>
+                <select className="w-full px-3 py-2 border rounded-lg">
+                  <option>Sales Rep</option>
+                  <option>Manager</option>
+                  <option>Admin</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1" 
+                  onClick={() => {
+                    toast.success('Invitation sent successfully');
+                    setShowInviteModal(false);
+                  }}
+                >
+                  Send Invite
+                </Button>
+                <Button variant="outline" onClick={() => setShowInviteModal(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Admin Panel</h1>
           <p className="text-muted-foreground mt-2">System administration and management</p>
         </div>
-        <Button variant="outline">System Settings</Button>
+        <Button variant="outline" onClick={() => navigate('/admin/system-settings')}>System Settings</Button>
       </div>
 
       {/* Stats */}
@@ -116,7 +166,7 @@ const AdminPanel = () => {
               <CardTitle>User Management</CardTitle>
               <CardDescription>Manage user accounts and permissions</CardDescription>
             </div>
-            <Button>Invite User</Button>
+            <Button onClick={() => setShowInviteModal(true)}>Invite User</Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -147,10 +197,10 @@ const AdminPanel = () => {
                   <TableCell>{user.lastLogin}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/users/${user.id}`)}>
                         Edit
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => toast.info('Feature coming soon')}>
                         Disable
                       </Button>
                     </div>
@@ -197,7 +247,7 @@ const AdminPanel = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Last backup: 2 hours ago
             </p>
-            <Button className="w-full">Create Backup Now</Button>
+            <Button className="w-full" onClick={() => navigate('/admin/backup-restore')}>Create Backup Now</Button>
           </CardContent>
         </Card>
 
@@ -210,7 +260,7 @@ const AdminPanel = () => {
             <p className="text-sm text-muted-foreground mb-4">
               12,456 entries in last 24h
             </p>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => navigate('/admin/debug-console')}>
               View Logs
             </Button>
           </CardContent>
@@ -225,7 +275,7 @@ const AdminPanel = () => {
             <p className="text-sm text-muted-foreground mb-4">
               8 active features
             </p>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => navigate('/admin/feature-flags')}>
               Manage Flags
             </Button>
           </CardContent>
