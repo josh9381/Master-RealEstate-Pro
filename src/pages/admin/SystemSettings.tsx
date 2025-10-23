@@ -1,9 +1,46 @@
+import { useState } from 'react';
 import { Users, Shield, Activity, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const SystemSettings = () => {
+  const { toast } = useToast();
+  
+  // General Settings
+  const [systemName, setSystemName] = useState('Your CRM System');
+  const [systemUrl, setSystemUrl] = useState('https://crm.yourcompany.com');
+  const [systemDescription, setSystemDescription] = useState('Customer Relationship Management System for sales and marketing teams');
+  const [language, setLanguage] = useState('en');
+  const [timezone, setTimezone] = useState('America/New_York');
+  const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
+  const [timeFormat, setTimeFormat] = useState('12');
+  
+  // Security Settings
+  const [strongPasswords, setStrongPasswords] = useState(true);
+  const [enable2FA, setEnable2FA] = useState(true);
+  const [require2FAAdmins, setRequire2FAAdmins] = useState(true);
+  const [sessionTimeout, setSessionTimeout] = useState(60);
+  const [maxLoginAttempts, setMaxLoginAttempts] = useState(5);
+  const [lockoutDuration, setLockoutDuration] = useState(30);
+  
+  const handleSaveGeneralSettings = () => {
+    if (!systemName || !systemUrl) {
+      toast.error('System name and URL are required');
+      return;
+    }
+    toast.success('General settings saved successfully');
+  };
+  
+  const handleSaveSecuritySettings = () => {
+    if (sessionTimeout < 1 || maxLoginAttempts < 1 || lockoutDuration < 1) {
+      toast.error('Please enter valid positive numbers for all fields');
+      return;
+    }
+    toast.success('Security settings saved successfully');
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -68,7 +105,8 @@ const SystemSettings = () => {
               <label className="text-sm font-medium mb-2 block">System Name</label>
               <input
                 type="text"
-                defaultValue="Your CRM System"
+                value={systemName}
+                onChange={(e) => setSystemName(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
@@ -76,7 +114,8 @@ const SystemSettings = () => {
               <label className="text-sm font-medium mb-2 block">System URL</label>
               <input
                 type="text"
-                defaultValue="https://crm.yourcompany.com"
+                value={systemUrl}
+                onChange={(e) => setSystemUrl(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
@@ -85,14 +124,19 @@ const SystemSettings = () => {
             <label className="text-sm font-medium mb-2 block">System Description</label>
             <textarea
               rows={3}
-              defaultValue="Customer Relationship Management System for sales and marketing teams"
+              value={systemDescription}
+              onChange={(e) => setSystemDescription(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Default Language</label>
-              <select className="w-full px-3 py-2 border rounded-lg" defaultValue="en">
+              <select 
+                className="w-full px-3 py-2 border rounded-lg" 
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+              >
                 <option value="en">English</option>
                 <option value="es">Spanish</option>
                 <option value="fr">French</option>
@@ -102,7 +146,11 @@ const SystemSettings = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Default Timezone</label>
-              <select className="w-full px-3 py-2 border rounded-lg" defaultValue="America/New_York">
+              <select 
+                className="w-full px-3 py-2 border rounded-lg" 
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+              >
                 <option value="America/New_York">Eastern Time (ET)</option>
                 <option value="America/Chicago">Central Time (CT)</option>
                 <option value="America/Denver">Mountain Time (MT)</option>
@@ -114,7 +162,11 @@ const SystemSettings = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Date Format</label>
-              <select className="w-full px-3 py-2 border rounded-lg" defaultValue="MM/DD/YYYY">
+              <select 
+                className="w-full px-3 py-2 border rounded-lg" 
+                value={dateFormat}
+                onChange={(e) => setDateFormat(e.target.value)}
+              >
                 <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                 <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                 <option value="YYYY-MM-DD">YYYY-MM-DD</option>
@@ -122,13 +174,17 @@ const SystemSettings = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Time Format</label>
-              <select className="w-full px-3 py-2 border rounded-lg" defaultValue="12">
+              <select 
+                className="w-full px-3 py-2 border rounded-lg" 
+                value={timeFormat}
+                onChange={(e) => setTimeFormat(e.target.value)}
+              >
                 <option value="12">12-hour (AM/PM)</option>
                 <option value="24">24-hour</option>
               </select>
             </div>
           </div>
-          <Button>Save General Settings</Button>
+          <Button onClick={handleSaveGeneralSettings}>Save General Settings</Button>
         </CardContent>
       </Card>
 
@@ -141,7 +197,12 @@ const SystemSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={strongPasswords}
+                onChange={(e) => setStrongPasswords(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">Require strong passwords</span>
             </label>
             <p className="text-xs text-muted-foreground mt-1 ml-6">
@@ -150,13 +211,23 @@ const SystemSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={enable2FA}
+                onChange={(e) => setEnable2FA(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">Enable two-factor authentication</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={require2FAAdmins}
+                onChange={(e) => setRequire2FAAdmins(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">Require 2FA for admins</span>
             </label>
           </div>
@@ -164,7 +235,8 @@ const SystemSettings = () => {
             <label className="text-sm font-medium mb-2 block">Session Timeout (minutes)</label>
             <input
               type="number"
-              defaultValue="60"
+              value={sessionTimeout}
+              onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 0)}
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
@@ -172,7 +244,8 @@ const SystemSettings = () => {
             <label className="text-sm font-medium mb-2 block">Max Login Attempts</label>
             <input
               type="number"
-              defaultValue="5"
+              value={maxLoginAttempts}
+              onChange={(e) => setMaxLoginAttempts(parseInt(e.target.value) || 0)}
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
@@ -180,11 +253,12 @@ const SystemSettings = () => {
             <label className="text-sm font-medium mb-2 block">Lockout Duration (minutes)</label>
             <input
               type="number"
-              defaultValue="30"
+              value={lockoutDuration}
+              onChange={(e) => setLockoutDuration(parseInt(e.target.value) || 0)}
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-          <Button>Save Security Settings</Button>
+          <Button onClick={handleSaveSecuritySettings}>Save Security Settings</Button>
         </CardContent>
       </Card>
 

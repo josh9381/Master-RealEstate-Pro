@@ -1,17 +1,39 @@
+import { useState } from 'react';
 import { Activity, Database, Cpu, HardDrive, Network, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const HealthCheckDashboard = () => {
-  const services = [
+  const { toast } = useToast();
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [services, setServices] = useState([
     { name: 'Database', status: 'healthy', latency: '12ms', uptime: '99.9%' },
     { name: 'API Server', status: 'healthy', latency: '45ms', uptime: '99.8%' },
     { name: 'Cache (Redis)', status: 'healthy', latency: '2ms', uptime: '100%' },
     { name: 'Email Service', status: 'degraded', latency: '234ms', uptime: '98.5%' },
     { name: 'Storage (S3)', status: 'healthy', latency: '67ms', uptime: '99.95%' },
     { name: 'Search (Elasticsearch)', status: 'down', latency: 'N/A', uptime: '85.2%' },
-  ];
+  ]);
+
+  const handleRefresh = () => {
+    toast.info('Refreshing health checks...');
+    
+    // Simulate health check refresh with slightly updated latency values
+    setTimeout(() => {
+      setServices(services.map(service => {
+        if (service.latency !== 'N/A') {
+          const currentLatency = parseInt(service.latency);
+          const newLatency = currentLatency + Math.floor(Math.random() * 10 - 5); // +/- 5ms variation
+          return { ...service, latency: `${Math.max(1, newLatency)}ms` };
+        }
+        return service;
+      }));
+      setLastRefresh(new Date());
+      toast.success('Health checks refreshed successfully');
+    }, 1500);
+  };
 
   return (
     <div className="space-y-6">
@@ -19,10 +41,10 @@ const HealthCheckDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">System Health Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-            Monitor system status and performance
+            Monitor system status and performance • Last updated: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
-        <Button>
+        <Button onClick={handleRefresh}>
           <Activity className="h-4 w-4 mr-2" />
           Refresh
         </Button>

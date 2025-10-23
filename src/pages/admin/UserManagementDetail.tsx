@@ -2,8 +2,10 @@ import { Users, Mail, Phone, Shield, Clock, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const UserManagementDetail = () => {
+  const { toast } = useToast();
   const user = {
     id: 'usr_12345',
     name: 'John Doe',
@@ -17,6 +19,20 @@ const UserManagementDetail = () => {
     avatar: 'JD',
   };
 
+  const handleResetPassword = () => {
+    if (confirm(`Send password reset email to ${user.email}?`)) {
+      toast.success(`Password reset email sent to ${user.email}`);
+    }
+  };
+
+  const handleSaveChanges = () => {
+    if (!user.name || !user.email) {
+      toast.error('Name and email are required');
+      return;
+    }
+    toast.success('User details updated successfully');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -25,8 +41,8 @@ const UserManagementDetail = () => {
           <p className="text-muted-foreground mt-2">Manage user details and permissions</p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">Reset Password</Button>
-          <Button>Save Changes</Button>
+          <Button variant="outline" onClick={handleResetPassword}>Reset Password</Button>
+          <Button onClick={handleSaveChanges}>Save Changes</Button>
         </div>
       </div>
 

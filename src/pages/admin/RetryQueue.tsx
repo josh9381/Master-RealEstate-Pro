@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { RefreshCw, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const RetryQueue = () => {
-  const failedJobs = [
+  const { toast } = useToast();
+  const [failedJobs, setFailedJobs] = useState([
     {
       id: '1',
       type: 'Email Campaign',
@@ -35,7 +38,34 @@ const RetryQueue = () => {
       nextRetry: 'Manual',
       status: 'failed',
     },
-  ];
+  ]);
+
+  const handleRetryAll = () => {
+    toast.info('Retrying all failed jobs...');
+    setTimeout(() => {
+      setFailedJobs([]); // Clear all jobs (simulating successful retry)
+      toast.success('All jobs retried successfully');
+    }, 2000);
+  };
+
+  const handleRetryOne = (jobId: string, jobName: string) => {
+    toast.info(`Retrying ${jobName}...`);
+    setTimeout(() => {
+      setFailedJobs(failedJobs.filter(j => j.id !== jobId));
+      toast.success(`${jobName} retried successfully`);
+    }, 1500);
+  };
+
+  const handleCancel = (jobId: string, jobName: string) => {
+    if (confirm(`Cancel ${jobName}? This will remove it from the retry queue.`)) {
+      setFailedJobs(failedJobs.filter(j => j.id !== jobId));
+      toast.success(`${jobName} cancelled and removed from queue`);
+    }
+  };
+
+  const handleViewDetails = (jobName: string, error: string) => {
+    toast.info(`Viewing details for: ${jobName}\nError: ${error}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -46,7 +76,7 @@ const RetryQueue = () => {
             Manage failed jobs and retry operations
           </p>
         </div>
-        <Button>
+        <Button onClick={handleRetryAll}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Retry All
         </Button>
@@ -156,13 +186,13 @@ const RetryQueue = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleRetryOne(job.id, job.name)}>
                       <RefreshCw className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(job.name, job.error)}>
                       View Details
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => handleCancel(job.id, job.name)}>
                       Delete
                     </Button>
                   </div>

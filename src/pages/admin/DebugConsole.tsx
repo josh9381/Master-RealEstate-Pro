@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { Terminal, AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const DebugConsole = () => {
-  const logs = [
+  const { toast } = useToast();
+  const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const [logs, setLogs] = useState([
     {
       id: 1,
       timestamp: '2024-01-15 14:32:15',
@@ -47,7 +51,40 @@ const DebugConsole = () => {
       message: 'User john.doe@company.com logged in from 192.168.1.1',
       source: 'AuthService',
     },
-  ];
+  ]);
+
+  const handleClearLogs = () => {
+    if (confirm('Are you sure you want to clear all logs? This cannot be undone.')) {
+      setLogs([]);
+      toast.success('All logs cleared successfully');
+    }
+  };
+
+  const handleExportLogs = () => {
+    toast.info('Exporting logs...');
+    setTimeout(() => {
+      const logText = logs.map(log => 
+        `[${log.level.toUpperCase()}] ${log.timestamp} | ${log.source} | ${log.message}`
+      ).join('\n');
+      
+      // Create downloadable file (simulated)
+      const blob = new Blob([logText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `system-logs-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Logs exported successfully');
+    }, 500);
+  };
+
+  const filteredLogs = selectedFilter === 'all' 
+    ? logs 
+    : logs.filter(log => log.level === selectedFilter);
 
   const getLogIcon = (level: string) => {
     switch (level) {
@@ -85,8 +122,8 @@ const DebugConsole = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">Clear Logs</Button>
-          <Button variant="outline">Export Logs</Button>
+          <Button variant="outline" onClick={handleClearLogs}>Clear Logs</Button>
+          <Button variant="outline" onClick={handleExportLogs}>Export Logs</Button>
         </div>
       </div>
 
@@ -138,12 +175,16 @@ const DebugConsole = () => {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4">
-            <select className="px-4 py-2 border rounded-md">
-              <option>All Levels</option>
-              <option>Error</option>
-              <option>Warning</option>
-              <option>Info</option>
-              <option>Success</option>
+            <select 
+              className="px-4 py-2 border rounded-md"
+              value={selectedFilter}
+              onChange={(e) => setSelectedFilter(e.target.value)}
+            >
+              <option value="all">All Levels</option>
+              <option value="error">Error</option>
+              <option value="warning">Warning</option>
+              <option value="info">Info</option>
+              <option value="success">Success</option>
             </select>
             <select className="px-4 py-2 border rounded-md">
               <option>All Sources</option>
@@ -159,7 +200,7 @@ const DebugConsole = () => {
               placeholder="Search logs..."
               className="flex-1 px-4 py-2 border rounded-md"
             />
-            <Button>Apply Filters</Button>
+            <Button onClick={() => toast.info('Filters applied')}>Apply Filters</Button>
           </div>
         </CardContent>
       </Card>
@@ -180,7 +221,7 @@ const DebugConsole = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 font-mono text-sm">
-            {logs.map((log) => (
+            {filteredLogs.map((log) => (
               <div
                 key={log.id}
                 className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-accent"
@@ -189,7 +230,7 @@ const DebugConsole = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-1">
                     <span className="text-xs text-muted-foreground">{log.timestamp}</span>
-                    <Badge variant={getLogBadgeVariant(log.level) as any} className="text-xs">
+                    <Badge variant={getLogBadgeVariant(log.level) as 'default' | 'destructive' | 'warning' | 'success'} className="text-xs">
                       {log.level.toUpperCase()}
                     </Badge>
                     <Badge variant="outline" className="text-xs">

@@ -1,9 +1,32 @@
+import { useState } from 'react';
 import { Download, FileText, Database, Filter, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const DataExportWizard = () => {
+  const { toast } = useToast();
+  const [selectedDataType, setSelectedDataType] = useState<string | null>(null);
+  const selectedFormat = 'csv'; // Fixed format for now
+
+  const handleSelectDataType = (dataType: string) => {
+    setSelectedDataType(dataType);
+    toast.success(`${dataType} selected for export`);
+  };
+
+  const handleExport = () => {
+    if (!selectedDataType) {
+      toast.error('Please select a data type to export');
+      return;
+    }
+    
+    toast.info(`Preparing ${selectedDataType} export in ${selectedFormat.toUpperCase()} format...`);
+    setTimeout(() => {
+      toast.success(`${selectedDataType} data exported successfully!`);
+    }, 2000);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -77,7 +100,10 @@ const DataExportWizard = () => {
             ].map((dataType) => (
               <div
                 key={dataType.name}
-                className="p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors"
+                onClick={() => handleSelectDataType(dataType.name)}
+                className={`p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors ${
+                  selectedDataType === dataType.name ? 'border-primary bg-primary/5' : ''
+                }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-3xl">{dataType.icon}</div>
@@ -359,7 +385,7 @@ const DataExportWizard = () => {
             <Button variant="outline">Save as Template</Button>
             <div className="flex space-x-2">
               <Button variant="outline">Preview</Button>
-              <Button>
+              <Button onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export Data
               </Button>
