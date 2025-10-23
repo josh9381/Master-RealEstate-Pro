@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { Database, Download, Upload, RefreshCw, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const BackupRestore = () => {
-  const backupHistory = [
+  const { toast } = useToast();
+  const [backupHistory, setBackupHistory] = useState([
     {
       id: 1,
       name: 'Full System Backup',
@@ -37,7 +40,54 @@ const BackupRestore = () => {
       type: 'automatic',
       status: 'completed',
     },
-  ];
+  ]);
+
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
+  const [backupFrequency, setBackupFrequency] = useState('Daily');
+  const [backupTime, setBackupTime] = useState('03:00');
+  const [retentionPeriod, setRetentionPeriod] = useState('Keep last 7 backups');
+
+  const handleCreateBackup = () => {
+    const newBackup = {
+      id: backupHistory.length + 1,
+      name: 'Manual Backup',
+      size: '2.4 GB',
+      date: new Date().toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: '2-digit', 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true 
+      }),
+      type: 'manual' as const,
+      status: 'completed' as const,
+    };
+    setBackupHistory([newBackup, ...backupHistory]);
+    toast.success('Backup created successfully');
+  };
+
+  const handleRestore = (backupId: number) => {
+    if (confirm('Are you sure you want to restore this backup? This will replace current data.')) {
+      toast.success(`Restoring backup #${backupId}...`);
+      setTimeout(() => {
+        toast.success('Backup restored successfully');
+      }, 2000);
+    }
+  };
+
+  const handleDownload = (_backupId: number, backupName: string) => {
+    toast.info(`Downloading ${backupName}...`);
+    setTimeout(() => {
+      toast.success('Backup downloaded successfully');
+    }, 1500);
+  };
+
+  const handleDelete = (_backupId: number) => {
+    if (confirm('Are you sure you want to delete this backup?')) {
+      toast.success('Backup deleted successfully (feature not implemented in demo)');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -61,7 +111,7 @@ const BackupRestore = () => {
             <CardDescription>Generate a new system backup</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full">
+            <Button className="w-full" onClick={handleCreateBackup}>
               <Database className="h-4 w-4 mr-2" />
               Backup Now
             </Button>
@@ -79,7 +129,11 @@ const BackupRestore = () => {
             <CardDescription>Restore from previous backup</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => backupHistory.length > 0 && handleRestore(backupHistory[0].id)}
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               Restore
             </Button>
@@ -97,7 +151,11 @@ const BackupRestore = () => {
             <CardDescription>Download backup to local storage</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => backupHistory.length > 0 && handleDownload(backupHistory[0].id, backupHistory[0].name)}
+            >
               <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
@@ -120,7 +178,15 @@ const BackupRestore = () => {
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" defaultChecked className="sr-only peer" />
+              <input 
+                type="checkbox" 
+                checked={autoBackupEnabled}
+                onChange={(e) => {
+                  setAutoBackupEnabled(e.target.checked);
+                  toast.success(e.target.checked ? 'Automatic backups enabled' : 'Automatic backups disabled');
+                }}
+                className="sr-only peer" 
+              />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
@@ -128,7 +194,11 @@ const BackupRestore = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Backup Frequency</label>
-              <select className="w-full p-2 border rounded-md">
+              <select 
+                className="w-full p-2 border rounded-md"
+                value={backupFrequency}
+                onChange={(e) => setBackupFrequency(e.target.value)}
+              >
                 <option>Daily</option>
                 <option>Weekly</option>
                 <option>Monthly</option>
@@ -136,13 +206,22 @@ const BackupRestore = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Backup Time</label>
-              <input type="time" defaultValue="03:00" className="w-full p-2 border rounded-md" />
+              <input 
+                type="time" 
+                value={backupTime}
+                onChange={(e) => setBackupTime(e.target.value)}
+                className="w-full p-2 border rounded-md" 
+              />
             </div>
           </div>
 
           <div>
             <label className="text-sm font-medium mb-2 block">Retention Period</label>
-            <select className="w-full p-2 border rounded-md">
+            <select 
+              className="w-full p-2 border rounded-md"
+              value={retentionPeriod}
+              onChange={(e) => setRetentionPeriod(e.target.value)}
+            >
               <option>Keep last 7 backups</option>
               <option>Keep last 14 backups</option>
               <option>Keep last 30 backups</option>
@@ -196,11 +275,19 @@ const BackupRestore = () => {
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDownload(backup.id, backup.name)}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleRestore(backup.id)}
+                  >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Restore
                   </Button>

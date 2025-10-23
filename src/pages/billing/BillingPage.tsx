@@ -1,4 +1,5 @@
-import { CreditCard, Download, TrendingUp, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { CreditCard, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -10,8 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/Table';
+import { useToast } from '@/hooks/useToast';
 
 const BillingPage = () => {
+  const { toast } = useToast();
   const invoices = [
     {
       id: 'INV-2024-001',
@@ -35,6 +38,48 @@ const BillingPage = () => {
       period: 'Nov 2023',
     },
   ];
+
+  const [currentPlan, setCurrentPlan] = useState('Professional');
+
+  const handleChangePlan = () => {
+    toast.info('Opening plan selection...');
+  };
+
+  const handleCancelSubscription = () => {
+    if (confirm('Are you sure you want to cancel your subscription? This will take effect at the end of your current billing period.')) {
+      toast.success('Subscription cancellation scheduled');
+    }
+  };
+
+  const handleAddPaymentMethod = () => {
+    toast.info('Opening payment method form...');
+  };
+
+  const handleEditPayment = () => {
+    toast.info('Opening payment method editor...');
+  };
+
+  const handleRemovePayment = () => {
+    if (confirm('Are you sure you want to remove this payment method?')) {
+      toast.success('Payment method removed');
+    }
+  };
+
+  const handleDownloadInvoice = (invoiceId: string) => {
+    toast.info(`Downloading invoice ${invoiceId}...`);
+    setTimeout(() => {
+      toast.success('Invoice downloaded successfully');
+    }, 1000);
+  };
+
+  const handleUpgradePlan = (planName: string) => {
+    if (planName === currentPlan) return;
+    
+    if (confirm(`Upgrade to ${planName} plan? Your new rate will be reflected in your next bill.`)) {
+      setCurrentPlan(planName);
+      toast.success(`Successfully upgraded to ${planName} plan!`);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -74,8 +119,8 @@ const BillingPage = () => {
               </div>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline">Change Plan</Button>
-              <Button variant="destructive">Cancel Subscription</Button>
+              <Button variant="outline" onClick={handleChangePlan}>Change Plan</Button>
+              <Button variant="destructive" onClick={handleCancelSubscription}>Cancel Subscription</Button>
             </div>
           </div>
         </CardContent>
@@ -137,7 +182,7 @@ const BillingPage = () => {
               <CardTitle>Payment Method</CardTitle>
               <CardDescription>Manage your payment information</CardDescription>
             </div>
-            <Button variant="outline">Add Payment Method</Button>
+            <Button variant="outline" onClick={handleAddPaymentMethod}>Add Payment Method</Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -149,10 +194,10 @@ const BillingPage = () => {
             </div>
             <Badge variant="success">Default</Badge>
             <div className="flex space-x-2">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={handleEditPayment}>
                 Edit
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={handleRemovePayment}>
                 Remove
               </Button>
             </div>
@@ -189,7 +234,7 @@ const BillingPage = () => {
                     <Badge variant="success">{invoice.status}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => handleDownloadInvoice(invoice.id)}>
                       <Download className="h-4 w-4 mr-2" />
                       Download
                     </Button>
@@ -261,6 +306,7 @@ const BillingPage = () => {
                   className="w-full"
                   variant={plan.current ? 'secondary' : 'default'}
                   disabled={plan.current}
+                  onClick={() => handleUpgradePlan(plan.name)}
                 >
                   {plan.current ? 'Current Plan' : 'Upgrade'}
                 </Button>

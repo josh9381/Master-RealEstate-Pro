@@ -1,9 +1,109 @@
-import { Database, Zap, Trash2, RefreshCw, FileText, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { Database, Zap, RefreshCw, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
 
 const DatabaseMaintenance = () => {
+  const { toast } = useToast();
+  const [vacuumFull, setVacuumFull] = useState(true);
+  const [analyze, setAnalyze] = useState(true);
+  const [backupSchedule, setBackupSchedule] = useState('Daily at 2:00 AM');
+  const [retentionPeriod, setRetentionPeriod] = useState('7 days');
+
+  const handleOptimize = () => {
+    toast.info('Optimizing database...');
+    setTimeout(() => {
+      toast.success('Database optimized successfully');
+    }, 2000);
+  };
+
+  const handleReindex = () => {
+    toast.info('Reindexing tables...');
+    setTimeout(() => {
+      toast.success('All tables reindexed successfully');
+    }, 2500);
+  };
+
+  const handleBackup = () => {
+    toast.info('Creating database backup...');
+    setTimeout(() => {
+      toast.success('Backup created successfully');
+    }, 1500);
+  };
+
+  const handleVacuum = () => {
+    const options = [];
+    if (vacuumFull) options.push('FULL');
+    if (analyze) options.push('ANALYZE');
+    
+    toast.info(`Running VACUUM ${options.join(' + ')}...`);
+    setTimeout(() => {
+      toast.success('Vacuum completed successfully');
+    }, 3000);
+  };
+
+  const handleReindexAll = () => {
+    toast.info('Reindexing all tables...');
+    setTimeout(() => {
+      toast.success('All indexes rebuilt successfully');
+    }, 2500);
+  };
+
+  const handleCluster = () => {
+    if (confirm('This will lock tables and may take significant time. Continue?')) {
+      toast.info('Clustering tables...');
+      setTimeout(() => {
+        toast.success('Tables clustered successfully');
+      }, 3500);
+    }
+  };
+
+  const handleOptimizeTable = (tableName: string) => {
+    toast.info(`Optimizing ${tableName} table...`);
+    setTimeout(() => {
+      toast.success(`Table ${tableName} optimized`);
+    }, 1500);
+  };
+
+  const handleViewDetails = (tableName: string) => {
+    toast.info(`Viewing details for ${tableName} table`);
+  };
+
+  const handleBackupNow = () => {
+    toast.info('Creating backup...');
+    setTimeout(() => {
+      toast.success('Backup created successfully');
+    }, 1500);
+  };
+
+  const handleViewHistory = () => {
+    toast.info('Opening backup history...');
+  };
+
+  const handleTruncateAll = () => {
+    if (confirm('⚠️ WARNING: This will delete ALL data from ALL tables. This cannot be undone. Are you absolutely sure?')) {
+      if (confirm('Type "DELETE ALL DATA" to confirm (just click OK for demo)')) {
+        toast.error('Truncating all tables...');
+        setTimeout(() => {
+          toast.success('All tables truncated');
+        }, 2000);
+      }
+    }
+  };
+
+  const handleDropDatabase = () => {
+    if (confirm('🚨 DANGER: This will permanently delete the ENTIRE database. This cannot be undone. Are you absolutely sure?')) {
+      if (confirm('Type "DROP DATABASE" to confirm (just click OK for demo)')) {
+        toast.error('Dropping database...');
+        setTimeout(() => {
+          toast.error('Database dropped (demo mode - not actually dropped)');
+        }, 2000);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -67,21 +167,21 @@ const DatabaseMaintenance = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <Button className="h-auto py-4 flex-col">
+            <Button className="h-auto py-4 flex-col" onClick={handleOptimize}>
               <Zap className="h-6 w-6 mb-2" />
               <span className="font-semibold">Optimize Database</span>
               <span className="text-xs text-muted-foreground mt-1">
                 Run vacuum and analyze
               </span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col">
+            <Button variant="outline" className="h-auto py-4 flex-col" onClick={handleReindex}>
               <RefreshCw className="h-6 w-6 mb-2" />
               <span className="font-semibold">Reindex Tables</span>
               <span className="text-xs text-muted-foreground mt-1">
                 Rebuild all indexes
               </span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col">
+            <Button variant="outline" className="h-auto py-4 flex-col" onClick={handleBackup}>
               <Database className="h-6 w-6 mb-2" />
               <span className="font-semibold">Backup Database</span>
               <span className="text-xs text-muted-foreground mt-1">
@@ -115,10 +215,10 @@ const DatabaseMaintenance = () => {
                   </p>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleOptimizeTable(table.name)}>
                     Optimize
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleViewDetails(table.name)}>
                     Details
                   </Button>
                 </div>
@@ -143,15 +243,25 @@ const DatabaseMaintenance = () => {
                   Reclaim storage occupied by dead tuples
                 </p>
               </div>
-              <Button variant="outline">Run Vacuum</Button>
+              <Button variant="outline" onClick={handleVacuum}>Run Vacuum</Button>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
-                <input type="checkbox" defaultChecked className="rounded" />
+                <input 
+                  type="checkbox" 
+                  checked={vacuumFull}
+                  onChange={(e) => setVacuumFull(e.target.checked)}
+                  className="rounded" 
+                />
                 <span>VACUUM FULL (locks table)</span>
               </div>
               <div className="flex items-center space-x-2">
-                <input type="checkbox" defaultChecked className="rounded" />
+                <input 
+                  type="checkbox" 
+                  checked={analyze}
+                  onChange={(e) => setAnalyze(e.target.checked)}
+                  className="rounded" 
+                />
                 <span>ANALYZE (update statistics)</span>
               </div>
             </div>
@@ -165,7 +275,7 @@ const DatabaseMaintenance = () => {
                   Rebuild indexes to remove bloat
                 </p>
               </div>
-              <Button variant="outline">Reindex All</Button>
+              <Button variant="outline" onClick={handleReindexAll}>Reindex All</Button>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Select Tables</label>
@@ -187,7 +297,7 @@ const DatabaseMaintenance = () => {
                   Physically reorder table data
                 </p>
               </div>
-              <Button variant="outline">Cluster Tables</Button>
+              <Button variant="outline" onClick={handleCluster}>Cluster Tables</Button>
             </div>
             <p className="text-xs text-orange-600">
               Warning: This operation locks the table and can take significant time
@@ -206,7 +316,11 @@ const DatabaseMaintenance = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Backup Schedule</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
+              <select 
+                className="w-full px-3 py-2 border rounded-lg"
+                value={backupSchedule}
+                onChange={(e) => setBackupSchedule(e.target.value)}
+              >
                 <option>Daily at 2:00 AM</option>
                 <option>Every 12 hours</option>
                 <option>Every 6 hours</option>
@@ -216,7 +330,11 @@ const DatabaseMaintenance = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Retention Period</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
+              <select 
+                className="w-full px-3 py-2 border rounded-lg"
+                value={retentionPeriod}
+                onChange={(e) => setRetentionPeriod(e.target.value)}
+              >
                 <option>7 days</option>
                 <option>14 days</option>
                 <option>30 days</option>
@@ -226,8 +344,8 @@ const DatabaseMaintenance = () => {
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button>Create Backup Now</Button>
-            <Button variant="outline">View Backup History</Button>
+            <Button onClick={handleBackupNow}>Create Backup Now</Button>
+            <Button variant="outline" onClick={handleViewHistory}>View Backup History</Button>
           </div>
         </CardContent>
       </Card>
@@ -301,7 +419,7 @@ const DatabaseMaintenance = () => {
                 Delete all data from all tables (structure remains)
               </p>
             </div>
-            <Button variant="destructive">Truncate All</Button>
+            <Button variant="destructive" onClick={handleTruncateAll}>Truncate All</Button>
           </div>
           <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
             <div>
@@ -310,7 +428,7 @@ const DatabaseMaintenance = () => {
                 Permanently delete the entire database
               </p>
             </div>
-            <Button variant="destructive">Drop Database</Button>
+            <Button variant="destructive" onClick={handleDropDatabase}>Drop Database</Button>
           </div>
         </CardContent>
       </Card>
