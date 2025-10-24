@@ -7,6 +7,7 @@ import leadRoutes from './routes/lead.routes'
 import tagRoutes from './routes/tag.routes'
 import noteRoutes from './routes/note.routes'
 import campaignRoutes from './routes/campaign.routes'
+import taskRoutes from './routes/task.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
@@ -74,20 +75,13 @@ app.get('/api', (req: Request, res: Response) => {
   })
 })
 
-// Mount auth routes
+// Mount routes
 app.use('/api/auth', authRoutes)
-
-// Mount lead routes
 app.use('/api/leads', leadRoutes)
-
-// Mount tag routes
 app.use('/api/tags', tagRoutes)
-
-// Mount note routes
 app.use('/api/notes', noteRoutes)
-
-// Mount campaign routes
 app.use('/api/campaigns', campaignRoutes)
+app.use('/api/tasks', taskRoutes)
 
 // 404 handler
 app.use(notFoundHandler)

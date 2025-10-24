@@ -31,6 +31,9 @@ import {
   createNote,
 } from '../controllers/note.controller';
 import { createNoteSchema, leadIdParamSchema } from '../validators/note.validator';
+import {
+  getTasksForLead,
+} from '../controllers/task.controller';
 
 const router = Router();
 
@@ -167,6 +170,17 @@ router.post(
   validateParams(leadIdParamSchema),
   validateBody(createNoteSchema),
   asyncHandler(createNote)
+);
+
+/**
+ * @route   GET /api/leads/:leadId/tasks
+ * @desc    Get all tasks for a lead
+ * @access  Private
+ */
+router.get(
+  '/:leadId/tasks',
+  validateParams(leadIdParamSchema),
+  asyncHandler(getTasksForLead)
 );
 
 export default router;
