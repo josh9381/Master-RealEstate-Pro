@@ -1,9 +1,11 @@
 import express, { Express, Request, Response } from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import rateLimit from 'express-rate-limit'
 import prisma from './config/database'
 import authRoutes from './routes/auth.routes'
+import { requestLogger } from './middleware/logger'
+import { errorHandler, notFoundHandler } from './middleware/errorHandler'
+import { generalLimiter } from './middleware/rateLimiter'
 
 // Load environment variables
 dotenv.config()
@@ -18,16 +20,15 @@ app.use(cors({
   credentials: true
 }))
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-})
-
 // Middleware
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use(limiter)
+
+// Request logging
+app.use(requestLogger)
+
+// Rate limiting (general)
+app.use(generalLimiter)
 
 // Health check endpoint
 app.get('/health', async (req: Request, res: Response) => {
@@ -71,22 +72,10 @@ app.get('/api', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes)
 
 // 404 handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found`,
-    availableRoutes: ['/health', '/api']
-  })
-})
+app.use(notFoundHandler)
 
-// Error handler
-app.use((err: Error, req: Request, res: Response, _next: unknown) => {
-  console.error('Error:', err)
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  })
-})
+// Global error handler (must be last)
+app.use(errorHandler)
 
 // Start server
 app.listen(PORT, () => {

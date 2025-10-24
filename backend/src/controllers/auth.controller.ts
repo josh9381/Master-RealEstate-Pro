@@ -1,247 +1,155 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { z } from 'zod';
 import { prisma } from '../config/database';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
-
-// Validation schemas
-const registerSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
-  lastName: z.string().min(1, 'Last name is required').max(50, 'Last name too long'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters')
-});
-
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required')
-});
-
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required')
-});
+import { ConflictError, UnauthorizedError, NotFoundError } from '../middleware/errorHandler';
 
 /**
  * Register a new user
  * POST /api/auth/register
+ * Validation handled by middleware
  */
 export async function register(req: Request, res: Response): Promise<void> {
-  try {
-    // Validate request body
-    const validatedData = registerSchema.parse(req.body);
+  const { firstName, lastName, email, password } = req.body;
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: validatedData.email }
-    });
+  // Check if user already exists
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
+  });
 
-    if (existingUser) {
-      res.status(400).json({
-        success: false,
-        error: 'User with this email already exists'
-      });
-      return;
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        email: validatedData.email,
-        password: hashedPassword,
-        role: 'USER' // Default role
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        role: true,
-        avatar: true,
-        createdAt: true
-      }
-    });
-
-    // Generate tokens
-    const accessToken = generateAccessToken(user.id, user.email, user.role);
-    const refreshToken = generateRefreshToken(user.id);
-
-    res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      data: {
-        user,
-        tokens: {
-          accessToken,
-          refreshToken
-        }
-      }
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: 'Validation error',
-        details: error.issues
-      });
-      return;
-    }
-
-    console.error('Registration error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to register user'
-    });
+  if (existingUser) {
+    throw new ConflictError('User with this email already exists');
   }
+
+  // Hash password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Create user
+  const user = await prisma.user.create({
+    data: {
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role: 'USER' // Default role
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      avatar: true,
+      createdAt: true
+    }
+  });
+
+  // Generate tokens
+  const accessToken = generateAccessToken(user.id, user.email, user.role);
+  const refreshToken = generateRefreshToken(user.id);
+
+  res.status(201).json({
+    success: true,
+    message: 'User registered successfully',
+    data: {
+      user,
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    }
+  });
 }
 
 /**
  * Login user
  * POST /api/auth/login
+ * Validation handled by middleware
  */
 export async function login(req: Request, res: Response): Promise<void> {
-  try {
-    // Validate request body
-    const validatedData = loginSchema.parse(req.body);
+  const { email, password } = req.body;
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email: validatedData.email }
-    });
+  // Find user
+  const user = await prisma.user.findUnique({
+    where: { email }
+  });
 
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
-      return;
-    }
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(validatedData.password, user.password);
-
-    if (!isPasswordValid) {
-      res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
-      return;
-    }
-
-    // Generate tokens
-    const accessToken = generateAccessToken(user.id, user.email, user.role);
-    const refreshToken = generateRefreshToken(user.id);
-
-    // Update last login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date(), lastLoginIp: req.ip }
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      data: {
-        user: {
-          id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: user.role,
-          avatar: user.avatar
-        },
-        tokens: {
-          accessToken,
-          refreshToken
-        }
-      }
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: 'Validation error',
-        details: error.issues
-      });
-      return;
-    }
-
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to login'
-    });
+  if (!user) {
+    throw new UnauthorizedError('Invalid credentials');
   }
+
+  // Check password
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordValid) {
+    throw new UnauthorizedError('Invalid credentials');
+  }
+
+  // Generate tokens
+  const accessToken = generateAccessToken(user.id, user.email, user.role);
+  const refreshToken = generateRefreshToken(user.id);
+
+  // Update last login
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date(), lastLoginIp: req.ip }
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Login successful',
+    data: {
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar
+      },
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    }
+  });
 }
 
 /**
  * Refresh access token
  * POST /api/auth/refresh
+ * Validation handled by middleware
  */
 export async function refresh(req: Request, res: Response): Promise<void> {
-  try {
-    // Validate request body
-    const validatedData = refreshSchema.parse(req.body);
+  const { refreshToken } = req.body;
 
-    // Verify refresh token
-    const payload = verifyRefreshToken(validatedData.refreshToken);
+  // Verify refresh token
+  const payload = verifyRefreshToken(refreshToken);
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        email: true,
-        role: true
-      }
-    });
-
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: 'User not found'
-      });
-      return;
+  // Get user
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: {
+      id: true,
+      email: true,
+      role: true
     }
+  });
 
-    // Generate new access token
-    const accessToken = generateAccessToken(user.id, user.email, user.role);
-
-    res.status(200).json({
-      success: true,
-      message: 'Token refreshed successfully',
-      data: {
-        accessToken
-      }
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: 'Validation error',
-        details: error.issues
-      });
-      return;
-    }
-
-    if (error instanceof Error) {
-      res.status(401).json({
-        success: false,
-        error: error.message
-      });
-      return;
-    }
-
-    console.error('Token refresh error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to refresh token'
-    });
+  if (!user) {
+    throw new UnauthorizedError('User not found');
   }
+
+  // Generate new access token
+  const accessToken = generateAccessToken(user.id, user.email, user.role);
+
+  res.status(200).json({
+    success: true,
+    message: 'Token refreshed successfully',
+    data: {
+      accessToken
+    }
+  });
 }
 
 /**
@@ -250,52 +158,36 @@ export async function refresh(req: Request, res: Response): Promise<void> {
  * Requires authentication
  */
 export async function me(req: Request, res: Response): Promise<void> {
-  try {
-    // User is attached by authenticate middleware
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-      return;
-    }
-
-    // Get full user details
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        role: true,
-        avatar: true,
-        subscriptionTier: true,
-        subscriptionId: true,
-        timezone: true,
-        language: true,
-        createdAt: true,
-        lastLoginAt: true
-      }
-    });
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: { user }
-    });
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get user information'
-    });
+  // User is attached by authenticate middleware
+  if (!req.user) {
+    throw new UnauthorizedError('Authentication required');
   }
+
+  // Get full user details
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.userId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      avatar: true,
+      subscriptionTier: true,
+      subscriptionId: true,
+      timezone: true,
+      language: true,
+      createdAt: true,
+      lastLoginAt: true
+    }
+  });
+
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+
+  res.status(200).json({
+    success: true,
+    data: { user }
+  });
 }
