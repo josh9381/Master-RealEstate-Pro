@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes'
 import leadRoutes from './routes/lead.routes'
 import tagRoutes from './routes/tag.routes'
 import noteRoutes from './routes/note.routes'
+import campaignRoutes from './routes/campaign.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
@@ -84,6 +85,9 @@ app.use('/api/tags', tagRoutes)
 
 // Mount note routes
 app.use('/api/notes', noteRoutes)
+
+// Mount campaign routes
+app.use('/api/campaigns', campaignRoutes)
 
 // 404 handler
 app.use(notFoundHandler)
