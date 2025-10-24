@@ -16,6 +16,9 @@ build/
 *.db-journal
 prisma/migrations/
 
+# Test coverage
+coverage/
+
 # Logs
 logs
 *.log

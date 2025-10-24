@@ -1,5 +1,8 @@
 import rateLimit from 'express-rate-limit';
 
+// Skip rate limiting in test environment
+const skip = () => process.env.NODE_ENV === 'test';
+
 /**
  * General API rate limiter - 100 requests per 15 minutes
  */
@@ -12,6 +15,7 @@ export const generalLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip,
 });
 
 /**
@@ -27,6 +31,7 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false, // Count all requests
+  skip,
 });
 
 /**
@@ -41,6 +46,7 @@ export const registerLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip,
 });
 
 /**
@@ -55,6 +61,7 @@ export const passwordResetLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip,
 });
 
 /**
@@ -69,4 +76,6 @@ export const sensitiveLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip,
 });
+

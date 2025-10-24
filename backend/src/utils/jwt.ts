@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { UnauthorizedError } from '../middleware/errorHandler';
 
 // JWT configuration
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET || 'your-access-token-secret-change-in-production';
@@ -55,12 +56,12 @@ export function verifyAccessToken(token: string): TokenPayload {
     return decoded;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      throw new Error('Access token has expired');
+      throw new UnauthorizedError('Access token has expired');
     }
     if (error instanceof jwt.JsonWebTokenError) {
-      throw new Error('Invalid access token');
+      throw new UnauthorizedError('Invalid access token');
     }
-    throw new Error('Token verification failed');
+    throw new UnauthorizedError('Token verification failed');
   }
 }
 
@@ -77,12 +78,12 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
     return decoded;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      throw new Error('Refresh token has expired');
+      throw new UnauthorizedError('Refresh token has expired');
     }
     if (error instanceof jwt.JsonWebTokenError) {
-      throw new Error('Invalid refresh token');
+      throw new UnauthorizedError('Invalid refresh token');
     }
-    throw new Error('Token verification failed');
+    throw new UnauthorizedError('Token verification failed');
   }
 }
 
