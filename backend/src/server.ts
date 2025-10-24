@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import rateLimit from 'express-rate-limit'
 import prisma from './config/database'
+import authRoutes from './routes/auth.routes'
 
 // Load environment variables
 dotenv.config()
@@ -65,6 +66,9 @@ app.get('/api', (req: Request, res: Response) => {
     }
   })
 })
+
+// Mount auth routes
+app.use('/api/auth', authRoutes)
 
 // 404 handler
 app.use((req: Request, res: Response) => {
