@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import prisma from './config/database'
 import authRoutes from './routes/auth.routes'
+import leadRoutes from './routes/lead.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
@@ -70,6 +71,9 @@ app.get('/api', (req: Request, res: Response) => {
 
 // Mount auth routes
 app.use('/api/auth', authRoutes)
+
+// Mount lead routes
+app.use('/api/leads', leadRoutes)
 
 // 404 handler
 app.use(notFoundHandler)

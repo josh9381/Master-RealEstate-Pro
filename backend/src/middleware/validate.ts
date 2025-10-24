@@ -1,6 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 
+// Extend Express Request to include validated data
+declare global {
+  namespace Express {
+    interface Request {
+      validatedQuery?: unknown;
+    }
+  }
+}
+
 /**
  * Validation middleware factory
  * Validates request body, params, or query against a Zod schema
@@ -22,9 +31,9 @@ export function validate(schema: {
         req.params = await schema.params.parseAsync(req.params) as typeof req.params;
       }
 
-      // Validate query
+      // Validate query - store in validatedQuery since req.query is readonly
       if (schema.query) {
-        req.query = await schema.query.parseAsync(req.query) as typeof req.query;
+        req.validatedQuery = await schema.query.parseAsync(req.query);
       }
 
       next();
