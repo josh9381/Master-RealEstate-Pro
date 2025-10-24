@@ -61,11 +61,12 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
   }
 
   // Search in name, email, company
+  // Note: SQLite doesn't support mode: 'insensitive', but SQLite is case-insensitive by default
   if (search) {
     where.OR = [
-      { name: { contains: search as string, mode: 'insensitive' } },
-      { email: { contains: search as string, mode: 'insensitive' } },
-      { company: { contains: search as string, mode: 'insensitive' } },
+      { name: { contains: search as string } },
+      { email: { contains: search as string } },
+      { company: { contains: search as string } },
     ];
   }
 

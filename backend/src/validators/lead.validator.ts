@@ -71,7 +71,7 @@ export const listLeadsQuerySchema = z.object({
  * Lead ID parameter validation
  */
 export const leadIdSchema = z.object({
-  id: z.string().cuid('Invalid lead ID'),
+  id: z.string().min(1, 'Lead ID is required'),
 });
 
 /**
