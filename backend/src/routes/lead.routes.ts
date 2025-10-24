@@ -21,6 +21,11 @@ import {
   bulkUpdateLeads,
   getLeadStats,
 } from '../controllers/lead.controller';
+import {
+  addTagsToLead,
+  removeTagFromLead,
+} from '../controllers/tag.controller';
+import { addTagsToLeadSchema } from '../validators/tag.validator';
 
 const router = Router();
 
@@ -113,6 +118,27 @@ router.post(
   '/bulk-update',
   validateBody(bulkUpdateLeadsSchema),
   asyncHandler(bulkUpdateLeads)
+);
+
+/**
+ * @route   POST /api/leads/:leadId/tags
+ * @desc    Add tags to a lead
+ * @access  Private
+ */
+router.post(
+  '/:leadId/tags',
+  validateBody(addTagsToLeadSchema),
+  asyncHandler(addTagsToLead)
+);
+
+/**
+ * @route   DELETE /api/leads/:leadId/tags/:tagId
+ * @desc    Remove tag from a lead
+ * @access  Private
+ */
+router.delete(
+  '/:leadId/tags/:tagId',
+  asyncHandler(removeTagFromLead)
 );
 
 export default router;

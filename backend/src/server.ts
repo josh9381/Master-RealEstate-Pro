@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import prisma from './config/database'
 import authRoutes from './routes/auth.routes'
 import leadRoutes from './routes/lead.routes'
+import tagRoutes from './routes/tag.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
@@ -64,6 +65,7 @@ app.get('/api', (req: Request, res: Response) => {
       health: '/health',
       auth: '/api/auth/*',
       leads: '/api/leads/*',
+      tags: '/api/tags/*',
       campaigns: '/api/campaigns/*'
     }
   })
@@ -74,6 +76,9 @@ app.use('/api/auth', authRoutes)
 
 // Mount lead routes
 app.use('/api/leads', leadRoutes)
+
+// Mount tag routes
+app.use('/api/tags', tagRoutes)
 
 // 404 handler
 app.use(notFoundHandler)
