@@ -15,7 +15,8 @@ async function main() {
     create: {
       email: 'admin@realestate.com',
       password: hashedPassword,
-      name: 'Admin User',
+      firstName: 'Admin',
+      lastName: 'User',
       role: 'ADMIN',
       isActive: true,
       emailVerified: true,
@@ -34,7 +35,8 @@ async function main() {
     create: {
       email: 'test@realestate.com',
       password: testPassword,
-      name: 'Test User',
+      firstName: 'Test',
+      lastName: 'User',
       role: 'USER',
       isActive: true,
       emailVerified: true,

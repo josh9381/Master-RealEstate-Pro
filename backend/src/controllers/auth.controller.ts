@@ -6,7 +6,8 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 
 // Validation schemas
 const registerSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+  firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
+  lastName: z.string().min(1, 'Last name is required').max(50, 'Last name too long'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters')
 });
@@ -48,14 +49,16 @@ export async function register(req: Request, res: Response): Promise<void> {
     // Create user
     const user = await prisma.user.create({
       data: {
-        name: validatedData.name,
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
         email: validatedData.email,
         password: hashedPassword,
         role: 'USER' // Default role
       },
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         role: true,
         avatar: true,
@@ -145,7 +148,8 @@ export async function login(req: Request, res: Response): Promise<void> {
       data: {
         user: {
           id: user.id,
-          name: user.name,
+          firstName: user.firstName,
+          lastName: user.lastName,
           email: user.email,
           role: user.role,
           avatar: user.avatar
@@ -261,7 +265,8 @@ export async function me(req: Request, res: Response): Promise<void> {
       where: { id: req.user.userId },
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         role: true,
         avatar: true,
