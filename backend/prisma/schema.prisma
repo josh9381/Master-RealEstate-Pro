@@ -1,0 +1,299 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"  // Using SQLite for local dev - switch to "postgresql" for production
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// PHASE 1: MVP MODELS (Week 1-3)
+// ============================================
+
+// User Management
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String    // bcrypt hashed
+  name          String
+  avatar        String?
+  role          Role      @default(USER)
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  
+  // Settings
+  timezone      String    @default("America/New_York")
+  language      String    @default("en")
+  
+  // Security
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  
+  // Subscription
+  subscriptionTier SubscriptionTier @default(FREE)
+  subscriptionId   String?
+  trialEndsAt      DateTime?
+  
+  // Relations
+  leads         Lead[]
+  campaigns     Campaign[]
+  activities    Activity[]
+  tasks         Task[]
+  notes         Note[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([email])
+  @@index([role])
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+// Lead Management
+model Lead {
+  id          String   @id @default(cuid())
+  
+  // Basic Info
+  name        String
+  email       String   @unique
+  phone       String?
+  company     String?
+  position    String?
+  
+  // Lead Details
+  status      LeadStatus @default(NEW)
+  score       Int       @default(0)
+  source      String?   // website, referral, social, etc.
+  value       Float?
+  stage       String?
+  
+  // Assignment
+  assignedToId String?
+  assignedTo   User?    @relation(fields: [assignedToId], references: [id])
+  
+  // Dates
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastContactAt DateTime?
+  
+  // Relations
+  tags         Tag[]
+  notes        Note[]
+  activities   Activity[]
+  
+  // Custom fields stored as JSON
+  customFields Json?
+  
+  // Indexes for performance
+  @@index([status])
+  @@index([assignedToId])
+  @@index([source])
+  @@index([createdAt])
+  @@index([score])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+// Tags for categorization
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?
+  leads     Lead[]
+  campaigns Campaign[]
+  createdAt DateTime @default(now())
+}
+
+// Notes attached to leads
+model Note {
+  id        String   @id @default(cuid())
+  content   String
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([leadId])
+  @@index([authorId])
+}
+
+// Campaign Management
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String
+  type        CampaignType
+  status      CampaignStatus @default(DRAFT)
+  
+  // Content
+  subject     String?
+  body        String?
+  previewText String?
+  
+  // Scheduling
+  startDate   DateTime?
+  endDate     DateTime?
+  
+  // Budget
+  budget      Float?
+  spent       Float?         @default(0)
+  
+  // Metrics
+  audience    Int?
+  sent        Int            @default(0)
+  delivered   Int            @default(0)
+  opened      Int            @default(0)
+  clicked     Int            @default(0)
+  converted   Int            @default(0)
+  bounced     Int            @default(0)
+  unsubscribed Int           @default(0)
+  
+  // Revenue
+  revenue     Float?         @default(0)
+  roi         Float?
+  
+  // A/B Testing
+  isABTest    Boolean        @default(false)
+  abTestData  Json?
+  
+  // Relations
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  tags        Tag[]
+  activities  Activity[]
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  @@index([status])
+  @@index([type])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+enum CampaignType {
+  EMAIL
+  SMS
+  PHONE
+  SOCIAL
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+// Activity Tracking
+model Activity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  title       String
+  description String?
+  
+  // Relations
+  leadId      String?
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campaignId  String?
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  
+  // Metadata
+  metadata    Json?
+  
+  createdAt   DateTime     @default(now())
+  
+  @@index([leadId])
+  @@index([campaignId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  EMAIL_SENT
+  EMAIL_OPENED
+  EMAIL_CLICKED
+  SMS_SENT
+  SMS_DELIVERED
+  CALL_MADE
+  CALL_RECEIVED
+  MEETING_SCHEDULED
+  MEETING_COMPLETED
+  NOTE_ADDED
+  STATUS_CHANGED
+  STAGE_CHANGED
+  LEAD_CREATED
+  LEAD_ASSIGNED
+  CAMPAIGN_LAUNCHED
+  CAMPAIGN_COMPLETED
+}
+
+// Tasks Management
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus   @default(PENDING)
+  
+  // Relations
+  assignedToId String
+  assignedTo   User        @relation(fields: [assignedToId], references: [id])
+  leadId       String?
+  
+  completedAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  @@index([assignedToId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([priority])
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}

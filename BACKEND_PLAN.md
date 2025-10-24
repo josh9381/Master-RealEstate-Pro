@@ -554,6 +554,52 @@ model LeadScore {
   @@index([overallScore])
 }
 
+model ChatConversation {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String?  // Auto-generated from first message
+  
+  messages    ChatMessage[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id              String           @id @default(cuid())
+  conversationId  String
+  conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  role            MessageRole      // user, assistant, system, function
+  content         String           @db.Text
+  
+  // Function calling
+  functionName    String?
+  functionArgs    Json?
+  functionResult  Json?
+  
+  // Metadata
+  tokens          Int?
+  cost            Float?           // Track user's API usage cost
+  
+  createdAt       DateTime         @default(now())
+  
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  FUNCTION
+}
+
 model AIInsight {
   id          String   @id @default(cuid())
   leadId      String
@@ -1112,6 +1158,22 @@ POST   /api/ai/enhance-message     - AI enhance email/SMS
 POST   /api/ai/suggest-actions     - AI suggest next actions
 ```
 
+### **AI Conversational Agent (RECOMMENDED ADDITION - Phase 3)**
+```
+POST   /api/ai/chat                - Send message to AI agent, execute actions
+GET    /api/ai/chat/history        - Get chat conversation history
+POST   /api/ai/chat/clear          - Clear conversation history
+GET    /api/ai/suggestions         - Get contextual AI suggestions
+POST   /api/ai/query               - Natural language query ("show leads from...")
+GET    /api/ai/usage               - Track user's AI API usage costs
+```
+
+**Implementation Notes:**
+- Use Vercel AI SDK + Claude 3.5 Sonnet OR OpenAI GPT-4
+- AI can call functions to: create leads, send emails, launch campaigns, analyze data
+- Requires user's own OpenAI/Claude API key (BYOK model)
+- See separate AI Agent implementation guide for details
+
 ### **Analytics & Reports**
 ```
 GET    /api/reports                - List reports
@@ -1455,13 +1517,23 @@ CREATE INDEX idx_campaigns_status ON campaigns(status);
 # **📅 DEVELOPMENT TIMELINE**
 
 ## **Week 1: Setup & Auth**
+
+### **SETUP ACCOUNTS (Do This First - 30 minutes total):**
+- [ ] Create Neon account (neon.tech) - Free PostgreSQL database
+- [ ] Create Railway account (railway.app) - Backend hosting
+- [ ] Create Vercel account (vercel.com) - Frontend already here
+- [ ] Get connection strings and save to password manager
+
+### **BUILD (Start Here - Build First, Deploy Later):**
 - [ ] Initialize project (Express + TypeScript + Prisma)
-- [ ] Set up PostgreSQL database
+- [ ] Create project structure and files
+- [ ] Set up Prisma with placeholder DATABASE_URL
 - [ ] Create initial Prisma schema (User, Lead, Campaign)
 - [ ] Implement JWT authentication
 - [ ] Build auth endpoints (register, login, refresh)
 - [ ] Set up middleware (auth, validation, error handling)
-- [ ] Deploy to Railway
+- [ ] Test locally with SQLite (switch to Neon when ready)
+- [ ] Deploy to Railway (after everything works locally)
 
 ## **Week 2: Core Features**
 - [ ] Leads CRUD endpoints
@@ -1501,6 +1573,9 @@ CREATE INDEX idx_campaigns_status ON campaigns(status);
 - [ ] AI insights generation
 - [ ] Email/SMS enhancement
 - [ ] Predictive analytics
+- [ ] **AI Conversational Agent (Vercel AI SDK)**
+- [ ] **Chat history persistence**
+- [ ] **Function calling setup (10-15 tools)**
 
 ## **Week 8-9: Analytics & Integrations**
 - [ ] Advanced analytics endpoints
@@ -1739,3 +1814,208 @@ Total: ~$200-300/month
 ---
 
 **This is your complete backend blueprint. Start with Phase 1, launch in 3 weeks, iterate based on user feedback. Build only what you need, when you need it. 🚀**
+
+---
+
+# **🤖 AI AGENT RECOMMENDATION (Phase 3)**
+
+## **Overview**
+
+Add a **conversational AI agent** that can not only chat with users but also **execute actions** in the app (create leads, send emails, launch campaigns, analyze data, etc.).
+
+## **Why Add This?**
+
+- ✅ **Major differentiator** - Most CRMs only have basic chatbots
+- ✅ **Minimal cost to you** - Users pay for their own API usage (BYOK model)
+- ✅ **High value** - AI assistant becomes users' virtual employee
+- ✅ **Quick to build** - 1-2 weeks with Vercel AI SDK
+- ✅ **Replaces multiple features** - One AI interface for many actions
+
+## **Technology Stack**
+
+### **Recommended: Vercel AI SDK + Claude 3.5 Sonnet**
+
+**Why this combo:**
+1. Vercel AI SDK makes function calling EASY
+2. Claude 3.5 is best at tool use and 50% cheaper than GPT-4
+3. Fully customizable - you own the code
+4. Works with user's own API keys (BYOK)
+
+```bash
+npm install ai @ai-sdk/anthropic @ai-sdk/openai zod
+```
+
+## **What The AI Agent Can Do**
+
+Users can ask natural language questions and the AI will execute actions:
+
+```
+"Show me my top 10 leads"
+→ AI calls getLeads({ limit: 10, orderBy: 'score' })
+
+"Create a lead for John Doe, john@example.com"
+→ AI calls createLead({ name: "John Doe", email: "john@example.com" })
+
+"Send an email to all hot leads"
+→ AI calls getLeads({ status: "HOT" })
+→ AI calls sendEmailBulk({ leadIds: [...], template: "hot_lead" })
+
+"Launch an email campaign to qualified leads with score > 80"
+→ AI calls createCampaign({ type: "email", filters: { minScore: 80 } })
+
+"What's my conversion rate?"
+→ AI calls getAnalytics() and calculates
+```
+
+## **Implementation Plan**
+
+### **Phase 3 - Week 7-8 (After core features working):**
+
+1. **Database Schema** (Already added above):
+   - ChatConversation model
+   - ChatMessage model
+   - Track conversations and function calls
+
+2. **Define AI Tools/Functions** (10-15 core actions):
+   - `getLeads()` - Fetch leads with filters
+   - `createLead()` - Create new lead
+   - `sendEmail()` - Send email to lead
+   - `launchCampaign()` - Create and launch campaign
+   - `getAnalytics()` - Fetch stats and metrics
+   - `createTask()` - Create follow-up task
+   - `generateEmail()` - AI write email content
+   - `analyzeCampaign()` - Campaign performance insights
+   - ... and more
+
+3. **API Endpoints**:
+   - `POST /api/ai/chat` - Main chat endpoint
+   - `GET /api/ai/chat/history` - Load conversation
+   - `POST /api/ai/chat/clear` - Clear history
+   - `GET /api/ai/usage` - Track user's API costs
+
+4. **Frontend Integration**:
+   - Already have `AIAssistant.tsx` and `FloatingAIButton.tsx`
+   - Just connect to real backend API instead of mock responses
+
+5. **Security**:
+   - Require confirmation for destructive actions (delete, bulk send)
+   - Rate limiting per user
+   - Validate user owns resources before AI accesses them
+   - Encrypt API keys (AES-256-GCM)
+
+## **Cost Model (BYOK)**
+
+### **Users Pay:**
+- OpenAI/Claude API usage: $2-50/month (based on their usage)
+- Twilio/SendGrid: Based on their sending volume
+- Your subscription fee: $9-79/month
+
+### **You Pay:**
+- Server costs: $30-70/month (same as before)
+- Database: Included
+- Development time: One-time
+
+**Result:** 90%+ profit margins, no API costs for you!
+
+## **User Setup Required**
+
+Users must add their own API keys:
+
+1. **OpenAI or Claude API key** (for AI features)
+   - Setup time: 2-5 minutes
+   - Cost to user: $2-50/month based on usage
+
+2. **SendGrid** (for email sending)
+   - Setup time: 3-5 minutes
+   - Cost to user: $0-15/month
+
+3. **Twilio** (for SMS/calling)
+   - Setup time: 3-5 minutes
+   - Cost to user: Pay per use
+
+**Make setup easy with:**
+- Step-by-step onboarding wizard
+- Video tutorials
+- "Click to open" links to provider sites
+- Test buttons to verify setup
+- Progressive setup (basic features work without keys)
+
+## **Implementation Timeline**
+
+```
+Week 7 (AI Agent Core):
+- Install Vercel AI SDK
+- Define 10 core tools/functions
+- Build chat endpoint with function calling
+- Test AI can execute actions
+
+Week 8 (Integration & Polish):
+- Connect AIAssistant.tsx to real API
+- Add chat history persistence
+- Implement confirmation modals
+- Add usage tracking
+- Security hardening
+
+Total: 2 weeks to add AI agent capability
+```
+
+## **Example Code Structure**
+
+```typescript
+// src/lib/ai-tools.ts
+import { tool } from 'ai'
+import { z } from 'zod'
+
+export const tools = {
+  getLeads: tool({
+    description: 'Get leads with optional filters',
+    parameters: z.object({
+      status: z.string().optional(),
+      minScore: z.number().optional(),
+      limit: z.number().default(10),
+    }),
+    execute: async ({ status, minScore, limit }) => {
+      const leads = await db.lead.findMany({
+        where: {
+          ...(status && { status }),
+          ...(minScore && { score: { gte: minScore } })
+        },
+        take: limit,
+      })
+      return leads
+    },
+  }),
+  
+  createLead: tool({
+    description: 'Create a new lead',
+    parameters: z.object({
+      name: z.string(),
+      email: z.string().email(),
+      phone: z.string().optional(),
+    }),
+    execute: async ({ name, email, phone }) => {
+      const lead = await db.lead.create({
+        data: { name, email, phone }
+      })
+      return `Lead created with ID: ${lead.id}`
+    },
+  }),
+  
+  // ... 8-13 more tools
+}
+```
+
+## **Priority Level**
+
+**Phase 3 Feature** - Build AFTER:
+- ✅ Phase 1: Core features (leads, campaigns, auth)
+- ✅ Phase 2: Communication (email/SMS sending, templates)
+- 🎯 **Phase 3: AI Agent** - Your competitive differentiator
+
+Don't build this until your core CRM functionality works. But when you do build it, it becomes your **biggest selling point** and requires minimal ongoing cost.
+
+---
+
+**End of AI Agent Recommendation**
+
+````
