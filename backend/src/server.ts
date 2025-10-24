@@ -5,6 +5,7 @@ import prisma from './config/database'
 import authRoutes from './routes/auth.routes'
 import leadRoutes from './routes/lead.routes'
 import tagRoutes from './routes/tag.routes'
+import noteRoutes from './routes/note.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
@@ -66,6 +67,7 @@ app.get('/api', (req: Request, res: Response) => {
       auth: '/api/auth/*',
       leads: '/api/leads/*',
       tags: '/api/tags/*',
+      notes: '/api/notes/*',
       campaigns: '/api/campaigns/*'
     }
   })
@@ -79,6 +81,9 @@ app.use('/api/leads', leadRoutes)
 
 // Mount tag routes
 app.use('/api/tags', tagRoutes)
+
+// Mount note routes
+app.use('/api/notes', noteRoutes)
 
 // 404 handler
 app.use(notFoundHandler)

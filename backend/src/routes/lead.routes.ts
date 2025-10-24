@@ -26,6 +26,11 @@ import {
   removeTagFromLead,
 } from '../controllers/tag.controller';
 import { addTagsToLeadSchema } from '../validators/tag.validator';
+import {
+  getNotesForLead,
+  createNote,
+} from '../controllers/note.controller';
+import { createNoteSchema, leadIdParamSchema } from '../validators/note.validator';
 
 const router = Router();
 
@@ -139,6 +144,29 @@ router.post(
 router.delete(
   '/:leadId/tags/:tagId',
   asyncHandler(removeTagFromLead)
+);
+
+/**
+ * @route   GET /api/leads/:leadId/notes
+ * @desc    Get all notes for a lead
+ * @access  Private
+ */
+router.get(
+  '/:leadId/notes',
+  validateParams(leadIdParamSchema),
+  asyncHandler(getNotesForLead)
+);
+
+/**
+ * @route   POST /api/leads/:leadId/notes
+ * @desc    Create a note for a lead
+ * @access  Private
+ */
+router.post(
+  '/:leadId/notes',
+  validateParams(leadIdParamSchema),
+  validateBody(createNoteSchema),
+  asyncHandler(createNote)
 );
 
 export default router;
