@@ -17,14 +17,6 @@ describe('Analytics Endpoints', () => {
   let userId: string
 
   beforeEach(async () => {
-    // Clear test data
-    await prisma.activity.deleteMany()
-    await prisma.note.deleteMany()
-    await prisma.task.deleteMany()
-    await prisma.campaign.deleteMany()
-    await prisma.lead.deleteMany()
-    await prisma.user.deleteMany()
-
     // Create test user
     const hashedPassword = await bcrypt.hash('password123', 10)
     const user = await prisma.user.create({

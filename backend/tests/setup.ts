@@ -33,12 +33,22 @@ afterAll(async () => {
 
 // Clean database between tests
 afterEach(async () => {
-  // Delete in reverse order of dependencies
-  await prisma.task.deleteMany();
+  // Delete in correct order to avoid foreign key constraint violations
+  // 1. Delete junction tables first (if they exist)
+  try {
+    await prisma.$executeRaw`DELETE FROM _LeadToTag`;
+  } catch (error) {
+    // Table might not exist or be empty, ignore
+  }
+  
+  // 2. Delete dependent records (those with foreign keys)
   await prisma.activity.deleteMany();
-  await prisma.campaign.deleteMany();
+  await prisma.task.deleteMany();
   await prisma.note.deleteMany();
+  
+  // 3. Delete parent records
+  await prisma.campaign.deleteMany();
   await prisma.lead.deleteMany();
-  await prisma.user.deleteMany();
   await prisma.tag.deleteMany();
+  await prisma.user.deleteMany();
 });

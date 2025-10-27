@@ -19,14 +19,6 @@ describe('Activity Management', () => {
   let campaignId: string
 
   beforeEach(async () => {
-    // Clear test data
-    await prisma.activity.deleteMany()
-    await prisma.note.deleteMany()
-    await prisma.task.deleteMany()
-    await prisma.campaign.deleteMany()
-    await prisma.lead.deleteMany()
-    await prisma.user.deleteMany()
-
     // Create test user
     const hashedPassword = await bcrypt.hash('password123', 10)
     const user = await prisma.user.create({
@@ -43,7 +35,7 @@ describe('Activity Management', () => {
     // Generate auth token
     authToken = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      'test-access-secret-123',
+      process.env.JWT_ACCESS_SECRET || 'test-access-secret-123',
       { expiresIn: '24h' }
     )
 

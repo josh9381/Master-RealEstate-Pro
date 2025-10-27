@@ -29,6 +29,7 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^2.7.0",
     "prisma": "^6.18.0",
     "typescript": "^5.9.3",
     "zod": "^4.1.12"

@@ -1,0 +1,297 @@
+### Master RealEstate Pro API Tests
+### Use the REST Client extension in VS Code to run these tests
+
+### Variables
+@baseUrl = http://localhost:8000
+@email = test{{$timestamp}}@example.com
+@password = Test123456!
+
+### ============================================================
+### 1. HEALTH CHECK
+### ============================================================
+
+### Health Check
+GET {{baseUrl}}/health
+
+### ============================================================
+### 2. AUTHENTICATION
+### ============================================================
+
+### Register New User
+# @name register
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "firstName": "Test",
+  "lastName": "User"
+}
+
+### Login
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Get Current User (requires token from login)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### ============================================================
+### 3. LEAD MANAGEMENT
+### ============================================================
+
+### Create Lead
+# @name createLead
+POST {{baseUrl}}/api/leads
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john{{$timestamp}}@example.com",
+  "phone": "555-0100",
+  "status": "NEW",
+  "score": 75,
+  "source": "website",
+  "value": 50000
+}
+
+### Get All Leads
+GET {{baseUrl}}/api/leads
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Single Lead
+GET {{baseUrl}}/api/leads/{{createLead.response.body.data.lead.id}}
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Lead Statistics
+GET {{baseUrl}}/api/leads/stats
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Update Lead
+PUT {{baseUrl}}/api/leads/{{createLead.response.body.data.lead.id}}
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "status": "CONTACTED",
+  "score": 85
+}
+
+### ============================================================
+### 4. TAG MANAGEMENT
+### ============================================================
+
+### Create Tag
+# @name createTag
+POST {{baseUrl}}/api/tags
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "name": "VIP Client",
+  "color": "#FF5733"
+}
+
+### Get All Tags
+GET {{baseUrl}}/api/tags
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Add Tag to Lead
+POST {{baseUrl}}/api/leads/{{createLead.response.body.data.lead.id}}/tags
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "tagIds": ["{{createTag.response.body.data.tag.id}}"]
+}
+
+### ============================================================
+### 5. NOTES MANAGEMENT
+### ============================================================
+
+### Create Note for Lead
+# @name createNote
+POST {{baseUrl}}/api/leads/{{createLead.response.body.data.lead.id}}/notes
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "content": "This is a test note. Very important information about the lead!"
+}
+
+### Get All Notes for Lead
+GET {{baseUrl}}/api/leads/{{createLead.response.body.data.lead.id}}/notes
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Update Note
+PUT {{baseUrl}}/api/notes/{{createNote.response.body.data.note.id}}
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "content": "Updated note content with more details."
+}
+
+### ============================================================
+### 6. CAMPAIGN MANAGEMENT
+### ============================================================
+
+### Create Campaign
+# @name createCampaign
+POST {{baseUrl}}/api/campaigns
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Welcome Email Campaign",
+  "type": "EMAIL",
+  "status": "DRAFT",
+  "subject": "Welcome to our service!",
+  "body": "Thank you for joining us. We're excited to work with you!",
+  "audience": 1000
+}
+
+### Get All Campaigns
+GET {{baseUrl}}/api/campaigns
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Campaign Statistics
+GET {{baseUrl}}/api/campaigns/stats
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Update Campaign Metrics
+PATCH {{baseUrl}}/api/campaigns/{{createCampaign.response.body.data.campaign.id}}/metrics
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "sent": 1000,
+  "delivered": 980,
+  "opened": 500,
+  "clicked": 100,
+  "converted": 20
+}
+
+### ============================================================
+### 7. TASK MANAGEMENT
+### ============================================================
+
+### Create Task
+# @name createTask
+POST {{baseUrl}}/api/tasks
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Follow up with lead",
+  "description": "Call to discuss property options",
+  "dueDate": "2025-10-27T23:00:00.000Z",
+  "priority": "HIGH",
+  "status": "PENDING"
+}
+
+### Get All Tasks
+GET {{baseUrl}}/api/tasks
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Task Statistics
+GET {{baseUrl}}/api/tasks/stats
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Update Task Status
+PUT {{baseUrl}}/api/tasks/{{createTask.response.body.data.task.id}}
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### ============================================================
+### 8. ACTIVITY LOGGING (NEW - WEEK 2)
+### ============================================================
+
+### Create Activity
+# @name createActivity
+POST {{baseUrl}}/api/activities
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+Content-Type: application/json
+
+{
+  "type": "EMAIL_SENT",
+  "title": "Sent welcome email",
+  "description": "Initial outreach email sent to new lead",
+  "leadId": "{{createLead.response.body.data.lead.id}}",
+  "metadata": {
+    "subject": "Welcome!",
+    "template": "welcome-template"
+  }
+}
+
+### Get All Activities
+GET {{baseUrl}}/api/activities
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Activity Statistics
+GET {{baseUrl}}/api/activities/stats
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Activities for Specific Lead
+GET {{baseUrl}}/api/activities/lead/{{createLead.response.body.data.lead.id}}
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Activities for Specific Campaign
+GET {{baseUrl}}/api/activities/campaign/{{createCampaign.response.body.data.campaign.id}}
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Single Activity
+GET {{baseUrl}}/api/activities/{{createActivity.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### ============================================================
+### 9. DASHBOARD ANALYTICS (NEW - WEEK 2)
+### ============================================================
+
+### Get Dashboard Statistics
+GET {{baseUrl}}/api/analytics/dashboard
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Lead Analytics
+GET {{baseUrl}}/api/analytics/leads
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Lead Analytics with Grouping
+GET {{baseUrl}}/api/analytics/leads?groupBy=status
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Campaign Analytics
+GET {{baseUrl}}/api/analytics/campaigns
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Campaign Analytics with Grouping
+GET {{baseUrl}}/api/analytics/campaigns?groupBy=type
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Task Analytics
+GET {{baseUrl}}/api/analytics/tasks
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Task Analytics with Grouping
+GET {{baseUrl}}/api/analytics/tasks?groupBy=priority
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Activity Feed
+GET {{baseUrl}}/api/analytics/activity-feed?limit=10
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}
+
+### Get Activity Feed with Pagination
+GET {{baseUrl}}/api/analytics/activity-feed?limit=5&offset=0
+Authorization: Bearer {{login.response.body.data.tokens.accessToken}}

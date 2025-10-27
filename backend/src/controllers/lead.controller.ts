@@ -475,7 +475,7 @@ export async function bulkUpdateLeads(req: Request, res: Response): Promise<void
           leadIds,
           updates,
           count: result.count,
-        },
+        } as any,
       },
     });
   }
