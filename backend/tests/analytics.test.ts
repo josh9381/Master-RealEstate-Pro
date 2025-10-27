@@ -30,11 +30,15 @@ describe('Analytics Endpoints', () => {
     })
     userId = user.id
 
-    // Generate auth token
+    // Generate auth token (must match backend JWT format with issuer/audience)
     authToken = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_ACCESS_SECRET || 'test-access-secret-123',
-      { expiresIn: '24h' }
+      { 
+        expiresIn: '24h',
+        issuer: 'realestate-pro-api',
+        audience: 'realestate-pro-client'
+      }
     )
 
     // Create sample data for analytics

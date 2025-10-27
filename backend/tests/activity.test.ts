@@ -32,11 +32,15 @@ describe('Activity Management', () => {
     })
     userId = user.id
 
-    // Generate auth token
+    // Generate auth token (must match backend JWT format with issuer/audience)
     authToken = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_ACCESS_SECRET || 'test-access-secret-123',
-      { expiresIn: '24h' }
+      { 
+        expiresIn: '24h',
+        issuer: 'realestate-pro-api',
+        audience: 'realestate-pro-client'
+      }
     )
 
     // Create test lead
@@ -108,7 +112,7 @@ describe('Activity Management', () => {
         .send({
           type: 'NOTE_ADDED',
           title: 'Added note',
-          leadId: 'invalid-lead-id'
+          leadId: 'clx1234567890abcdefghijk' // Valid CUID format but non-existent
         })
 
       expect(response.status).toBe(404)

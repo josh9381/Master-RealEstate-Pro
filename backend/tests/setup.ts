@@ -5,10 +5,6 @@ import * as fs from 'fs';
 
 // Use a separate test database
 const testDbPath = path.join(__dirname, '..', 'prisma', 'test.db');
-process.env.DATABASE_URL = `file:${testDbPath}`;
-process.env.NODE_ENV = 'test';
-process.env.JWT_ACCESS_SECRET = 'test-access-secret-123';
-process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-456';
 
 const prisma = new PrismaClient();
 
@@ -41,7 +37,7 @@ afterEach(async () => {
     // Table might not exist or be empty, ignore
   }
   
-  // 2. Delete dependent records (those with foreign keys)
+  // 2. Delete dependent records (those with foreign keys to users/leads/campaigns)
   await prisma.activity.deleteMany();
   await prisma.task.deleteMany();
   await prisma.note.deleteMany();
