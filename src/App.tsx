@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { MainLayout } from './components/layout/MainLayout'
 import { AuthLayout } from './components/layout/AuthLayout'
+import { ProtectedRoute } from './components/auth/ProtectedRoute'
 
 // Dashboard
 import Dashboard from './pages/dashboard/Dashboard'
@@ -136,7 +137,7 @@ function App() {
       </Route>
 
       {/* Main app routes */}
-      <Route element={<MainLayout />}>
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
         

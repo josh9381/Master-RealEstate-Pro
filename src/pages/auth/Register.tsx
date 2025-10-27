@@ -4,17 +4,18 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useToast } from '@/hooks/useToast'
+import { useAuthStore } from '@/store/authStore'
 
 function Register() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { register, isLoading } = useAuthStore()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
   })
-  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,14 +35,17 @@ function Register() {
       return
     }
 
-    setLoading(true)
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      await register({ 
+        name: formData.name, 
+        email: formData.email, 
+        password: formData.password 
+      })
       toast.success('Account created successfully!', 'Welcome to CRM Platform')
-      setTimeout(() => navigate('/auth/login'), 500)
-    }, 1000)
+      setTimeout(() => navigate('/'), 500)
+    } catch (error: any) {
+      toast.error('Registration failed', error.response?.data?.message || 'Could not create account')
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,6 +72,7 @@ function Register() {
               value={formData.name}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -83,6 +88,7 @@ function Register() {
               value={formData.email}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
           </div>
           
@@ -98,6 +104,7 @@ function Register() {
               value={formData.password}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -113,11 +120,12 @@ function Register() {
               value={formData.confirmPassword}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Creating account...' : 'Create Account'}
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Creating account...' : 'Create Account'}
           </Button>
         </form>
       </CardContent>

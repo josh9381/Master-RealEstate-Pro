@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useToast } from '@/hooks/useToast'
+import { useAuthStore } from '@/store/authStore'
 
 function Login() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { login, isLoading } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,14 +21,13 @@ function Login() {
       return
     }
     
-    setLoading(true)
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      await login({ email, password })
       toast.success('Login successful!', 'Redirecting to dashboard...')
       setTimeout(() => navigate('/'), 500)
-    }, 1000)
+    } catch (error: any) {
+      toast.error('Login failed', error.response?.data?.message || 'Invalid email or password')
+    }
   }
 
   return (
@@ -49,6 +49,7 @@ function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
           
@@ -63,6 +64,7 @@ function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -79,8 +81,8 @@ function Login() {
             </Link>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
       </CardContent>
