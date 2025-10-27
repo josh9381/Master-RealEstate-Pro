@@ -8,6 +8,8 @@ import tagRoutes from './routes/tag.routes'
 import noteRoutes from './routes/note.routes'
 import campaignRoutes from './routes/campaign.routes'
 import taskRoutes from './routes/task.routes'
+import activityRoutes from './routes/activity.routes'
+import analyticsRoutes from './routes/analytics.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
@@ -70,7 +72,9 @@ app.get('/api', (req: Request, res: Response) => {
       leads: '/api/leads/*',
       tags: '/api/tags/*',
       notes: '/api/notes/*',
-      campaigns: '/api/campaigns/*'
+      campaigns: '/api/campaigns/*',
+      activities: '/api/activities/*',
+      analytics: '/api/analytics/*'
     }
   })
 })
@@ -82,6 +86,8 @@ app.use('/api/tags', tagRoutes)
 app.use('/api/notes', noteRoutes)
 app.use('/api/campaigns', campaignRoutes)
 app.use('/api/tasks', taskRoutes)
+app.use('/api/activities', activityRoutes)
+app.use('/api/analytics', analyticsRoutes)
 
 // 404 handler
 app.use(notFoundHandler)
