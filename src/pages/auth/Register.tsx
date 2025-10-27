@@ -11,7 +11,8 @@ function Register() {
   const { toast } = useToast()
   const { register, isLoading } = useAuthStore()
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -20,31 +21,43 @@ function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.name || !formData.email || !formData.password) {
+    console.log('Form submitted', formData)
+    
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+      console.log('Validation failed: missing fields')
       toast.error('Missing fields', 'Please fill in all required fields')
       return
     }
     
     if (formData.password !== formData.confirmPassword) {
+      console.log('Validation failed: passwords do not match')
       toast.error('Password mismatch', 'Passwords do not match')
       return
     }
     
-    if (formData.password.length < 8) {
-      toast.warning('Weak password', 'Password should be at least 8 characters')
+    if (formData.password.length < 6) {
+      console.log('Validation failed: password too short')
+      toast.warning('Weak password', 'Password should be at least 6 characters')
       return
     }
 
     try {
+      console.log('Calling register API...')
       await register({ 
-        name: formData.name, 
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         email: formData.email, 
         password: formData.password 
       })
+      console.log('Registration successful!')
       toast.success('Account created successfully!', 'Welcome to CRM Platform')
       setTimeout(() => navigate('/'), 500)
-    } catch (error: any) {
-      toast.error('Registration failed', error.response?.data?.message || 'Could not create account')
+    } catch (error: unknown) {
+      console.error('Registration error:', error)
+      const err = error as { response?: { data?: { message?: string; errors?: any } } }
+      const errorMessage = err.response?.data?.message || 'Could not create account'
+      console.log('Error details:', err.response?.data)
+      toast.error('Registration failed', errorMessage)
     }
   }
 
@@ -60,20 +73,38 @@ function Register() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">
-              Full Name
-            </label>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="John Doe"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              disabled={isLoading}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="firstName" className="text-sm font-medium">
+                First Name
+              </label>
+              <Input
+                id="firstName"
+                name="firstName"
+                type="text"
+                placeholder="John"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="lastName" className="text-sm font-medium">
+                Last Name
+              </label>
+              <Input
+                id="lastName"
+                name="lastName"
+                type="text"
+                placeholder="Doe"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

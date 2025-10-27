@@ -3,9 +3,11 @@
 export interface User {
   id: string
   email: string
-  name: string
+  firstName?: string
+  lastName?: string
+  name?: string
   avatar?: string
-  role: 'admin' | 'user' | 'manager'
+  role: 'admin' | 'user' | 'manager' | 'USER' | 'ADMIN'
   createdAt: string
 }
 

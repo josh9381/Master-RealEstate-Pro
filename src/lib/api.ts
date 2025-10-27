@@ -104,9 +104,10 @@ api.interceptors.response.use(
 // ============================================================================
 
 export interface RegisterData {
+  firstName: string
+  lastName: string
   email: string
   password: string
-  name: string
 }
 
 export interface LoginData {
@@ -115,9 +116,15 @@ export interface LoginData {
 }
 
 export interface AuthResponse {
-  user: User
-  accessToken: string
-  refreshToken: string
+  success: boolean
+  message: string
+  data: {
+    user: User
+    tokens: {
+      accessToken: string
+      refreshToken: string
+    }
+  }
 }
 
 export const authApi = {
