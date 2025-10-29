@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useState, useEffect } from 'react'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
@@ -11,14 +11,13 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   LayoutGrid,
   List,
   Search,
-  Filter
+  RefreshCw
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
+import { leadsApi, activitiesApi } from '@/lib/api'
 
 interface FollowUp {
   id: number
@@ -30,82 +29,66 @@ interface FollowUp {
   priority: 'high' | 'medium' | 'low'
   status: 'pending' | 'completed' | 'overdue'
   notes?: string
+  leadId?: string
 }
-
-const mockFollowups: FollowUp[] = [
-  { 
-    id: 1, 
-    lead: 'John Doe', 
-    company: 'Acme Inc', 
-    type: 'call', 
-    date: '2025-10-19', 
-    time: '2:00 PM', 
-    priority: 'high',
-    status: 'overdue',
-    notes: 'Discuss Q4 pricing and implementation timeline'
-  },
-  { 
-    id: 2, 
-    lead: 'Jane Smith', 
-    company: 'Tech Corp', 
-    type: 'email', 
-    date: '2025-10-20', 
-    time: '10:00 AM', 
-    priority: 'high',
-    status: 'pending',
-    notes: 'Send updated proposal with revised scope'
-  },
-  { 
-    id: 3, 
-    lead: 'Bob Johnson', 
-    company: 'StartupXYZ', 
-    type: 'meeting', 
-    date: '2025-10-20', 
-    time: '3:30 PM', 
-    priority: 'medium',
-    status: 'pending',
-    notes: 'Product demo with technical team'
-  },
-  { 
-    id: 4, 
-    lead: 'Alice Brown', 
-    company: 'BigCo', 
-    type: 'email', 
-    date: '2025-10-21', 
-    time: '9:00 AM', 
-    priority: 'low',
-    status: 'pending',
-    notes: 'Check-in email about decision timeline'
-  },
-  { 
-    id: 5, 
-    lead: 'Charlie Wilson', 
-    company: 'Enterprise LLC', 
-    type: 'call', 
-    date: '2025-10-22', 
-    time: '11:00 AM', 
-    priority: 'medium',
-    status: 'pending'
-  },
-  { 
-    id: 6, 
-    lead: 'Diana Prince', 
-    company: 'Global Systems', 
-    type: 'task', 
-    date: '2025-10-23', 
-    time: '2:00 PM', 
-    priority: 'high',
-    status: 'pending',
-    notes: 'Prepare custom ROI analysis'
-  },
-]
 
 function LeadsFollowups() {
   const [view, setView] = useState<'queue' | 'calendar'>('queue')
   const [filter, setFilter] = useState<'all' | 'overdue' | 'today' | 'week'>('all')
-  const [followups, setFollowups] = useState<FollowUp[]>(mockFollowups)
+  const [followups, setFollowups] = useState<FollowUp[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    loadFollowups()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const loadFollowups = async () => {
+    setIsLoading(true)
+    try {
+      // Get recent activities that are pending
+      const activitiesResponse = await activitiesApi.getActivities({ limit: 50 })
+      const activities = activitiesResponse.data || []
+      
+      // Get leads to map names
+      const leadsResponse = await leadsApi.getLeads({ limit: 100 })
+      const leads = leadsResponse.data || []
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const leadMap = new Map(leads.map((l: any) => [l.id, l]))
+      
+      // Transform activities to follow-ups
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const followupList: FollowUp[] = activities.map((activity: any, index: number) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lead: any = leadMap.get(activity.leadId)
+        const createdDate = activity.createdAt ? new Date(activity.createdAt) : new Date()
+        const isPast = createdDate < new Date()
+        
+        return {
+          id: activity.id || index,
+          lead: lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead',
+          company: lead?.company || 'No Company',
+          type: activity.type === 'call' ? 'call' : activity.type === 'email' ? 'email' : activity.type === 'meeting' ? 'meeting' : 'task',
+          date: createdDate.toISOString().split('T')[0],
+          time: createdDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          priority: activity.priority || 'medium',
+          status: isPast ? 'overdue' : 'pending',
+          notes: activity.description || undefined,
+          leadId: activity.leadId
+        }
+      })
+      
+      setFollowups(followupList)
+    } catch (error) {
+      console.error('Error loading follow-ups:', error)
+      toast.error('Failed to load follow-ups')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -179,6 +162,10 @@ function LeadsFollowups() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={loadFollowups} disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={() => setView(view === 'queue' ? 'calendar' : 'queue')}>
             {view === 'queue' ? (
               <>

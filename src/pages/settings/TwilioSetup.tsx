@@ -1,13 +1,16 @@
-import { Phone, MessageSquare, Settings, Power } from 'lucide-react';
+import { Phone, MessageSquare, Settings, Power, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 const TwilioSetup = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [connected, setConnected] = useState(true);
   const [accountSid, setAccountSid] = useState('AC1234567890abcdef1234567890abcd');
   const [authToken, setAuthToken] = useState('abcdef1234567890abcdef123456');
@@ -28,16 +31,44 @@ const TwilioSetup = () => {
     },
   ]);
 
-  const handleSaveCredentials = async () => {
-    setLoading(true);
+  useEffect(() => {
+    loadTwilioConfig();
+  }, []);
+
+  const loadTwilioConfig = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Credentials Saved', 'Twilio credentials have been updated successfully.');
+      const config = await settingsApi.getSMSConfig();
+      if (config) {
+        setAccountSid(config.accountSid || 'AC1234567890abcdef1234567890abcd');
+        setAuthToken(config.authToken || 'abcdef1234567890abcdef123456');
+        setConnected(config.connected ?? true);
+      }
+      if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
-      toast.error('Error', 'Failed to save credentials.');
+      console.error('Failed to load Twilio config:', error);
+      toast.error('Failed to load settings, using defaults');
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => loadTwilioConfig(true);
+
+  const handleSaveCredentials = async () => {
+    setSaving(true);
+    try {
+      await settingsApi.updateSMSConfig({ accountSid, authToken });
+      toast.success('Credentials Saved', 'Twilio credentials have been updated successfully.');
+      loadTwilioConfig(); // Reload
+    } catch (error) {
+      console.error('Failed to save credentials:', error);
+      toast.error('Error', 'Failed to save credentials.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -62,11 +93,28 @@ const TwilioSetup = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Twilio Configuration</h1>
-        <p className="text-muted-foreground mt-2">
-          Configure Twilio for SMS and phone call functionality
-        </p>
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Loading Twilio configuration...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Twilio Configuration</h1>
+          <p className="text-muted-foreground mt-2">
+            Configure Twilio for SMS and phone call functionality
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Connection Status */}
@@ -127,8 +175,12 @@ const TwilioSetup = () => {
             />
           </div>
           <div className="flex space-x-2">
-            <Button onClick={handleSaveCredentials} loading={loading}>Save Credentials</Button>
-            <Button variant="outline" onClick={handleTestConnection} loading={loading}>Test Connection</Button>
+            <Button onClick={handleSaveCredentials} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Credentials'}
+            </Button>
+            <Button variant="outline" onClick={handleTestConnection} disabled={saving}>
+              Test Connection
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -342,6 +394,8 @@ const TwilioSetup = () => {
           <Button>Update Webhooks</Button>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

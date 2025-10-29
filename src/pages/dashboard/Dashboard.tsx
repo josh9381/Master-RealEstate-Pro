@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -39,8 +40,21 @@ import {
   Legend
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
+import { analyticsApi, leadsApi, campaignsApi } from '@/lib/api'
 
-const stats = [
+// Types
+interface StatCard {
+  name: string
+  value: string
+  change: string
+  trend: 'up' | 'down'
+  icon: React.ElementType
+  target: string
+  progress: number
+}
+
+// Mock data as fallback
+const mockStats = [
   {
     name: 'Total Revenue',
     value: '$45,231',
@@ -147,8 +161,81 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
+  // Fetch dashboard statistics from API
+  const { data: dashboardData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
+    queryKey: ['dashboard-stats', dateRange],
+    queryFn: async () => {
+      const response = await analyticsApi.getDashboardStats()
+      return response.data
+    },
+  })
+
+  // Fetch recent leads (for future use in Recent Activity section)
+  const { isLoading: leadsLoading } = useQuery({
+    queryKey: ['recentLeads'],
+    queryFn: async () => {
+      const response = await leadsApi.getLeads({ page: 1, limit: 5, sortBy: 'createdAt', sortOrder: 'desc' })
+      return response.data
+    },
+  })
+
+  // Fetch active campaigns (for future use in Active Campaigns section)
+  const { isLoading: campaignsLoading } = useQuery({
+    queryKey: ['activeCampaigns'],
+    queryFn: async () => {
+      const response = await campaignsApi.getCampaigns({ page: 1, limit: 5 })
+      return response.data
+    },
+  })
+
+  // Transform API data into UI format
+  const stats = dashboardData ? [
+    {
+      name: 'Total Leads',
+      value: dashboardData.overview?.totalLeads?.toString() || '0',
+      change: dashboardData.leads?.new ? `+${dashboardData.leads.new}` : '+0',
+      trend: 'up' as const,
+      icon: Users,
+      target: '3,000',
+      progress: Math.min(Math.round((dashboardData.overview?.totalLeads / 3000) * 100), 100) || 0
+    },
+    {
+      name: 'Active Campaigns',
+      value: dashboardData.overview?.activeCampaigns?.toString() || '0',
+      change: `+${dashboardData.campaigns?.active || 0}`,
+      trend: 'up' as const,
+      icon: Megaphone,
+      target: '15',
+      progress: Math.min(Math.round((dashboardData.overview?.activeCampaigns / 15) * 100), 100) || 0
+    },
+    {
+      name: 'Conversion Rate',
+      value: `${dashboardData.leads?.conversionRate?.toFixed(1) || '0.0'}%`,
+      change: '-2.4%',
+      trend: 'down' as const,
+      icon: Target,
+      target: '20%',
+      progress: Math.min(Math.round((dashboardData.leads?.conversionRate / 20) * 100), 100) || 0
+    },
+    {
+      name: 'Tasks Completed',
+      value: `${dashboardData.tasks?.completed || 0}/${dashboardData.tasks?.total || 0}`,
+      change: `${dashboardData.tasks?.completionRate || 0}%`,
+      trend: 'up' as const,
+      icon: CheckCircle2,
+      target: '100%',
+      progress: dashboardData.tasks?.completionRate || 0
+    },
+  ] as StatCard[] : mockStats
+
+  // Data extracted from API (available for future use in Recent Leads/Campaigns sections)
+  // const recentLeads = leadsData?.leads || []
+  // const activeCampaigns = campaignsData?.campaigns || []
+  const isLoading = statsLoading || leadsLoading || campaignsLoading
+
   const handleRefresh = () => {
     setRefreshing(true)
+    refetchStats()
     setTimeout(() => setRefreshing(false), 1000)
   }
 
@@ -161,6 +248,32 @@ function Dashboard() {
     a.href = url
     a.download = 'dashboard-data.json'
     a.click()
+  }
+
+  // Show loading state while fetching data
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <p className="mt-2 text-muted-foreground">Loading your dashboard...</p>
+          </div>
+        </div>
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
+                  <div className="h-8 bg-muted rounded w-3/4"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
+import { campaignsApi } from '@/lib/api'
 import { mockLeads } from '@/data/mockData'
 
 const campaignTypes = [
@@ -37,10 +39,10 @@ const campaignTypes = [
 
 function CampaignCreate() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [selectedType, setSelectedType] = useState('')
-  const [loading, setLoading] = useState(false)
   
   // Form state
   const [formData, setFormData] = useState({
@@ -58,6 +60,18 @@ function CampaignCreate() {
     abTestVariant: '',
   })
 
+  const createMutation = useMutation({
+    mutationFn: campaignsApi.createCampaign,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success(`Your ${selectedType} campaign "${formData.name}" has been created`)
+      navigate('/campaigns')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create campaign')
+    }
+  })
+
   const handleTypeSelect = (type: string) => {
     setSelectedType(type)
     setStep(2)
@@ -69,7 +83,7 @@ function CampaignCreate() {
 
   const handleCreate = () => {
     if (!formData.name.trim()) {
-      toast.error('Campaign name required', 'Please enter a name for your campaign')
+      toast.error('Please enter a campaign name')
       return
     }
     
@@ -78,14 +92,20 @@ function CampaignCreate() {
       return
     }
     
-    setLoading(true)
+    // Transform formData to match CreateCampaignData interface
+    const campaignData = {
+      name: formData.name,
+      type: selectedType as 'email' | 'sms' | 'phone',
+      status: 'draft' as const,
+      subject: formData.subject || undefined,
+      content: formData.content || undefined,
+      scheduledAt: formData.schedule === 'scheduled' && formData.scheduleDate 
+        ? `${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00Z` 
+        : undefined,
+      targetAudience: formData.audience === 'custom' ? formData.customAudience : undefined
+    }
     
-    // Simulate campaign creation
-    setTimeout(() => {
-      setLoading(false)
-      toast.success('Campaign created!', `Your ${selectedType} campaign "${formData.name}" is ready`)
-      setTimeout(() => navigate('/campaigns'), 500)
-    }, 1000)
+    createMutation.mutate(campaignData)
   }
 
   return (
@@ -514,8 +534,8 @@ function CampaignCreate() {
             <Button variant="outline" onClick={() => setStep(2)}>
               Back
             </Button>
-            <Button onClick={handleCreate} disabled={!formData.content} loading={loading}>
-              {loading ? 'Creating Campaign...' : 'Create Campaign'}
+            <Button onClick={handleCreate} disabled={!formData.content || createMutation.isPending}>
+              {createMutation.isPending ? 'Creating Campaign...' : 'Create Campaign'}
             </Button>
           </div>
         </div>

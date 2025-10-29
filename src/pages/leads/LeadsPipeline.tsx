@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -14,9 +14,11 @@ import {
   Sparkles,
   Eye,
   Plus,
-  Filter
+  Filter,
+  RefreshCw
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
+import { leadsApi } from '@/lib/api'
 
 interface Lead {
   id: number
@@ -40,74 +42,131 @@ interface Stage {
   totalValue?: string
 }
 
-const stages: Stage[] = [
-  { 
-    id: 'new', 
-    name: 'New', 
-    count: 12, 
-    color: 'bg-slate-500',
-    conversionRate: 45,
-    avgDays: 2,
-    totalValue: '$125k',
-    leads: [
-      { id: 1, name: 'John Doe', company: 'Acme Inc', score: 85, value: '$45k', lastContact: '2 hours ago', email: 'john@acme.com', phone: '555-0101' },
-      { id: 2, name: 'Jane Smith', company: 'Tech Corp', score: 72, value: '$32k', lastContact: '1 day ago', email: 'jane@techcorp.com', phone: '555-0102' },
-      { id: 6, name: 'Sarah Lee', company: 'Global Inc', score: 88, value: '$48k', lastContact: '3 hours ago', email: 'sarah@global.com', phone: '555-0106' },
-    ]
-  },
-  { 
-    id: 'contacted', 
-    name: 'Contacted', 
-    count: 8,
-    color: 'bg-blue-500',
-    conversionRate: 62,
-    avgDays: 5,
-    totalValue: '$186k',
-    leads: [
-      { id: 3, name: 'Bob Johnson', company: 'StartupXYZ', score: 91, value: '$67k', lastContact: '4 hours ago', email: 'bob@startupxyz.com', phone: '555-0103' },
-      { id: 7, name: 'Mike Chen', company: 'Innovate Co', score: 79, value: '$55k', lastContact: '1 day ago', email: 'mike@innovate.com', phone: '555-0107' },
-    ]
-  },
-  { 
-    id: 'qualified', 
-    name: 'Qualified', 
-    count: 15,
-    color: 'bg-purple-500',
-    conversionRate: 78,
-    avgDays: 7,
-    totalValue: '$342k',
-    leads: [
-      { id: 4, name: 'Alice Brown', company: 'BigCo', score: 68, value: '$89k', lastContact: '2 days ago', email: 'alice@bigco.com', phone: '555-0104' },
-      { id: 5, name: 'Charlie Wilson', company: 'Enterprise LLC', score: 79, value: '$125k', lastContact: '5 hours ago', email: 'charlie@enterprise.com', phone: '555-0105' },
-    ]
-  },
-  { 
-    id: 'proposal', 
-    name: 'Proposal', 
-    count: 6,
-    color: 'bg-orange-500',
-    conversionRate: 85,
-    avgDays: 12,
-    totalValue: '$458k',
-    leads: []
-  },
-  { 
-    id: 'won', 
-    name: 'Won', 
-    count: 24,
-    color: 'bg-green-500',
-    conversionRate: 100,
-    avgDays: 0,
-    totalValue: '$1.2M',
-    leads: []
-  },
-]
-
 function LeadsPipeline() {
-  const [pipelineStages, setPipelineStages] = useState<Stage[]>(stages)
+  const [pipelineStages, setPipelineStages] = useState<Stage[]>([])
   const [draggedLead, setDraggedLead] = useState<{ lead: Lead; fromStage: string } | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    loadPipelineData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const loadPipelineData = async () => {
+    setIsLoading(true)
+    try {
+      const response = await leadsApi.getLeads({ limit: 100 })
+      const leads = response.data || []
+      
+      // Organize leads by status
+      const statusMap: { [key: string]: Lead[] } = {
+        new: [],
+        contacted: [],
+        qualified: [],
+        proposal: [],
+        won: [],
+        lost: []
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      leads.forEach((apiLead: any) => {
+        const lead: Lead = {
+          id: apiLead.id,
+          name: `${apiLead.firstName} ${apiLead.lastName}`,
+          company: apiLead.company || 'No Company',
+          score: apiLead.score || 0,
+          value: apiLead.estimatedValue ? `$${apiLead.estimatedValue}` : undefined,
+          lastContact: apiLead.lastContactedAt ? new Date(apiLead.lastContactedAt).toLocaleDateString() : 'Never',
+          email: apiLead.email,
+          phone: apiLead.phone || undefined
+        }
+        
+        const status = apiLead.status?.toLowerCase() || 'new'
+        if (statusMap[status]) {
+          statusMap[status].push(lead)
+        } else {
+          statusMap.new.push(lead)
+        }
+      })
+
+      // Build pipeline stages
+      const stages: Stage[] = [
+        { 
+          id: 'new', 
+          name: 'New', 
+          count: statusMap.new.length, 
+          color: 'bg-slate-500',
+          conversionRate: 45,
+          avgDays: 2,
+          totalValue: calculateTotalValue(statusMap.new),
+          leads: statusMap.new
+        },
+        { 
+          id: 'contacted', 
+          name: 'Contacted', 
+          count: statusMap.contacted.length,
+          color: 'bg-blue-500',
+          conversionRate: 62,
+          avgDays: 5,
+          totalValue: calculateTotalValue(statusMap.contacted),
+          leads: statusMap.contacted
+        },
+        { 
+          id: 'qualified', 
+          name: 'Qualified', 
+          count: statusMap.qualified.length,
+          color: 'bg-purple-500',
+          conversionRate: 78,
+          avgDays: 7,
+          totalValue: calculateTotalValue(statusMap.qualified),
+          leads: statusMap.qualified
+        },
+        { 
+          id: 'proposal', 
+          name: 'Proposal', 
+          count: statusMap.proposal.length,
+          color: 'bg-orange-500',
+          conversionRate: 85,
+          avgDays: 12,
+          totalValue: calculateTotalValue(statusMap.proposal),
+          leads: statusMap.proposal
+        },
+        { 
+          id: 'won', 
+          name: 'Won', 
+          count: statusMap.won.length,
+          color: 'bg-green-500',
+          conversionRate: 100,
+          avgDays: 0,
+          totalValue: calculateTotalValue(statusMap.won),
+          leads: statusMap.won
+        },
+      ]
+
+      setPipelineStages(stages)
+    } catch (error) {
+      console.error('Error loading pipeline data:', error)
+      toast.error('Failed to load pipeline data')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const calculateTotalValue = (leads: Lead[]): string => {
+    const total = leads.reduce((sum, lead) => {
+      const value = lead.value ? parseInt(lead.value.replace(/[^0-9]/g, '')) : 0
+      return sum + value
+    }, 0)
+    
+    if (total >= 1000000) {
+      return `$${(total / 1000000).toFixed(1)}M`
+    } else if (total >= 1000) {
+      return `$${(total / 1000).toFixed(0)}k`
+    }
+    return `$${total}`
+  }
 
   const handleDragStart = (lead: Lead, stageId: string) => {
     setDraggedLead({ lead, fromStage: stageId })
@@ -171,6 +230,10 @@ function LeadsPipeline() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={loadPipelineData} disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
             <Filter className="mr-2 h-4 w-4" />
             Filters

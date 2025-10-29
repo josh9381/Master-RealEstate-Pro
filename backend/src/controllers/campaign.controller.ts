@@ -424,3 +424,103 @@ export const updateCampaignMetrics = async (req: Request, res: Response) => {
     message: 'Campaign metrics updated successfully',
   });
 };
+
+/**
+ * Pause a campaign
+ * POST /api/campaigns/:id/pause
+ */
+export const pauseCampaign = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    throw new ForbiddenError('User authentication required');
+  }
+
+  // Check if campaign exists
+  const existingCampaign = await prisma.campaign.findUnique({
+    where: { id },
+  });
+
+  if (!existingCampaign) {
+    throw new NotFoundError('Campaign not found');
+  }
+
+  // Update campaign status to PAUSED
+  const campaign = await prisma.campaign.update({
+    where: { id },
+    data: { status: 'PAUSED' },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatar: true,
+        },
+      },
+      tags: true,
+    },
+  });
+
+  res.json({
+    success: true,
+    data: { campaign },
+    message: 'Campaign paused successfully',
+  });
+};
+
+/**
+ * Send/Launch a campaign
+ * POST /api/campaigns/:id/send
+ */
+export const sendCampaign = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    throw new ForbiddenError('User authentication required');
+  }
+
+  // Check if campaign exists
+  const existingCampaign = await prisma.campaign.findUnique({
+    where: { id },
+  });
+
+  if (!existingCampaign) {
+    throw new NotFoundError('Campaign not found');
+  }
+
+  // Update campaign status to ACTIVE and set start date if not set
+  const updateData: any = { 
+    status: 'ACTIVE',
+  };
+  
+  if (!existingCampaign.startDate) {
+    updateData.startDate = new Date();
+  }
+
+  const campaign = await prisma.campaign.update({
+    where: { id },
+    data: updateData,
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatar: true,
+        },
+      },
+      tags: true,
+    },
+  });
+
+  res.json({
+    success: true,
+    data: { campaign },
+    message: 'Campaign sent successfully',
+  });
+};

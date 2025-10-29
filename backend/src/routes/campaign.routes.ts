@@ -10,6 +10,8 @@ import {
   deleteCampaign,
   getCampaignStats,
   updateCampaignMetrics,
+  pauseCampaign,
+  sendCampaign,
 } from '../controllers/campaign.controller';
 import {
   createCampaignSchema,
@@ -67,11 +69,11 @@ router.post(
 );
 
 /**
- * @route   PUT /api/campaigns/:id
+ * @route   PATCH /api/campaigns/:id
  * @desc    Update a campaign
  * @access  Private
  */
-router.put(
+router.patch(
   '/:id',
   validateParams(campaignIdSchema),
   validateBody(updateCampaignSchema),
@@ -88,6 +90,28 @@ router.patch(
   validateParams(campaignIdSchema),
   validateBody(updateCampaignMetricsSchema),
   asyncHandler(updateCampaignMetrics)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/pause
+ * @desc    Pause a campaign
+ * @access  Private
+ */
+router.post(
+  '/:id/pause',
+  validateParams(campaignIdSchema),
+  asyncHandler(pauseCampaign)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/send
+ * @desc    Send/Launch a campaign
+ * @access  Private
+ */
+router.post(
+  '/:id/send',
+  validateParams(campaignIdSchema),
+  asyncHandler(sendCampaign)
 );
 
 /**

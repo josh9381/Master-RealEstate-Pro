@@ -1,11 +1,17 @@
-import { Smartphone, Send, Users, Clock, MessageSquare } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { Smartphone, Send, Users, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast'
+import { messagesApi, templatesApi } from '@/lib/api'
 
 const SMSCenter = () => {
-  const recentMessages = [
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const { toast } = useToast()
+  const [recentMessages, setRecentMessages] = useState([
     {
       id: 1,
       contact: 'John Smith',
@@ -33,7 +39,37 @@ const SMSCenter = () => {
       status: 'read',
       direction: 'inbound',
     },
-  ];
+  ])
+
+  useEffect(() => {
+    loadMessages()
+  }, [])
+
+  const loadMessages = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
+      const response = await messagesApi.getMessages({ type: 'sms' })
+      
+      if (response && Array.isArray(response)) {
+        setRecentMessages(response)
+      }
+    } catch (error) {
+      console.error('Failed to load SMS messages:', error)
+      toast.error('Failed to load messages, using sample data')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    loadMessages(true)
+  }
 
   return (
     <div className="space-y-6">
@@ -42,11 +78,28 @@ const SMSCenter = () => {
           <h1 className="text-3xl font-bold">SMS Center</h1>
           <p className="text-muted-foreground mt-2">Send and manage SMS messages</p>
         </div>
-        <Button>
-          <Send className="h-4 w-4 mr-2" />
-          New SMS
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button>
+            <Send className="h-4 w-4 mr-2" />
+            New SMS
+          </Button>
+        </div>
       </div>
+
+      {loading ? (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading SMS messages...</p>
+          </div>
+        </Card>
+      ) : (
+        <>
+      <div className="hidden">Wrapper for loading state</div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -215,6 +268,8 @@ const SMSCenter = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

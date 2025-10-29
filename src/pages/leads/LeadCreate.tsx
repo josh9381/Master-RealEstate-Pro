@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Save, User, Building2, Mail, Phone, MapPin, DollarSign, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { leadsApi } from '@/lib/api'
+import { useToast } from '@/hooks/useToast'
 
 export default function LeadCreate() {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -29,16 +33,34 @@ export default function LeadCreate() {
     notes: ''
   })
 
+  const createMutation = useMutation({
+    mutationFn: leadsApi.createLead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      toast.success('Lead created successfully')
+      navigate('/leads')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create lead')
+    }
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Transform formData to match CreateLeadData interface
+    const leadData = {
+      name: `${formData.firstName} ${formData.lastName}`.trim(),
+      email: formData.email,
+      phone: formData.phone || undefined,
+      company: formData.company || undefined,
+      status: formData.status,
+      source: formData.source,
+      assignedTo: formData.assignedTo || undefined,
+      tags: formData.tags
+    }
     
-    console.log('Creating lead:', formData)
-    setLoading(false)
-    navigate('/leads')
+    createMutation.mutate(leadData)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -347,10 +369,10 @@ export default function LeadCreate() {
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={loading}
+                  disabled={createMutation.isPending}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Creating...' : 'Create Lead'}
+                  {createMutation.isPending ? 'Creating...' : 'Create Lead'}
                 </Button>
                 
                 <Button 

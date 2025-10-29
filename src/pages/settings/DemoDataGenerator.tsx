@@ -1,4 +1,4 @@
-import { Database, Trash2, Download, AlertTriangle } from 'lucide-react';
+import { Database, Trash2, Download, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -8,20 +8,21 @@ import { useToast } from '@/hooks/useToast';
 const DemoDataGenerator = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [leadsCount, setLeadsCount] = useState('100');
   const [campaignsCount, setCampaignsCount] = useState('10');
   const [activitiesCount, setActivitiesCount] = useState('500');
 
   const handleGenerate = async (type: string, count: string) => {
-    setLoading(true);
+    setGenerating(true);
     try {
-      // Simulate API call
+      // Would use dedicated demo data API endpoint in production
       await new Promise(resolve => setTimeout(resolve, 2000));
       toast.success('Data Generated', `Successfully generated ${count} sample ${type}.`);
     } catch (error) {
       toast.error('Generation Failed', `Failed to generate ${type}.`);
     } finally {
-      setLoading(false);
+      setGenerating(false);
     }
   };
 

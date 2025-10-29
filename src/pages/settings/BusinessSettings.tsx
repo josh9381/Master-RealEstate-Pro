@@ -1,13 +1,16 @@
-import { useState } from 'react';
-import { Building } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Building, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 const BusinessSettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // Company Information
   const [companyName, setCompanyName] = useState('Acme Corporation');
@@ -30,6 +33,50 @@ const BusinessSettings = () => {
   const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
   const [currency, setCurrency] = useState('USD');
   
+  useEffect(() => {
+    loadBusinessSettings();
+  }, []);
+
+  const loadBusinessSettings = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await settingsApi.getBusinessSettings();
+      
+      if (response) {
+        setCompanyName(response.companyName || 'Acme Corporation');
+        setIndustry(response.industry || 'Technology');
+        setCompanySize(response.companySize || '11-50 employees');
+        setTaxId(response.taxId || '');
+        setWebsite(response.website || '');
+        setEmail(response.email || '');
+        setPhone(response.phone || '');
+        setAddress(response.address || '');
+        setCity(response.city || '');
+        setState(response.state || '');
+        setZipCode(response.zipCode || '');
+        setCountry(response.country || 'United States');
+        setTimezone(response.timezone || 'America/Los_Angeles');
+        setDateFormat(response.dateFormat || 'MM/DD/YYYY');
+        setCurrency(response.currency || 'USD');
+      }
+    } catch (error) {
+      console.error('Failed to load business settings:', error);
+      toast.error('Failed to load settings, using default data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadBusinessSettings(true);
+  };
+  
   const handleLogoUpload = () => {
     toast.info('Logo upload feature coming soon!');
   };
@@ -40,21 +87,59 @@ const BusinessSettings = () => {
       return;
     }
     
-    setLoading(true);
+    setSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.updateBusinessSettings({
+        companyName,
+        industry,
+        companySize,
+        taxId,
+        website,
+        email,
+        phone,
+        address,
+        city,
+        state,
+        zipCode,
+        country,
+        timezone,
+        dateFormat,
+        currency
+      });
       toast.success('Business settings saved successfully');
+      await loadBusinessSettings(true);
     } catch (error) {
+      console.error('Failed to save settings:', error);
       toast.error('Failed to save settings');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 max-w-4xl">
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading business settings...</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-bold">Business Settings</h1>
-        <p className="text-muted-foreground mt-2">Configure your business information and branding</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Business Settings</h1>
+          <p className="text-muted-foreground mt-2">Configure your business information and branding</p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Company Logo */}
@@ -249,7 +334,9 @@ const BusinessSettings = () => {
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline">Cancel</Button>
-        <Button onClick={handleSave} loading={loading}>Save Changes</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Button>
       </div>
     </div>
   );

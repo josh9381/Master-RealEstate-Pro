@@ -1,113 +1,142 @@
-import { History, Clock, User, Tag, FileText, Calendar } from 'lucide-react';
+import { History, Clock, User, Tag, FileText, Calendar, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { useState, useEffect } from 'react';
+import { activitiesApi } from '@/lib/api';
 
 const LeadHistory = () => {
-  const timeline = [
-    {
-      id: 1,
-      type: 'status_change',
-      title: 'Status Changed',
-      description: 'New Lead → Qualified',
-      user: 'John Doe',
-      timestamp: '2024-01-15 14:30',
-      icon: Tag,
-      color: 'blue',
-    },
-    {
-      id: 2,
-      type: 'email_sent',
-      title: 'Email Sent',
-      description: 'Welcome email campaign delivered',
-      user: 'System',
-      timestamp: '2024-01-15 10:15',
-      icon: FileText,
-      color: 'green',
-    },
-    {
-      id: 3,
-      type: 'note_added',
-      title: 'Note Added',
-      description: 'Had a great conversation about their needs. Very interested in our product.',
-      user: 'Sarah Johnson',
-      timestamp: '2024-01-14 16:45',
-      icon: FileText,
-      color: 'purple',
-    },
-    {
-      id: 4,
-      type: 'task_completed',
-      title: 'Task Completed',
-      description: 'Follow-up call scheduled for next week',
-      user: 'Mike Wilson',
-      timestamp: '2024-01-14 11:20',
-      icon: Calendar,
-      color: 'orange',
-    },
-    {
-      id: 5,
-      type: 'email_opened',
-      title: 'Email Opened',
-      description: 'Opened "Product Introduction" email',
-      user: 'System',
-      timestamp: '2024-01-13 09:30',
-      icon: FileText,
-      color: 'green',
-    },
-    {
-      id: 6,
-      type: 'assigned',
-      title: 'Lead Assigned',
-      description: 'Assigned to Sarah Johnson',
-      user: 'John Doe',
-      timestamp: '2024-01-12 15:00',
-      icon: User,
-      color: 'blue',
-    },
-    {
-      id: 7,
-      type: 'created',
-      title: 'Lead Created',
-      description: 'Lead captured from website contact form',
-      user: 'System',
-      timestamp: '2024-01-12 14:30',
-      icon: Clock,
-      color: 'gray',
-    },
-  ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    statusChanges: 0,
+    emails: 0,
+    notes: 0,
+    tasks: 0,
+    calls: 0
+  });
 
-  const stats = [
-    { label: 'Total Activities', value: '47' },
-    { label: 'Status Changes', value: '8' },
-    { label: 'Emails Sent', value: '12' },
-    { label: 'Notes Added', value: '15' },
-    { label: 'Tasks Completed', value: '9' },
-    { label: 'Days Active', value: '23' },
+  useEffect(() => {
+    loadActivities();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadActivities = async () => {
+    setIsLoading(true);
+    try {
+      const response = await activitiesApi.getActivities({ limit: 50 });
+      const activities = response.data || [];
+      
+      // Transform activities to timeline format
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const timelineItems = activities.map((activity: any, index: number) => ({
+        id: activity.id || index,
+        type: activity.type || 'activity',
+        title: formatTitle(activity.type),
+        description: activity.description || 'No description',
+        user: activity.userId ? `User ${activity.userId}` : 'System',
+        timestamp: activity.createdAt ? new Date(activity.createdAt).toLocaleString() : 'Unknown',
+        icon: getIconForType(activity.type),
+        color: getColorForType(activity.type),
+      }));
+
+      setTimeline(timelineItems);
+
+      // Calculate stats
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newStats = {
+        total: activities.length,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        statusChanges: activities.filter((a: any) => a.type === 'status_change').length,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        emails: activities.filter((a: any) => a.type === 'email').length,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        notes: activities.filter((a: any) => a.type === 'note').length,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        tasks: activities.filter((a: any) => a.type === 'task').length,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        calls: activities.filter((a: any) => a.type === 'call').length,
+      };
+      setStats(newStats);
+    } catch (error) {
+      console.error('Error loading activities:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatTitle = (type: string): string => {
+    const titles: { [key: string]: string } = {
+      'status_change': 'Status Changed',
+      'email': 'Email Sent',
+      'note': 'Note Added',
+      'call': 'Phone Call',
+      'meeting': 'Meeting Scheduled',
+      'task': 'Task Updated',
+    };
+    return titles[type] || 'Activity';
+  };
+
+  const getIconForType = (type: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const icons: { [key: string]: any } = {
+      'status_change': Tag,
+      'email': FileText,
+      'note': FileText,
+      'call': Clock,
+      'meeting': Calendar,
+      'task': Calendar,
+    };
+    return icons[type] || History;
+  };
+
+  const getColorForType = (type: string): string => {
+    const colors: { [key: string]: string } = {
+      'status_change': 'blue',
+      'email': 'green',
+      'note': 'purple',
+      'call': 'orange',
+      'meeting': 'blue',
+      'task': 'orange',
+    };
+    return colors[type] || 'gray';
+  };
+
+  const displayStats = [
+    { label: 'Total Activities', value: stats.total.toString() },
+    { label: 'Status Changes', value: stats.statusChanges.toString() },
+    { label: 'Emails Sent', value: stats.emails.toString() },
+    { label: 'Notes Added', value: stats.notes.toString() },
+    { label: 'Tasks Completed', value: stats.tasks.toString() },
+    { label: 'Phone Calls', value: stats.calls.toString() },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Lead Activity History</h1>
-        <p className="text-muted-foreground mt-2">
-          Complete timeline of all lead interactions and changes
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Lead Activity History</h1>
+          <p className="text-muted-foreground mt-2">
+            Complete timeline of all lead interactions and changes
+          </p>
+        </div>
+        <Button onClick={loadActivities} disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Lead Info Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>John Smith - Acme Corp</CardTitle>
-              <CardDescription>john.smith@acmecorp.com • +1 (555) 123-4567</CardDescription>
-            </div>
-            <Badge variant="success">Qualified</Badge>
-          </div>
+          <CardTitle>Recent Activity Overview</CardTitle>
+          <CardDescription>Summary of lead activities across all leads</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            {stats.map((stat) => (
+            {displayStats.map((stat) => (
               <div key={stat.label} className="text-center p-3 bg-muted rounded-lg">
                 <div className="text-2xl font-bold">{stat.value}</div>
                 <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>

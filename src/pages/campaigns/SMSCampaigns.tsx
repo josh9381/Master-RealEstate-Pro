@@ -1,38 +1,52 @@
-import { MessageSquare, Send, Clock, CheckCircle } from 'lucide-react';
+import { MessageSquare, Send, Clock, CheckCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
+import { useState, useEffect } from 'react';
+import { campaignsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 
 const SMSCampaigns = () => {
-  const smsCampaigns = [
-    {
-      id: 1,
-      name: 'Flash Sale Alert',
-      message: '🎉 FLASH SALE! 50% off for the next 2 hours. Use code FLASH50',
-      status: 'sent',
-      sent: 3200,
-      delivered: 3180,
-      clicked: 512,
-      date: '2024-01-15',
-    },
-    {
-      id: 2,
-      name: 'Appointment Reminder',
-      message: 'Hi! Reminder: You have an appointment tomorrow at 2 PM. Reply YES to confirm.',
-      status: 'scheduled',
-      recipients: 450,
-      date: '2024-01-20',
-    },
-    {
-      id: 3,
-      name: 'Product Launch',
-      message: 'Be the first to know! New product launching this Friday. Stay tuned!',
-      status: 'draft',
-      recipients: 5000,
-      date: '2024-01-22',
-    },
-  ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [smsCampaigns, setSmsCampaigns] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    deliveryRate: 99.4,
+    clickRate: 16.0,
+    scheduled: 0
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadCampaigns();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadCampaigns = async () => {
+    setIsLoading(true);
+    try {
+      const response = await campaignsApi.getCampaigns({ type: 'sms', limit: 50 });
+      const campaigns = response.data || [];
+      
+      setSmsCampaigns(campaigns);
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const scheduled = campaigns.filter((c: any) => c.status === 'scheduled').length;
+      setStats({
+        total: response.total || 0,
+        deliveryRate: 99.4, // Mock
+        clickRate: 16.0, // Mock
+        scheduled
+      });
+    } catch (error) {
+      console.error('Error loading SMS campaigns:', error);
+      toast.error('Failed to load campaigns');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -41,22 +55,28 @@ const SMSCampaigns = () => {
           <h1 className="text-3xl font-bold">SMS Campaigns</h1>
           <p className="text-muted-foreground mt-2">Send targeted SMS messages to your contacts</p>
         </div>
-        <Button>
-          <MessageSquare className="h-4 w-4 mr-2" />
-          Create SMS Campaign
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadCampaigns} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Create SMS Campaign
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3,200</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">SMS campaigns</p>
           </CardContent>
         </Card>
         <Card>
@@ -65,8 +85,8 @@ const SMSCampaigns = () => {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">99.4%</div>
-            <p className="text-xs text-muted-foreground">3,180 delivered</p>
+            <div className="text-2xl font-bold">{stats.deliveryRate}%</div>
+            <p className="text-xs text-muted-foreground">Average rate</p>
           </CardContent>
         </Card>
         <Card>
@@ -75,8 +95,8 @@ const SMSCampaigns = () => {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">16.0%</div>
-            <p className="text-xs text-muted-foreground">512 clicks</p>
+            <div className="text-2xl font-bold">{stats.clickRate}%</div>
+            <p className="text-xs text-muted-foreground">Average rate</p>
           </CardContent>
         </Card>
         <Card>
@@ -85,7 +105,7 @@ const SMSCampaigns = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold">{stats.scheduled}</div>
             <p className="text-xs text-muted-foreground">Going out soon</p>
           </CardContent>
         </Card>

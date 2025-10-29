@@ -1,7 +1,10 @@
-import { Activity, Clock, Users, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, Clock, Users, Zap, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { analyticsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 import {
   AreaChart,
   Area,
@@ -14,6 +17,36 @@ import {
 } from 'recharts';
 
 const UsageAnalytics = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [activityData, setActivityData] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await loadUsageData();
+    };
+    fetchData();
+  }, []);
+
+  const loadUsageData = async () => {
+    setLoading(true);
+    try {
+      const [dashboard, activity] = await Promise.all([
+        analyticsApi.getDashboardStats(),
+        analyticsApi.getActivityFeed(),
+      ]);
+      setDashboardData(dashboard);
+      setActivityData(activity?.activities || []);
+    } catch (error) {
+      const err = error as Error;
+      toast.error(err.message || 'Failed to load usage data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mock usage data since we don't have specific usage metrics endpoint
   const usageData = [
     { date: 'Jan 1', users: 45, apiCalls: 12340, storage: 8.2 },
     { date: 'Jan 5', users: 52, apiCalls: 15670, storage: 8.5 },
@@ -40,43 +73,49 @@ const UsageAnalytics = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Usage Analytics</h1>
-        <p className="text-muted-foreground mt-2">
-          Track system usage, user activity, and resource consumption
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Usage Analytics</h1>
+          <p className="text-muted-foreground mt-2">
+            Track system usage, user activity, and resource consumption
+          </p>
+        </div>
+        <Button variant="outline" onClick={loadUsageData} disabled={loading}>
+          {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
+          {loading ? 'Loading...' : 'Refresh'}
+        </Button>
       </div>
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Activities</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">58</div>
-            <p className="text-xs text-muted-foreground">Today</p>
+            <div className="text-2xl font-bold">{activityData.length}</div>
+            <p className="text-xs text-muted-foreground">Recent activities</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">API Calls</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">17,450</div>
-            <p className="text-xs text-muted-foreground">Last 24 hours</p>
+            <div className="text-2xl font-bold">{dashboardData?.stats?.totalLeads || 0}</div>
+            <p className="text-xs text-muted-foreground">In system</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
+            <CardTitle className="text-sm font-medium">Campaigns</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">9.5 GB</div>
-            <p className="text-xs text-muted-foreground">of 50 GB</p>
+            <div className="text-2xl font-bold">{dashboardData?.stats?.totalCampaigns || 0}</div>
+            <p className="text-xs text-muted-foreground">Active</p>
           </CardContent>
         </Card>
         <Card>

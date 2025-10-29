@@ -1,20 +1,46 @@
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Activity, TrendingUp, Zap, Brain } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Activity, TrendingUp, Zap, Brain, RefreshCw } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { aiApi } from '@/lib/api'
+import { useToast } from '@/hooks/useToast'
 
 const AIAnalytics = () => {
-  // Performance metrics over time
-  const performanceData = [
-    { date: 'Jan 15', accuracy: 88, latency: 120, throughput: 450 },
-    { date: 'Jan 16', accuracy: 89, latency: 115, throughput: 480 },
-    { date: 'Jan 17', accuracy: 90, latency: 110, throughput: 520 },
-    { date: 'Jan 18', accuracy: 91, latency: 105, throughput: 550 },
-    { date: 'Jan 19', accuracy: 92, latency: 100, throughput: 580 },
-    { date: 'Jan 20', accuracy: 94, latency: 95, throughput: 620 },
-  ]
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [performanceData, setPerformanceData] = useState<Array<{
+    date?: string;
+    month?: string;
+    accuracy?: number;
+    latency?: number;
+    throughput?: number;
+  }>>([])
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      await loadAnalytics()
+    }
+    fetchData()
+  }, [])
 
-  // Model comparison
+  const loadAnalytics = async () => {
+    setLoading(true)
+    try {
+      const data = await aiApi.getModelPerformance()
+      if (data?.performance) {
+        setPerformanceData(data.performance)
+      }
+    } catch (error) {
+      const err = error as Error
+      toast.error(err.message || 'Failed to load AI analytics')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Model comparison data (can be from API or static)
   const modelComparison = [
     { model: 'Lead Scoring', accuracy: 94, speed: 95, reliability: 98 },
     { model: 'Segmentation', accuracy: 89, speed: 92, reliability: 96 },
@@ -22,14 +48,31 @@ const AIAnalytics = () => {
     { model: 'Churn Model', accuracy: 87, speed: 90, reliability: 93 },
   ]
 
+  // Calculate metrics from performance data
+  const avgAccuracy = performanceData.length > 0
+    ? (performanceData.reduce((sum, p) => sum + (p.accuracy || 0), 0) / performanceData.length).toFixed(1)
+    : '0'
+  const latestLatency = performanceData.length > 0
+    ? performanceData[performanceData.length - 1]?.latency || 0
+    : 0
+  const latestThroughput = performanceData.length > 0
+    ? performanceData[performanceData.length - 1]?.throughput || 0
+    : 0
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">AI Performance Analytics</h1>
-        <p className="text-muted-foreground mt-2">
-          Detailed performance metrics and analytics for all AI models
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">AI Performance Analytics</h1>
+          <p className="text-muted-foreground mt-2">
+            Detailed performance metrics and analytics for all AI models
+          </p>
+        </div>
+        <Button onClick={loadAnalytics} disabled={loading}>
+          {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
+          {loading ? 'Loading...' : 'Refresh'}
+        </Button>
       </div>
 
       {/* Key Metrics */}
@@ -40,8 +83,8 @@ const AIAnalytics = () => {
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">95ms</div>
-            <p className="text-xs text-green-600">-12ms from last week</p>
+            <div className="text-2xl font-bold">{latestLatency}ms</div>
+            <p className="text-xs text-green-600">Real-time data</p>
           </CardContent>
         </Card>
 
@@ -51,8 +94,8 @@ const AIAnalytics = () => {
             <Brain className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">92.3%</div>
-            <p className="text-xs text-green-600">+2.1% improvement</p>
+            <div className="text-2xl font-bold">{avgAccuracy}%</div>
+            <p className="text-xs text-green-600">Average across models</p>
           </CardContent>
         </Card>
 
@@ -62,8 +105,8 @@ const AIAnalytics = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">620/min</div>
-            <p className="text-xs text-green-600">+15% increase</p>
+            <div className="text-2xl font-bold">{latestThroughput}/min</div>
+            <p className="text-xs text-green-600">Current rate</p>
           </CardContent>
         </Card>
 

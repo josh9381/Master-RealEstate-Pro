@@ -1,68 +1,96 @@
-import { FileText, Plus, Copy, Edit } from 'lucide-react';
+import { FileText, Plus, Copy, Edit, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
+import { useState, useEffect } from 'react';
+import { campaignsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 
 const CampaignTemplates = () => {
-  const templates = [
-    {
-      id: 1,
-      name: 'Welcome Email Series',
-      type: 'Email',
-      category: 'Onboarding',
-      description: '3-part welcome email sequence for new subscribers',
-      usageCount: 45,
-      lastUsed: '2 days ago',
-    },
-    {
-      id: 2,
-      name: 'Flash Sale Alert',
-      type: 'SMS',
-      category: 'Promotion',
-      description: 'Quick SMS template for time-sensitive offers',
-      usageCount: 32,
-      lastUsed: '1 week ago',
-    },
-    {
-      id: 3,
-      name: 'Product Launch Announcement',
-      type: 'Email',
-      category: 'Product',
-      description: 'Professional template for new product releases',
-      usageCount: 28,
-      lastUsed: '3 days ago',
-    },
-    {
-      id: 4,
-      name: 'Customer Survey Request',
-      type: 'Email',
-      category: 'Feedback',
-      description: 'Collect customer feedback and testimonials',
-      usageCount: 56,
-      lastUsed: '1 day ago',
-    },
-    {
-      id: 5,
-      name: 'Appointment Reminder',
-      type: 'SMS',
-      category: 'Reminder',
-      description: 'Automated appointment confirmation and reminder',
-      usageCount: 89,
-      lastUsed: 'Today',
-    },
-    {
-      id: 6,
-      name: 'Re-engagement Campaign',
-      type: 'Email',
-      category: 'Retention',
-      description: 'Win back inactive customers with special offers',
-      usageCount: 23,
-      lastUsed: '5 days ago',
-    },
-  ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    email: 0,
+    sms: 0,
+    phone: 0
+  });
+  const { toast } = useToast();
 
-  const categories = ['All', 'Onboarding', 'Promotion', 'Product', 'Feedback', 'Reminder', 'Retention'];
+  useEffect(() => {
+    loadTemplates();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadTemplates = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch all campaigns to use as templates
+      const response = await campaignsApi.getCampaigns({ limit: 100 });
+      const campaigns = response.data || [];
+      
+      // Transform campaigns into template format
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const templateList = campaigns.map((campaign: any) => ({
+        id: campaign.id,
+        name: campaign.name,
+        type: campaign.type === 'email' ? 'Email' : campaign.type === 'sms' ? 'SMS' : 'Phone',
+        category: campaign.status === 'completed' ? 'Proven' : 'Draft',
+        description: campaign.content?.substring(0, 60) || 'Campaign template',
+        usageCount: 0, // Mock - no endpoint for this
+        lastUsed: campaign.updatedAt ? new Date(campaign.updatedAt).toLocaleDateString() : 'Never',
+        subject: campaign.subject,
+        content: campaign.content,
+        status: campaign.status
+      }));
+      
+      setTemplates(templateList);
+      
+      // Calculate stats
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const emailCount = campaigns.filter((c: any) => c.type === 'email').length;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const smsCount = campaigns.filter((c: any) => c.type === 'sms').length;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const phoneCount = campaigns.filter((c: any) => c.type === 'phone').length;
+      
+      setStats({
+        total: campaigns.length,
+        email: emailCount,
+        sms: smsCount,
+        phone: phoneCount
+      });
+    } catch (error) {
+      console.error('Error loading templates:', error);
+      toast.error('Failed to load templates');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDuplicate = async (templateId: number) => {
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+    
+    try {
+      await campaignsApi.createCampaign({
+        name: `${template.name} (Copy)`,
+        type: template.type.toLowerCase() as 'email' | 'sms' | 'phone',
+        status: 'draft',
+        subject: template.subject,
+        content: template.content
+      });
+      toast.success(`Template "${template.name}" duplicated`);
+      loadTemplates();
+    } catch (error) {
+      console.error('Error duplicating template:', error);
+      toast.error('Failed to duplicate template');
+    }
+  };
+
+  const categories = ['All', 'Email', 'SMS', 'Phone', 'Proven', 'Draft'];
 
   return (
     <div className="space-y-6">
@@ -73,10 +101,16 @@ const CampaignTemplates = () => {
             Pre-built templates to speed up campaign creation
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Template
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadTemplates} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Template
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -87,7 +121,7 @@ const CampaignTemplates = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground">Across all types</p>
           </CardContent>
         </Card>
@@ -97,7 +131,7 @@ const CampaignTemplates = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">16</div>
+            <div className="text-2xl font-bold">{stats.email}</div>
             <p className="text-xs text-muted-foreground">Ready to use</p>
           </CardContent>
         </Card>
@@ -107,18 +141,18 @@ const CampaignTemplates = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{stats.sms}</div>
             <p className="text-xs text-muted-foreground">Quick send</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Most Used</CardTitle>
+            <CardTitle className="text-sm font-medium">Phone Templates</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
-            <p className="text-xs text-muted-foreground">Appointment Reminder</p>
+            <div className="text-2xl font-bold">{stats.phone}</div>
+            <p className="text-xs text-muted-foreground">Voice campaigns</p>
           </CardContent>
         </Card>
       </div>
@@ -158,11 +192,11 @@ const CampaignTemplates = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                <span>Used {template.usageCount} times</span>
-                <span>Last: {template.lastUsed}</span>
+                <span>Status: {template.status}</span>
+                <span>Updated: {template.lastUsed}</span>
               </div>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => handleDuplicate(template.id)}>
                   <Copy className="h-4 w-4 mr-2" />
                   Use Template
                 </Button>

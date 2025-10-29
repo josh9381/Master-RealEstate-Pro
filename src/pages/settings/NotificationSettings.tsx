@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Bell, Mail, MessageSquare, TrendingUp, Users, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Mail, MessageSquare, TrendingUp, Users, Calendar, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 import { LucideIcon } from 'lucide-react';
 
@@ -23,7 +24,9 @@ interface NotificationCategory {
 
 const NotificationSettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // Channel toggles
   const [emailEnabled, setEmailEnabled] = useState(true);
@@ -79,7 +82,45 @@ const NotificationSettings = () => {
     },
   ]);
 
-  const handleToggleNotification = (categoryIndex: number, settingIndex: number, channel: 'email' | 'push' | 'sms') => {
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await settingsApi.getNotificationSettings();
+      
+      if (response) {
+        setEmailEnabled(response.emailEnabled ?? true);
+        setPushEnabled(response.pushEnabled ?? true);
+        setSmsEnabled(response.smsEnabled ?? true);
+        setQuietHoursEnabled(response.quietHoursEnabled ?? false);
+        setQuietStart(response.quietStart || '22:00');
+        setQuietEnd(response.quietEnd || '08:00');
+        if (response.categories) {
+          setNotificationCategories(response.categories);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load notification settings:', error);
+      toast.error('Failed to load settings, using defaults');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadSettings(true);
+  };
+
+  const toggleNotification = (categoryIndex: number, settingIndex: number, channel: 'email' | 'push' | 'sms') => {
     setNotificationCategories(prev => {
       const updated = [...prev];
       updated[categoryIndex].settings[settingIndex][channel] = !updated[categoryIndex].settings[settingIndex][channel];
@@ -87,18 +128,42 @@ const NotificationSettings = () => {
     });
   };
 
+  const handleToggleNotification = toggleNotification;
+
   const handleSave = async () => {
-    setLoading(true);
+    setSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.updateNotificationSettings({
+        emailEnabled,
+        pushEnabled,
+        smsEnabled,
+        quietHoursEnabled,
+        quietStart,
+        quietEnd,
+        categories: notificationCategories
+      });
       toast.success('Notification preferences saved successfully');
+      await loadSettings(true);
     } catch (error) {
+      console.error('Failed to save preferences:', error);
       toast.error('Failed to save preferences');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 max-w-4xl">
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading notification settings...</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const handleReset = () => {
     // Reset to default values
@@ -159,11 +224,17 @@ const NotificationSettings = () => {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-3xl font-bold">Notification Settings</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage how and when you receive notifications
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Notification Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage how and when you receive notifications
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Notification Channels */}
@@ -341,7 +412,9 @@ const NotificationSettings = () => {
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline" onClick={handleReset}>Reset to Default</Button>
-        <Button onClick={handleSave} loading={loading}>Save Preferences</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Preferences'}
+        </Button>
       </div>
     </div>
   );

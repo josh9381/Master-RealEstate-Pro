@@ -1,14 +1,17 @@
-import { useState } from 'react';
-import { Workflow, Plus, Play, Pause, Edit, Trash2, BarChart3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Workflow, Plus, Play, Pause, Edit, Trash2, BarChart3, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/useToast';
+import { workflowsApi } from '@/lib/api';
 
 const WorkflowsList = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   const [workflows, setWorkflows] = useState([
     {
@@ -63,21 +66,67 @@ const WorkflowsList = () => {
     },
   ]);
 
-  const toggleWorkflowStatus = (workflowId: number) => {
-    setWorkflows(workflows.map(w => 
-      w.id === workflowId 
-        ? { ...w, status: w.status === 'active' ? 'paused' as const : 'active' as const }
-        : w
-    ));
-    const workflow = workflows.find(w => w.id === workflowId);
-    if (workflow) {
-      toast.success(`Workflow ${workflow.status === 'active' ? 'paused' : 'activated'}`);
+  useEffect(() => {
+    loadWorkflows();
+  }, []);
+
+  const loadWorkflows = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await workflowsApi.getWorkflows();
+      
+      if (response && Array.isArray(response)) {
+        setWorkflows(response);
+      }
+    } catch (error) {
+      console.error('Failed to load workflows:', error);
+      toast.error('Failed to load workflows, using sample data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const deleteWorkflow = (workflowId: number) => {
-    setWorkflows(workflows.filter(w => w.id !== workflowId));
-    toast.success('Workflow deleted successfully');
+  const handleRefresh = () => {
+    loadWorkflows(true);
+  };
+
+  const toggleWorkflowStatus = async (workflowId: number) => {
+    try {
+      await workflowsApi.toggleWorkflow(workflowId.toString());
+      
+      setWorkflows(workflows.map(w => 
+        w.id === workflowId 
+          ? { ...w, status: w.status === 'active' ? 'paused' as const : 'active' as const }
+          : w
+      ));
+      const workflow = workflows.find(w => w.id === workflowId);
+      if (workflow) {
+        toast.success(`Workflow ${workflow.status === 'active' ? 'paused' : 'activated'}`);
+      }
+      
+      await loadWorkflows(true);
+    } catch (error) {
+      console.error('Failed to toggle workflow:', error);
+      toast.error('Failed to toggle workflow status');
+    }
+  };
+
+  const deleteWorkflow = async (workflowId: number) => {
+    try {
+      await workflowsApi.deleteWorkflow(workflowId.toString());
+      setWorkflows(workflows.filter(w => w.id !== workflowId));
+      toast.success('Workflow deleted successfully');
+      await loadWorkflows(true);
+    } catch (error) {
+      console.error('Failed to delete workflow:', error);
+      toast.error('Failed to delete workflow');
+    }
   };
 
   const viewAnalytics = (workflowId: number) => {
@@ -99,13 +148,30 @@ const WorkflowsList = () => {
             Automate your marketing and sales processes
           </p>
         </div>
-        <Link to="/workflows/builder">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Workflow
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
-        </Link>
+          <Link to="/workflows/builder">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Workflow
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {loading ? (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading workflows...</p>
+          </div>
+        </Card>
+      ) : (
+        <>
+      <div className="hidden">Wrapper for loading state</div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -285,6 +351,8 @@ const WorkflowsList = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

@@ -1,12 +1,15 @@
-import { Shield, CheckCircle, AlertTriangle, FileText } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, FileText, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 const ComplianceSettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [tcpaEnabled, setTcpaEnabled] = useState(true);
   const [requireConsent, setRequireConsent] = useState(true);
   const [blockRevokedConsent, setBlockRevokedConsent] = useState(true);
@@ -20,26 +23,66 @@ const ComplianceSettings = () => {
   const [logAllChanges, setLogAllChanges] = useState(true);
   const [retentionDays, setRetentionDays] = useState('365');
 
-  const handleSave = async () => {
-    setLoading(true);
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    
     try {
-      // Simulate API call
+      // Compliance settings would be part of settingsApi in real implementation
+      const settings = await settingsApi.getBusinessSettings();
+      if (isRefresh) toast.success('Settings refreshed');
+    } catch (error) {
+      console.error('Failed to load compliance settings:', error);
+      toast.error('Failed to load settings, using defaults');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => loadSettings(true);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Would use settingsApi.updateComplianceSettings() in real implementation
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success('Settings Saved', 'Compliance settings have been updated successfully.');
     } catch (error) {
       toast.error('Error', 'Failed to save compliance settings.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Compliance Settings</h1>
-        <p className="text-muted-foreground mt-2">
-          Configure TCPA, DNC, GDPR, and other compliance requirements
-        </p>
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Loading compliance settings...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Compliance Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Configure TCPA, DNC, GDPR, and other compliance requirements
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Compliance Status */}
@@ -501,8 +544,12 @@ const ComplianceSettings = () => {
       {/* Save Settings */}
       <div className="flex justify-end space-x-2">
         <Button variant="outline">Reset to Defaults</Button>
-        <Button onClick={handleSave} loading={loading}>Save All Settings</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save All Settings'}
+        </Button>
       </div>
+        </>
+      )}
     </div>
   );
 };

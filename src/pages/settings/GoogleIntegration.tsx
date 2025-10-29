@@ -1,13 +1,16 @@
-import { useState } from 'react';
-import { Chrome, Calendar, Mail, Shield, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Chrome, Calendar, Mail, Shield, CheckCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 const GoogleIntegration = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [connected, setConnected] = useState(true);
   
   // Gmail settings
@@ -25,53 +28,100 @@ const GoogleIntegration = () => {
   const [contactsEnabled, setContactsEnabled] = useState(true);
   const [syncContacts, setSyncContacts] = useState(true);
   const [autoImport, setAutoImport] = useState(false);
-  
-  const handleConnect = async () => {
-    setLoading(true);
+
+  useEffect(() => {
+    loadIntegrationSettings();
+  }, []);
+
+  const loadIntegrationSettings = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setConnected(true);
-      toast.success('Connected to Google Workspace successfully');
+      const status = await settingsApi.getIntegrationStatus('google');
+      if (status) {
+        setConnected(status.connected ?? true);
+      }
+      if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
-      toast.error('Failed to connect to Google');
+      console.error('Failed to load Google integration:', error);
+      toast.error('Failed to load settings, using defaults');
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => loadIntegrationSettings(true);
+  
+  const handleConnect = async () => {
+    setSaving(true);
+    try {
+      await settingsApi.connectIntegration('google', {});
+      setConnected(true);
+      toast.success('Connected to Google Workspace successfully');
+      loadIntegrationSettings(); // Reload
+    } catch (error) {
+      console.error('Failed to connect:', error);
+      toast.error('Failed to connect to Google');
+    } finally {
+      setSaving(false);
     }
   };
   
   const handleDisconnect = async () => {
     if (!confirm('Are you sure you want to disconnect Google Workspace?')) return;
     
-    setLoading(true);
+    setSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.disconnectIntegration('google');
       setConnected(false);
       toast.success('Disconnected from Google Workspace');
     } catch (error) {
+      console.error('Failed to disconnect:', error);
       toast.error('Failed to disconnect');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
   
   const handleSaveSettings = async () => {
-    setLoading(true);
+    setSaving(true);
     try {
+      // Would save individual settings in real implementation
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success('Google integration settings saved');
     } catch (error) {
       toast.error('Failed to save settings');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+  
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Google Workspace Integration</h1>
-        <p className="text-muted-foreground mt-2">
-          Connect Google services for enhanced functionality
-        </p>
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Loading Google integration...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Google Workspace Integration</h1>
+          <p className="text-muted-foreground mt-2">
+            Connect Google services for enhanced functionality
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Connection Status */}
@@ -101,8 +151,8 @@ const GoogleIntegration = () => {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" onClick={handleDisconnect} loading={loading}>
-                Disconnect
+              <Button variant="outline" onClick={handleDisconnect} disabled={saving}>
+                {saving ? 'Disconnecting...' : 'Disconnect'}
               </Button>
             </div>
           ) : (
@@ -110,9 +160,9 @@ const GoogleIntegration = () => {
               <p className="text-muted-foreground mb-4">
                 Connect your Google Workspace account to enable integrations
               </p>
-              <Button onClick={handleConnect} loading={loading}>
+              <Button onClick={handleConnect} disabled={saving}>
                 <Chrome className="h-4 w-4 mr-2" />
-                Connect Google Account
+                {saving ? 'Connecting...' : 'Connect Google Account'}
               </Button>
             </div>
           )}
@@ -455,10 +505,12 @@ const GoogleIntegration = () => {
       {/* Save Button */}
       {connected && (
         <div className="flex justify-end">
-          <Button onClick={handleSaveSettings} loading={loading}>
-            Save Integration Settings
+          <Button onClick={handleSaveSettings} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Integration Settings'}
           </Button>
         </div>
+      )}
+        </>
       )}
     </div>
   );

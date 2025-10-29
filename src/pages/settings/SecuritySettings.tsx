@@ -1,14 +1,17 @@
-import { useState } from 'react';
-import { Shield, Key, Smartphone, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Shield, Key, Smartphone, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 const SecuritySettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -25,6 +28,40 @@ const SecuritySettings = () => {
     { id: 2, device: 'iPhone • Safari', location: 'San Francisco, CA', time: '2 hours ago', current: false },
     { id: 3, device: 'macOS • Firefox', location: 'San Jose, CA', time: '1 day ago', current: false },
   ]);
+
+  useEffect(() => {
+    loadSecuritySettings();
+  }, []);
+
+  const loadSecuritySettings = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const settings = await settingsApi.getSecuritySettings();
+      
+      if (settings) {
+        setTwoFactorEnabled(settings.twoFactorEnabled ?? true);
+      }
+      
+      if (isRefresh) {
+        toast.success('Security settings refreshed');
+      }
+    } catch (error) {
+      console.error('Failed to load security settings:', error);
+      toast.error('Failed to load security settings, using defaults');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadSecuritySettings(true);
+  };
   
   const handlePasswordChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -42,32 +79,39 @@ const SecuritySettings = () => {
       return;
     }
     
-    setLoading(true);
+    setSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.changePassword({ currentPassword, newPassword });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       toast.success('Password updated successfully');
     } catch (error) {
+      console.error('Failed to change password:', error);
       toast.error('Failed to update password');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
   
   const handleToggle2FA = async () => {
-    setLoading(true);
+    setSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setTwoFactorEnabled(!twoFactorEnabled);
-      toast.success(twoFactorEnabled ? '2FA disabled' : '2FA enabled successfully');
+      if (twoFactorEnabled) {
+        await settingsApi.disable2FA({});
+        setTwoFactorEnabled(false);
+        toast.success('2FA disabled');
+      } else {
+        await settingsApi.enable2FA({});
+        setTwoFactorEnabled(true);
+        toast.success('2FA enabled successfully');
+      }
+      loadSecuritySettings(); // Reload from API
     } catch (error) {
+      console.error('Failed to toggle 2FA:', error);
       toast.error('Failed to update 2FA settings');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
   
@@ -142,11 +186,33 @@ const SecuritySettings = () => {
       setLoading(false);
     }
   };
+  
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-bold">Security Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your account security and authentication</p>
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Loading security settings...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Security Settings</h1>
+          <p className="text-muted-foreground mt-2">Manage your account security and authentication</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Security Score */}
@@ -226,7 +292,9 @@ const SecuritySettings = () => {
               <li>• Contains at least one special character</li>
             </ul>
           </div>
-          <Button onClick={handlePasswordChange} loading={loading}>Update Password</Button>
+          <Button onClick={handlePasswordChange} disabled={saving}>
+            {saving ? 'Updating...' : 'Update Password'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -365,6 +433,8 @@ const SecuritySettings = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

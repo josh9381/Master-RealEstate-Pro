@@ -1,8 +1,82 @@
-import { Download, FileSpreadsheet, FileJson, FileText, Calendar } from 'lucide-react';
+import { Download, FileSpreadsheet, FileJson, FileText, Calendar, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { useState, useEffect } from 'react';
+import { leadsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 
 const LeadsExport = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalLeads, setTotalLeads] = useState(0);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadLeadCount();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadLeadCount = async () => {
+    try {
+      const response = await leadsApi.getLeads({ limit: 1 });
+      setTotalLeads(response.total || 0);
+    } catch (error) {
+      console.error('Error loading lead count:', error);
+    }
+  };
+
+  const handleExport = async (format: string) => {
+    setIsLoading(true);
+    try {
+      const response = await leadsApi.getLeads({ limit: 1000 });
+      const leads = response.data || [];
+      
+      // Create export data
+      let exportData: string;
+      let filename: string;
+      let mimeType: string;
+
+      if (format === 'csv') {
+        const headers = 'First Name,Last Name,Email,Phone,Company,Status,Source,Score\n';
+        const rows = leads.map((lead: any) => 
+          `${lead.firstName || ''},${lead.lastName || ''},${lead.email},${lead.phone || ''},${lead.company || ''},${lead.status},${lead.source || ''},${lead.score || 0}`
+        ).join('\n');
+        exportData = headers + rows;
+        filename = `leads_export_${new Date().toISOString().split('T')[0]}.csv`;
+        mimeType = 'text/csv';
+      } else if (format === 'json') {
+        exportData = JSON.stringify(leads, null, 2);
+        filename = `leads_export_${new Date().toISOString().split('T')[0]}.json`;
+        mimeType = 'application/json';
+      } else {
+        // Excel format - use CSV for now
+        const headers = 'First Name,Last Name,Email,Phone,Company,Status,Source,Score\n';
+        const rows = leads.map((lead: any) => 
+          `${lead.firstName || ''},${lead.lastName || ''},${lead.email},${lead.phone || ''},${lead.company || ''},${lead.status},${lead.source || ''},${lead.score || 0}`
+        ).join('\n');
+        exportData = headers + rows;
+        filename = `leads_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      }
+
+      // Create download link
+      const blob = new Blob([exportData], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${leads.length} leads as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Error exporting leads:', error);
+      toast.error('Failed to export leads');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const exportHistory = [
     {
       id: 1,
@@ -52,7 +126,7 @@ const LeadsExport = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full">
+            <Button className="w-full" onClick={() => handleExport('excel')} disabled={isLoading}>
               <Download className="h-4 w-4 mr-2" />
               Export as Excel
             </Button>
@@ -70,7 +144,7 @@ const LeadsExport = () => {
             <CardDescription>Simple comma-separated values for easy import</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full">
+            <Button className="w-full" onClick={() => handleExport('csv')} disabled={isLoading}>
               <Download className="h-4 w-4 mr-2" />
               Export as CSV
             </Button>
@@ -88,7 +162,7 @@ const LeadsExport = () => {
             <CardDescription>Structured data for developers and integrations</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full">
+            <Button className="w-full" onClick={() => handleExport('json')} disabled={isLoading}>
               <Download className="h-4 w-4 mr-2" />
               Export as JSON
             </Button>

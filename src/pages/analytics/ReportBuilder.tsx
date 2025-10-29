@@ -1,9 +1,45 @@
-import { Layout, Plus, Settings, TrendingUp, BarChart3 } from 'lucide-react';
+import { Layout, Plus, Settings, TrendingUp, BarChart3, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useState, useEffect } from 'react';
+import { analyticsApi } from '@/lib/api';
 
 const ReportBuilder = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [dataSources, setDataSources] = useState({
+    leads: 0,
+    campaigns: 0,
+    contacts: 0,
+    tasks: 0,
+  });
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [dashboardData, leadData, campaignData] = await Promise.all([
+        analyticsApi.getDashboardStats(),
+        analyticsApi.getLeadAnalytics(),
+        analyticsApi.getCampaignAnalytics(),
+      ]);
+
+      setDataSources({
+        leads: leadData?.total || 0,
+        campaigns: campaignData?.total || 0,
+        contacts: dashboardData?.stats?.totalLeads || 0,
+        tasks: dashboardData?.stats?.totalTasks || 0,
+      });
+    } catch (error) {
+      console.error('Error loading report builder data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -14,6 +50,10 @@ const ReportBuilder = () => {
           </p>
         </div>
         <div className="flex space-x-2">
+          <Button variant="outline" onClick={loadData} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline">Load Template</Button>
           <Button>Save Report</Button>
         </div>
@@ -67,10 +107,10 @@ const ReportBuilder = () => {
           <CardContent>
             <div className="space-y-2">
               {[
-                { name: 'Leads', icon: TrendingUp, count: 4567 },
-                { name: 'Campaigns', icon: BarChart3, count: 23 },
-                { name: 'Contacts', icon: Layout, count: 8901 },
-                { name: 'Tasks', icon: Settings, count: 234 },
+                { name: 'Leads', icon: TrendingUp, count: dataSources.leads },
+                { name: 'Campaigns', icon: BarChart3, count: dataSources.campaigns },
+                { name: 'Contacts', icon: Layout, count: dataSources.contacts },
+                { name: 'Tasks', icon: Settings, count: dataSources.tasks },
               ].map((source) => (
                 <div
                   key={source.name}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Mail, 
   MessageSquare, 
@@ -20,13 +20,15 @@ import {
   FileText,
   Settings,
   Download,
-  Filter
+  Filter,
+  RefreshCw
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/hooks/useToast'
+import { messagesApi } from '@/lib/api'
 
 interface Message {
   id: number
@@ -206,6 +208,8 @@ const mockThreads: Thread[] = [
 ]
 
 const CommunicationInbox = () => {
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [selectedChannel, setSelectedChannel] = useState<'all' | 'email' | 'sms' | 'call'>('all')
   const [selectedFolder, setSelectedFolder] = useState<'inbox' | 'unread' | 'starred' | 'snoozed' | 'archived' | 'trash'>('inbox')
   const [threads, setThreads] = useState<Thread[]>(mockThreads)
@@ -239,6 +243,43 @@ const CommunicationInbox = () => {
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showAttachmentModal, setShowAttachmentModal] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    loadMessages()
+  }, [])
+
+  const loadMessages = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
+      const response = await messagesApi.getMessages()
+      
+      // Transform API response to thread format if needed
+      if (response && Array.isArray(response)) {
+        setThreads(response)
+        if (response.length > 0) {
+          setSelectedThread(response[0])
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load messages:', error)
+      toast.error('Failed to load messages, using sample data')
+      // Keep using mock data on error
+      setThreads(mockThreads)
+      setSelectedThread(mockThreads[0])
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    loadMessages(true)
+  }
 
   const templates = [
     { id: 1, name: 'Schedule a call', content: 'Hi {contact},\n\nI\'d like to schedule a call to discuss this further. What times work best for you this week?\n\nBest regards' },
@@ -336,34 +377,57 @@ const CommunicationInbox = () => {
     }
   }
 
-  const handleSendReply = () => {
+  const handleSendReply = async () => {
     if (!replyText.trim()) return
-    // Simulate adding a sent message to the thread
     if (!selectedThread) return
     
-    const messageBody = autoAppendSignature && selectedThread.type === 'email' 
-      ? replyText + signature 
-      : replyText
+    try {
+      const messageBody = autoAppendSignature && selectedThread.type === 'email' 
+        ? replyText + signature 
+        : replyText
 
-    const newMessage: Message = {
-      id: Date.now(),
-      threadId: selectedThread.id,
-      type: selectedThread.type,
-      from: 'you@company.com',
-      to: selectedThread.type === 'email' ? selectedThread.messages[0].to : selectedThread.messages[0].to,
-      contact: selectedThread.contact,
-      subject: selectedThread.subject,
-      body: messageBody,
-      timestamp: 'Just now',
-      date: new Date().toLocaleString(),
-      unread: false,
-      starred: false,
-      status: 'sent'
+      // Call API based on message type
+      if (selectedThread.type === 'email') {
+        await messagesApi.sendEmail({
+          to: selectedThread.messages[0].to,
+          subject: selectedThread.subject,
+          body: messageBody,
+          threadId: selectedThread.id
+        })
+      } else if (selectedThread.type === 'sms') {
+        await messagesApi.sendSMS({
+          to: selectedThread.messages[0].to,
+          body: messageBody,
+          threadId: selectedThread.id
+        })
+      }
+
+      const newMessage: Message = {
+        id: Date.now(),
+        threadId: selectedThread.id,
+        type: selectedThread.type,
+        from: 'you@company.com',
+        to: selectedThread.type === 'email' ? selectedThread.messages[0].to : selectedThread.messages[0].to,
+        contact: selectedThread.contact,
+        subject: selectedThread.subject,
+        body: messageBody,
+        timestamp: 'Just now',
+        date: new Date().toLocaleString(),
+        unread: false,
+        starred: false,
+        status: 'sent'
+      }
+
+      setThreads(prev => prev.map(t => t.id === selectedThread.id ? { ...t, messages: [...t.messages, newMessage], lastMessage: newMessage.body, timestamp: 'Just now' } : t))
+      toast.success('Reply sent successfully')
+      setReplyText('')
+      
+      // Refresh messages to get updated data
+      await loadMessages(true)
+    } catch (error) {
+      console.error('Failed to send reply:', error)
+      toast.error('Failed to send reply, please try again')
     }
-
-    setThreads(prev => prev.map(t => t.id === selectedThread.id ? { ...t, messages: [...t.messages, newMessage], lastMessage: newMessage.body, timestamp: 'Just now' } : t))
-    toast.success('Reply sent successfully')
-    setReplyText('')
   }
 
   const saveSignature = () => {
@@ -403,54 +467,81 @@ const CommunicationInbox = () => {
     }, 500)
   }
 
-  const handleSendCompose = () => {
+  const handleSendCompose = async () => {
     if (!composeTo || !composeBody) {
       toast.error('Please fill in recipient and message')
       return
     }
 
-    // Create new thread with the composed message
-    const newThreadId = Math.max(...threads.map(t => t.id)) + 1
-    const newMessageId = Date.now()
-    
-    const messageBody = composeType === 'email' && autoAppendSignature 
-      ? composeBody + signature 
-      : composeBody
+    try {
+      const messageBody = composeType === 'email' && autoAppendSignature 
+        ? composeBody + signature 
+        : composeBody
 
-    const newMessage: Message = {
-      id: newMessageId,
-      threadId: newThreadId,
-      type: composeType,
-      from: 'you@company.com',
-      to: composeTo,
-      contact: composeTo.split('@')[0] || composeTo,
-      subject: composeType === 'email' ? composeSubject : undefined,
-      body: messageBody,
-      timestamp: 'Just now',
-      date: new Date().toLocaleString(),
-      unread: false,
-      starred: false,
-      status: 'sent'
+      // Call API based on message type
+      if (composeType === 'email') {
+        await messagesApi.sendEmail({
+          to: composeTo,
+          subject: composeSubject,
+          body: messageBody
+        })
+      } else if (composeType === 'sms') {
+        await messagesApi.sendSMS({
+          to: composeTo,
+          body: messageBody
+        })
+      } else if (composeType === 'call') {
+        await messagesApi.makeCall({
+          to: composeTo,
+          notes: messageBody
+        })
+      }
+
+      // Create new thread with the composed message
+      const newThreadId = Math.max(...threads.map(t => t.id)) + 1
+      const newMessageId = Date.now()
+
+      const newMessage: Message = {
+        id: newMessageId,
+        threadId: newThreadId,
+        type: composeType,
+        from: 'you@company.com',
+        to: composeTo,
+        contact: composeTo.split('@')[0] || composeTo,
+        subject: composeType === 'email' ? composeSubject : undefined,
+        body: messageBody,
+        timestamp: 'Just now',
+        date: new Date().toLocaleString(),
+        unread: false,
+        starred: false,
+        status: 'sent'
+      }
+
+      const newThread: Thread = {
+        id: newThreadId,
+        contact: composeTo.split('@')[0] || composeTo,
+        lastMessage: composeBody,
+        timestamp: 'Just now',
+        unread: 0,
+        type: composeType,
+        messages: [newMessage],
+        subject: composeType === 'email' ? composeSubject : undefined
+      }
+
+      setThreads(prev => [newThread, ...prev])
+      setSelectedThread(newThread)
+      setShowComposeModal(false)
+      setComposeTo('')
+      setComposeSubject('')
+      setComposeBody('')
+      toast.success('Message sent successfully')
+
+      // Refresh messages to get updated data
+      await loadMessages(true)
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      toast.error('Failed to send message, please try again')
     }
-
-    const newThread: Thread = {
-      id: newThreadId,
-      contact: composeTo.split('@')[0] || composeTo,
-      lastMessage: composeBody,
-      timestamp: 'Just now',
-      unread: 0,
-      type: composeType,
-      messages: [newMessage],
-      subject: composeType === 'email' ? composeSubject : undefined
-    }
-
-    setThreads(prev => [newThread, ...prev])
-    setSelectedThread(newThread)
-    setShowComposeModal(false)
-    setComposeTo('')
-    setComposeSubject('')
-    setComposeBody('')
-    toast.success('Message sent successfully')
   }
 
   return (
@@ -463,11 +554,32 @@ const CommunicationInbox = () => {
             Unified inbox for all your communications
           </p>
         </div>
-        <Button onClick={() => setShowComposeModal(true)}>
-          <Send className="mr-2 h-4 w-4" />
-          Compose New
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => setShowComposeModal(true)}>
+            <Send className="mr-2 h-4 w-4" />
+            Compose New
+          </Button>
+        </div>
       </div>
+
+      {loading ? (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading messages...</p>
+          </div>
+        </Card>
+      ) : (
+        <>
+      <div className="hidden">Wrapper for loading state</div>
 
       {/* 3-Column Layout */}
       <div className="grid grid-cols-12 gap-4 h-[calc(100vh-200px)]">
@@ -1306,6 +1418,8 @@ const CommunicationInbox = () => {
             </CardContent>
           </Card>
         </div>
+      )}
+        </>
       )}
     </div>
   )

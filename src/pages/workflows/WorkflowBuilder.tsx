@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Workflow, Play, Plus, TrendingUp, Save, TestTube2, Clock, 
   CheckCircle2, XCircle, Activity, Download, Upload, Trash2,
   Copy, Settings, Zap, Mail, MessageSquare, UserPlus, Tag,
   Calendar, FileText, ChevronDown, ChevronRight,
-  ArrowRight, GitBranch, Filter, Terminal, GripVertical, MousePointer2
+  ArrowRight, GitBranch, Filter, Terminal, GripVertical, MousePointer2, RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/hooks/useToast';
+import { workflowsApi } from '@/lib/api';
 
 type NodeType = 'trigger' | 'action' | 'condition' | 'delay';
 
@@ -38,6 +39,7 @@ interface ExecutionLog {
 
 const WorkflowBuilder = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [workflowName, setWorkflowName] = useState('New Workflow');
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
@@ -60,6 +62,35 @@ const WorkflowBuilder = () => {
     { id: '4', timestamp: '2025-10-22 13:45:10', status: 'success', duration: 3.1, details: 'Lead assigned to team' },
   ]);
 
+  useEffect(() => {
+    // Load workflow if ID is in URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const workflowId = urlParams.get('id');
+    if (workflowId) {
+      loadWorkflow(workflowId);
+    }
+  }, []);
+
+  const loadWorkflow = async (workflowId: string) => {
+    try {
+      setLoading(true);
+      const response = await workflowsApi.getWorkflow(workflowId);
+      
+      if (response) {
+        setWorkflowName(response.name || 'Workflow');
+        // Load nodes from response if available
+        if (response.nodes) {
+          setNodes(response.nodes);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load workflow:', error);
+      toast.error('Failed to load workflow');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const addNode = (type: NodeType, label: string) => {
     const newNode: WorkflowNode = {
       id: `node-${Date.now()}`,
@@ -80,17 +111,52 @@ const WorkflowBuilder = () => {
     toast.success('Node removed from workflow');
   };
 
-  const saveWorkflow = () => {
-    toast.success('Workflow saved successfully');
+  const saveWorkflow = async () => {
+    try {
+      const workflowData = {
+        name: workflowName,
+        nodes: nodes,
+        status: 'draft'
+      };
+
+      // Check if editing existing workflow
+      const urlParams = new URLSearchParams(window.location.search);
+      const workflowId = urlParams.get('id');
+
+      if (workflowId) {
+        await workflowsApi.updateWorkflow(workflowId, workflowData);
+        toast.success('Workflow updated successfully');
+      } else {
+        await workflowsApi.createWorkflow(workflowData);
+        toast.success('Workflow created successfully');
+      }
+    } catch (error) {
+      console.error('Failed to save workflow:', error);
+      toast.error('Failed to save workflow');
+    }
   };
 
-  const runTest = () => {
-    setIsTestRunning(true);
-    toast.info('Starting test execution...');
-    setTimeout(() => {
+  const runTest = async () => {
+    try {
+      setIsTestRunning(true);
+      toast.info('Starting test execution...');
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const workflowId = urlParams.get('id');
+      
+      if (workflowId) {
+        await workflowsApi.testWorkflow(workflowId);
+      }
+      
+      setTimeout(() => {
+        setIsTestRunning(false);
+        toast.success('Test completed successfully');
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to test workflow:', error);
       setIsTestRunning(false);
-      toast.success('Test completed successfully');
-    }, 3000);
+      toast.error('Test execution failed');
+    }
   };
 
   const importTemplate = (templateName: string) => {

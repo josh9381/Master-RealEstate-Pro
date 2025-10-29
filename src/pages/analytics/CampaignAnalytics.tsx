@@ -1,4 +1,5 @@
-import { Mail, Send, Eye, MousePointer, Users, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Send, Eye, MousePointer, Users, Calendar, RefreshCw, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -24,8 +25,45 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/Table';
+import { analyticsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 
 const CampaignAnalytics = () => {
+  const [loading, setLoading] = useState(true);
+  const [campaignData, setCampaignData] = useState<any>(null);
+  const toast = useToast();
+
+  useEffect(() => {
+    loadCampaignAnalytics();
+  }, []);
+
+  const loadCampaignAnalytics = async () => {
+    try {
+      setLoading(true);
+      const response = await analyticsApi.getCampaignAnalytics().catch(() => ({ data: null }));
+      setCampaignData(response.data);
+    } catch (error) {
+      console.error('Error loading campaign analytics:', error);
+      toast.toast.warning('Error loading campaign analytics', 'Using fallback data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Use API data with fallbacks
+  const performance = campaignData?.performance || {};
+  const totalCampaigns = campaignData?.total || 0;
+  const topCampaigns = campaignData?.topCampaigns || [];
+
+  // Mock performance data (would come from time-series endpoint)
   const campaignPerformance = [
     { date: '2024-01-01', sent: 1200, opened: 384, clicked: 96, converted: 24 },
     { date: '2024-01-02', sent: 1350, opened: 432, clicked: 108, converted: 27 },
@@ -35,52 +73,8 @@ const CampaignAnalytics = () => {
     { date: '2024-01-06', sent: 1540, opened: 493, clicked: 123, converted: 31 },
   ];
 
-  const campaigns = [
-    {
-      id: 1,
-      name: 'Spring Product Launch',
-      type: 'Email',
-      sent: 8450,
-      opened: 2704,
-      clicked: 676,
-      converted: 169,
-      revenue: 84500,
-      roi: 320,
-    },
-    {
-      id: 2,
-      name: 'Customer Re-engagement',
-      type: 'Email',
-      sent: 5230,
-      opened: 1674,
-      clicked: 419,
-      converted: 105,
-      revenue: 52500,
-      roi: 280,
-    },
-    {
-      id: 3,
-      name: 'Holiday Special Offer',
-      type: 'SMS',
-      sent: 3200,
-      opened: 2880,
-      clicked: 512,
-      converted: 128,
-      revenue: 64000,
-      roi: 410,
-    },
-    {
-      id: 4,
-      name: 'Webinar Invitation',
-      type: 'Email',
-      sent: 6780,
-      opened: 2169,
-      clicked: 542,
-      converted: 136,
-      revenue: 40800,
-      roi: 220,
-    },
-  ];
+  // Use topCampaigns from API or fallback to empty array
+  const campaigns = topCampaigns.length > 0 ? topCampaigns : [];
 
   const hourlyPerformance = [
     { hour: '00:00', openRate: 12 },
@@ -101,7 +95,10 @@ const CampaignAnalytics = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">Date Range</Button>
+          <Button variant="outline" onClick={loadCampaignAnalytics}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
           <Button>Export Data</Button>
         </div>
       </div>
@@ -114,8 +111,8 @@ const CampaignAnalytics = () => {
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23,660</div>
-            <p className="text-xs text-muted-foreground">Across all campaigns</p>
+            <div className="text-2xl font-bold">{(performance.totalSent || 0).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">{totalCampaigns} campaigns</p>
           </CardContent>
         </Card>
         <Card>
@@ -124,8 +121,8 @@ const CampaignAnalytics = () => {
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">32.0%</div>
-            <p className="text-xs text-muted-foreground">+2.5% vs last period</p>
+            <div className="text-2xl font-bold">{performance.openRate || 0}%</div>
+            <p className="text-xs text-muted-foreground">{(performance.totalOpened || 0).toLocaleString()} opened</p>
           </CardContent>
         </Card>
         <Card>
@@ -134,7 +131,7 @@ const CampaignAnalytics = () => {
             <MousePointer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8.0%</div>
+            <div className="text-2xl font-bold">{performance.clickRate || 0}%</div>
             <p className="text-xs text-muted-foreground">+1.2% vs last period</p>
           </CardContent>
         </Card>

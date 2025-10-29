@@ -1,7 +1,10 @@
-import { Brain, Activity, Settings, Play, Pause, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Brain, Activity, Settings, Play, Pause, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { aiApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 import {
   Table,
   TableBody,
@@ -12,58 +15,40 @@ import {
 } from '@/components/ui/Table';
 
 const ModelTraining = () => {
-  const models = [
-    {
-      id: 1,
-      name: 'Lead Scoring Model v3',
-      type: 'Classification',
-      status: 'active',
-      accuracy: 94.2,
-      lastTrained: '2 days ago',
-      trainingTime: '45 min',
-      dataPoints: 12500,
-    },
-    {
-      id: 2,
-      name: 'Churn Prediction Model',
-      type: 'Classification',
-      status: 'training',
-      accuracy: 87.3,
-      lastTrained: 'In progress',
-      trainingTime: '23 min elapsed',
-      dataPoints: 8900,
-    },
-    {
-      id: 3,
-      name: 'Revenue Forecast Model',
-      type: 'Regression',
-      status: 'active',
-      accuracy: 91.7,
-      lastTrained: '5 days ago',
-      trainingTime: '1h 12min',
-      dataPoints: 24000,
-    },
-    {
-      id: 4,
-      name: 'Customer Segmentation',
-      type: 'Clustering',
-      status: 'active',
-      accuracy: 89.4,
-      lastTrained: '1 week ago',
-      trainingTime: '38 min',
-      dataPoints: 15600,
-    },
-    {
-      id: 5,
-      name: 'Conversion Predictor',
-      type: 'Classification',
-      status: 'needs_training',
-      accuracy: 78.1,
-      lastTrained: '2 months ago',
-      trainingTime: '52 min',
-      dataPoints: 9800,
-    },
-  ];
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [models, setModels] = useState<Array<{
+    id: string | number;
+    name: string;
+    type: string;
+    status: string;
+    accuracy: number;
+    lastTrained: string;
+    trainingTime?: string;
+    dataPoints?: number;
+  }>>([])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await loadTrainingModels()
+    }
+    fetchData()
+  }, [])
+
+  const loadTrainingModels = async () => {
+    setLoading(true)
+    try {
+      const data = await aiApi.getTrainingModels()
+      if (data?.models) {
+        setModels(data.models)
+      }
+    } catch (error) {
+      const err = error as Error
+      toast.error(err.message || 'Failed to load training models')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const trainingMetrics = [
     { epoch: 1, trainLoss: 0.89, valLoss: 0.92, accuracy: 72.3 },
@@ -87,9 +72,9 @@ const ModelTraining = () => {
             <Settings className="h-4 w-4 mr-2" />
             Training Config
           </Button>
-          <Button>
-            <Play className="h-4 w-4 mr-2" />
-            New Training
+          <Button onClick={loadTrainingModels} disabled={loading}>
+            {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+            {loading ? 'Loading...' : 'Refresh'}
           </Button>
         </div>
       </div>
@@ -102,8 +87,10 @@ const ModelTraining = () => {
             <Brain className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">5 active, 1 training, 2 need update</p>
+            <div className="text-2xl font-bold">{models.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {models.filter(m => m.status === 'active').length} active, {models.filter(m => m.status === 'training').length} training
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -112,8 +99,10 @@ const ModelTraining = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">88.5%</div>
-            <p className="text-xs text-muted-foreground">+3.2% from last quarter</p>
+            <div className="text-2xl font-bold">
+              {models.length > 0 ? (models.reduce((sum, m) => sum + m.accuracy, 0) / models.length).toFixed(1) : 0}%
+            </div>
+            <p className="text-xs text-muted-foreground">Across all models</p>
           </CardContent>
         </Card>
         <Card>
@@ -122,7 +111,7 @@ const ModelTraining = () => {
             <Brain className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold">{models.filter(m => m.status === 'training').length}</div>
             <p className="text-xs text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
@@ -132,7 +121,9 @@ const ModelTraining = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">70.8K</div>
+            <div className="text-2xl font-bold">
+              {(models.reduce((sum, m) => sum + (m.dataPoints || 0), 0) / 1000).toFixed(1)}K
+            </div>
             <p className="text-xs text-muted-foreground">Total training data</p>
           </CardContent>
         </Card>
@@ -184,8 +175,8 @@ const ModelTraining = () => {
                     <span className="font-semibold">{model.accuracy}%</span>
                   </TableCell>
                   <TableCell>{model.lastTrained}</TableCell>
-                  <TableCell>{model.trainingTime}</TableCell>
-                  <TableCell>{model.dataPoints.toLocaleString()}</TableCell>
+                  <TableCell>{model.trainingTime || 'N/A'}</TableCell>
+                  <TableCell>{model.dataPoints ? model.dataPoints.toLocaleString() : 'N/A'}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
                       {model.status === 'training' ? (

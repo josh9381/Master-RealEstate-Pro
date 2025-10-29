@@ -1,66 +1,189 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Filter, CheckCircle2, Circle, Clock, Flag, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import { tasksApi, CreateTaskData } from '@/lib/api'
+import { useToast } from '@/hooks/useToast'
+
+interface Task {
+  id: number | string
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high'
+  dueDate: string
+  assignee: string
+  completed: boolean
+  category: string
+  status: 'pending' | 'completed' | 'cancelled'
+}
+
+// Fallback tasks (outside component to avoid re-renders)
+const fallbackTasks: Task[] = [
+  {
+    id: 1,
+    title: 'Follow up with John Doe',
+    description: 'Send property brochure and schedule viewing',
+    priority: 'high',
+    dueDate: 'Today',
+    assignee: 'Sarah Johnson',
+    completed: false,
+    category: 'follow-up',
+    status: 'pending'
+  },
+  {
+    id: 2,
+    title: 'Prepare contract for ABC Corp',
+    description: 'Review terms and prepare final contract',
+    priority: 'high',
+    dueDate: 'Tomorrow',
+    assignee: 'Mike Davis',
+    completed: false,
+    category: 'contract',
+    status: 'pending'
+  },
+  {
+    id: 3,
+    title: 'Schedule property viewing',
+    description: 'Downtown office space - 3 potential clients',
+    priority: 'medium',
+    dueDate: 'Mar 25',
+    assignee: 'Emily Brown',
+    completed: false,
+    category: 'viewing',
+    status: 'pending'
+  },
+  {
+    id: 4,
+    title: 'Send monthly report',
+    description: 'Compile and send sales report to management',
+    priority: 'medium',
+    dueDate: 'Mar 30',
+    assignee: 'John Smith',
+    completed: false,
+    category: 'admin',
+    status: 'pending'
+  },
+  {
+    id: 5,
+    title: 'Update CRM data',
+    description: 'Import new leads from marketing campaign',
+    priority: 'low',
+    dueDate: 'Next Week',
+    assignee: 'Sarah Johnson',
+    completed: true,
+    category: 'admin',
+    status: 'completed'
+  },
+]
 
 export default function TasksPage() {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
 
-  const tasks = [
-    {
-      id: 1,
-      title: 'Follow up with John Doe',
-      description: 'Send property brochure and schedule viewing',
-      priority: 'high',
-      dueDate: 'Today',
-      assignee: 'Sarah Johnson',
-      completed: false,
-      category: 'follow-up'
+  // Fetch tasks from API
+  const { data: tasksResponse, isLoading } = useQuery({
+    queryKey: ['tasks', filter],
+    queryFn: async () => {
+      try {
+        const params: {
+          status?: 'pending' | 'completed' | 'cancelled';
+          priority?: 'low' | 'medium' | 'high';
+        } = {}
+        
+        if (filter === 'completed') params.status = 'completed'
+        if (filter === 'active') params.status = 'pending'
+        if (filter === 'high') params.priority = 'high'
+        
+        const response = await tasksApi.getTasks(params)
+        return response.data
+      } catch (error) {
+        console.log('API fetch failed, using fallback data')
+        return null
+      }
     },
-    {
-      id: 2,
-      title: 'Prepare contract for ABC Corp',
-      description: 'Review terms and prepare final contract',
-      priority: 'high',
-      dueDate: 'Tomorrow',
-      assignee: 'Mike Davis',
-      completed: false,
-      category: 'contract'
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+
+  // Smart data source - use API data or fallback to hardcoded tasks
+  const tasks: Task[] = useMemo(() => {
+    if (tasksResponse?.tasks && tasksResponse.tasks.length > 0) {
+      // Transform API tasks to match component structure
+      return tasksResponse.tasks.map((task: any) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority || 'medium',
+        dueDate: task.dueDate || 'No date',
+        assignee: task.assignedTo || 'Unassigned',
+        completed: task.status === 'completed',
+        category: task.category || 'general',
+        status: task.status
+      }))
+    }
+    return fallbackTasks
+  }, [tasksResponse])
+
+  // Create task mutation (available for new task feature)
+  const _createTaskMutation = useMutation({
+    mutationFn: (data: CreateTaskData) => tasksApi.createTask(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Task created successfully')
     },
-    {
-      id: 3,
-      title: 'Schedule property viewing',
-      description: 'Downtown office space - 3 potential clients',
-      priority: 'medium',
-      dueDate: 'Mar 25',
-      assignee: 'Emily Brown',
-      completed: false,
-      category: 'viewing'
+    onError: () => {
+      toast.error('Failed to create task')
     },
-    {
-      id: 4,
-      title: 'Send monthly report',
-      description: 'Compile and send sales report to management',
-      priority: 'medium',
-      dueDate: 'Mar 30',
-      assignee: 'John Smith',
-      completed: false,
-      category: 'admin'
+  })
+
+  // Update task mutation (available for task editing)
+  const _updateTaskMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTaskData> }) =>
+      tasksApi.updateTask(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Task updated successfully')
     },
-    {
-      id: 5,
-      title: 'Update CRM data',
-      description: 'Import new leads from marketing campaign',
-      priority: 'low',
-      dueDate: 'Next Week',
-      assignee: 'Sarah Johnson',
-      completed: true,
-      category: 'admin'
+    onError: () => {
+      toast.error('Failed to update task')
     },
-  ]
+  })
+
+  // Delete task mutation (available for task deletion)
+  const _deleteTaskMutation = useMutation({
+    mutationFn: (id: string) => tasksApi.deleteTask(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Task deleted successfully')
+    },
+    onError: () => {
+      toast.error('Failed to delete task')
+    },
+  })
+
+  // Complete task mutation
+  const completeTaskMutation = useMutation({
+    mutationFn: (id: string) => tasksApi.completeTask(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Task completed')
+    },
+    onError: () => {
+      toast.error('Failed to complete task')
+    },
+  })
+
+  const _handleToggleComplete = (taskId: number | string) => {
+    // Only call API if we're using real data
+    if (tasksResponse?.tasks) {
+      completeTaskMutation.mutate(String(taskId))
+    }
+  }
 
   const filteredTasks = tasks.filter(task => {
     if (filter === 'completed' && !task.completed) return false

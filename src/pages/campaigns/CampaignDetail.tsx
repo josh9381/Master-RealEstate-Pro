@@ -1,11 +1,14 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Edit, Pause, Trash2, X } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
+import { campaignsApi, CreateCampaignData } from '@/lib/api'
+import { mockCampaigns } from '@/data/mockData'
 import {
   LineChart,
   Line,
@@ -29,66 +32,93 @@ function CampaignDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showContentModal, setShowContentModal] = useState(false)
-  const [campaignData, setCampaignData] = useState({
-    id,
-    name: 'Summer Email Campaign',
-    type: 'email' as 'email' | 'sms' | 'phone' | 'social',
-    status: 'active' as 'active' | 'paused' | 'completed' | 'draft' | 'scheduled',
-    sent: 1250,
-    opened: 625,
-    clicked: 187,
-    converted: 45,
-    startDate: '2024-01-15',
-    endDate: '2024-02-15',
-    subject: 'Summer Sale - 50% Off!',
-    content: "Don't miss our biggest summer sale. Get 50% off on all products...",
-    fullContent: `
-      <h1>🌞 Summer Sale - 50% Off Everything!</h1>
-      
-      <p>Dear Valued Customer,</p>
-      
-      <p>We're excited to announce our biggest sale of the year! For a limited time, enjoy <strong>50% OFF</strong> on all our premium real estate services.</p>
-      
-      <h2>What's Included:</h2>
-      <ul>
-        <li>Premium Property Listings</li>
-        <li>Virtual Property Tours</li>
-        <li>Professional Photography Services</li>
-        <li>Marketing & Advertising Packages</li>
-        <li>Legal Documentation Support</li>
-      </ul>
-      
-      <h2>Why Choose Us?</h2>
-      <p>With over 10 years of experience in the real estate market, we've helped thousands of clients find their dream homes. Our expert team is dedicated to making your property journey smooth and successful.</p>
-      
-      <h2>Special Bonuses:</h2>
-      <ul>
-        <li>Free property valuation</li>
-        <li>Complimentary staging consultation</li>
-        <li>Priority listing on top real estate platforms</li>
-      </ul>
-      
-      <p><strong>This offer ends soon!</strong> Don't miss out on this incredible opportunity to save on our premium services.</p>
-      
-      <p>Click the button below to schedule a free consultation with one of our expert agents.</p>
-      
-      <p>Best regards,<br>
-      The Real Estate Pro Team</p>
-    `,
-    budget: 5000,
-    spent: 3200,
+
+  // Fetch campaign from API
+  const { data: campaignResponse, isLoading } = useQuery({
+    queryKey: ['campaign', id],
+    queryFn: async () => {
+      try {
+        const response = await campaignsApi.getCampaign(id!)
+        return response.data
+      } catch (error) {
+        // If API fails, try to find campaign in mock data
+        console.log('API fetch failed, using mock data')
+        const mockCampaign = mockCampaigns.find(c => c.id === Number(id))
+        return mockCampaign || null
+      }
+    },
+    enabled: !!id,
+    retry: false,
+    refetchOnWindowFocus: false,
   })
+
+  // Get campaign data with fallback to default structure
+  const campaignData = useMemo(() => {
+    if (!campaignResponse) {
+      return {
+        id,
+        name: 'Loading...',
+        type: 'email' as 'email' | 'sms' | 'phone' | 'social',
+        status: 'draft' as 'active' | 'paused' | 'completed' | 'draft' | 'scheduled',
+        sent: 0,
+        opened: 0,
+        clicked: 0,
+        converted: 0,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+        subject: '',
+        content: '',
+        fullContent: '',
+        budget: 0,
+        spent: 0,
+      }
+    }
+
+    return {
+      ...campaignResponse,
+      opened: campaignResponse.opens || 0,
+      clicked: campaignResponse.clicks || 0,
+      converted: campaignResponse.conversions || 0,
+      fullContent: campaignResponse.content || '',
+    }
+  }, [campaignResponse, id])
 
   const [editForm, setEditForm] = useState(campaignData)
 
+  // Update campaign mutation
+  const updateCampaignMutation = useMutation({
+    mutationFn: (data: Partial<CreateCampaignData>) =>
+      campaignsApi.updateCampaign(id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] })
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign updated successfully')
+    },
+    onError: () => {
+      toast.error('Failed to update campaign')
+    },
+  })
+
+  // Delete campaign mutation
+  const deleteCampaignMutation = useMutation({
+    mutationFn: () => campaignsApi.deleteCampaign(id!),
+    onSuccess: () => {
+      toast.success('Campaign deleted successfully')
+      navigate('/campaigns')
+    },
+    onError: () => {
+      toast.error('Failed to delete campaign')
+    },
+  })
+
   const handleStatusToggle = () => {
     const newStatus = campaignData.status === 'active' ? 'paused' : 'active'
-    setCampaignData({ ...campaignData, status: newStatus })
-    toast.success(`Campaign ${newStatus === 'active' ? 'resumed' : 'paused'} successfully`)
+    updateCampaignMutation.mutate({ status: newStatus })
   }
 
   const handleEditClick = () => {
@@ -97,21 +127,60 @@ function CampaignDetail() {
   }
 
   const handleSaveEdit = () => {
-    setCampaignData(editForm)
+    updateCampaignMutation.mutate({
+      name: editForm.name,
+      type: editForm.type as 'email' | 'sms' | 'phone',
+      status: editForm.status as 'draft' | 'scheduled' | 'active' | 'paused' | 'completed',
+      subject: editForm.subject || undefined,
+      content: editForm.fullContent || undefined,
+    })
     setShowEditModal(false)
-    toast.success('Campaign updated successfully')
   }
 
   const handleDelete = () => {
-    toast.success('Campaign deleted successfully')
-    setTimeout(() => navigate('/campaigns'), 1000)
+    deleteCampaignMutation.mutate()
+    setShowDeleteModal(false)
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-10 bg-muted rounded w-1/3 mb-2" />
+          <div className="h-6 bg-muted rounded w-1/4" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-32 bg-muted rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Show 404 if campaign not found
+  if (!campaignResponse) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold">Campaign Not Found</h2>
+          <p className="mt-2 text-muted-foreground">
+            The campaign you're looking for doesn't exist.
+          </p>
+          <Button className="mt-4" onClick={() => navigate('/campaigns')}>
+            Back to Campaigns
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   const campaign = campaignData
 
-  const openRate = ((campaign.opened / campaign.sent) * 100).toFixed(1)
-  const clickRate = ((campaign.clicked / campaign.sent) * 100).toFixed(1)
-  const conversionRate = ((campaign.converted / campaign.sent) * 100).toFixed(1)
+  const openRate = campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : '0.0'
+  const clickRate = campaign.sent > 0 ? ((campaign.clicked / campaign.sent) * 100).toFixed(1) : '0.0'
+  const conversionRate = campaign.sent > 0 ? ((campaign.converted / campaign.sent) * 100).toFixed(1) : '0.0'
 
   return (
     <div className="space-y-6">

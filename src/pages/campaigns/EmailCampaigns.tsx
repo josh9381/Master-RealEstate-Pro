@@ -1,41 +1,54 @@
-import { useState } from 'react';
-import { Mail, Send, Calendar, Users, FileText } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { useState, useEffect } from 'react';
+import { Mail, Send, Calendar, Users, FileText, RefreshCw } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { campaignsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 
 const EmailCampaigns = () => {
   const [activeTab, setActiveTab] = useState('all');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    openRate: 0,
+    clickRate: 0,
+    scheduled: 0
+  });
+  const { toast } = useToast();
 
-  const campaigns = [
-    {
-      id: 1,
-      name: 'Spring Product Launch',
-      subject: 'Introducing Our Latest Innovation',
-      status: 'sent',
-      sent: 8450,
-      opened: 2704,
-      clicked: 676,
-      date: '2024-01-15',
-    },
-    {
-      id: 2,
-      name: 'Weekly Newsletter #45',
-      subject: 'This Week in Marketing',
-      status: 'scheduled',
-      recipients: 5230,
-      date: '2024-01-20',
-    },
-    {
-      id: 3,
-      name: 'Customer Re-engagement',
-      subject: 'We Miss You! Special Offer Inside',
-      status: 'draft',
-      recipients: 3200,
-      date: '2024-01-18',
-    },
-  ];
+  useEffect(() => {
+    loadCampaigns();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadCampaigns = async () => {
+    setIsLoading(true);
+    try {
+      const response = await campaignsApi.getCampaigns({ type: 'email', limit: 50 });
+      const emailCampaigns = response.data || [];
+      
+      setCampaigns(emailCampaigns);
+      
+      // Calculate stats
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const scheduled = emailCampaigns.filter((c: any) => c.status === 'scheduled').length;
+      setStats({
+        total: response.total || 0,
+        openRate: 32.0, // Mock - no endpoint for this
+        clickRate: 8.0, // Mock - no endpoint for this
+        scheduled
+      });
+    } catch (error) {
+      console.error('Error loading email campaigns:', error);
+      toast.error('Failed to load campaigns');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -44,22 +57,28 @@ const EmailCampaigns = () => {
           <h1 className="text-3xl font-bold">Email Campaigns</h1>
           <p className="text-muted-foreground mt-2">Create and manage email marketing campaigns</p>
         </div>
-        <Button>
-          <Send className="h-4 w-4 mr-2" />
-          Create Email Campaign
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadCampaigns} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button>
+            <Send className="h-4 w-4 mr-2" />
+            Create Email Campaign
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23,660</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">Email campaigns</p>
           </CardContent>
         </Card>
         <Card>
@@ -68,8 +87,8 @@ const EmailCampaigns = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">32.0%</div>
-            <p className="text-xs text-muted-foreground">+2.5% vs last month</p>
+            <div className="text-2xl font-bold">{stats.openRate}%</div>
+            <p className="text-xs text-muted-foreground">Industry average</p>
           </CardContent>
         </Card>
         <Card>
@@ -78,8 +97,8 @@ const EmailCampaigns = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8.0%</div>
-            <p className="text-xs text-muted-foreground">+1.2% vs last month</p>
+            <div className="text-2xl font-bold">{stats.clickRate}%</div>
+            <p className="text-xs text-muted-foreground">Industry average</p>
           </CardContent>
         </Card>
         <Card>
@@ -88,7 +107,7 @@ const EmailCampaigns = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{stats.scheduled}</div>
             <p className="text-xs text-muted-foreground">Coming soon</p>
           </CardContent>
         </Card>

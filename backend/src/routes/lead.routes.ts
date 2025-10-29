@@ -82,11 +82,11 @@ router.post(
 );
 
 /**
- * @route   PUT /api/leads/:id
+ * @route   PATCH /api/leads/:id
  * @desc    Update a lead
  * @access  Private
  */
-router.put(
+router.patch(
   '/:id',
   validateParams(leadIdSchema),
   validateBody(updateLeadSchema),

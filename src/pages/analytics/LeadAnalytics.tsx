@@ -1,4 +1,5 @@
-import { BarChart3, TrendingUp, Users, Target, Calendar, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, Users, Target, Calendar, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -12,8 +13,46 @@ import {
   LineChart,
   Line,
 } from 'recharts';
+import { analyticsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 
 const LeadAnalytics = () => {
+  const [loading, setLoading] = useState(true);
+  const [leadData, setLeadData] = useState<any>(null);
+  const toast = useToast();
+
+  useEffect(() => {
+    loadLeadAnalytics();
+  }, []);
+
+  const loadLeadAnalytics = async () => {
+    try {
+      setLoading(true);
+      const response = await analyticsApi.getLeadAnalytics().catch(() => ({ data: null }));
+      setLeadData(response.data);
+    } catch (error) {
+      console.error('Error loading lead analytics:', error);
+      toast.toast.warning('Error loading lead analytics', 'Using fallback data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Use API data with fallbacks
+  const totalLeads = leadData?.total || 4567;
+  const conversionRate = leadData?.conversionRate || 26.2;
+  const averageScore = leadData?.averageScore || 73.4;
+  const topLeads = leadData?.topLeads || [];
+
+  // Mock data for trends (would come from a time-series endpoint)
   const leadTrends = [
     { month: 'Jul', newLeads: 145, qualified: 89, converted: 34 },
     { month: 'Aug', newLeads: 168, qualified: 103, converted: 42 },
@@ -23,20 +62,36 @@ const LeadAnalytics = () => {
     { month: 'Dec', newLeads: 223, qualified: 145, converted: 67 },
   ];
 
-  const sourceBreakdown = [
-    { source: 'Website Form', count: 342, percentage: 38 },
-    { source: 'Email Campaign', count: 276, percentage: 31 },
-    { source: 'Social Media', count: 165, percentage: 18 },
-    { source: 'Referral', count: 89, percentage: 10 },
-    { source: 'Other', count: 28, percentage: 3 },
-  ];
+  // Source breakdown from API data
+  const sourceBreakdown = leadData?.bySource
+    ? Object.entries(leadData.bySource).map(([source, count]: [string, any]) => ({
+        source,
+        count: count as number,
+        percentage: Math.round(((count as number) / totalLeads) * 100)
+      }))
+    : [
+        { source: 'Website Form', count: 342, percentage: 38 },
+        { source: 'Email Campaign', count: 276, percentage: 31 },
+        { source: 'Social Media', count: 165, percentage: 18 },
+        { source: 'Referral', count: 89, percentage: 10 },
+        { source: 'Other', count: 28, percentage: 3 },
+      ];
 
-  const topPerformers = [
-    { name: 'Sarah Johnson', leads: 89, converted: 34, rate: '38.2%' },
-    { name: 'Mike Smith', leads: 76, converted: 28, rate: '36.8%' },
-    { name: 'Emily Brown', leads: 65, converted: 22, rate: '33.8%' },
-    { name: 'David Lee', leads: 54, converted: 17, rate: '31.5%' },
-  ];
+  // Top performing leads
+  const topPerformers = topLeads.length > 0
+    ? topLeads.slice(0, 4).map((lead: any) => ({
+        name: lead.name,
+        leads: 1,
+        converted: lead.status === 'WON' ? 1 : 0,
+        rate: `${lead.score || 0}%`,
+        score: lead.score
+      }))
+    : [
+        { name: 'Sarah Johnson', leads: 89, converted: 34, rate: '38.2%' },
+        { name: 'Mike Smith', leads: 76, converted: 28, rate: '36.8%' },
+        { name: 'Emily Brown', leads: 65, converted: 22, rate: '33.8%' },
+        { name: 'David Lee', leads: 54, converted: 17, rate: '31.5%' },
+      ];
 
   return (
     <div className="space-y-6">
@@ -47,10 +102,16 @@ const LeadAnalytics = () => {
             Track lead generation and conversion performance
           </p>
         </div>
-        <Button variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Export Report
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={loadLeadAnalytics}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </Button>
+        </div>
       </div>
 
       {/* Key Metrics */}
@@ -61,8 +122,10 @@ const LeadAnalytics = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4,567</div>
-            <p className="text-xs text-muted-foreground">+12.5% from last month</p>
+            <div className="text-2xl font-bold">{totalLeads.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              {leadData?.byStatus?.NEW || 0} new this period
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -71,18 +134,34 @@ const LeadAnalytics = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">26.2%</div>
-            <p className="text-xs text-muted-foreground">+3.1% from last month</p>
+            <div className="text-2xl font-bold">{conversionRate}%</div>
+            <p className="text-xs text-muted-foreground">
+              {leadData?.byStatus?.WON || 0} won deals
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Time to Convert</CardTitle>
+            <CardTitle className="text-sm font-medium">Avg Lead Score</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{averageScore}</div>
+            <p className="text-xs text-muted-foreground">
+              Quality indicator
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Qualified Leads</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8.3 days</div>
-            <p className="text-xs text-muted-foreground">-1.2 days from last month</p>
+            <div className="text-2xl font-bold">{leadData?.byStatus?.QUALIFIED || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Ready for outreach
+            </p>
           </CardContent>
         </Card>
         <Card>

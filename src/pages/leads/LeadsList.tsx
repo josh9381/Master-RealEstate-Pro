@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -22,8 +23,9 @@ import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { ActiveFilterChips } from '@/components/filters/ActiveFilterChips'
 import { useToast } from '@/hooks/useToast'
-import { mockLeads, mockActivities } from '@/data/mockData'
+import { leadsApi, CreateLeadData, UpdateLeadData, BulkUpdateData } from '@/lib/api'
 import { Lead } from '@/types'
+import { mockLeads } from '@/data/mockData'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
 interface FilterConfig {
@@ -62,9 +64,7 @@ function LeadsList() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [isSending, setIsSending] = useState(false)
 
-  // Local state for leads (editable copy)
-  const [leads, setLeads] = useState<Lead[]>(mockLeads as Lead[])
-  const [leadNotes, setLeadNotes] = useState<Record<number, string[]>>({})
+  const queryClient = useQueryClient()
 
   const [filters, setFilters] = useState<FilterConfig>({
     status: [],
@@ -91,12 +91,119 @@ function LeadsList() {
   const [newStatus, setNewStatus] = useState('')
   const [assignToUser, setAssignToUser] = useState('')
 
+  // Edit lead state - declared earlier with other state (line 63)
+
+  // Fetch leads from API
+  const { data: leadsResponse, isLoading } = useQuery({
+    queryKey: ['leads', currentPage, pageSize, searchQuery, sortField, sortDirection, filters],
+    queryFn: async () => {
+      try {
+        const params: Record<string, string | number> = {
+          page: currentPage,
+          limit: pageSize,
+          sortBy: sortField,
+          sortOrder: sortDirection || 'desc',
+        }
+        
+        if (searchQuery) params.search = searchQuery
+        if (filters.status.length > 0) params.status = filters.status[0]
+        if (filters.source.length > 0) params.source = filters.source[0]
+        
+        const response = await leadsApi.getLeads(params)
+        return response.data
+      } catch (error) {
+        // If API fails (e.g., not authenticated), return null to use mock data
+        console.log('API fetch failed, using mock data')
+        return null
+      }
+    },
+    retry: false, // Don't retry on auth failures
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+  })
+
+  // Delete lead mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => leadsApi.deleteLead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      toast.success('Lead deleted successfully')
+    },
+    onError: () => {
+      toast.error('Failed to delete lead')
+    },
+  })
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (leadIds: string[]) => leadsApi.bulkDelete(leadIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      setSelectedLeads([])
+      toast.success(`${selectedLeads.length} leads deleted`)
+    },
+    onError: () => {
+      toast.error('Failed to delete leads')
+    },
+  })
+
+  // Create lead mutation
+  const createLeadMutation = useMutation({
+    mutationFn: (leadData: CreateLeadData) => leadsApi.createLead(leadData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      toast.success('Lead created successfully')
+    },
+    onError: () => {
+      toast.error('Failed to create lead')
+    },
+  })
+
+  // Update lead mutation
+  const updateLeadMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateLeadData }) => 
+      leadsApi.updateLead(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      toast.success('Lead updated successfully')
+    },
+    onError: () => {
+      toast.error('Failed to update lead')
+    },
+  })
+
+  // Bulk update mutation
+  const bulkUpdateMutation = useMutation({
+    mutationFn: (data: BulkUpdateData) => 
+      leadsApi.bulkUpdate(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      setSelectedLeads([])
+      toast.success(`${selectedLeads.length} leads updated`)
+    },
+    onError: () => {
+      toast.error('Failed to update leads')
+    },
+  })
+
+  // Extract leads data with fallback to mock data
+  const leads = useMemo(() => {
+    // If we have API data, use it
+    if (leadsResponse?.leads && leadsResponse.leads.length > 0) {
+      return leadsResponse.leads
+    }
+    // Otherwise, use mock data (for when not authenticated or no data)
+    return mockLeads as Lead[]
+  }, [leadsResponse])
+
+  // Local state for lead notes
+  const [leadNotes, setLeadNotes] = useState<Record<number, string[]>>({})
+
   // Calculate lead statistics
   const leadStats = useMemo(() => {
     const total = leads.length
-    const qualified = leads.filter(l => l.status === 'qualified').length
-    const avgScore = total > 0 ? Math.round(leads.reduce((sum, l) => sum + l.score, 0) / total) : 0
-    const converted = leads.filter(l => l.status === 'proposal' || l.status === 'negotiation').length
+    const qualified = leads.filter((l: Lead) => l.status === 'qualified').length
+    const avgScore = total > 0 ? Math.round(leads.reduce((sum: number, l: Lead) => sum + l.score, 0) / total) : 0
+    const converted = leads.filter((l: Lead) => l.status === 'proposal' || l.status === 'negotiation').length
     
     return {
       total,
@@ -111,7 +218,7 @@ function LeadsList() {
   // Calculate source distribution
   const sourceData = useMemo(() => {
     const sources: Record<string, number> = {}
-    leads.forEach(lead => {
+    leads.forEach((lead: Lead) => {
       sources[lead.source] = (sources[lead.source] || 0) + 1
     })
     return Object.entries(sources).map(([name, value]) => ({ 
@@ -123,7 +230,7 @@ function LeadsList() {
   // Calculate score distribution
   const scoreData = useMemo(() => {
     const ranges = { '60-70': 0, '71-80': 0, '81-90': 0, '91-100': 0 }
-    leads.forEach(lead => {
+    leads.forEach((lead: Lead) => {
       if (lead.score >= 91) ranges['91-100']++
       else if (lead.score >= 81) ranges['81-90']++
       else if (lead.score >= 71) ranges['71-80']++
@@ -132,9 +239,15 @@ function LeadsList() {
     return Object.entries(ranges).map(([range, count]) => ({ range, count }))
   }, [leads])
 
-  // Filter and sort leads
+  // Filter and sort leads - server-side for API, client-side for mock
   const filteredAndSortedLeads = useMemo(() => {
-    let filtered = leads.filter(lead => {
+    // If using API data (has pagination info), leads are already filtered/sorted
+    if (leadsResponse?.pagination) {
+      return leads
+    }
+    
+    // Client-side filtering for mock data
+    let filtered = leads.filter((lead: Lead) => {
       if (searchQuery && !lead.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
           !lead.email.toLowerCase().includes(searchQuery.toLowerCase()) &&
           !(lead.company || '').toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -143,7 +256,7 @@ function LeadsList() {
       return true
     })
 
-    // Sort leads
+    // Client-side sorting for mock data
     if (sortField && sortDirection) {
       filtered = [...filtered].sort((a, b) => {
         const aVal = a[sortField]
@@ -161,15 +274,24 @@ function LeadsList() {
     }
 
     return filtered
-  }, [leads, searchQuery, sortField, sortDirection])
+  }, [leads, searchQuery, sortField, sortDirection, leadsResponse])
 
-  // Paginate leads
+  // Paginate leads - server-side for API, client-side for mock
   const paginatedLeads = useMemo(() => {
+    // If using API data, leads are already paginated
+    if (leadsResponse?.pagination) {
+      return leads
+    }
+    
+    // Client-side pagination for mock data
     const startIndex = (currentPage - 1) * pageSize
     return filteredAndSortedLeads.slice(startIndex, startIndex + pageSize)
-  }, [filteredAndSortedLeads, currentPage, pageSize])
+  }, [filteredAndSortedLeads, currentPage, pageSize, leadsResponse, leads])
 
-  const totalPages = Math.ceil(filteredAndSortedLeads.length / pageSize)
+  // Get pagination info - from API or calculate for mock data
+  const totalPages = leadsResponse?.pagination?.totalPages || Math.ceil(filteredAndSortedLeads.length / pageSize)
+  const totalLeads = leadsResponse?.pagination?.total || filteredAndSortedLeads.length
+
 
   const toggleLeadSelection = (id: number) => {
     setSelectedLeads((prev: number[]) =>
@@ -181,7 +303,7 @@ function LeadsList() {
     if (selectedLeads.length === paginatedLeads.length) {
       setSelectedLeads([])
     } else {
-      setSelectedLeads(paginatedLeads.map(lead => lead.id))
+      setSelectedLeads(paginatedLeads.map((lead: Lead) => lead.id))
     }
   }
 
@@ -302,19 +424,12 @@ function LeadsList() {
       return
     }
 
-    // Update tags for selected leads
-    setLeads(prev => prev.map(lead => {
-      if (selectedLeads.includes(lead.id)) {
-        const updatedTags = Array.from(new Set([...(lead.tags || []), ...selectedTags]))
-        return { ...lead, tags: updatedTags }
-      }
-      return lead
-    }))
-
-    toast.success(`Tags applied to ${selectedLeads.length} leads`)
+    bulkUpdateMutation.mutate({
+      leadIds: selectedLeads.map(String),
+      updates: { tags: selectedTags }
+    })
     setShowTagsModal(false)
     setSelectedTags([])
-    setSelectedLeads([])
   }
 
   const handleAddQuickNote = (leadId: number) => {
@@ -334,14 +449,12 @@ function LeadsList() {
       return
     }
 
-    setLeads(prev => prev.map(lead => 
-      selectedLeads.includes(lead.id) ? { ...lead, status: newStatus as Lead['status'] } : lead
-    ))
-
-    toast.success(`Status updated for ${selectedLeads.length} leads`)
+    bulkUpdateMutation.mutate({
+      leadIds: selectedLeads.map(String),
+      updates: { status: newStatus as Lead['status'] }
+    })
     setShowStatusModal(false)
     setNewStatus('')
-    setSelectedLeads([])
   }
 
   const handleAssignTo = () => {
@@ -350,63 +463,75 @@ function LeadsList() {
       return
     }
 
-    setLeads(prev => prev.map(lead => 
-      selectedLeads.includes(lead.id) ? { ...lead, assignedTo: assignToUser } : lead
-    ))
-
-    toast.success(`${selectedLeads.length} leads assigned to ${assignToUser}`)
+    bulkUpdateMutation.mutate({
+      leadIds: selectedLeads.map(String),
+      updates: { assignedTo: assignToUser }
+    })
     setShowAssignModal(false)
     setAssignToUser('')
-    setSelectedLeads([])
   }
 
   const handleBulkDelete = () => {
-    setLeads(prev => prev.filter(lead => !selectedLeads.includes(lead.id)))
-    toast.success(`${selectedLeads.length} leads deleted`)
+    bulkDeleteMutation.mutate(selectedLeads.map(String))
     setShowDeleteModal(false)
-    setSelectedLeads([])
   }
 
-  const handleEditLead = (lead: typeof mockLeads[0]) => {
+  const handleEditLead = (lead: Lead) => {
     setEditingLead(lead)
     setShowEditModal(true)
   }
 
   const handleSaveEdit = () => {
     if (editingLead) {
-      setLeads(prev => prev.map(lead => 
-        lead.id === editingLead.id ? editingLead : lead
-      ))
-      toast.success('Lead updated successfully')
+      // Filter out null values and convert to UpdateLeadData
+      const updateData: UpdateLeadData = {
+        name: editingLead.name,
+        email: editingLead.email,
+        phone: editingLead.phone,
+        company: editingLead.company,
+        status: editingLead.status,
+        source: editingLead.source,
+        score: editingLead.score,
+        assignedTo: editingLead.assignedTo || undefined,
+        tags: editingLead.tags,
+      }
+      
+      updateLeadMutation.mutate({
+        id: String(editingLead.id),
+        data: updateData
+      })
       setShowEditModal(false)
       setEditingLead(null)
     }
   }
 
-  const handleDuplicateLead = (lead: typeof mockLeads[0]) => {
-    const newLead = {
-      ...lead,
-      id: Math.max(...leads.map(l => l.id)) + 1,
+  const handleDuplicateLead = (lead: Lead) => {
+    // Create a copy of the lead without the ID
+    const createData: CreateLeadData = {
       name: `${lead.name} (Copy)`,
-      createdAt: new Date().toISOString()
+      email: lead.email,
+      phone: lead.phone,
+      company: lead.company,
+      status: lead.status,
+      source: lead.source,
+      assignedTo: lead.assignedTo || undefined,
+      tags: lead.tags,
     }
-    setLeads(prev => [newLead, ...prev])
-    toast.success('Lead duplicated successfully')
+    createLeadMutation.mutate(createData)
   }
 
   const handleDeleteSingle = (leadId: number) => {
-    setLeads(prev => prev.filter(l => l.id !== leadId))
-    toast.success('Lead deleted')
+    deleteMutation.mutate(String(leadId))
     setShowRowMenu(null)
   }
 
   const handleExportCSV = () => {
-    const selectedLeadsData = leads.filter(l => selectedLeads.includes(l.id))
+    const selectedLeadsData = leads.filter((l: Lead) => selectedLeads.includes(l.id))
     const data = selectedLeadsData.length > 0 ? selectedLeadsData : filteredAndSortedLeads
     
     const csvContent = [
       ['Name', 'Email', 'Company', 'Phone', 'Score', 'Status', 'Source', 'Assigned To', 'Tags'],
-      ...data.map(lead => [
+      ...data.map((lead: Lead) => [
         lead.name,
         lead.email,
         lead.company,
@@ -460,22 +585,8 @@ function LeadsList() {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']
 
   const getRecentActivities = (leadId: number) => {
-    // Get activities from mockActivities for this lead
-    const leadActivities = mockActivities
-      .filter(a => a.leadId === leadId)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 5)
-      .map(activity => {
-        const timeAgo = getTimeAgo(activity.timestamp)
-        return {
-          type: activity.type.replace('_', ' '),
-          desc: activity.title,
-          time: timeAgo,
-          details: activity.description
-        }
-      })
-
-    // Add notes from leadNotes state
+    // TODO: Fetch activities from API for this lead
+    // For now, just return notes from local state
     const notes = (leadNotes[leadId] || []).map((note) => ({
       type: 'note',
       desc: note,
@@ -483,9 +594,11 @@ function LeadsList() {
       details: ''
     }))
 
-    return [...notes, ...leadActivities]
+    return notes
   }
 
+  // Commented out for now - will be used when we fetch activities from API
+  /*
   const getTimeAgo = (timestamp: string) => {
     const now = new Date()
     const then = new Date(timestamp)
@@ -497,6 +610,25 @@ function LeadsList() {
     if (diff < 2592000) return `${Math.floor(diff / 86400)} days ago`
     return then.toLocaleDateString()
   }
+  */
+
+  // Show loading skeleton
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="p-6">
+              <div className="h-24 animate-pulse bg-muted rounded" />
+            </Card>
+          ))}
+        </div>
+        <Card className="p-6">
+          <div className="h-96 animate-pulse bg-muted rounded" />
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -506,9 +638,9 @@ function LeadsList() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Leads</p>
-              <h3 className="mt-2 text-3xl font-bold">{leadStats.total}</h3>
+              <h3 className="mt-2 text-3xl font-bold">{totalLeads || leadStats.total}</h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                <span className="text-green-600 font-medium">↑ 12%</span> from last month
+                Showing page {currentPage} of {totalPages}
               </p>
             </div>
             <div className="rounded-full bg-blue-100 p-3">
@@ -1330,7 +1462,7 @@ function LeadsList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedLeads.map((lead) => (
+            {paginatedLeads.map((lead: Lead) => (
               <>
                 <TableRow key={lead.id}>
                   <TableCell>
@@ -1379,7 +1511,7 @@ function LeadsList() {
                   <TableCell className="capitalize">{lead.source}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {(lead.tags || []).slice(0, 2).map((tag, idx) => (
+                      {(lead.tags || []).slice(0, 2).map((tag: string, idx: number) => (
                         <Badge key={idx} variant="outline" className="text-xs">
                           {tag}
                         </Badge>
@@ -1496,7 +1628,7 @@ function LeadsList() {
                               <>
                                 <Input
                                   placeholder="Add a quick note..."
-                                  value={quickNote.text}
+                                  value={quickNote?.text || ''}
                                   onChange={(e) => setQuickNote({ leadId: lead.id, text: e.target.value })}
                                   onKeyPress={(e) => {
                                     if (e.key === 'Enter') handleAddQuickNote(lead.id)
@@ -1535,7 +1667,7 @@ function LeadsList() {
       ) : (
         /* Grid View */
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {paginatedLeads.map((lead) => (
+          {paginatedLeads.map((lead: Lead) => (
             <Card key={lead.id} className="p-4 hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-3">
                 <input
@@ -1641,7 +1773,7 @@ function LeadsList() {
               </div>
               
               <div className="flex flex-wrap gap-1 mb-3">
-                {(lead.tags || []).slice(0, 2).map((tag, idx) => (
+                {(lead.tags || []).slice(0, 2).map((tag: string, idx: number) => (
                   <Badge key={idx} variant="outline" className="text-xs">
                     {tag}
                   </Badge>

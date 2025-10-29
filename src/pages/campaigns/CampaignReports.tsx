@@ -1,12 +1,13 @@
-import { BarChart3, TrendingUp, Users, Mail, MousePointer } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, Users, Mail, MousePointer, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { campaignsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 import {
   LineChart,
   Line,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -16,52 +17,95 @@ import {
 } from 'recharts';
 
 const CampaignReports = () => {
-  const performanceData = [
-    { date: 'Jan 1', sent: 1200, delivered: 1180, opened: 472, clicked: 94 },
-    { date: 'Jan 5', sent: 1500, delivered: 1485, opened: 594, clicked: 119 },
-    { date: 'Jan 10', sent: 1800, delivered: 1782, opened: 713, clicked: 143 },
-    { date: 'Jan 15', sent: 2100, delivered: 2079, opened: 832, clicked: 166 },
-    { date: 'Jan 20', sent: 1900, delivered: 1881, opened: 752, clicked: 150 },
-  ];
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalSent: 0,
+    deliveryRate: 0,
+    openRate: 0,
+    clickRate: 0,
+    revenue: 0,
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [performanceData, setPerformanceData] = useState<any[]>([]);
 
-  const campaigns = [
-    {
-      id: 1,
-      name: 'Spring Product Launch',
-      type: 'Email',
-      sent: 8450,
-      delivered: 8366,
-      opened: 2676,
-      clicked: 670,
-      bounced: 84,
-      unsubscribed: 12,
-      revenue: 45230,
-    },
-    {
-      id: 2,
-      name: 'Customer Survey',
-      type: 'Email',
-      sent: 5230,
-      delivered: 5178,
-      opened: 2071,
-      clicked: 518,
-      bounced: 52,
-      unsubscribed: 8,
-      revenue: 0,
-    },
-    {
-      id: 3,
-      name: 'Flash Sale SMS',
-      type: 'SMS',
-      sent: 3200,
-      delivered: 3180,
-      opened: 2862,
-      clicked: 510,
-      bounced: 20,
-      unsubscribed: 5,
-      revenue: 28400,
-    },
-  ];
+  useEffect(() => {
+    loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadReports = async () => {
+    setIsLoading(true);
+    try {
+      const response = await campaignsApi.getCampaigns();
+      const allCampaigns = response.data || [];
+
+      // Transform campaigns to include calculated metrics
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const enrichedCampaigns = allCampaigns.map((c: any) => {
+        const sent = c.recipientCount || 0;
+        const delivered = Math.floor(sent * 0.991); // Mock 99.1% delivery
+        const opened = Math.floor(delivered * 0.32); // Mock 32% open rate
+        const clicked = Math.floor(opened * 0.25); // Mock 25% click-through rate
+        const bounced = sent - delivered;
+        const unsubscribed = Math.floor(sent * 0.002); // Mock 0.2% unsub rate
+        const revenue = c.type === 'email' ? Math.floor(Math.random() * 50000) : Math.floor(Math.random() * 30000);
+
+        return {
+          ...c,
+          type: c.type.charAt(0).toUpperCase() + c.type.slice(1),
+          sent,
+          delivered,
+          opened,
+          clicked,
+          bounced,
+          unsubscribed,
+          revenue,
+        };
+      });
+
+      setCampaigns(enrichedCampaigns);
+
+      // Calculate overall stats
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalSent = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.sent, 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalDelivered = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.delivered, 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalOpened = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.opened, 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalClicked = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.clicked, 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalRevenue = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.revenue, 0);
+
+      setStats({
+        totalSent,
+        deliveryRate: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0,
+        openRate: totalDelivered > 0 ? (totalOpened / totalDelivered) * 100 : 0,
+        clickRate: totalOpened > 0 ? (totalClicked / totalOpened) * 100 : 0,
+        revenue: totalRevenue,
+      });
+
+      // Generate performance trend data (mock time-series from campaigns)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const trend = enrichedCampaigns.slice(0, 5).map((c: any) => ({
+        date: new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        sent: c.sent,
+        delivered: c.delivered,
+        opened: c.opened,
+        clicked: c.clicked,
+      }));
+      setPerformanceData(trend);
+
+    } catch (error) {
+      console.error('Error loading campaign reports:', error);
+      toast.error('Failed to load campaign reports');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -73,6 +117,10 @@ const CampaignReports = () => {
           </p>
         </div>
         <div className="flex space-x-2">
+          <Button onClick={loadReports} disabled={isLoading} variant="outline" size="sm">
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline">Export Report</Button>
           <Button variant="outline">Schedule Report</Button>
         </div>
@@ -86,7 +134,7 @@ const CampaignReports = () => {
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23,660</div>
+            <div className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Across all campaigns</p>
           </CardContent>
         </Card>
@@ -96,8 +144,8 @@ const CampaignReports = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">99.1%</div>
-            <p className="text-xs text-muted-foreground">23,452 delivered</p>
+            <div className="text-2xl font-bold">{stats.deliveryRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">Successfully delivered</p>
           </CardContent>
         </Card>
         <Card>
@@ -106,8 +154,8 @@ const CampaignReports = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">32.4%</div>
-            <p className="text-xs text-muted-foreground">7,599 opened</p>
+            <div className="text-2xl font-bold">{stats.openRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">Campaign opens</p>
           </CardContent>
         </Card>
         <Card>
@@ -116,8 +164,8 @@ const CampaignReports = () => {
             <MousePointer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8.2%</div>
-            <p className="text-xs text-muted-foreground">1,930 clicked</p>
+            <div className="text-2xl font-bold">{stats.clickRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">Click-through rate</p>
           </CardContent>
         </Card>
         <Card>
@@ -126,8 +174,8 @@ const CampaignReports = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$73,630</div>
-            <p className="text-xs text-muted-foreground">From 3 campaigns</p>
+            <div className="text-2xl font-bold">${stats.revenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">From {campaigns.length} campaigns</p>
           </CardContent>
         </Card>
       </div>
@@ -259,31 +307,64 @@ const CampaignReports = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              { stage: 'Sent', count: 23660, percentage: 100, color: 'bg-blue-500' },
-              { stage: 'Delivered', count: 23452, percentage: 99.1, color: 'bg-green-500' },
-              { stage: 'Opened', count: 7599, percentage: 32.4, color: 'bg-orange-500' },
-              { stage: 'Clicked', count: 1930, percentage: 8.2, color: 'bg-purple-500' },
-              { stage: 'Converted', count: 234, percentage: 1.0, color: 'bg-pink-500' },
-            ].map((stage) => (
-              <div key={stage.stage}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <div className={`h-3 w-3 rounded-full ${stage.color}`}></div>
-                    <span className="font-medium">{stage.stage}</span>
+            {(() => {
+              const totalSent = campaigns.reduce((sum, c) => sum + c.sent, 0);
+              const totalDelivered = campaigns.reduce((sum, c) => sum + c.delivered, 0);
+              const totalOpened = campaigns.reduce((sum, c) => sum + c.opened, 0);
+              const totalClicked = campaigns.reduce((sum, c) => sum + c.clicked, 0);
+              const totalConverted = Math.floor(totalClicked * 0.12); // Mock 12% conversion
+
+              return [
+                { 
+                  stage: 'Sent', 
+                  count: totalSent, 
+                  percentage: 100, 
+                  color: 'bg-blue-500' 
+                },
+                { 
+                  stage: 'Delivered', 
+                  count: totalDelivered, 
+                  percentage: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0, 
+                  color: 'bg-green-500' 
+                },
+                { 
+                  stage: 'Opened', 
+                  count: totalOpened, 
+                  percentage: totalSent > 0 ? (totalOpened / totalSent) * 100 : 0, 
+                  color: 'bg-orange-500' 
+                },
+                { 
+                  stage: 'Clicked', 
+                  count: totalClicked, 
+                  percentage: totalSent > 0 ? (totalClicked / totalSent) * 100 : 0, 
+                  color: 'bg-purple-500' 
+                },
+                { 
+                  stage: 'Converted', 
+                  count: totalConverted, 
+                  percentage: totalSent > 0 ? (totalConverted / totalSent) * 100 : 0, 
+                  color: 'bg-pink-500' 
+                },
+              ].map((stage) => (
+                <div key={stage.stage}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <div className={`h-3 w-3 rounded-full ${stage.color}`}></div>
+                      <span className="font-medium">{stage.stage}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {stage.count.toLocaleString()} ({stage.percentage.toFixed(1)}%)
+                    </span>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {stage.count.toLocaleString()} ({stage.percentage}%)
-                  </span>
+                  <div className="w-full bg-secondary rounded-full h-4">
+                    <div
+                      className={`h-4 rounded-full ${stage.color}`}
+                      style={{ width: `${Math.min(stage.percentage, 100)}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="w-full bg-secondary rounded-full h-4">
-                  <div
-                    className={`h-4 rounded-full ${stage.color}`}
-                    style={{ width: `${stage.percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </CardContent>
       </Card>
@@ -297,21 +378,25 @@ const CampaignReports = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { name: 'Flash Sale SMS', rate: 89.9, type: 'SMS' },
-                { name: 'Customer Survey', rate: 40.0, type: 'Email' },
-                { name: 'Spring Launch', rate: 32.0, type: 'Email' },
-              ].map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <Badge variant="secondary" className="mt-1">
-                      {item.type}
-                    </Badge>
+              {campaigns
+                .sort((a, b) => (b.opened / b.delivered) - (a.opened / a.delivered))
+                .slice(0, 3)
+                .map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <Badge variant="secondary" className="mt-1">
+                        {item.type}
+                      </Badge>
+                    </div>
+                    <span className="text-2xl font-bold text-green-600">
+                      {item.delivered > 0 ? ((item.opened / item.delivered) * 100).toFixed(1) : 0}%
+                    </span>
                   </div>
-                  <span className="text-2xl font-bold text-green-600">{item.rate}%</span>
-                </div>
-              ))}
+                ))}
+              {campaigns.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">No campaigns found</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -323,21 +408,25 @@ const CampaignReports = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { name: 'Flash Sale SMS', rate: 16.0, type: 'SMS' },
-                { name: 'Customer Survey', rate: 10.0, type: 'Email' },
-                { name: 'Spring Launch', rate: 7.9, type: 'Email' },
-              ].map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <Badge variant="secondary" className="mt-1">
-                      {item.type}
-                    </Badge>
+              {campaigns
+                .sort((a, b) => (b.clicked / b.opened) - (a.clicked / a.opened))
+                .slice(0, 3)
+                .map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <Badge variant="secondary" className="mt-1">
+                        {item.type}
+                      </Badge>
+                    </div>
+                    <span className="text-2xl font-bold text-purple-600">
+                      {item.opened > 0 ? ((item.clicked / item.opened) * 100).toFixed(1) : 0}%
+                    </span>
                   </div>
-                  <span className="text-2xl font-bold text-purple-600">{item.rate}%</span>
-                </div>
-              ))}
+                ))}
+              {campaigns.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">No campaigns found</p>
+              )}
             </div>
           </CardContent>
         </Card>

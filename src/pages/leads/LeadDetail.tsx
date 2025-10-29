@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -11,45 +12,92 @@ import { AISuggestedActions } from '@/components/ai/AISuggestedActions'
 import { ActivityTimeline } from '@/components/activity/ActivityTimeline'
 import { Lead } from '@/types'
 import { useToast } from '@/hooks/useToast'
+import { leadsApi, UpdateLeadData } from '@/lib/api'
+import { mockLeads } from '@/data/mockData'
 
 function LeadDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [showEmailComposer, setShowEmailComposer] = useState(false)
   const [showSMSComposer, setShowSMSComposer] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
 
-  // Mock data - In real app, this would fetch from API based on id
-  const lead: Lead = {
-    id: parseInt(id || '1'),
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1234567890',
-    company: 'Acme Inc',
-    position: 'CEO',
-    score: 85,
-    status: 'qualified',
-    source: 'website',
-    value: 50000,
-    stage: 'Proposal',
-    assignedTo: 'Sarah Johnson',
-    createdAt: '2024-01-15',
-    tags: ['Enterprise', 'Hot Lead', 'Demo Scheduled'],
-    notes: 'Very interested in our enterprise features.',
-    customFields: {
-      industry: 'Technology',
-      companySize: 150,
-      budget: 75000,
-      website: 'https://acme-inc.com',
-      address: {
-        street: '123 Main St',
-        city: 'San Francisco',
-        state: 'CA',
-        zip: '94105',
-        country: 'USA'
+  // Fetch lead details from API
+  const { data: leadResponse, isLoading } = useQuery({
+    queryKey: ['lead', id],
+    queryFn: async () => {
+      try {
+        const response = await leadsApi.getLead(id!)
+        return response.data
+      } catch (error) {
+        // If API fails, try to find lead in mock data
+        console.log('API fetch failed, using mock data')
+        const mockLead = mockLeads.find(lead => lead.id === Number(id))
+        return mockLead || null
       }
-    }
+    },
+    enabled: !!id,
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+
+  // Update lead mutation
+  const updateLeadMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateLeadData }) =>
+      leadsApi.updateLead(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id] })
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      toast.success('Lead updated successfully')
+    },
+    onError: () => {
+      toast.error('Failed to update lead')
+    },
+  })
+
+  // Delete lead mutation
+  const deleteLeadMutation = useMutation({
+    mutationFn: (id: string) => leadsApi.deleteLead(id),
+    onSuccess: () => {
+      toast.success('Lead deleted successfully')
+      navigate('/leads')
+    },
+    onError: () => {
+      toast.error('Failed to delete lead')
+    },
+  })
+
+  const lead = leadResponse as Lead | undefined
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-10 bg-muted rounded w-1/3 mb-2" />
+          <div className="h-6 bg-muted rounded w-1/4" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 bg-muted rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if lead not found
+  if (!lead) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold mb-2">Lead not found</h2>
+        <p className="text-muted-foreground mb-4">The lead you're looking for doesn't exist.</p>
+        <Button onClick={() => navigate('/leads')}>Back to Leads</Button>
+      </div>
+    )
   }
 
   const notes = [
@@ -63,11 +111,31 @@ function LeadDetail() {
   }
 
   const handleSaveEdit = () => {
-    if (editingLead) {
-      // In real app, this would save to backend
-      toast.success('Lead updated successfully')
+    if (editingLead && id) {
+      const updateData: UpdateLeadData = {
+        name: editingLead.name,
+        email: editingLead.email,
+        phone: editingLead.phone,
+        company: editingLead.company,
+        status: editingLead.status,
+        source: editingLead.source,
+        score: editingLead.score,
+        assignedTo: editingLead.assignedTo || undefined,
+        tags: editingLead.tags,
+      }
+      
+      updateLeadMutation.mutate({
+        id: id,
+        data: updateData
+      })
       setShowEditModal(false)
       setEditingLead(null)
+    }
+  }
+
+  const handleDeleteLead = () => {
+    if (id && window.confirm('Are you sure you want to delete this lead?')) {
+      deleteLeadMutation.mutate(id)
     }
   }
 
@@ -84,7 +152,7 @@ function LeadDetail() {
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleDeleteLead}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>

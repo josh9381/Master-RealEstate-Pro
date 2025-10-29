@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import { Users, UserPlus, Mail, MoreVertical, Crown, X, Trash2, Edit2, Upload, Activity, Award, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, UserPlus, Mail, MoreVertical, Crown, X, Trash2, Edit2, Upload, Activity, Award, CheckCircle2, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/hooks/useToast';
+import { teamsApi } from '@/lib/api';
 
 const TeamManagement = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPermissionEditor, setShowPermissionEditor] = useState(false);
   const [showActivityLogs, setShowActivityLogs] = useState(false);
@@ -69,6 +73,42 @@ const TeamManagement = () => {
     },
   ]);
 
+  useEffect(() => {
+    loadTeamData();
+  }, []);
+
+  const loadTeamData = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const response = await teamsApi.getTeams();
+      const membersResponse = await teamsApi.getMembers(response.teams[0]?.id || 1);
+      
+      if (membersResponse.members) {
+        setTeamMembers(membersResponse.members);
+      }
+      
+      if (isRefresh) {
+        toast.success('Team data refreshed');
+      }
+    } catch (error) {
+      console.error('Failed to load team data:', error);
+      toast.error('Failed to load team data, using mock data');
+      // Keep using mock data on error
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadTeamData(true);
+  };
+
   const activityLogs = [
     { user: 'Sarah Johnson', action: 'Updated lead status', time: '5 min ago' },
     { user: 'Mike Smith', action: 'Created new campaign', time: '1 hour ago' },
@@ -83,34 +123,58 @@ const TeamManagement = () => {
     { name: 'David Lee', leads: 28, deals: 7, revenue: '$28,500', avatar: 'DL' },
   ];
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     if (!inviteEmail) {
       toast.error('Please enter an email address');
       return;
     }
-    const newMember = {
-      id: teamMembers.length + 1,
-      name: inviteEmail.split('@')[0],
-      email: inviteEmail,
-      role: inviteRole,
-      status: 'invited' as const,
-      lastActive: 'Pending',
-      avatar: inviteEmail.substring(0, 2).toUpperCase(),
-      isOnline: false,
-    };
-    setTeamMembers([...teamMembers, newMember]);
-    toast.success(`Invitation sent to ${inviteEmail}`);
-    setShowInviteModal(false);
-    setInviteEmail('');
+
+    setSaving(true);
+    try {
+      await teamsApi.inviteMember(1, { email: inviteEmail, role: inviteRole });
+      
+      const newMember = {
+        id: teamMembers.length + 1,
+        name: inviteEmail.split('@')[0],
+        email: inviteEmail,
+        role: inviteRole,
+        status: 'invited' as const,
+        lastActive: 'Pending',
+        avatar: inviteEmail.substring(0, 2).toUpperCase(),
+        isOnline: false,
+      };
+      setTeamMembers([...teamMembers, newMember]);
+      toast.success(`Invitation sent to ${inviteEmail}`);
+      setShowInviteModal(false);
+      setInviteEmail('');
+      loadTeamData(); // Reload from API
+    } catch (error) {
+      console.error('Failed to invite member:', error);
+      toast.error('Failed to send invitation');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const resendInvite = (email: string) => {
-    toast.success(`Invitation resent to ${email}`);
+  const resendInvite = async (email: string) => {
+    try {
+      await teamsApi.inviteMember(1, { email, role: 'Sales Rep' });
+      toast.success(`Invitation resent to ${email}`);
+    } catch (error) {
+      console.error('Failed to resend invite:', error);
+      toast.error('Failed to resend invitation');
+    }
   };
 
-  const removeMember = (id: number) => {
-    setTeamMembers(teamMembers.filter(m => m.id !== id));
-    toast.success('Team member removed');
+  const removeMember = async (id: number) => {
+    try {
+      await teamsApi.removeMember(1, id);
+      setTeamMembers(teamMembers.filter(m => m.id !== id));
+      toast.success('Team member removed');
+    } catch (error) {
+      console.error('Failed to remove member:', error);
+      toast.error('Failed to remove team member');
+    }
   };
 
   const editMember = (id: number) => {
@@ -151,6 +215,17 @@ const TeamManagement = () => {
 
   return (
     <div className="space-y-6">
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Loading team data...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
       {/* Invite Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -186,11 +261,11 @@ const TeamManagement = () => {
                 </select>
               </div>
               <div className="flex gap-2">
-                <Button className="flex-1" onClick={handleInvite}>
+                <Button className="flex-1" onClick={handleInvite} disabled={saving}>
                   <Mail className="h-4 w-4 mr-2" />
-                  Send Invitation
+                  {saving ? 'Sending...' : 'Send Invitation'}
                 </Button>
-                <Button variant="outline" onClick={() => setShowInviteModal(false)}>
+                <Button variant="outline" onClick={() => setShowInviteModal(false)} disabled={saving}>
                   Cancel
                 </Button>
               </div>
@@ -241,6 +316,14 @@ const TeamManagement = () => {
           <p className="text-muted-foreground mt-2">Manage your team members and their permissions</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={() => setShowBulkImport(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Bulk Import
@@ -566,6 +649,8 @@ const TeamManagement = () => {
       )}
 
       {/* Quick Invite removed since we have modal */}
+        </>
+      )}
     </div>
   );
 };

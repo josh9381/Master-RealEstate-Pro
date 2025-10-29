@@ -1,13 +1,16 @@
-import { useState } from 'react';
-import { Zap, Plus, Clock, Target, CheckCircle, X, Edit2, Trash2, Pause, Play, Filter as FilterIcon, ArrowUpDown, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Zap, Plus, Clock, Target, CheckCircle, X, Edit2, Trash2, Pause, Play, Filter as FilterIcon, ArrowUpDown, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/hooks/useToast';
+import { workflowsApi } from '@/lib/api';
 
 const AutomationRules = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'executions' | 'lastRun'>('name');
@@ -48,47 +51,109 @@ const AutomationRules = () => {
     },
   ]);
 
-  const toggleRuleStatus = (ruleId: number) => {
-    setAutomationRules(automationRules.map(rule => 
-      rule.id === ruleId 
-        ? { ...rule, status: rule.status === 'active' ? 'paused' as const : 'active' as const }
-        : rule
-    ));
-    const rule = automationRules.find(r => r.id === ruleId);
-    if (rule) {
-      toast.success(`Rule ${rule.status === 'active' ? 'paused' : 'activated'}`);
+  useEffect(() => {
+    loadRules();
+  }, []);
+
+  const loadRules = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await workflowsApi.getWorkflows({ type: 'automation' });
+      
+      if (response && Array.isArray(response)) {
+        setAutomationRules(response);
+      }
+    } catch (error) {
+      console.error('Failed to load automation rules:', error);
+      toast.error('Failed to load rules, using sample data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const deleteRule = (ruleId: number) => {
-    setAutomationRules(automationRules.filter(rule => rule.id !== ruleId));
-    toast.success('Rule deleted successfully');
+  const handleRefresh = () => {
+    loadRules(true);
+  };
+
+  const toggleRuleStatus = async (ruleId: number) => {
+    try {
+      await workflowsApi.toggleWorkflow(ruleId.toString());
+      
+      setAutomationRules(automationRules.map(rule => 
+        rule.id === ruleId 
+          ? { ...rule, status: rule.status === 'active' ? 'paused' as const : 'active' as const }
+          : rule
+      ));
+      const rule = automationRules.find(r => r.id === ruleId);
+      if (rule) {
+        toast.success(`Rule ${rule.status === 'active' ? 'paused' : 'activated'}`);
+      }
+      
+      await loadRules(true);
+    } catch (error) {
+      console.error('Failed to toggle rule:', error);
+      toast.error('Failed to toggle rule status');
+    }
+  };
+
+  const deleteRule = async (ruleId: number) => {
+    try {
+      await workflowsApi.deleteWorkflow(ruleId.toString());
+      setAutomationRules(automationRules.filter(rule => rule.id !== ruleId));
+      toast.success('Rule deleted successfully');
+      await loadRules(true);
+    } catch (error) {
+      console.error('Failed to delete rule:', error);
+      toast.error('Failed to delete rule');
+    }
   };
 
   const editRule = (_ruleId: number) => {
     toast.info('Edit functionality - opens rule editor');
   };
 
-  const createRule = () => {
+  const createRule = async () => {
     if (!newRuleName.trim()) {
       toast.error('Please enter a rule name');
       return;
     }
-    const newRule = {
-      id: Math.max(...automationRules.map(r => r.id)) + 1,
-      name: newRuleName,
-      description: newRuleDescription || 'No description',
-      trigger: 'Lead Created',
-      actions: ['Send Email'],
-      status: 'active' as const,
-      executions: 0,
-      lastRun: 'Never',
-    };
-    setAutomationRules([...automationRules, newRule]);
-    toast.success('Rule created successfully');
-    setShowCreateModal(false);
-    setNewRuleName('');
-    setNewRuleDescription('');
+    
+    try {
+      const newRuleData = {
+        name: newRuleName,
+        description: newRuleDescription || 'No description',
+        trigger: 'Lead Created',
+        actions: ['Send Email'],
+        status: 'active'
+      };
+      
+      await workflowsApi.createWorkflow(newRuleData);
+      
+      const newRule = {
+        id: Math.max(...automationRules.map(r => r.id)) + 1,
+        ...newRuleData,
+        status: 'active' as const,
+        executions: 0,
+        lastRun: 'Never',
+      };
+      
+      setAutomationRules([...automationRules, newRule]);
+      toast.success('Rule created successfully');
+      setShowCreateModal(false);
+      setNewRuleName('');
+      setNewRuleDescription('');
+      
+      await loadRules(true);
+    } catch (error) {
+      console.error('Failed to create rule:', error);
+      toast.error('Failed to create rule');
+    }
   };
 
   const applyTemplate = (templateName: string) => {
@@ -117,6 +182,15 @@ const AutomationRules = () => {
 
   return (
     <div className="space-y-6">
+      {loading ? (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading automation rules...</p>
+          </div>
+        </Card>
+      ) : (
+        <>
       {/* Create Rule Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -183,6 +257,10 @@ const AutomationRules = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={exportRules}>
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -539,6 +617,8 @@ const AutomationRules = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

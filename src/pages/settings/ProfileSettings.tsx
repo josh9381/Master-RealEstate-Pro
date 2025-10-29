@@ -1,13 +1,16 @@
-import { Camera } from 'lucide-react';
+import { Camera, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 const ProfileSettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // Basic Information
   const [firstName, setFirstName] = useState('John');
@@ -29,7 +32,50 @@ const ProfileSettings = () => {
   const [timezone, setTimezone] = useState('Pacific Time (PT)');
   const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
   
-  const handlePhotoUpload = () => {
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await settingsApi.getProfile();
+      
+      if (response) {
+        setFirstName(response.firstName || 'John');
+        setLastName(response.lastName || 'Doe');
+        setEmail(response.email || '');
+        setPhone(response.phone || '');
+        setJobTitle(response.jobTitle || '');
+        setCompany(response.company || '');
+        setAddress(response.address || '');
+        setCity(response.city || '');
+        setState(response.state || '');
+        setZipCode(response.zipCode || '');
+        setCountry(response.country || 'United States');
+        setLanguage(response.language || 'English (US)');
+        setTimezone(response.timezone || 'Pacific Time (PT)');
+        setDateFormat(response.dateFormat || 'MM/DD/YYYY');
+      }
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+      toast.error('Failed to load profile, using default data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadProfile(true);
+  };
+  
+  const handlePhotoUpload = async () => {
     toast.info('Photo upload feature coming soon!');
     // In a real app, this would open a file picker
   };
@@ -40,23 +86,58 @@ const ProfileSettings = () => {
       return;
     }
     
-    setLoading(true);
+    setSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.updateProfile({
+        firstName,
+        lastName,
+        email,
+        phone,
+        jobTitle,
+        company,
+        address,
+        city,
+        state,
+        zipCode,
+        country,
+        language,
+        timezone,
+        dateFormat
+      });
       toast.success('Profile updated successfully');
+      await loadProfile(true);
     } catch (error) {
+      console.error('Failed to update profile:', error);
       toast.error('Failed to update profile');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6 max-w-4xl">
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading profile settings...</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-bold">Profile Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your personal information and preferences</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Profile Settings</h1>
+          <p className="text-muted-foreground mt-2">Manage your personal information and preferences</p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Profile Photo */}
@@ -209,8 +290,8 @@ const ProfileSettings = () => {
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline">Cancel</Button>
-        <Button onClick={handleSave} loading={loading}>
-          {loading ? 'Saving...' : 'Save Changes'}
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </div>

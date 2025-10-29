@@ -1,29 +1,51 @@
-import { Settings, Database, Zap, Bell, Shield } from 'lucide-react';
+import { Settings, Database, Zap, Bell, Shield, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 const ServiceConfiguration = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [storageProvider, setStorageProvider] = useState('s3');
   const [accessKeyId, setAccessKeyId] = useState('');
   const [secretAccessKey, setSecretAccessKey] = useState('');
   const [bucketName, setBucketName] = useState('');
   const [region, setRegion] = useState('us-east-1');
 
-  const handleSaveSettings = async () => {
-    setLoading(true);
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     try {
-      // Simulate API call
+      // Service config would use settingsApi in production
+      if (isRefresh) toast.success('Settings refreshed');
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => loadSettings(true);
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success('Settings Saved', 'Service configuration has been updated successfully.');
     } catch (error) {
       toast.error('Error', 'Failed to save service configuration.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 

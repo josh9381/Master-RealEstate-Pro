@@ -1,11 +1,17 @@
-import { Phone, PhoneIncoming, PhoneOutgoing, Clock, Mic, PhoneMissed } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { Phone, PhoneIncoming, PhoneOutgoing, Clock, Mic, PhoneMissed, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast'
+import { messagesApi } from '@/lib/api'
 
 const CallCenter = () => {
-  const recentCalls = [
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const { toast } = useToast()
+  const [recentCalls, setRecentCalls] = useState([
     {
       id: 1,
       contact: 'John Smith',
@@ -36,7 +42,37 @@ const CallCenter = () => {
       time: '2 hours ago',
       notes: 'No answer - will call back',
     },
-  ];
+  ])
+
+  useEffect(() => {
+    loadCalls()
+  }, [])
+
+  const loadCalls = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
+      const response = await messagesApi.getMessages({ type: 'call' })
+      
+      if (response && Array.isArray(response)) {
+        setRecentCalls(response)
+      }
+    } catch (error) {
+      console.error('Failed to load call logs:', error)
+      toast.error('Failed to load calls, using sample data')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    loadCalls(true)
+  }
 
   return (
     <div className="space-y-6">
@@ -45,11 +81,28 @@ const CallCenter = () => {
           <h1 className="text-3xl font-bold">Call Center</h1>
           <p className="text-muted-foreground mt-2">Make and manage phone calls</p>
         </div>
-        <Button>
-          <Phone className="h-4 w-4 mr-2" />
-          Make Call
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button>
+            <Phone className="h-4 w-4 mr-2" />
+            Make Call
+          </Button>
+        </div>
       </div>
+
+      {loading ? (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading call logs...</p>
+          </div>
+        </Card>
+      ) : (
+        <>
+      <div className="hidden">Wrapper for loading state</div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -231,6 +284,8 @@ const CallCenter = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

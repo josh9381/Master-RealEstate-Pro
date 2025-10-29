@@ -1,10 +1,16 @@
-import { Facebook, Twitter, Instagram, Linkedin, Send, Calendar, BarChart3 } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { Facebook, Twitter, Instagram, Linkedin, Send, Calendar, BarChart3, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast'
+import { messagesApi } from '@/lib/api'
 
 const SocialMediaDashboard = () => {
-  const socialPosts = [
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const { toast } = useToast()
+  const [socialPosts, setSocialPosts] = useState([
     {
       id: 1,
       platform: 'Facebook',
@@ -35,7 +41,37 @@ const SocialMediaDashboard = () => {
       comments: 23,
       shares: 89,
     },
-  ];
+  ])
+
+  useEffect(() => {
+    loadSocialPosts()
+  }, [])
+
+  const loadSocialPosts = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
+      const response = await messagesApi.getMessages({ type: 'social' })
+      
+      if (response && Array.isArray(response)) {
+        setSocialPosts(response)
+      }
+    } catch (error) {
+      console.error('Failed to load social posts:', error)
+      toast.error('Failed to load posts, using sample data')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    loadSocialPosts(true)
+  }
 
   const platformIcons = {
     Facebook: Facebook,
@@ -60,11 +96,28 @@ const SocialMediaDashboard = () => {
             Manage and schedule posts across all platforms
           </p>
         </div>
-        <Button>
-          <Send className="h-4 w-4 mr-2" />
-          Create Post
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button>
+            <Send className="h-4 w-4 mr-2" />
+            Create Post
+          </Button>
+        </div>
       </div>
+
+      {loading ? (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading social posts...</p>
+          </div>
+        </Card>
+      ) : (
+        <>
+      <div className="hidden">Wrapper for loading state</div>
 
       {/* Platform Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -347,6 +400,8 @@ const SocialMediaDashboard = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

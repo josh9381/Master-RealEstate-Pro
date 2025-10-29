@@ -1,41 +1,48 @@
-import { Phone, PhoneCall, Clock, TrendingUp } from 'lucide-react';
+import { Phone, PhoneCall, Clock, TrendingUp, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useState, useEffect } from 'react';
+import { campaignsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 
 const PhoneCampaigns = () => {
-  const campaigns = [
-    {
-      id: 1,
-      name: 'Q1 Sales Outreach',
-      type: 'Automated',
-      status: 'active',
-      totalCalls: 450,
-      answered: 320,
-      voicemail: 95,
-      conversions: 45,
-      avgDuration: '8m 32s',
-    },
-    {
-      id: 2,
-      name: 'Customer Satisfaction Survey',
-      type: 'IVR',
-      status: 'completed',
-      totalCalls: 850,
-      answered: 680,
-      voicemail: 120,
-      conversions: 510,
-      avgDuration: '3m 15s',
-    },
-    {
-      id: 3,
-      name: 'Appointment Confirmations',
-      type: 'Reminder',
-      status: 'scheduled',
-      totalCalls: 200,
-      scheduled: '2024-01-20',
-    },
-  ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    answerRate: 66.7,
+    avgDuration: '6m 20s',
+    conversions: 0
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadCampaigns();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadCampaigns = async () => {
+    setIsLoading(true);
+    try {
+      const response = await campaignsApi.getCampaigns({ type: 'phone', limit: 50 });
+      const phoneCampaigns = response.data || [];
+      
+      setCampaigns(phoneCampaigns);
+      setStats({
+        total: response.total || 0,
+        answerRate: 66.7, // Mock
+        avgDuration: '6m 20s', // Mock
+        conversions: 0 // Mock
+      });
+    } catch (error) {
+      console.error('Error loading phone campaigns:', error);
+      toast.error('Failed to load campaigns');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -46,22 +53,28 @@ const PhoneCampaigns = () => {
             Manage automated calling campaigns and track performance
           </p>
         </div>
-        <Button>
-          <Phone className="h-4 w-4 mr-2" />
-          Create Phone Campaign
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadCampaigns} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button>
+            <Phone className="h-4 w-4 mr-2" />
+            Create Phone Campaign
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
             <Phone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,500</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">Phone campaigns</p>
           </CardContent>
         </Card>
         <Card>
@@ -70,8 +83,8 @@ const PhoneCampaigns = () => {
             <PhoneCall className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">66.7%</div>
-            <p className="text-xs text-muted-foreground">1,000 answered</p>
+            <div className="text-2xl font-bold">{stats.answerRate}%</div>
+            <p className="text-xs text-muted-foreground">Average rate</p>
           </CardContent>
         </Card>
         <Card>
@@ -80,18 +93,18 @@ const PhoneCampaigns = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">6m 24s</div>
+            <div className="text-2xl font-bold">{stats.avgDuration}</div>
             <p className="text-xs text-muted-foreground">Per call</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">Conversions</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">37.0%</div>
-            <p className="text-xs text-muted-foreground">555 conversions</p>
+            <div className="text-2xl font-bold">{stats.conversions}</div>
+            <p className="text-xs text-muted-foreground">Successful calls</p>
           </CardContent>
         </Card>
       </div>

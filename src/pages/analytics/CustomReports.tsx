@@ -1,9 +1,44 @@
-import { BarChart3, TrendingUp, Filter, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, Filter, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { analyticsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 
 const CustomReports = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [leadData, setLeadData] = useState<any>(null);
+  const [campaignData, setCampaignData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await loadReportsData();
+    };
+    fetchData();
+  }, []);
+
+  const loadReportsData = async () => {
+    setLoading(true);
+    try {
+      const [dashboard, leads, campaigns] = await Promise.all([
+        analyticsApi.getDashboardStats(),
+        analyticsApi.getLeadAnalytics(),
+        analyticsApi.getCampaignAnalytics(),
+      ]);
+      setDashboardData(dashboard);
+      setLeadData(leads);
+      setCampaignData(campaigns);
+    } catch (error) {
+      const err = error as Error;
+      toast.error(err.message || 'Failed to load reports data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const savedReports = [
     {
       id: 1,
@@ -40,39 +75,49 @@ const CustomReports = () => {
             Build and save custom reports with your data
           </p>
         </div>
-        <Button>
-          <BarChart3 className="h-4 w-4 mr-2" />
-          Create New Report
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadReportsData} disabled={loading}>
+            {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
+            {loading ? 'Loading...' : 'Refresh'}
+          </Button>
+          <Button>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Create New Report
+          </Button>
+        </div>
       </div>
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saved Reports</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">Total reports</p>
+            <div className="text-2xl font-bold">{leadData?.total || 0}</div>
+            <p className="text-xs text-muted-foreground">In system</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reports Run</CardTitle>
+            <CardTitle className="text-sm font-medium">Campaigns</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold">{campaignData?.total || 0}</div>
+            <p className="text-xs text-muted-foreground">Total campaigns</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled Reports</CardTitle>
+            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
             <Filter className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{leadData?.conversionRate || 0}%</div>
+            <p className="text-xs text-muted-foreground">Lead conversion</p>
+          </CardContent>
           <CardContent>
             <div className="text-2xl font-bold">8</div>
             <p className="text-xs text-muted-foreground">Active schedules</p>

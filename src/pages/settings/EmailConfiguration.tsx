@@ -1,13 +1,16 @@
-import { useState } from 'react';
-import { Mail, Server, Shield, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Server, Shield, CheckCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { settingsApi } from '@/lib/api';
 
 const EmailConfiguration = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   
   // SMTP Settings
@@ -37,6 +40,47 @@ const EmailConfiguration = () => {
   const [dailyLimit, setDailyLimit] = useState('10000');
   const [rateLimit, setRateLimit] = useState('No limit');
   const [bounceHandling, setBounceHandling] = useState('Mark as bounced after 1 failure');
+
+  useEffect(() => {
+    loadEmailConfig();
+  }, []);
+
+  const loadEmailConfig = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const config = await settingsApi.getEmailConfig();
+      
+      if (config) {
+        setSmtpHost(config.smtpHost || 'smtp.sendgrid.net');
+        setSmtpPort(config.smtpPort || '587');
+        setUsername(config.username || 'apikey');
+        setPassword(config.password || 'SG.xxxxxxxxxxxxxxxxxxxxxxxx');
+        setEncryption(config.encryption || 'tls');
+        setFromName(config.fromName || 'Your CRM Team');
+        setFromEmail(config.fromEmail || 'noreply@yourcrm.com');
+        setReplyToEmail(config.replyToEmail || 'support@yourcrm.com');
+      }
+      
+      if (isRefresh) {
+        toast.success('Email configuration refreshed');
+      }
+    } catch (error) {
+      console.error('Failed to load email config:', error);
+      toast.error('Failed to load email configuration, using defaults');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadEmailConfig(true);
+  };
   
   const handleTestConnection = async () => {
     if (!smtpHost || !smtpPort || !username || !password) {
@@ -46,10 +90,10 @@ const EmailConfiguration = () => {
     
     setTestingConnection(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await settingsApi.testEmail({ smtpHost, smtpPort, username, password, encryption });
       toast.success('SMTP connection successful! Test email sent.');
     } catch (error) {
+      console.error('Failed to test connection:', error);
       toast.error('Failed to connect to SMTP server');
     } finally {
       setTestingConnection(false);
@@ -57,15 +101,35 @@ const EmailConfiguration = () => {
   };
   
   const handleSaveSettings = async () => {
-    setLoading(true);
+    setSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.updateEmailConfig({
+        smtpHost,
+        smtpPort,
+        username,
+        password,
+        encryption,
+        fromName,
+        fromEmail,
+        replyToEmail,
+        bccEmail,
+        domain,
+        includeUnsubscribe,
+        trackOpens,
+        trackClicks,
+        includeLogo,
+        includeSocial,
+        dailyLimit,
+        rateLimit,
+        bounceHandling,
+      });
       toast.success('Email configuration saved successfully');
+      loadEmailConfig(); // Reload from API
     } catch (error) {
+      console.error('Failed to save settings:', error);
       toast.error('Failed to save settings');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
   
@@ -81,13 +145,35 @@ const EmailConfiguration = () => {
       setLoading(false);
     }
   };
+  
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Email Configuration</h1>
-        <p className="text-muted-foreground mt-2">
-          Configure SMTP settings and email delivery
-        </p>
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Loading email configuration...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Email Configuration</h1>
+          <p className="text-muted-foreground mt-2">
+            Configure SMTP settings and email delivery
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Connection Status */}
@@ -198,9 +284,11 @@ const EmailConfiguration = () => {
             </select>
           </div>
           <div className="flex space-x-2">
-            <Button onClick={handleSaveSettings} loading={loading}>Save Settings</Button>
-            <Button variant="outline" onClick={handleTestConnection} loading={testingConnection}>
-              Send Test Email
+            <Button onClick={handleSaveSettings} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Settings'}
+            </Button>
+            <Button variant="outline" onClick={handleTestConnection} disabled={testingConnection}>
+              {testingConnection ? 'Testing...' : 'Send Test Email'}
             </Button>
           </div>
         </CardContent>
@@ -470,6 +558,8 @@ const EmailConfiguration = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

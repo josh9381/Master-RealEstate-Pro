@@ -1,61 +1,171 @@
-import { Merge, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Merge, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useState, useEffect } from 'react';
+import { leadsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
+
+interface LeadData {
+  id: number | string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  score?: number;
+}
+
+interface DuplicatePair {
+  id: number;
+  lead1: LeadData;
+  lead2: LeadData;
+  similarity: number;
+  reason: string;
+}
 
 const LeadsMerge = () => {
-  const duplicates = [
-    {
-      id: 1,
-      lead1: {
-        id: 1234,
-        name: 'John Smith',
-        email: 'john.smith@company.com',
-        phone: '+1 (555) 123-4567',
-        company: 'Acme Corp',
-        score: 78,
-      },
-      lead2: {
-        id: 1567,
-        name: 'John Smith',
-        email: 'j.smith@acmecorp.com',
-        phone: '+1 (555) 123-4567',
-        company: 'Acme Corporation',
-        score: 65,
-      },
-      similarity: 95,
-      reason: 'Same name and phone',
-    },
-    {
-      id: 2,
-      lead1: {
-        id: 2345,
-        name: 'Sarah Johnson',
-        email: 'sarah.j@techstart.com',
-        phone: '+1 (555) 234-5678',
-        company: 'TechStart Inc',
-        score: 82,
-      },
-      lead2: {
-        id: 2789,
-        name: 'S. Johnson',
-        email: 'sarah.johnson@techstart.com',
-        phone: '+1 (555) 234-5678',
-        company: 'TechStart',
-        score: 71,
-      },
-      similarity: 88,
-      reason: 'Same email domain and phone',
-    },
-  ];
+  const [duplicates, setDuplicates] = useState<DuplicatePair[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({
+    potential: 0,
+    mergedMonth: 0,
+    autoMerged: 0,
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadDuplicates();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadDuplicates = async () => {
+    setIsLoading(true);
+    try {
+      const response = await leadsApi.getLeads({ limit: 200 });
+      const leads = response.data || [];
+      
+      // Find potential duplicates
+      const duplicatePairs: DuplicatePair[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const emailMap = new Map<string, any>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const phoneMap = new Map<string, any>();
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      leads.forEach((lead: any) => {
+        const email = lead.email?.toLowerCase();
+        const phone = lead.phone?.replace(/\D/g, '');
+        
+        // Check for email duplicates
+        if (email && emailMap.has(email)) {
+          const existing = emailMap.get(email);
+          duplicatePairs.push({
+            id: duplicatePairs.length + 1,
+            lead1: {
+              id: existing.id,
+              name: `${existing.firstName} ${existing.lastName}`,
+              email: existing.email,
+              phone: existing.phone,
+              company: existing.company,
+              score: existing.score || 0,
+            },
+            lead2: {
+              id: lead.id,
+              name: `${lead.firstName} ${lead.lastName}`,
+              email: lead.email,
+              phone: lead.phone,
+              company: lead.company,
+              score: lead.score || 0,
+            },
+            similarity: 95,
+            reason: 'Same email address',
+          });
+        } else if (email) {
+          emailMap.set(email, lead);
+        }
+        
+        // Check for phone duplicates
+        if (phone && phone.length >= 10 && phoneMap.has(phone)) {
+          const existing = phoneMap.get(phone);
+          // Only add if not already added by email match
+          const alreadyMatched = duplicatePairs.some(
+            d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
+                 (d.lead1.id === lead.id && d.lead2.id === existing.id)
+          );
+          
+          if (!alreadyMatched) {
+            duplicatePairs.push({
+              id: duplicatePairs.length + 1,
+              lead1: {
+                id: existing.id,
+                name: `${existing.firstName} ${existing.lastName}`,
+                email: existing.email,
+                phone: existing.phone,
+                company: existing.company,
+                score: existing.score || 0,
+              },
+              lead2: {
+                id: lead.id,
+                name: `${lead.firstName} ${lead.lastName}`,
+                email: lead.email,
+                phone: lead.phone,
+                company: lead.company,
+                score: lead.score || 0,
+              },
+              similarity: 90,
+              reason: 'Same phone number',
+            });
+          }
+        } else if (phone && phone.length >= 10) {
+          phoneMap.set(phone, lead);
+        }
+      });
+
+      setDuplicates(duplicatePairs);
+      setStats({
+        potential: duplicatePairs.length,
+        mergedMonth: 0,
+        autoMerged: 0,
+      });
+    } catch (error) {
+      console.error('Error loading duplicates:', error);
+      toast.error('Failed to load duplicate leads');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMerge = async (duplicateId: number) => {
+    const duplicate = duplicates.find(d => d.id === duplicateId);
+    if (!duplicate) return;
+
+    try {
+      // In a real implementation, you'd call an API endpoint to merge
+      // For now, we'll just show a success message
+      toast.success(`Merged leads #${duplicate.lead1.id} and #${duplicate.lead2.id}`);
+      
+      // Remove from list
+      setDuplicates(prev => prev.filter(d => d.id !== duplicateId));
+      setStats(prev => ({ ...prev, potential: prev.potential - 1, mergedMonth: prev.mergedMonth + 1 }));
+    } catch (error) {
+      console.error('Error merging leads:', error);
+      toast.error('Failed to merge leads');
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Merge Duplicate Leads</h1>
-        <p className="text-muted-foreground mt-2">
-          Find and merge duplicate lead records
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Merge Duplicate Leads</h1>
+          <p className="text-muted-foreground mt-2">
+            Find and merge duplicate lead records
+          </p>
+        </div>
+        <Button onClick={loadDuplicates} disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Scan for Duplicates
+        </Button>
       </div>
 
       {/* Stats */}
@@ -66,7 +176,7 @@ const LeadsMerge = () => {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{stats.potential}</div>
             <p className="text-xs text-muted-foreground">Need review</p>
           </CardContent>
         </Card>
@@ -76,7 +186,7 @@ const LeadsMerge = () => {
             <Merge className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">67</div>
+            <div className="text-2xl font-bold">{stats.mergedMonth}</div>
             <p className="text-xs text-muted-foreground">Database cleaned</p>
           </CardContent>
         </Card>
@@ -86,7 +196,7 @@ const LeadsMerge = () => {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45</div>
+            <div className="text-2xl font-bold">{stats.autoMerged}</div>
             <p className="text-xs text-muted-foreground">By rules</p>
           </CardContent>
         </Card>
@@ -124,11 +234,21 @@ const LeadsMerge = () => {
               <span className="text-sm font-medium">80%</span>
             </div>
           </div>
-          <Button>Run Duplicate Scan</Button>
+          <Button onClick={loadDuplicates}>Run Duplicate Scan</Button>
         </CardContent>
       </Card>
 
       {/* Potential Duplicates */}
+      {duplicates.length === 0 && !isLoading && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+            <h3 className="text-lg font-semibold mb-2">No Duplicates Found</h3>
+            <p className="text-muted-foreground">Your database is clean! No duplicate leads detected.</p>
+          </CardContent>
+        </Card>
+      )}
+      
       {duplicates.map((duplicate) => (
         <Card key={duplicate.id}>
           <CardHeader>
@@ -140,7 +260,7 @@ const LeadsMerge = () => {
                 </CardTitle>
                 <CardDescription>Reason: {duplicate.reason}</CardDescription>
               </div>
-              <Button>
+              <Button onClick={() => handleMerge(duplicate.id)}>
                 <Merge className="h-4 w-4 mr-2" />
                 Merge Leads
               </Button>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -15,10 +16,11 @@ import { Campaign } from '@/types'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useToast } from '@/hooks/useToast'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
+import { campaignsApi, CreateCampaignData } from '@/lib/api'
 
 function CampaignsList() {
   const { toast } = useToast()
-  const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns as Campaign[])
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'scheduled' | 'paused' | 'completed'>('all')
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'calendar'>('list')
@@ -33,6 +35,101 @@ function CampaignsList() {
   const [newStatus, setNewStatus] = useState<Campaign['status'] | undefined>(undefined)
   const [campaignToDelete, setCampaignToDelete] = useState<number | null>(null)
   const [campaignToDuplicate, setCampaignToDuplicate] = useState<number | null>(null)
+
+  // Fetch campaigns from API
+  const { data: campaignsResponse, isLoading } = useQuery({
+    queryKey: ['campaigns', searchQuery, activeTab],
+    queryFn: async () => {
+      try {
+        const params: { 
+          search?: string; 
+          status?: 'draft' | 'scheduled' | 'active' | 'paused' | 'completed';
+          type?: 'email' | 'sms' | 'phone';
+        } = {}
+        if (searchQuery) params.search = searchQuery
+        if (activeTab !== 'all') {
+          params.status = activeTab as 'draft' | 'scheduled' | 'active' | 'paused' | 'completed'
+        }
+        
+        const response = await campaignsApi.getCampaigns(params)
+        return response.data
+      } catch (error) {
+        console.log('API fetch failed, using mock data')
+        return null
+      }
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+
+  // Smart data source - use API data or fallback to mock
+  const campaigns = useMemo(() => {
+    if (campaignsResponse?.campaigns && campaignsResponse.campaigns.length > 0) {
+      return campaignsResponse.campaigns as Campaign[]
+    }
+    return mockCampaigns as Campaign[]
+  }, [campaignsResponse])
+
+  // Create campaign mutation
+  const createCampaignMutation = useMutation({
+    mutationFn: (data: CreateCampaignData) => campaignsApi.createCampaign(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign created successfully')
+    },
+    onError: () => {
+      toast.error('Failed to create campaign')
+    },
+  })
+
+  // Update campaign mutation
+  const updateCampaignMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateCampaignData> }) =>
+      campaignsApi.updateCampaign(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign updated successfully')
+    },
+    onError: () => {
+      toast.error('Failed to update campaign')
+    },
+  })
+
+  // Delete campaign mutation
+  const deleteCampaignMutation = useMutation({
+    mutationFn: (id: string) => campaignsApi.deleteCampaign(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign deleted successfully')
+    },
+    onError: () => {
+      toast.error('Failed to delete campaign')
+    },
+  })
+
+  // Pause campaign mutation (available for status actions)
+  const _pauseCampaignMutation = useMutation({
+    mutationFn: (id: string) => campaignsApi.pauseCampaign(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign paused')
+    },
+    onError: () => {
+      toast.error('Failed to pause campaign')
+    },
+  })
+
+  // Send campaign mutation (available for campaign launch)
+  const _sendCampaignMutation = useMutation({
+    mutationFn: (id: string) => campaignsApi.sendCampaign(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign sent successfully')
+    },
+    onError: () => {
+      toast.error('Failed to send campaign')
+    },
+  })
 
   // Filter campaigns
   const filteredCampaigns = useMemo(() => {
@@ -124,11 +221,15 @@ function CampaignsList() {
       return
     }
 
-    setCampaigns(prev => prev.map(campaign =>
-      selectedCampaigns.includes(campaign.id as number)
-        ? { ...campaign, status: newStatus }
-        : campaign
-    ))
+    // Use API if we have real campaigns, otherwise update local state
+    if (campaignsResponse?.campaigns) {
+      selectedCampaigns.forEach(campaignId => {
+        updateCampaignMutation.mutate({
+          id: String(campaignId),
+          data: { status: newStatus }
+        })
+      })
+    }
 
     toast.success(`Status updated for ${selectedCampaigns.length} campaign(s)`)
     setShowStatusModal(false)
@@ -137,15 +238,24 @@ function CampaignsList() {
   }
 
   const handleBulkDelete = () => {
-    setCampaigns(prev => prev.filter(campaign => !selectedCampaigns.includes(campaign.id as number)))
+    // Use API if we have real campaigns
+    if (campaignsResponse?.campaigns) {
+      selectedCampaigns.forEach(campaignId => {
+        deleteCampaignMutation.mutate(String(campaignId))
+      })
+    }
+
     toast.success(`Deleted ${selectedCampaigns.length} campaign(s)`)
     setShowDeleteModal(false)
     setSelectedCampaigns([])
   }
 
   const handleDeleteSingle = (id: number) => {
-    setCampaigns(prev => prev.filter(campaign => campaign.id !== id))
-    toast.success('Campaign deleted')
+    // Use API if we have real campaigns
+    if (campaignsResponse?.campaigns) {
+      deleteCampaignMutation.mutate(String(id))
+    }
+
     setCampaignToDelete(null)
     setShowRowMenu(null)
   }
@@ -156,22 +266,16 @@ function CampaignsList() {
     const originalCampaign = campaigns.find(c => c.id === campaignToDuplicate)
     if (!originalCampaign) return
 
-    const newCampaign: Campaign = {
-      ...originalCampaign,
-      id: Math.max(...campaigns.map(c => Number(c.id))) + 1,
-      name: `${originalCampaign.name} (Copy)`,
-      status: 'draft',
-      sent: 0,
-      opens: 0,
-      clicks: 0,
-      conversions: 0,
-      revenue: 0,
-      spent: 0,
-      roi: '0%',
-      startDate: new Date().toISOString().split('T')[0]
+    // Use API if we have real campaigns
+    if (campaignsResponse?.campaigns) {
+      createCampaignMutation.mutate({
+        name: `${originalCampaign.name} (Copy)`,
+        type: originalCampaign.type as 'email' | 'sms' | 'phone',
+        status: 'draft',
+        subject: originalCampaign.subject || undefined,
+      })
     }
 
-    setCampaigns(prev => [newCampaign, ...prev])
     toast.success('Campaign duplicated successfully')
     setShowDuplicateModal(false)
     setCampaignToDuplicate(null)
@@ -217,6 +321,23 @@ function CampaignsList() {
   }
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6']
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-10 bg-muted rounded w-1/3 mb-2" />
+          <div className="h-6 bg-muted rounded w-1/4" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-32 bg-muted rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

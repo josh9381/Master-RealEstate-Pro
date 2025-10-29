@@ -1,9 +1,32 @@
 import axios, { AxiosError } from 'axios'
 import type { Lead, Campaign, Note, Activity, Analytics, User } from '@/types'
 
+// Determine the API base URL
+const getApiBaseUrl = () => {
+  // Check if we have an environment variable for the API URL
+  const envApiUrl = import.meta.env.VITE_API_URL
+  if (envApiUrl) {
+    console.log('🔧 Using API URL from environment:', envApiUrl)
+    return envApiUrl
+  }
+
+  // In GitHub Codespaces, detect the backend URL
+  if (window.location.hostname.includes('app.github.dev')) {
+    // Replace the port 3000 with 8000 for backend
+    const backendUrl = window.location.origin.replace('-3000.', '-8000.')
+    const apiUrl = `${backendUrl}/api`
+    console.log('🔧 Detected Codespaces, using API URL:', apiUrl)
+    return apiUrl
+  }
+
+  // Default to relative path (works with Vite proxy in local development)
+  console.log('🔧 Using relative API URL (Vite proxy): /api')
+  return '/api'
+}
+
 // Create axios instance
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getApiBaseUrl(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -534,6 +557,445 @@ export const analyticsApi = {
 
   getConversionFunnel: async (params?: AnalyticsQuery) => {
     const response = await api.get('/analytics/conversion-funnel', { params })
+    return response.data
+  },
+}
+
+// ============================================================================
+// AI API
+// ============================================================================
+
+export interface InsightFilter {
+  type?: string
+  priority?: string
+  limit?: number
+}
+
+export interface RecommendationFilter {
+  type?: string
+  limit?: number
+}
+
+export interface EnhanceMessagePayload {
+  message: string
+  type?: string
+  tone?: string
+}
+
+export interface SuggestActionsPayload {
+  context?: string
+  leadId?: string
+  campaignId?: string
+}
+
+export interface UploadTrainingDataPayload {
+  modelType: string
+  data: any
+}
+
+export const aiApi = {
+  // AI Hub Stats & Overview
+  getStats: async () => {
+    const response = await api.get('/ai/stats')
+    return response.data
+  },
+
+  getFeatures: async () => {
+    const response = await api.get('/ai/features')
+    return response.data
+  },
+
+  // Model Performance & Training
+  getModelPerformance: async (months?: number) => {
+    const response = await api.get('/ai/models/performance', { 
+      params: { months } 
+    })
+    return response.data
+  },
+
+  getTrainingModels: async () => {
+    const response = await api.get('/ai/models/training')
+    return response.data
+  },
+
+  uploadTrainingData: async (payload: UploadTrainingDataPayload) => {
+    const response = await api.post('/ai/models/training/upload', payload)
+    return response.data
+  },
+
+  // Data Quality
+  getDataQuality: async () => {
+    const response = await api.get('/ai/data-quality')
+    return response.data
+  },
+
+  // Insights & Recommendations
+  getInsights: async (params?: InsightFilter) => {
+    const response = await api.get('/ai/insights', { params })
+    return response.data
+  },
+
+  getInsightById: async (id: string) => {
+    const response = await api.get(`/ai/insights/${id}`)
+    return response.data
+  },
+
+  dismissInsight: async (id: string) => {
+    const response = await api.post(`/ai/insights/${id}/dismiss`)
+    return response.data
+  },
+
+  getRecommendations: async (params?: RecommendationFilter) => {
+    const response = await api.get('/ai/recommendations', { params })
+    return response.data
+  },
+
+  // Lead Scoring
+  getLeadScore: async (leadId: string) => {
+    const response = await api.get(`/ai/lead-score/${leadId}`)
+    return response.data
+  },
+
+  recalculateScores: async () => {
+    const response = await api.post('/ai/recalculate-scores')
+    return response.data
+  },
+
+  // Predictions
+  getPredictions: async (leadId: string) => {
+    const response = await api.get(`/ai/predictions/${leadId}`)
+    return response.data
+  },
+
+  // AI Assistant Features
+  enhanceMessage: async (payload: EnhanceMessagePayload) => {
+    const response = await api.post('/ai/enhance-message', payload)
+    return response.data
+  },
+
+  suggestActions: async (payload: SuggestActionsPayload) => {
+    const response = await api.post('/ai/suggest-actions', payload)
+    return response.data
+  },
+
+  // Feature Importance
+  getFeatureImportance: async (modelType?: string) => {
+    const response = await api.get('/ai/feature-importance', {
+      params: { modelType }
+    })
+    return response.data
+  },
+}
+
+// Messages & Communication API
+export const messagesApi = {
+  getMessages: async (params?: any) => {
+    const response = await api.get('/messages', { params })
+    return response.data
+  },
+
+  getMessage: async (id: string) => {
+    const response = await api.get(`/messages/${id}`)
+    return response.data
+  },
+
+  sendEmail: async (data: any) => {
+    const response = await api.post('/messages/email', data)
+    return response.data
+  },
+
+  sendSMS: async (data: any) => {
+    const response = await api.post('/messages/sms', data)
+    return response.data
+  },
+
+  makeCall: async (data: any) => {
+    const response = await api.post('/messages/call', data)
+    return response.data
+  },
+
+  markAsRead: async (id: string) => {
+    const response = await api.patch(`/messages/${id}/read`)
+    return response.data
+  },
+
+  deleteMessage: async (id: string) => {
+    const response = await api.delete(`/messages/${id}`)
+    return response.data
+  },
+}
+
+// Templates API
+export const templatesApi = {
+  // Email Templates
+  getEmailTemplates: async (params?: any) => {
+    const response = await api.get('/email-templates', { params })
+    return response.data
+  },
+
+  getEmailTemplate: async (id: string) => {
+    const response = await api.get(`/email-templates/${id}`)
+    return response.data
+  },
+
+  createEmailTemplate: async (data: any) => {
+    const response = await api.post('/email-templates', data)
+    return response.data
+  },
+
+  updateEmailTemplate: async (id: string, data: any) => {
+    const response = await api.put(`/email-templates/${id}`, data)
+    return response.data
+  },
+
+  deleteEmailTemplate: async (id: string) => {
+    const response = await api.delete(`/email-templates/${id}`)
+    return response.data
+  },
+
+  // SMS Templates
+  getSMSTemplates: async (params?: any) => {
+    const response = await api.get('/sms-templates', { params })
+    return response.data
+  },
+
+  getSMSTemplate: async (id: string) => {
+    const response = await api.get(`/sms-templates/${id}`)
+    return response.data
+  },
+
+  createSMSTemplate: async (data: any) => {
+    const response = await api.post('/sms-templates', data)
+    return response.data
+  },
+
+  updateSMSTemplate: async (id: string, data: any) => {
+    const response = await api.put(`/sms-templates/${id}`, data)
+    return response.data
+  },
+
+  deleteSMSTemplate: async (id: string) => {
+    const response = await api.delete(`/sms-templates/${id}`)
+    return response.data
+  },
+}
+
+// Workflows API
+export const workflowsApi = {
+  getWorkflows: async (params?: any) => {
+    const response = await api.get('/workflows', { params })
+    return response.data
+  },
+
+  getWorkflow: async (id: string) => {
+    const response = await api.get(`/workflows/${id}`)
+    return response.data
+  },
+
+  createWorkflow: async (data: any) => {
+    const response = await api.post('/workflows', data)
+    return response.data
+  },
+
+  updateWorkflow: async (id: string, data: any) => {
+    const response = await api.put(`/workflows/${id}`, data)
+    return response.data
+  },
+
+  deleteWorkflow: async (id: string) => {
+    const response = await api.delete(`/workflows/${id}`)
+    return response.data
+  },
+
+  toggleWorkflow: async (id: string) => {
+    const response = await api.patch(`/workflows/${id}/toggle`)
+    return response.data
+  },
+
+  testWorkflow: async (id: string) => {
+    const response = await api.post(`/workflows/${id}/test`)
+    return response.data
+  },
+
+  getExecutions: async (workflowId: string, params?: any) => {
+    const response = await api.get(`/workflows/${workflowId}/executions`, { params })
+    return response.data
+  },
+}
+
+// Settings API
+export const settingsApi = {
+  // Profile
+  getProfile: async () => {
+    const response = await api.get('/settings/profile')
+    return response.data
+  },
+
+  updateProfile: async (data: any) => {
+    const response = await api.put('/settings/profile', data)
+    return response.data
+  },
+
+  uploadAvatar: async (file: File) => {
+    const formData = new FormData()
+    formData.append('avatar', file)
+    const response = await api.post('/settings/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  },
+
+  changePassword: async (data: any) => {
+    const response = await api.put('/settings/password', data)
+    return response.data
+  },
+
+  // Business Settings
+  getBusinessSettings: async () => {
+    const response = await api.get('/settings/business')
+    return response.data
+  },
+
+  updateBusinessSettings: async (data: any) => {
+    const response = await api.put('/settings/business', data)
+    return response.data
+  },
+
+  // Email Configuration
+  getEmailConfig: async () => {
+    const response = await api.get('/settings/email')
+    return response.data
+  },
+
+  updateEmailConfig: async (data: any) => {
+    const response = await api.put('/settings/email', data)
+    return response.data
+  },
+
+  testEmail: async (data: any) => {
+    const response = await api.post('/settings/email/test', data)
+    return response.data
+  },
+
+  // SMS Configuration
+  getSMSConfig: async () => {
+    const response = await api.get('/settings/sms')
+    return response.data
+  },
+
+  updateSMSConfig: async (data: any) => {
+    const response = await api.put('/settings/sms', data)
+    return response.data
+  },
+
+  testSMS: async (data: any) => {
+    const response = await api.post('/settings/sms/test', data)
+    return response.data
+  },
+
+  // Notification Settings
+  getNotificationSettings: async () => {
+    const response = await api.get('/settings/notifications')
+    return response.data
+  },
+
+  updateNotificationSettings: async (data: any) => {
+    const response = await api.put('/settings/notifications', data)
+    return response.data
+  },
+
+  // Security Settings
+  getSecuritySettings: async () => {
+    const response = await api.get('/settings/security')
+    return response.data
+  },
+
+  enable2FA: async (data: any) => {
+    const response = await api.post('/settings/2fa/enable', data)
+    return response.data
+  },
+
+  disable2FA: async (data: any) => {
+    const response = await api.post('/settings/2fa/disable', data)
+    return response.data
+  },
+
+  verify2FA: async (data: any) => {
+    const response = await api.post('/settings/2fa/verify', data)
+    return response.data
+  },
+
+  // Integrations
+  getIntegrations: async () => {
+    const response = await api.get('/integrations')
+    return response.data
+  },
+
+  connectIntegration: async (provider: string, data: any) => {
+    const response = await api.post(`/integrations/${provider}/connect`, data)
+    return response.data
+  },
+
+  disconnectIntegration: async (provider: string) => {
+    const response = await api.post(`/integrations/${provider}/disconnect`)
+    return response.data
+  },
+
+  getIntegrationStatus: async (provider: string) => {
+    const response = await api.get(`/integrations/${provider}/status`)
+    return response.data
+  },
+
+  syncIntegration: async (provider: string) => {
+    const response = await api.post(`/integrations/${provider}/sync`)
+    return response.data
+  },
+}
+
+// Team Management API
+export const teamsApi = {
+  getTeams: async (params?: any) => {
+    const response = await api.get('/teams', { params })
+    return response.data
+  },
+
+  getTeam: async (id: string) => {
+    const response = await api.get(`/teams/${id}`)
+    return response.data
+  },
+
+  createTeam: async (data: any) => {
+    const response = await api.post('/teams', data)
+    return response.data
+  },
+
+  updateTeam: async (id: string, data: any) => {
+    const response = await api.put(`/teams/${id}`, data)
+    return response.data
+  },
+
+  deleteTeam: async (id: string) => {
+    const response = await api.delete(`/teams/${id}`)
+    return response.data
+  },
+
+  getMembers: async (teamId: string, params?: any) => {
+    const response = await api.get(`/teams/${teamId}/members`, { params })
+    return response.data
+  },
+
+  inviteMember: async (teamId: string, data: any) => {
+    const response = await api.post(`/teams/${teamId}/invite`, data)
+    return response.data
+  },
+
+  removeMember: async (teamId: string, userId: string) => {
+    const response = await api.delete(`/teams/${teamId}/members/${userId}`)
+    return response.data
+  },
+
+  updateMemberRole: async (teamId: string, userId: string, role: string) => {
+    const response = await api.patch(`/teams/${teamId}/members/${userId}/role`, { role })
     return response.data
   },
 }

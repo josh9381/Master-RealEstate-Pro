@@ -1,10 +1,16 @@
-import { Mail, Layout, Type, Image, Link, Code, Eye } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { Mail, Layout, Type, Image, Link, Code, Eye, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast'
+import { templatesApi } from '@/lib/api'
 
 const EmailTemplatesLibrary = () => {
-  const templates = [
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const { toast } = useToast()
+  const [templates, setTemplates] = useState([
     {
       id: 1,
       name: 'Welcome Email',
@@ -59,7 +65,38 @@ const EmailTemplatesLibrary = () => {
       uses: 234,
       lastModified: '2 weeks ago',
     },
-  ];
+  ])
+
+  useEffect(() => {
+    loadTemplates()
+  }, [])
+
+  const loadTemplates = async (showRefreshState = false) => {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
+      const response = await templatesApi.getEmailTemplates()
+      
+      if (response && Array.isArray(response)) {
+        setTemplates(response)
+      }
+    } catch (error) {
+      console.error('Failed to load email templates:', error)
+      toast.error('Failed to load templates, using sample data')
+      // Keep using mock data on error
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    loadTemplates(true)
+  }
 
   return (
     <div className="space-y-6">
@@ -70,11 +107,28 @@ const EmailTemplatesLibrary = () => {
             Pre-designed templates for your email campaigns
           </p>
         </div>
-        <Button>
-          <Layout className="h-4 w-4 mr-2" />
-          Create Template
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button>
+            <Layout className="h-4 w-4 mr-2" />
+            Create Template
+          </Button>
+        </div>
       </div>
+
+      {loading ? (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading templates...</p>
+          </div>
+        </Card>
+      ) : (
+        <>
+      <div className="hidden">Wrapper for loading state</div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -376,6 +430,8 @@ const EmailTemplatesLibrary = () => {
           <Button>Save Settings</Button>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };

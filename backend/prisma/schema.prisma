@@ -47,6 +47,13 @@ model User {
   activities    Activity[]
   tasks         Task[]
   notes         Note[]
+  appointments  Appointment[]
+  businessSettings      BusinessSettings?
+  emailConfig           EmailConfig?
+  smsConfig             SMSConfig?
+  notificationSettings  NotificationSettings?
+  integrations          Integration[]
+  teamMembers           TeamMember[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,6 +106,7 @@ model Lead {
   tags         Tag[]
   notes        Note[]
   activities   Activity[]
+  appointments Appointment[]
   
   // Custom fields stored as JSON
   customFields Json?
@@ -297,4 +305,370 @@ enum TaskStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+// ============================================
+// PHASE 2: COMMUNICATION & AUTOMATION (Week 4-6)
+// ============================================
+
+// Email Templates
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  body        String
+  category    String?
+  isActive    Boolean  @default(true)
+  variables   Json?    // {name, email, company, etc.}
+  usageCount  Int      @default(0)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([category])
+  @@index([isActive])
+}
+
+// SMS Templates
+model SMSTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  body        String
+  category    String?
+  isActive    Boolean  @default(true)
+  variables   Json?
+  usageCount  Int      @default(0)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([category])
+  @@index([isActive])
+}
+
+// Communication Inbox
+model Message {
+  id          String        @id @default(cuid())
+  type        MessageType
+  direction   MessageDirection
+  
+  // Content
+  subject     String?
+  body        String
+  
+  // Participants
+  fromAddress String
+  toAddress   String
+  
+  // Status
+  status      MessageStatus @default(PENDING)
+  readAt      DateTime?
+  repliedAt   DateTime?
+  
+  // Relations
+  leadId      String?
+  threadId    String?       // For email threads
+  parentId    String?       // For replies
+  
+  // Provider Info
+  externalId  String?       // Twilio SID, SendGrid ID, etc.
+  provider    String?       // twilio, sendgrid, etc.
+  
+  // Metadata
+  metadata    Json?
+  
+  createdAt   DateTime      @default(now())
+  
+  @@index([leadId])
+  @@index([threadId])
+  @@index([status])
+  @@index([type])
+  @@index([direction])
+  @@index([createdAt])
+}
+
+enum MessageType {
+  EMAIL
+  SMS
+  CALL
+  SOCIAL
+  NEWSLETTER
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+  OPENED
+  CLICKED
+}
+
+// Automation Workflows
+model Workflow {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean        @default(false)
+  
+  // Trigger
+  triggerType WorkflowTrigger
+  triggerData Json?
+  
+  // Actions
+  actions     Json           // Array of action definitions
+  
+  // Stats
+  executions  Int            @default(0)
+  successRate Float?
+  lastRunAt   DateTime?
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  // Relations
+  executionLogs  WorkflowExecution[]
+  
+  @@index([isActive])
+  @@index([triggerType])
+}
+
+enum WorkflowTrigger {
+  LEAD_CREATED
+  LEAD_STATUS_CHANGED
+  LEAD_ASSIGNED
+  CAMPAIGN_COMPLETED
+  EMAIL_OPENED
+  TIME_BASED
+  SCORE_THRESHOLD
+  TAG_ADDED
+  MANUAL
+}
+
+model WorkflowExecution {
+  id          String   @id @default(cuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  status      ExecutionStatus
+  error       String?
+  
+  // Context
+  leadId      String?
+  metadata    Json?
+  
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  
+  @@index([workflowId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+// ============================================
+// PHASE 3: SETTINGS & CONFIGURATION MODELS
+// ============================================
+
+// Business Settings
+model BusinessSettings {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyName    String?
+  address        String?
+  phone          String?
+  website        String?
+  logo           String?
+  billingEmail   String?
+  businessHours  Json?    // { monday: { open: "9:00", close: "17:00" }, ... }
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Email Configuration
+model EmailConfig {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  provider    String   @default("sendgrid") // sendgrid, smtp
+  apiKey      String?  // Encrypted
+  fromEmail   String?
+  fromName    String?
+  smtpHost    String?
+  smtpPort    Int?
+  smtpUser    String?
+  smtpPassword String? // Encrypted
+  isActive    Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// SMS Configuration
+model SMSConfig {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  provider      String   @default("twilio")
+  accountSid    String?  // Encrypted
+  authToken     String?  // Encrypted
+  phoneNumber   String?
+  isActive      Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Notification Settings
+model NotificationSettings {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  emailNotifications  Boolean  @default(true)
+  pushNotifications   Boolean  @default(true)
+  smsNotifications    Boolean  @default(false)
+  
+  // Channel preferences (JSON)
+  channels            Json?    // { leadAssigned: true, campaignCompleted: true, ... }
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// Integration
+model Integration {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  provider      String   // google_sheets, slack, zapier, etc.
+  isConnected   Boolean  @default(false)
+  credentials   Json?    // Encrypted credentials
+  config        Json?    // Provider-specific config
+  
+  lastSyncAt    DateTime?
+  syncStatus    String?  // idle, syncing, success, error
+  syncError     String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
+}
+
+// Team Management
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  
+  // Settings
+  settings    Json?
+  
+  // Subscription
+  subscriptionTier SubscriptionTier @default(FREE)
+  
+  // Relations
+  members     TeamMember[]
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  @@index([slug])
+}
+
+model TeamMember {
+  id        String       @id @default(cuid())
+  teamId    String
+  team      Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      TeamRole     @default(MEMBER)
+  
+  joinedAt  DateTime     @default(now())
+  
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+// ============================================
+// PHASE 4: APPOINTMENTS & CALENDAR
+// ============================================
+
+model Appointment {
+  id          String            @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  meetingUrl  String?
+  type        AppointmentType
+  status      AppointmentStatus @default(SCHEDULED)
+  
+  // Relations
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  
+  // Attendees stored as JSON array
+  // Format: [{email: string, name: string, confirmed: boolean}]
+  attendees   Json?
+  
+  // Reminders
+  reminderSent Boolean          @default(false)
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  @@index([startTime])
+  @@index([userId])
+  @@index([leadId])
+  @@index([status])
+  @@index([type])
+}
+
+enum AppointmentType {
+  CALL
+  MEETING
+  DEMO
+  CONSULTATION
+  FOLLOW_UP
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
