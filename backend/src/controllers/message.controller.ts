@@ -3,6 +3,8 @@ import { prisma } from '../config/database'
 import { NotFoundError, ValidationError } from '../middleware/errorHandler'
 import { sendEmail as sendEmailService } from '../services/email.service'
 import { sendSMS as sendSMSService } from '../services/sms.service'
+import { templateService } from '../services/template.service'
+import crypto from 'crypto'
 
 type MessageType = 'EMAIL' | 'SMS' | 'CALL' | 'SOCIAL' | 'NEWSLETTER'
 type MessageDirection = 'INBOUND' | 'OUTBOUND'
@@ -31,11 +33,12 @@ export const getMessages = async (req: Request, res: Response) => {
   }
 
   if (search) {
+    const searchTerm = search as string
     where.OR = [
-      { subject: { contains: search as string, mode: 'insensitive' } },
-      { body: { contains: search as string, mode: 'insensitive' } },
-      { fromAddress: { contains: search as string, mode: 'insensitive' } },
-      { toAddress: { contains: search as string, mode: 'insensitive' } },
+      { subject: { contains: searchTerm, mode: ('insensitive' as const) } },
+      { body: { contains: searchTerm, mode: ('insensitive' as const) } },
+      { fromAddress: { contains: searchTerm, mode: ('insensitive' as const) } },
+      { toAddress: { contains: searchTerm, mode: ('insensitive' as const) } },
     ]
   }
 
@@ -81,23 +84,78 @@ export const getMessage = async (req: Request, res: Response) => {
 
 // Send email
 export const sendEmail = async (req: Request, res: Response) => {
-  const { to, subject, body, leadId } = req.body
+  const { to, subject, body, leadId, templateId, templateVariables, threadId } = req.body
 
-  if (!to || !subject || !body) {
+  let finalSubject = subject
+  let finalBody = body
+
+  // If templateId is provided, render the template
+  if (templateId) {
+    const template = await prisma.emailTemplate.findUnique({
+      where: { id: templateId }
+    })
+
+    if (!template) {
+      throw new NotFoundError('Email template not found')
+    }
+
+    if (!template.isActive) {
+      throw new ValidationError('Email template is not active')
+    }
+
+    // Build context for template rendering
+    const context: Record<string, unknown> = {
+      lead: {},
+      user: {},
+      system: {},
+      custom: templateVariables || {}
+    }
+
+    // If leadId provided, fetch lead data
+    if (leadId) {
+      const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+      if (lead) {
+        const {firstName, lastName} = templateService.parseFullName(lead.name)
+        context.lead = {
+          id: lead.id,
+          name: lead.name,
+          firstName,
+          lastName,
+          email: lead.email,
+          phone: lead.phone,
+          company: lead.company,
+          position: lead.position,
+          status: lead.status,
+          score: lead.score,
+          value: lead.value,
+          source: lead.source
+        }
+      }
+    }
+
+    // Build system context
+    Object.assign(context, { system: templateService.buildSystemContext() })
+
+    // Render template with variables
+    finalSubject = templateService.renderTemplate(template.subject, context)
+    finalBody = templateService.renderTemplate(template.body, context)
+
+    // Track template usage
+    await templateService.trackEmailTemplateUsage(templateId)
+  }
+
+  if (!to || !finalSubject || !finalBody) {
     throw new ValidationError('To, subject, and body are required')
   }
 
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(to)) {
-    throw new ValidationError('Invalid email address')
-  }
+  // Generate threadId if not provided
+  const messageThreadId = threadId || crypto.randomBytes(16).toString('hex')
 
   // Use the email service
   const result = await sendEmailService({
     to,
-    subject,
-    html: body,
+    subject: finalSubject,
+    html: finalBody,
     leadId,
     trackOpens: true,
     trackClicks: true,
@@ -110,33 +168,87 @@ export const sendEmail = async (req: Request, res: Response) => {
   res.status(201).json({
     success: true,
     messageId: result.messageId,
+    threadId: messageThreadId,
     message: 'Email sent successfully',
   })
 }
 
 // Send SMS
 export const sendSMS = async (req: Request, res: Response) => {
-  const { to, body, leadId } = req.body
+  const { to, body, leadId, templateId, templateVariables, threadId } = req.body
 
-  if (!to || !body) {
+  let finalBody = body
+
+  // If templateId is provided, render the template
+  if (templateId) {
+    const template = await prisma.sMSTemplate.findUnique({
+      where: { id: templateId }
+    })
+
+    if (!template) {
+      throw new NotFoundError('SMS template not found')
+    }
+
+    if (!template.isActive) {
+      throw new ValidationError('SMS template is not active')
+    }
+
+    // Build context for template rendering
+    const context: Record<string, unknown> = {
+      lead: {},
+      user: {},
+      system: {},
+      custom: templateVariables || {}
+    }
+
+    // If leadId provided, fetch lead data
+    if (leadId) {
+      const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+      if (lead) {
+        const {firstName, lastName} = templateService.parseFullName(lead.name)
+        context.lead = {
+          id: lead.id,
+          name: lead.name,
+          firstName,
+          lastName,
+          email: lead.email,
+          phone: lead.phone,
+          company: lead.company,
+          position: lead.position,
+          status: lead.status,
+          score: lead.score,
+          value: lead.value,
+          source: lead.source
+        }
+      }
+    }
+
+    // Build system context
+    Object.assign(context, { system: templateService.buildSystemContext() })
+
+    // Render template with variables
+    finalBody = templateService.renderTemplate(template.body, context)
+
+    // Track template usage
+    await templateService.trackSMSTemplateUsage(templateId)
+  }
+
+  if (!to || !finalBody) {
     throw new ValidationError('To and body are required')
   }
 
-  // Phone number validation (basic)
-  const phoneRegex = /^\+?[1-9]\d{1,14}$/
-  if (!phoneRegex.test(to.replace(/[\s-()]/g, ''))) {
-    throw new ValidationError('Invalid phone number format')
-  }
-
   // SMS character limit
-  if (body.length > 1600) {
+  if (finalBody.length > 1600) {
     throw new ValidationError('SMS body should not exceed 1600 characters')
   }
+
+  // Generate threadId if not provided
+  const messageThreadId = threadId || crypto.randomBytes(16).toString('hex')
 
   // Use the SMS service
   const result = await sendSMSService({
     to,
-    message: body,
+    message: finalBody,
     leadId,
   })
 
@@ -147,6 +259,7 @@ export const sendSMS = async (req: Request, res: Response) => {
   res.status(201).json({
     success: true,
     messageId: result.messageId,
+    threadId: messageThreadId,
     message: 'SMS sent successfully',
   })
 }
@@ -251,5 +364,111 @@ export const getMessageStats = async (req: Request, res: Response) => {
       type: item.type,
       count: item._count,
     })),
+  })
+}
+
+// Get messages in a thread
+export const getThreadMessages = async (req: Request, res: Response) => {
+  const { threadId } = req.params
+
+  const messages = await prisma.message.findMany({
+    where: { 
+      metadata: {
+        path: ['threadId'],
+        equals: threadId
+      }
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  if (messages.length === 0) {
+    throw new NotFoundError('Thread not found')
+  }
+
+  res.json({
+    threadId,
+    messageCount: messages.length,
+    messages,
+  })
+}
+
+// Reply to a message (creates message in same thread)
+export const replyToMessage = async (req: Request, res: Response) => {
+  const { id } = req.params
+  const { body } = req.body
+
+  const originalMessage = await prisma.message.findUnique({
+    where: { id },
+  })
+
+  if (!originalMessage) {
+    throw new NotFoundError('Original message not found')
+  }
+
+  // Extract threadId from metadata
+  const metadata = originalMessage.metadata as Record<string, unknown> || {}
+  const threadId = (metadata.threadId as string) || crypto.randomBytes(16).toString('hex')
+
+  // Determine reply type and address based on original message
+  const isEmail = originalMessage.type === 'EMAIL'
+  
+  if (isEmail) {
+    const result = await sendEmailService({
+      to: originalMessage.fromAddress,
+      subject: `Re: ${originalMessage.subject || '(no subject)'}`,
+      html: body,
+      leadId: originalMessage.leadId || undefined,
+      trackOpens: true,
+      trackClicks: true,
+    })
+
+    if (!result.success) {
+      throw new ValidationError(result.error || 'Failed to send reply')
+    }
+
+    res.status(201).json({
+      success: true,
+      messageId: result.messageId,
+      threadId,
+      message: 'Reply sent successfully',
+    })
+  } else {
+    const result = await sendSMSService({
+      to: originalMessage.fromAddress,
+      message: body,
+      leadId: originalMessage.leadId || undefined,
+    })
+
+    if (!result.success) {
+      throw new ValidationError(result.error || 'Failed to send reply')
+    }
+
+    res.status(201).json({
+      success: true,
+      messageId: result.messageId,
+      threadId,
+      message: 'Reply sent successfully',
+    })
+  }
+}
+
+// Mark multiple messages as read
+export const markMessagesAsRead = async (req: Request, res: Response) => {
+  const { messageIds } = req.body
+
+  await prisma.message.updateMany({
+    where: {
+      id: {
+        in: messageIds
+      }
+    },
+    data: {
+      readAt: new Date(),
+    },
+  })
+
+  res.json({
+    success: true,
+    message: `${messageIds.length} message(s) marked as read`,
   })
 }

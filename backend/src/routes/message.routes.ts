@@ -7,6 +7,10 @@ import {
   sendSMSSchema,
   makeCallSchema,
   messageQuerySchema,
+  markAsReadSchema,
+  replyToMessageSchema,
+  messageIdSchema,
+  threadIdSchema,
 } from '../validators/message.validator'
 import {
   getMessages,
@@ -17,6 +21,9 @@ import {
   markAsRead,
   deleteMessage,
   getMessageStats,
+  getThreadMessages,
+  replyToMessage,
+  markMessagesAsRead,
 } from '../controllers/message.controller'
 
 const router = Router()
@@ -95,5 +102,37 @@ router.patch('/:id/read', asyncHandler(markAsRead))
  * @access  Private
  */
 router.delete('/:id', asyncHandler(deleteMessage))
+
+/**
+ * @route   GET /api/messages/thread/:threadId
+ * @desc    Get all messages in a thread
+ * @access  Private
+ */
+router.get(
+  '/thread/:threadId',
+  asyncHandler(getThreadMessages)
+)
+
+/**
+ * @route   POST /api/messages/:id/reply
+ * @desc    Reply to a message
+ * @access  Private
+ */
+router.post(
+  '/:id/reply',
+  validateBody(replyToMessageSchema),
+  asyncHandler(replyToMessage)
+)
+
+/**
+ * @route   POST /api/messages/mark-read
+ * @desc    Mark multiple messages as read
+ * @access  Private
+ */
+router.post(
+  '/mark-read',
+  validateBody(markAsReadSchema),
+  asyncHandler(markMessagesAsRead)
+)
 
 export default router

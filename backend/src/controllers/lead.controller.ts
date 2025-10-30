@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/errorHandler';
 import type { LeadStatus } from '@prisma/client';
+import { workflowTriggerService } from '../services/workflow-trigger.service';
 
 /**
  * Get all leads with filtering, pagination, and sorting
@@ -265,6 +266,18 @@ export async function createLead(req: Request, res: Response): Promise<void> {
     },
   });
 
+  // Trigger workflows for LEAD_CREATED event
+  try {
+    await workflowTriggerService.detectTriggers({
+      type: 'LEAD_CREATED',
+      data: { lead },
+      leadId: lead.id,
+    });
+  } catch (error) {
+    console.error('Error triggering workflows for lead creation:', error);
+    // Don't fail the lead creation if workflow trigger fails
+  }
+
   res.status(201).json({
     success: true,
     message: 'Lead created successfully',
@@ -383,6 +396,42 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
     await prisma.activity.createMany({
       data: activityData,
     });
+  }
+
+  // Trigger workflows for status change
+  if (updates.status && updates.status !== existingLead.status) {
+    try {
+      await workflowTriggerService.detectTriggers({
+        type: 'LEAD_STATUS_CHANGED',
+        data: {
+          lead,
+          oldStatus: existingLead.status,
+          newStatus: updates.status,
+        },
+        leadId: lead.id,
+      });
+    } catch (error) {
+      console.error('Error triggering workflows for status change:', error);
+      // Don't fail the lead update if workflow trigger fails
+    }
+  }
+
+  // Trigger workflows for lead assignment
+  if (updates.assignedToId && updates.assignedToId !== existingLead.assignedToId) {
+    try {
+      await workflowTriggerService.detectTriggers({
+        type: 'LEAD_ASSIGNED',
+        data: {
+          lead,
+          oldAssignedToId: existingLead.assignedToId,
+          newAssignedToId: updates.assignedToId,
+        },
+        leadId: lead.id,
+      });
+    } catch (error) {
+      console.error('Error triggering workflows for lead assignment:', error);
+      // Don't fail the lead update if workflow trigger fails
+    }
   }
 
   res.status(200).json({

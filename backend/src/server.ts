@@ -14,6 +14,8 @@ import activityRoutes from './routes/activity.routes'
 import analyticsRoutes from './routes/analytics.routes'
 import aiRoutes from './routes/ai.routes'
 import templateRoutes from './routes/template.routes'
+import emailTemplateRoutes from './routes/email-template.routes'
+import smsTemplateRoutes from './routes/sms-template.routes'
 import messageRoutes from './routes/message.routes'
 import workflowRoutes from './routes/workflow.routes'
 import settingsRoutes from './routes/settings.routes'
@@ -111,6 +113,8 @@ app.get('/api', (req: Request, res: Response) => {
       analytics: '/api/analytics/*',
       ai: '/api/ai/*',
       templates: '/api/templates/*',
+      emailTemplates: '/api/email-templates/*',
+      smsTemplates: '/api/sms-templates/*',
       messages: '/api/messages/*',
       workflows: '/api/workflows/*',
       settings: '/api/settings/*',
@@ -132,6 +136,8 @@ app.use('/api/activities', activityRoutes)
 app.use('/api/analytics', analyticsRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/templates', templateRoutes)
+app.use('/api/email-templates', emailTemplateRoutes)
+app.use('/api/sms-templates', smsTemplateRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/workflows', workflowRoutes)
 app.use('/api/settings', settingsRoutes)
