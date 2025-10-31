@@ -6,7 +6,8 @@ import {
   getLeadAnalytics,
   getCampaignAnalytics,
   getTaskAnalytics,
-  getActivityFeed
+  getActivityFeed,
+  getConversionFunnel
 } from '../controllers/analytics.controller'
 
 const router = Router()
@@ -20,5 +21,6 @@ router.get('/leads', asyncHandler(getLeadAnalytics))
 router.get('/campaigns', asyncHandler(getCampaignAnalytics))
 router.get('/tasks', asyncHandler(getTaskAnalytics))
 router.get('/activity-feed', asyncHandler(getActivityFeed))
+router.get('/conversion-funnel', asyncHandler(getConversionFunnel))
 
 export default router

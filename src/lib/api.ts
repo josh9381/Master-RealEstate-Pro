@@ -304,6 +304,7 @@ export interface CreateNoteData {
 }
 
 export const notesApi = {
+  // Lead-specific notes (nested route)
   getLeadNotes: async (leadId: string) => {
     const response = await api.get(`/leads/${leadId}/notes`)
     return response.data
@@ -314,8 +315,14 @@ export const notesApi = {
     return response.data
   },
 
+  // Standalone note operations
+  getNote: async (id: string) => {
+    const response = await api.get(`/notes/${id}`)
+    return response.data
+  },
+
   updateNote: async (id: string, content: string) => {
-    const response = await api.patch(`/notes/${id}`, { content })
+    const response = await api.put(`/notes/${id}`, { content })
     return response.data
   },
 
@@ -727,7 +734,7 @@ export const messagesApi = {
 
 // Templates API
 export const templatesApi = {
-  // Email Templates
+  // Email Templates (dedicated endpoints)
   getEmailTemplates: async (params?: any) => {
     const response = await api.get('/email-templates', { params })
     return response.data
@@ -753,7 +760,17 @@ export const templatesApi = {
     return response.data
   },
 
-  // SMS Templates
+  useEmailTemplate: async (id: string) => {
+    const response = await api.post(`/templates/email/${id}/use`)
+    return response.data
+  },
+
+  getEmailTemplateStats: async () => {
+    const response = await api.get('/templates/email/stats')
+    return response.data
+  },
+
+  // SMS Templates (dedicated endpoints)
   getSMSTemplates: async (params?: any) => {
     const response = await api.get('/sms-templates', { params })
     return response.data
@@ -776,6 +793,28 @@ export const templatesApi = {
 
   deleteSMSTemplate: async (id: string) => {
     const response = await api.delete(`/sms-templates/${id}`)
+    return response.data
+  },
+
+  useSMSTemplate: async (id: string) => {
+    const response = await api.post(`/templates/sms/${id}/use`)
+    return response.data
+  },
+
+  getSMSTemplateStats: async () => {
+    const response = await api.get('/templates/sms/stats')
+    return response.data
+  },
+
+  // Generic template endpoints (via /api/templates route)
+  // These provide alternative access patterns for the same functionality
+  getAllEmailTemplates: async (params?: any) => {
+    const response = await api.get('/templates/email', { params })
+    return response.data
+  },
+
+  getAllSMSTemplates: async (params?: any) => {
+    const response = await api.get('/templates/sms', { params })
     return response.data
   },
 }
@@ -996,6 +1035,114 @@ export const teamsApi = {
 
   updateMemberRole: async (teamId: string, userId: string, role: string) => {
     const response = await api.patch(`/teams/${teamId}/members/${userId}/role`, { role })
+    return response.data
+  },
+}
+
+// ============================================================================
+// APPOINTMENTS API
+// ============================================================================
+
+export interface AppointmentsQuery {
+  page?: number
+  limit?: number
+  status?: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
+  leadId?: string
+  startDate?: string
+  endDate?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface CreateAppointmentData {
+  leadId: string
+  title: string
+  description?: string
+  type: 'viewing' | 'consultation' | 'inspection' | 'meeting' | 'follow_up' | 'other'
+  scheduledAt: string
+  duration?: number
+  location?: string
+  notes?: string
+  reminders?: {
+    method: 'email' | 'sms'
+    minutesBefore: number
+  }[]
+}
+
+export interface UpdateAppointmentData {
+  title?: string
+  description?: string
+  type?: 'viewing' | 'consultation' | 'inspection' | 'meeting' | 'follow_up' | 'other'
+  scheduledAt?: string
+  duration?: number
+  location?: string
+  notes?: string
+  status?: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
+  reminders?: {
+    method: 'email' | 'sms'
+    minutesBefore: number
+  }[]
+}
+
+export interface CalendarQuery {
+  startDate: string
+  endDate: string
+  leadId?: string
+}
+
+export interface UpcomingQuery {
+  days?: number
+  limit?: number
+}
+
+export interface SendReminderData {
+  method: 'email' | 'sms' | 'both'
+  customMessage?: string
+}
+
+export const appointmentsApi = {
+  getAppointments: async (params?: AppointmentsQuery) => {
+    const response = await api.get('/appointments', { params })
+    return response.data
+  },
+
+  getAppointment: async (id: string) => {
+    const response = await api.get(`/appointments/${id}`)
+    return response.data
+  },
+
+  createAppointment: async (data: CreateAppointmentData) => {
+    const response = await api.post('/appointments', data)
+    return response.data
+  },
+
+  updateAppointment: async (id: string, data: UpdateAppointmentData) => {
+    const response = await api.put(`/appointments/${id}`, data)
+    return response.data
+  },
+
+  cancelAppointment: async (id: string) => {
+    const response = await api.delete(`/appointments/${id}`)
+    return response.data
+  },
+
+  confirmAppointment: async (id: string) => {
+    const response = await api.patch(`/appointments/${id}/confirm`)
+    return response.data
+  },
+
+  sendReminder: async (id: string, data: SendReminderData) => {
+    const response = await api.post(`/appointments/${id}/reminder`, data)
+    return response.data
+  },
+
+  getCalendar: async (params: CalendarQuery) => {
+    const response = await api.get('/appointments/calendar', { params })
+    return response.data
+  },
+
+  getUpcoming: async (params?: UpcomingQuery) => {
+    const response = await api.get('/appointments/upcoming', { params })
     return response.data
   },
 }

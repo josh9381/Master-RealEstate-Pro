@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, Target, Users, TrendingUp, Sparkles, BarChart3, Upload, RefreshCw, Activity, AlertCircle, CheckCircle, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -7,6 +7,21 @@ import { Badge } from '@/components/ui/Badge';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { aiApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+
+// Icon mapping for API responses (which return icon names as strings)
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Target,
+  Sparkles,
+  RefreshCw,
+  Brain,
+  Users,
+  TrendingUp,
+  BarChart3,
+  Activity,
+  AlertCircle,
+  CheckCircle,
+  Zap,
+};
 
 const AIHub = () => {
   const [uploading, setUploading] = useState(false)
@@ -321,7 +336,8 @@ const AIHub = () => {
         <h2 className="text-xl font-semibold mb-4">AI Features</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {aiFeaturesData.map((feature) => {
-            const Icon = feature.icon;
+            // Handle both component references (mock data) and string names (API data)
+            const Icon = typeof feature.icon === 'string' ? iconMap[feature.icon] || Brain : feature.icon;
             return (
               <Card key={feature.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
@@ -605,7 +621,8 @@ const AIHub = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             {recommendations.map((rec) => {
-              const Icon = rec.icon
+              // Handle both component references (mock data) and string names (API data)
+              const Icon = typeof rec.icon === 'string' ? iconMap[rec.icon] || Target : rec.icon
               return (
                 <div key={rec.id} className="rounded-lg border p-4 space-y-3">
                   <div className="flex items-start justify-between">

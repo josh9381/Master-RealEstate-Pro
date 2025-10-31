@@ -34,6 +34,9 @@ import { createNoteSchema, leadIdParamSchema } from '../validators/note.validato
 import {
   getTasksForLead,
 } from '../controllers/task.controller';
+import {
+  getActivities,
+} from '../controllers/activity.controller';
 
 const router = Router();
 
@@ -181,6 +184,21 @@ router.get(
   '/:leadId/tasks',
   validateParams(leadIdParamSchema),
   asyncHandler(getTasksForLead)
+);
+
+/**
+ * @route   GET /api/leads/:leadId/activities
+ * @desc    Get all activities for a lead
+ * @access  Private
+ */
+router.get(
+  '/:leadId/activities',
+  validateParams(leadIdParamSchema),
+  asyncHandler(async (req, res) => {
+    // Reuse getActivities function by adding leadId to query
+    req.query.leadId = req.params.leadId;
+    return getActivities(req, res);
+  })
 );
 
 export default router;

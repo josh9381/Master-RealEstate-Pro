@@ -1,5 +1,6 @@
 import { prisma } from '../config/database'
 import type { WorkflowTrigger, Workflow } from '@prisma/client'
+import { workflowExecutorService } from './workflow-executor.service'
 
 /**
  * Workflow Trigger Detection Service
@@ -29,6 +30,9 @@ export class WorkflowTriggerService {
    */
   async detectTriggers(event: TriggerEvent): Promise<Workflow[]> {
     try {
+      console.log(`🔔 Trigger detected: ${event.type}`)
+      console.log(`   Event data:`, JSON.stringify(event.data, null, 2))
+      
       // Find all active workflows with matching trigger type
       const matchingWorkflows = await prisma.workflow.findMany({
         where: {
@@ -37,21 +41,26 @@ export class WorkflowTriggerService {
         },
       })
 
+      console.log(`   Found ${matchingWorkflows.length} active workflows with trigger type ${event.type}`)
+
       const triggeredWorkflows: Workflow[] = []
 
       // Evaluate conditions for each workflow
       for (const workflow of matchingWorkflows) {
+        console.log(`   Evaluating workflow: ${workflow.name} (${workflow.id})`)
         const conditionsMatch = await this.evaluateConditions(workflow, event.data)
         
         if (conditionsMatch) {
           // Queue the workflow for execution
           await this.queueWorkflow(workflow.id, event.data, event.leadId)
           triggeredWorkflows.push(workflow)
+          console.log(`   ✅ Workflow ${workflow.name} triggered`)
+        } else {
+          console.log(`   ❌ Workflow ${workflow.name} conditions not met`)
         }
       }
 
-      console.log(`🔔 Trigger detected: ${event.type}`)
-      console.log(`   Matched workflows: ${triggeredWorkflows.length}`)
+      console.log(`   Final matched workflows: ${triggeredWorkflows.length}`)
       
       return triggeredWorkflows
     } catch (error) {
@@ -146,9 +155,29 @@ export class WorkflowTriggerService {
       })
 
       console.log(`📝 Workflow queued for execution: ${workflowId}`)
+
+      // Execute the workflow immediately (in production, this would be queued)
+      // Run in background without awaiting
+      this.executeWorkflowAsync(workflowId, serializedData, leadId)
     } catch (error) {
       console.error('Error queueing workflow:', error)
       throw error
+    }
+  }
+
+  /**
+   * Execute workflow asynchronously without blocking
+   */
+  private async executeWorkflowAsync(
+    workflowId: string,
+    eventData: Record<string, unknown>,
+    leadId?: string
+  ): Promise<void> {
+    try {
+      await workflowExecutorService.executeWorkflow(workflowId, eventData, leadId)
+    } catch (error) {
+      console.error(`Error executing workflow ${workflowId}:`, error)
+      // Error is already logged in executor and execution marked as failed
     }
   }
 

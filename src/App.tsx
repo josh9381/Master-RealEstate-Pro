@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { MainLayout } from './components/layout/MainLayout'
 import { AuthLayout } from './components/layout/AuthLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { PageErrorBoundary } from './components/PageErrorBoundary'
 
 // Dashboard
 import Dashboard from './pages/dashboard/Dashboard'
@@ -142,15 +143,15 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         
         {/* Leads */}
-        <Route path="/leads" element={<LeadsList />} />
-        <Route path="/leads/create" element={<LeadCreate />} />
-        <Route path="/leads/:id" element={<LeadDetail />} />
-        <Route path="/leads/pipeline" element={<LeadsPipeline />} />
-        <Route path="/leads/import" element={<LeadsImport />} />
-        <Route path="/leads/export" element={<LeadsExport />} />
-        <Route path="/leads/followups" element={<LeadsFollowups />} />
-        <Route path="/leads/history" element={<LeadHistory />} />
-        <Route path="/leads/merge" element={<LeadsMerge />} />
+        <Route path="/leads" element={<PageErrorBoundary pageName="Leads List"><LeadsList /></PageErrorBoundary>} />
+        <Route path="/leads/create" element={<PageErrorBoundary pageName="Create Lead"><LeadCreate /></PageErrorBoundary>} />
+        <Route path="/leads/:id" element={<PageErrorBoundary pageName="Lead Detail"><LeadDetail /></PageErrorBoundary>} />
+        <Route path="/leads/pipeline" element={<PageErrorBoundary pageName="Pipeline"><LeadsPipeline /></PageErrorBoundary>} />
+        <Route path="/leads/import" element={<PageErrorBoundary pageName="Import Leads"><LeadsImport /></PageErrorBoundary>} />
+        <Route path="/leads/export" element={<PageErrorBoundary pageName="Export Leads"><LeadsExport /></PageErrorBoundary>} />
+        <Route path="/leads/followups" element={<PageErrorBoundary pageName="Follow-ups"><LeadsFollowups /></PageErrorBoundary>} />
+        <Route path="/leads/history" element={<PageErrorBoundary pageName="Lead History"><LeadHistory /></PageErrorBoundary>} />
+        <Route path="/leads/merge" element={<PageErrorBoundary pageName="Merge Leads"><LeadsMerge /></PageErrorBoundary>} />
         
         {/* Calendar & Tasks */}
         <Route path="/calendar" element={<CalendarPage />} />
@@ -171,22 +172,22 @@ function App() {
         <Route path="/campaigns/ab-testing" element={<ABTesting />} />
         
         {/* AI Hub */}
-        <Route path="/ai" element={<AIHub />} />
-        <Route path="/ai/lead-scoring" element={<LeadScoring />} />
-        <Route path="/ai/segmentation" element={<Segmentation />} />
-        <Route path="/ai/predictive" element={<PredictiveAnalytics />} />
-        <Route path="/ai/training" element={<ModelTraining />} />
-        <Route path="/ai/insights" element={<IntelligenceInsights />} />
-        <Route path="/ai/analytics" element={<AIAnalytics />} />
+        <Route path="/ai" element={<PageErrorBoundary pageName="AI Hub"><AIHub /></PageErrorBoundary>} />
+        <Route path="/ai/lead-scoring" element={<PageErrorBoundary pageName="Lead Scoring"><LeadScoring /></PageErrorBoundary>} />
+        <Route path="/ai/segmentation" element={<PageErrorBoundary pageName="Segmentation"><Segmentation /></PageErrorBoundary>} />
+        <Route path="/ai/predictive" element={<PageErrorBoundary pageName="Predictive Analytics"><PredictiveAnalytics /></PageErrorBoundary>} />
+        <Route path="/ai/training" element={<PageErrorBoundary pageName="Model Training"><ModelTraining /></PageErrorBoundary>} />
+        <Route path="/ai/insights" element={<PageErrorBoundary pageName="Intelligence Insights"><IntelligenceInsights /></PageErrorBoundary>} />
+        <Route path="/ai/analytics" element={<PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary>} />
         
         {/* Analytics */}
-        <Route path="/analytics" element={<AnalyticsDashboard />} />
-        <Route path="/analytics/campaigns" element={<CampaignAnalytics />} />
-        <Route path="/analytics/leads" element={<LeadAnalytics />} />
-        <Route path="/analytics/conversions" element={<ConversionReports />} />
-        <Route path="/analytics/usage" element={<UsageAnalytics />} />
-        <Route path="/analytics/custom-reports" element={<CustomReports />} />
-        <Route path="/analytics/report-builder" element={<ReportBuilder />} />
+        <Route path="/analytics" element={<PageErrorBoundary pageName="Analytics Dashboard"><AnalyticsDashboard /></PageErrorBoundary>} />
+        <Route path="/analytics/campaigns" element={<PageErrorBoundary pageName="Campaign Analytics"><CampaignAnalytics /></PageErrorBoundary>} />
+        <Route path="/analytics/leads" element={<PageErrorBoundary pageName="Lead Analytics"><LeadAnalytics /></PageErrorBoundary>} />
+        <Route path="/analytics/conversions" element={<PageErrorBoundary pageName="Conversion Reports"><ConversionReports /></PageErrorBoundary>} />
+        <Route path="/analytics/usage" element={<PageErrorBoundary pageName="Usage Analytics"><UsageAnalytics /></PageErrorBoundary>} />
+        <Route path="/analytics/custom-reports" element={<PageErrorBoundary pageName="Custom Reports"><CustomReports /></PageErrorBoundary>} />
+        <Route path="/analytics/report-builder" element={<PageErrorBoundary pageName="Report Builder"><ReportBuilder /></PageErrorBoundary>} />
         
         {/* Communication */}
         <Route path="/communication" element={<CommunicationInbox />} />
@@ -223,16 +224,16 @@ function App() {
         <Route path="/notifications" element={<NotificationsPage />} />
         
         {/* Admin */}
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/admin/users/:id" element={<UserManagementDetail />} />
-        <Route path="/admin/system" element={<SystemSettings />} />
-        <Route path="/admin/features" element={<FeatureFlags />} />
-        <Route path="/admin/debug" element={<DebugConsole />} />
-        <Route path="/admin/backup" element={<BackupRestore />} />
-        <Route path="/admin/export" element={<DataExportWizard />} />
-        <Route path="/admin/retry-queue" element={<RetryQueue />} />
-        <Route path="/admin/health" element={<HealthCheckDashboard />} />
-        <Route path="/admin/database" element={<DatabaseMaintenance />} />
+        <Route path="/admin" element={<PageErrorBoundary pageName="Admin Panel"><AdminPanel /></PageErrorBoundary>} />
+        <Route path="/admin/users/:id" element={<PageErrorBoundary pageName="User Management"><UserManagementDetail /></PageErrorBoundary>} />
+        <Route path="/admin/system" element={<PageErrorBoundary pageName="System Settings"><SystemSettings /></PageErrorBoundary>} />
+        <Route path="/admin/features" element={<PageErrorBoundary pageName="Feature Flags"><FeatureFlags /></PageErrorBoundary>} />
+        <Route path="/admin/debug" element={<PageErrorBoundary pageName="Debug Console"><DebugConsole /></PageErrorBoundary>} />
+        <Route path="/admin/backup" element={<PageErrorBoundary pageName="Backup & Restore"><BackupRestore /></PageErrorBoundary>} />
+        <Route path="/admin/export" element={<PageErrorBoundary pageName="Data Export"><DataExportWizard /></PageErrorBoundary>} />
+        <Route path="/admin/retry-queue" element={<PageErrorBoundary pageName="Retry Queue"><RetryQueue /></PageErrorBoundary>} />
+        <Route path="/admin/health" element={<PageErrorBoundary pageName="Health Check"><HealthCheckDashboard /></PageErrorBoundary>} />
+        <Route path="/admin/database" element={<PageErrorBoundary pageName="Database Maintenance"><DatabaseMaintenance /></PageErrorBoundary>} />
         
         {/* Billing */}
         <Route path="/billing" element={<BillingPage />} />

@@ -474,3 +474,89 @@ async function calculateTaskCompletionRate() {
   
   return total > 0 ? Math.round((completed / total) * 100) : 0
 }
+
+// Get conversion funnel analytics
+export const getConversionFunnel = async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query
+
+    // Build date filter
+    const dateFilter: any = {}
+    if (startDate) dateFilter.gte = new Date(startDate as string)
+    if (endDate) dateFilter.lte = new Date(endDate as string)
+
+    const whereDate = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
+
+    // Get lead counts by status (funnel stages)
+    const leadsByStatus = await prisma.lead.groupBy({
+      by: ['status'],
+      where: whereDate,
+      _count: true
+    })
+
+    // Map status to funnel stages
+    const funnelData = {
+      new: 0,
+      contacted: 0,
+      qualified: 0,
+      proposal: 0,
+      negotiation: 0,
+      won: 0,
+      lost: 0
+    }
+
+    leadsByStatus.forEach(item => {
+      const status = item.status.toLowerCase() as keyof typeof funnelData
+      if (status in funnelData) {
+        funnelData[status] = item._count
+      }
+    })
+
+    // Calculate conversion rates
+    const totalLeads = Object.values(funnelData).reduce((sum, count) => sum + count, 0)
+    const wonLeads = funnelData.won
+    const overallConversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0
+
+    // Calculate stage-to-stage conversion rates
+    const stages = [
+      { name: 'New Leads', count: funnelData.new, stage: 'new' },
+      { name: 'Contacted', count: funnelData.contacted, stage: 'contacted' },
+      { name: 'Qualified', count: funnelData.qualified, stage: 'qualified' },
+      { name: 'Proposal Sent', count: funnelData.proposal, stage: 'proposal' },
+      { name: 'Negotiation', count: funnelData.negotiation, stage: 'negotiation' },
+      { name: 'Won', count: funnelData.won, stage: 'won' }
+    ]
+
+    const stagesWithRates = stages.map((stage, index) => {
+      let conversionRate = 0
+      if (index > 0 && stages[index - 1].count > 0) {
+        conversionRate = Math.round((stage.count / stages[index - 1].count) * 100)
+      }
+      return {
+        ...stage,
+        conversionRate,
+        percentage: totalLeads > 0 ? Math.round((stage.count / totalLeads) * 100) : 0
+      }
+    })
+
+    res.json({
+      success: true,
+      data: {
+        stages: stagesWithRates,
+        lost: funnelData.lost,
+        totalLeads,
+        wonLeads,
+        lostLeads: funnelData.lost,
+        overallConversionRate,
+        lostRate: totalLeads > 0 ? Math.round((funnelData.lost / totalLeads) * 100) : 0
+      }
+    })
+  } catch (error: any) {
+    console.error('Error fetching conversion funnel:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch conversion funnel analytics',
+      error: error.message
+    })
+  }
+}

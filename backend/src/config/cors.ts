@@ -81,6 +81,9 @@ export const corsOptions: CorsOptions = {
     return callback(new Error(`Origin ${origin_str} not allowed by CORS`));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
   maxAge: 86400, // 24 hours - cache preflight requests
   optionsSuccessStatus: 200
 };

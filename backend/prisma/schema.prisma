@@ -235,8 +235,8 @@ model Activity {
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   campaignId  String?
   campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User         @relation(fields: [userId], references: [id])
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id])
   
   // Metadata
   metadata    Json?
@@ -274,13 +274,13 @@ model Task {
   id          String       @id @default(cuid())
   title       String
   description String?
-  dueDate     DateTime
+  dueDate     DateTime?
   priority    TaskPriority @default(MEDIUM)
   status      TaskStatus   @default(PENDING)
   
   // Relations
-  assignedToId String
-  assignedTo   User        @relation(fields: [assignedToId], references: [id])
+  assignedToId String?
+  assignedTo   User?       @relation(fields: [assignedToId], references: [id])
   leadId       String?
   
   completedAt  DateTime?
