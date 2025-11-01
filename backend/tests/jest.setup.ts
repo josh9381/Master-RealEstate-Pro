@@ -5,7 +5,7 @@ const path = require('path');
 const dbPath = path.join(__dirname, '..', 'prisma', 'test.db');
 process.env.DATABASE_URL = `file:${dbPath}`;
 process.env.NODE_ENV = 'test';
-process.env.JWT_ACCESS_SECRET = 'test-access-secret-123';
-process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-456';
+process.env.JWT_ACCESS_SECRET = 'test_access_secret_32_characters_minimum_for_security';
+process.env.JWT_REFRESH_SECRET = 'test_refresh_secret_32_characters_minimum_for_security';
 
 export {};

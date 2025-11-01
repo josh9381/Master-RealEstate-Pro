@@ -17,6 +17,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import { useToast } from '@/hooks/useToast'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
+import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 
 function CampaignsList() {
   const { toast } = useToast()
@@ -62,12 +63,15 @@ function CampaignsList() {
     refetchOnWindowFocus: false,
   })
 
-  // Smart data source - use API data or fallback to mock
+  // Smart data source - use API data or fallback to mock (if enabled)
   const campaigns = useMemo(() => {
     if (campaignsResponse?.campaigns && campaignsResponse.campaigns.length > 0) {
       return campaignsResponse.campaigns as Campaign[]
     }
-    return mockCampaigns as Campaign[]
+    if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
+      return mockCampaigns as Campaign[]
+    }
+    return []
   }, [campaignsResponse])
 
   // Create campaign mutation

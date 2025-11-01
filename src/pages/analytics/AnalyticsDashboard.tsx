@@ -84,12 +84,12 @@ const AnalyticsDashboard = () => {
     { name: 'Tom H', deals: 25, revenue: 132000 },
   ];
 
-  // Use API data with fallbacks
+  // Use API data with zero fallbacks
   const revenueData = getMockRevenueData();
-  const totalRevenue = campaignAnalytics?.performance?.totalRevenue || 328000;
-  const totalLeads = dashboardData?.leads?.total || leadAnalytics?.total || 4567;
-  const conversionRate = leadAnalytics?.conversionRate || dashboardData?.leads?.conversionRate || 26.2;
-  const avgDealSize = totalRevenue / Math.max(totalLeads, 1) || 5234;
+  const totalRevenue = campaignAnalytics?.performance?.totalRevenue || 0;
+  const totalLeads = dashboardData?.leads?.total || leadAnalytics?.total || 0;
+  const conversionRate = leadAnalytics?.conversionRate || dashboardData?.leads?.conversionRate || 0;
+  const avgDealSize = totalLeads > 0 ? totalRevenue / totalLeads : 0;
 
   // Channel data from lead sources
   const channelData = leadAnalytics?.bySource 
@@ -98,7 +98,7 @@ const AnalyticsDashboard = () => {
         value: Math.round((value / totalLeads) * 100),
         color: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899'][index] || '#6b7280'
       }))
-    : getMockChannelData();
+    : [];
 
   // Conversion funnel from lead status data
   const conversionFunnel = leadAnalytics?.byStatus
@@ -109,14 +109,14 @@ const AnalyticsDashboard = () => {
         { stage: 'Proposal', count: leadAnalytics.byStatus.PROPOSAL || 0 },
         { stage: 'Won', count: leadAnalytics.byStatus.WON || 0 },
       ]
-    : getMockConversionFunnel();
+    : [];
 
-  const teamPerformance = getMockTeamPerformance();
+  const teamPerformance: any[] = [];
 
   // Campaign performance metrics
-  const emailOpenRate = campaignAnalytics?.performance?.openRate || 32.5;
-  const emailClickRate = campaignAnalytics?.performance?.clickRate || 8.3;
-  const emailConversionRate = campaignAnalytics?.performance?.conversionRate || 4.2;
+  const emailOpenRate = campaignAnalytics?.performance?.openRate || 0;
+  const emailClickRate = campaignAnalytics?.performance?.clickRate || 0;
+  const emailConversionRate = campaignAnalytics?.performance?.conversionRate || 0;
 
   if (loading) {
     return (

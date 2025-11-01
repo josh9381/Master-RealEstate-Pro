@@ -9,6 +9,7 @@ import { Edit, Pause, Trash2, X } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
 import { mockCampaigns } from '@/data/mockData'
+import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import {
   LineChart,
   Line,
@@ -46,10 +47,13 @@ function CampaignDetail() {
         const response = await campaignsApi.getCampaign(id!)
         return response.data
       } catch (error) {
-        // If API fails, try to find campaign in mock data
-        console.log('API fetch failed, using mock data')
-        const mockCampaign = mockCampaigns.find(c => c.id === Number(id))
-        return mockCampaign || null
+        // If API fails, try to find campaign in mock data (if enabled)
+        console.log('API fetch failed')
+        if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
+          const mockCampaign = mockCampaigns.find(c => c.id === Number(id))
+          return mockCampaign || null
+        }
+        return null
       }
     },
     enabled: !!id,

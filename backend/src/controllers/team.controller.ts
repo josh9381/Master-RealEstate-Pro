@@ -39,10 +39,10 @@ export async function createTeam(req: Request, res: Response): Promise<void> {
     throw new UnauthorizedError('Authentication required');
   }
 
-  const { name, slug: providedSlug, description } = req.body;
+  const { name, slug: providedSlug } = req.body;
 
   // Auto-generate slug from name if not provided
-  let slug = providedSlug || name.toLowerCase()
+  const slug = providedSlug || name.toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
@@ -61,7 +61,6 @@ export async function createTeam(req: Request, res: Response): Promise<void> {
     data: {
       name,
       slug: finalSlug,
-      description,
       members: {
         create: {
           userId: req.user.userId,

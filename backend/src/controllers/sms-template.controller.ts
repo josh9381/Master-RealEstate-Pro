@@ -76,13 +76,16 @@ export async function getSMSTemplates(req: Request, res: Response): Promise<void
   }));
 
   res.json({
-    templates: templatesWithStats,
-    pagination: {
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      pages: Math.ceil(total / Number(limit)),
-    },
+    success: true,
+    data: {
+      templates: templatesWithStats,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit)),
+      },
+    }
   });
 }
 
@@ -107,7 +110,10 @@ export async function getSMSTemplate(req: Request, res: Response): Promise<void>
     stats: calculateSMSLength(template.body),
   };
 
-  res.json(templateWithStats);
+  res.json({
+    success: true,
+    data: { template: templateWithStats }
+  });
 }
 
 /**
@@ -148,7 +154,11 @@ export async function createSMSTemplate(req: Request, res: Response): Promise<vo
     stats: calculateSMSLength(template.body),
   };
 
-  res.status(201).json(templateWithStats);
+  res.status(201).json({
+    success: true,
+    message: 'SMS template created successfully',
+    data: { template: templateWithStats }
+  });
 }
 
 /**
@@ -207,7 +217,11 @@ export async function updateSMSTemplate(req: Request, res: Response): Promise<vo
     stats: calculateSMSLength(template.body),
   };
 
-  res.json(templateWithStats);
+  res.json({
+    success: true,
+    message: 'SMS template updated successfully',
+    data: { template: templateWithStats }
+  });
 }
 
 /**
@@ -230,7 +244,10 @@ export async function deleteSMSTemplate(req: Request, res: Response): Promise<vo
     where: { id },
   });
 
-  res.json({ message: 'SMS template deleted successfully' });
+  res.json({
+    success: true,
+    message: 'SMS template deleted successfully'
+  });
 }
 
 /**
@@ -291,7 +308,10 @@ export async function getSMSTemplateCategories(req: Request, res: Response): Pro
     .filter(Boolean)
     .sort();
 
-  res.json({ categories: categoryList });
+  res.json({
+    success: true,
+    data: { categories: categoryList }
+  });
 }
 
 /**

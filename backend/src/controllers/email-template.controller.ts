@@ -61,13 +61,16 @@ export async function getEmailTemplates(req: Request, res: Response): Promise<vo
   ]);
 
   res.json({
-    templates,
-    pagination: {
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      pages: Math.ceil(total / Number(limit)),
-    },
+    success: true,
+    data: {
+      templates,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit)),
+      },
+    }
   });
 }
 
@@ -86,7 +89,10 @@ export async function getEmailTemplate(req: Request, res: Response): Promise<voi
     throw new NotFoundError('Email template not found');
   }
 
-  res.json(template);
+  res.json({
+    success: true,
+    data: { template }
+  });
 }
 
 /**
@@ -116,7 +122,11 @@ export async function createEmailTemplate(req: Request, res: Response): Promise<
     },
   });
 
-  res.status(201).json(template);
+  res.status(201).json({
+    success: true,
+    message: 'Email template created successfully',
+    data: { template }
+  });
 }
 
 /**
@@ -162,7 +172,11 @@ export async function updateEmailTemplate(req: Request, res: Response): Promise<
     },
   });
 
-  res.json(template);
+  res.json({
+    success: true,
+    message: 'Email template updated successfully',
+    data: { template }
+  });
 }
 
 /**
@@ -185,7 +199,10 @@ export async function deleteEmailTemplate(req: Request, res: Response): Promise<
     where: { id },
   });
 
-  res.json({ message: 'Email template deleted successfully' });
+  res.json({
+    success: true,
+    message: 'Email template deleted successfully'
+  });
 }
 
 /**
@@ -218,7 +235,11 @@ export async function duplicateEmailTemplate(req: Request, res: Response): Promi
     },
   });
 
-  res.status(201).json(duplicatedTemplate);
+  res.status(201).json({
+    success: true,
+    message: 'Email template duplicated successfully',
+    data: { template: duplicatedTemplate }
+  });
 }
 
 /**
@@ -241,5 +262,8 @@ export async function getEmailTemplateCategories(req: Request, res: Response): P
     .filter(Boolean)
     .sort();
 
-  res.json({ categories: categoryList });
+  res.json({
+    success: true,
+    data: { categories: categoryList }
+  });
 }

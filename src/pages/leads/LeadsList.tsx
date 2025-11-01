@@ -13,6 +13,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/Table'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/Dialog'
 import { 
   Plus, Search, Filter, Download, LayoutGrid, LayoutList, MoreHorizontal,
   Mail, Tag as TagIcon, TrendingUp, Users, Target, ArrowUpDown, 
@@ -26,7 +36,23 @@ import { useToast } from '@/hooks/useToast'
 import { leadsApi, CreateLeadData, UpdateLeadData, BulkUpdateData } from '@/lib/api'
 import { Lead } from '@/types'
 import { mockLeads } from '@/data/mockData'
+import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
+
+// Helper types for handling API data that might be objects
+interface TagObject {
+  id: number | string
+  name: string
+  color?: string
+}
+
+interface UserObject {
+  id: number | string
+  firstName: string
+  lastName: string
+  email?: string
+  avatar?: string
+}
 
 interface FilterConfig {
   status: string[]
@@ -63,6 +89,8 @@ function LeadsList() {
   const [showRowMenu, setShowRowMenu] = useState<number | null>(null)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [isSending, setIsSending] = useState(false)
+  const [deletingLeadId, setDeletingLeadId] = useState<number | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -185,25 +213,29 @@ function LeadsList() {
     },
   })
 
-  // Extract leads data with fallback to mock data
+  // Extract leads data with fallback to mock data (if enabled)
   const leads = useMemo(() => {
     // If we have API data, use it
     if (leadsResponse?.leads && leadsResponse.leads.length > 0) {
       return leadsResponse.leads
     }
-    // Otherwise, use mock data (for when not authenticated or no data)
-    return mockLeads as Lead[]
+    // Otherwise, use mock data only if enabled
+    if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
+      return mockLeads as Lead[]
+    }
+    // Return empty array if mock data is disabled
+    return []
   }, [leadsResponse])
 
   // Local state for lead notes
   const [leadNotes, setLeadNotes] = useState<Record<number, string[]>>({})
 
-  // Calculate lead statistics
+  // Calculate lead statistics (showing 0 for empty values)
   const leadStats = useMemo(() => {
-    const total = leads.length
-    const qualified = leads.filter((l: Lead) => l.status === 'qualified').length
+    const total = leads.length || 0
+    const qualified = leads.filter((l: Lead) => l.status === 'qualified').length || 0
     const avgScore = total > 0 ? Math.round(leads.reduce((sum: number, l: Lead) => sum + l.score, 0) / total) : 0
-    const converted = leads.filter((l: Lead) => l.status === 'proposal' || l.status === 'negotiation').length
+    const converted = leads.filter((l: Lead) => l.status === 'proposal' || l.status === 'negotiation').length || 0
     
     return {
       total,
@@ -465,7 +497,7 @@ function LeadsList() {
 
     bulkUpdateMutation.mutate({
       leadIds: selectedLeads.map(String),
-      updates: { assignedTo: assignToUser }
+      updates: { assignedToId: assignToUser }
     })
     setShowAssignModal(false)
     setAssignToUser('')
@@ -492,7 +524,7 @@ function LeadsList() {
         status: editingLead.status,
         source: editingLead.source,
         score: editingLead.score,
-        assignedTo: editingLead.assignedTo || undefined,
+        assignedToId: editingLead.assignedTo || undefined,
         tags: editingLead.tags,
       }
       
@@ -514,15 +546,29 @@ function LeadsList() {
       company: lead.company,
       status: lead.status,
       source: lead.source,
-      assignedTo: lead.assignedTo || undefined,
+      assignedToId: lead.assignedTo || undefined,
       tags: lead.tags,
     }
     createLeadMutation.mutate(createData)
   }
 
   const handleDeleteSingle = (leadId: number) => {
-    deleteMutation.mutate(String(leadId))
+    setDeletingLeadId(leadId)
+    setShowDeleteConfirm(true)
     setShowRowMenu(null)
+  }
+
+  const confirmDelete = () => {
+    if (deletingLeadId) {
+      deleteMutation.mutate(String(deletingLeadId))
+      setShowDeleteConfirm(false)
+      setDeletingLeadId(null)
+    }
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false)
+    setDeletingLeadId(null)
   }
 
   const handleExportCSV = () => {
@@ -1511,11 +1557,14 @@ function LeadsList() {
                   <TableCell className="capitalize">{lead.source}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {(lead.tags || []).slice(0, 2).map((tag: string, idx: number) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
+                      {(lead.tags || []).slice(0, 2).map((tag: string | TagObject, idx: number) => {
+                        const tagName = typeof tag === 'string' ? tag : tag?.name || 'Unknown'
+                        return (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {tagName}
+                          </Badge>
+                        )
+                      })}
                       {(lead.tags || []).length > 2 && (
                         <Badge variant="outline" className="text-xs">
                           +{(lead.tags || []).length - 2}
@@ -1523,7 +1572,18 @@ function LeadsList() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{lead.assignedTo || '-'}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      if (typeof lead.assignedTo === 'string') {
+                        return lead.assignedTo
+                      }
+                      if (lead.assignedTo && typeof lead.assignedTo === 'object' && 'firstName' in lead.assignedTo) {
+                        const user = lead.assignedTo as UserObject
+                        return `${user.firstName} ${user.lastName}`
+                      }
+                      return '-'
+                    })()}
+                  </TableCell>
                   <TableCell>
                     <div className="relative">
                       <Button 
@@ -1773,11 +1833,14 @@ function LeadsList() {
               </div>
               
               <div className="flex flex-wrap gap-1 mb-3">
-                {(lead.tags || []).slice(0, 2).map((tag: string, idx: number) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
+                {(lead.tags || []).slice(0, 2).map((tag: string | TagObject, idx: number) => {
+                  const tagName = typeof tag === 'string' ? tag : tag?.name || 'Unknown'
+                  return (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {tagName}
+                    </Badge>
+                  )
+                })}
                 {(lead.tags || []).length > 2 && (
                   <Badge variant="outline" className="text-xs">
                     +{(lead.tags || []).length - 2}
@@ -1787,7 +1850,18 @@ function LeadsList() {
               
               <div className="flex items-center justify-between pt-3 border-t text-sm">
                 <span className="text-muted-foreground capitalize">{lead.source}</span>
-                <span className="text-muted-foreground">{lead.assignedTo || 'Unassigned'}</span>
+                <span className="text-muted-foreground">
+                  {(() => {
+                    if (typeof lead.assignedTo === 'string') {
+                      return lead.assignedTo
+                    }
+                    if (lead.assignedTo && typeof lead.assignedTo === 'object' && 'firstName' in lead.assignedTo) {
+                      const user = lead.assignedTo as UserObject
+                      return `${user.firstName} ${user.lastName}`
+                    }
+                    return 'Unassigned'
+                  })()}
+                </span>
               </div>
             </Card>
           ))}
@@ -1865,6 +1939,30 @@ function LeadsList() {
           </div>
         </div>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this lead? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="outline" onClick={cancelDelete}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

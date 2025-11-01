@@ -1,253 +1,403 @@
-// This is your Prisma schema file
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"  // Using SQLite for local dev - switch to "postgresql" for production
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// PHASE 1: MVP MODELS (Week 1-3)
-// ============================================
+model Activity {
+  id          String       @id
+  type        ActivityType
+  title       String
+  description String?
+  leadId      String?
+  campaignId  String?
+  userId      String?
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  Campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  Lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  User        User?        @relation(fields: [userId], references: [id])
 
-// User Management
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String    // bcrypt hashed
-  firstName     String
-  lastName      String
-  avatar        String?
-  role          Role      @default(USER)
-  isActive      Boolean   @default(true)
-  emailVerified Boolean   @default(false)
-  
-  // Settings
-  timezone      String    @default("America/New_York")
-  language      String    @default("en")
-  
-  // Security
-  lastLoginAt   DateTime?
-  lastLoginIp   String?
-  twoFactorEnabled Boolean @default(false)
-  twoFactorSecret  String?
-  
-  // Subscription
-  subscriptionTier SubscriptionTier @default(FREE)
-  subscriptionId   String?
-  trialEndsAt      DateTime?
-  
-  // Relations
-  leads         Lead[]
-  campaigns     Campaign[]
-  activities    Activity[]
-  tasks         Task[]
-  notes         Note[]
-  appointments  Appointment[]
-  businessSettings      BusinessSettings?
-  emailConfig           EmailConfig?
-  smsConfig             SMSConfig?
-  notificationSettings  NotificationSettings?
-  integrations          Integration[]
-  teamMembers           TeamMember[]
-  
+  @@index([campaignId])
+  @@index([createdAt])
+  @@index([leadId])
+  @@index([type])
+  @@index([userId])
+}
+
+model Appointment {
+  id           String            @id
+  title        String
+  description  String?
+  startTime    DateTime
+  endTime      DateTime
+  location     String?
+  meetingUrl   String?
+  type         AppointmentType
+  status       AppointmentStatus @default(SCHEDULED)
+  userId       String
+  leadId       String?
+  attendees    Json?
+  reminderSent Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime
+  Lead         Lead?             @relation(fields: [leadId], references: [id])
+  User         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([startTime])
+  @@index([status])
+  @@index([type])
+  @@index([userId])
+}
+
+model BusinessSettings {
+  id            String   @id
+  userId        String   @unique
+  companyName   String?
+  address       String?
+  phone         String?
+  website       String?
+  logo          String?
+  billingEmail  String?
+  businessHours Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  User          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id           String         @id
+  name         String
+  type         CampaignType
+  status       CampaignStatus @default(DRAFT)
+  subject      String?
+  body         String?
+  previewText  String?
+  startDate    DateTime?
+  endDate      DateTime?
+  budget       Float?
+  spent        Float?         @default(0)
+  audience     Int?
+  sent         Int            @default(0)
+  delivered    Int            @default(0)
+  opened       Int            @default(0)
+  clicked      Int            @default(0)
+  converted    Int            @default(0)
+  bounced      Int            @default(0)
+  unsubscribed Int            @default(0)
+  revenue      Float?         @default(0)
+  roi          Float?
+  isABTest     Boolean        @default(false)
+  abTestData   Json?
+  createdById  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  Activity     Activity[]
+  User         User           @relation(fields: [createdById], references: [id])
+  Tag          Tag[]
+
+  @@index([createdAt])
+  @@index([createdById])
+  @@index([status])
+  @@index([type])
+}
+
+model EmailConfig {
+  id           String   @id
+  userId       String   @unique
+  provider     String   @default("sendgrid")
+  apiKey       String?
+  fromEmail    String?
+  fromName     String?
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUser     String?
+  smtpPassword String?
+  isActive     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailTemplate {
+  id         String    @id
+  name       String
+  subject    String
+  body       String
+  category   String?
+  isActive   Boolean   @default(true)
+  variables  Json?
+  usageCount Int       @default(0)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model Integration {
+  id          String    @id
+  userId      String
+  provider    String
+  isConnected Boolean   @default(false)
+  credentials Json?
+  config      Json?
+  lastSyncAt  DateTime?
+  syncStatus  String?
+  syncError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([provider])
+  @@index([userId])
+}
+
+model Lead {
+  id            String        @id
+  name          String
+  email         String        @unique
+  phone         String?
+  company       String?
+  position      String?
+  status        LeadStatus    @default(NEW)
+  score         Int           @default(0)
+  source        String?
+  value         Float?
+  stage         String?
+  assignedToId  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  lastContactAt DateTime?
+  customFields  Json?
+  Activity      Activity[]
+  Appointment   Appointment[]
+  User          User?         @relation(fields: [assignedToId], references: [id])
+  Note          Note[]
+  Tag           Tag[]
+
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@index([score])
+  @@index([source])
+  @@index([status])
+}
+
+model Message {
+  id          String           @id
+  type        MessageType
+  direction   MessageDirection
+  subject     String?
+  body        String
+  fromAddress String
+  toAddress   String
+  status      MessageStatus    @default(PENDING)
+  readAt      DateTime?
+  repliedAt   DateTime?
+  leadId      String?
+  threadId    String?
+  parentId    String?
+  externalId  String?
+  provider    String?
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+
+  @@index([createdAt])
+  @@index([direction])
+  @@index([leadId])
+  @@index([status])
+  @@index([threadId])
+  @@index([type])
+}
+
+model Note {
+  id        String   @id
+  content   String
+  leadId    String
+  authorId  String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  updatedAt DateTime
+  User      User     @relation(fields: [authorId], references: [id])
+  Lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([leadId])
+}
+
+model NotificationSettings {
+  id                 String   @id
+  userId             String   @unique
+  emailNotifications Boolean  @default(true)
+  pushNotifications  Boolean  @default(true)
+  smsNotifications   Boolean  @default(false)
+  channels           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime
+  User               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SMSConfig {
+  id          String   @id
+  userId      String   @unique
+  provider    String   @default("twilio")
+  accountSid  String?
+  authToken   String?
+  phoneNumber String?
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SMSTemplate {
+  id         String    @id
+  name       String
+  body       String
+  category   String?
+  isActive   Boolean   @default(true)
+  variables  Json?
+  usageCount Int       @default(0)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model Tag {
+  id        String     @id
+  name      String     @unique
+  color     String?
+  createdAt DateTime   @default(now())
+  Campaign  Campaign[]
+  Lead      Lead[]
+}
+
+model Task {
+  id           String       @id
+  title        String
+  description  String?
+  dueDate      DateTime?
+  priority     TaskPriority @default(MEDIUM)
+  status       TaskStatus   @default(PENDING)
+  assignedToId String?
+  leadId       String?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime
+  User         User?        @relation(fields: [assignedToId], references: [id])
+
+  @@index([assignedToId])
+  @@index([dueDate])
+  @@index([priority])
+  @@index([status])
+}
+
+model Team {
+  id               String           @id
+  name             String
+  slug             String           @unique
+  settings         Json?
+  subscriptionTier SubscriptionTier @default(FREE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime
+  TeamMember       TeamMember[]
+
+  @@index([slug])
+}
+
+model TeamMember {
+  id       String   @id
+  teamId   String
+  userId   String
+  role     TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+  Team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  User     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model User {
+  id                   String                @id
+  email                String                @unique
+  password             String
+  firstName            String
+  lastName             String
+  avatar               String?
+  role                 Role                  @default(USER)
+  isActive             Boolean               @default(true)
+  emailVerified        Boolean               @default(false)
+  timezone             String                @default("America/New_York")
+  language             String                @default("en")
+  lastLoginAt          DateTime?
+  lastLoginIp          String?
+  twoFactorEnabled     Boolean               @default(false)
+  twoFactorSecret      String?
+  subscriptionTier     SubscriptionTier      @default(FREE)
+  subscriptionId       String?
+  trialEndsAt          DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime
+  Activity             Activity[]
+  Appointment          Appointment[]
+  BusinessSettings     BusinessSettings?
+  Campaign             Campaign[]
+  EmailConfig          EmailConfig?
+  Integration          Integration[]
+  Lead                 Lead[]
+  Note                 Note[]
+  NotificationSettings NotificationSettings?
+  SMSConfig            SMSConfig?
+  Task                 Task[]
+  TeamMember           TeamMember[]
+
   @@index([email])
   @@index([role])
 }
 
-enum Role {
-  ADMIN
-  MANAGER
-  USER
+model Workflow {
+  id                String              @id
+  name              String
+  description       String?
+  isActive          Boolean             @default(false)
+  triggerType       WorkflowTrigger
+  triggerData       Json?
+  actions           Json
+  executions        Int                 @default(0)
+  successRate       Float?
+  lastRunAt         DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  WorkflowExecution WorkflowExecution[]
+
+  @@index([isActive])
+  @@index([triggerType])
 }
 
-enum SubscriptionTier {
-  FREE
-  STARTER
-  PROFESSIONAL
-  ENTERPRISE
-}
-
-// Lead Management
-model Lead {
-  id          String   @id @default(cuid())
-  
-  // Basic Info
-  name        String
-  email       String   @unique
-  phone       String?
-  company     String?
-  position    String?
-  
-  // Lead Details
-  status      LeadStatus @default(NEW)
-  score       Int       @default(0)
-  source      String?   // website, referral, social, etc.
-  value       Float?
-  stage       String?
-  
-  // Assignment
-  assignedToId String?
-  assignedTo   User?    @relation(fields: [assignedToId], references: [id])
-  
-  // Dates
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  lastContactAt DateTime?
-  
-  // Relations
-  tags         Tag[]
-  notes        Note[]
-  activities   Activity[]
-  appointments Appointment[]
-  
-  // Custom fields stored as JSON
-  customFields Json?
-  
-  // Indexes for performance
-  @@index([status])
-  @@index([assignedToId])
-  @@index([source])
-  @@index([createdAt])
-  @@index([score])
-}
-
-enum LeadStatus {
-  NEW
-  CONTACTED
-  QUALIFIED
-  PROPOSAL
-  NEGOTIATION
-  WON
-  LOST
-}
-
-// Tags for categorization
-model Tag {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String?
-  leads     Lead[]
-  campaigns Campaign[]
-  createdAt DateTime @default(now())
-}
-
-// Notes attached to leads
-model Note {
-  id        String   @id @default(cuid())
-  content   String
-  leadId    String
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@index([leadId])
-  @@index([authorId])
-}
-
-// Campaign Management
-model Campaign {
-  id          String         @id @default(cuid())
-  name        String
-  type        CampaignType
-  status      CampaignStatus @default(DRAFT)
-  
-  // Content
-  subject     String?
-  body        String?
-  previewText String?
-  
-  // Scheduling
-  startDate   DateTime?
-  endDate     DateTime?
-  
-  // Budget
-  budget      Float?
-  spent       Float?         @default(0)
-  
-  // Metrics
-  audience    Int?
-  sent        Int            @default(0)
-  delivered   Int            @default(0)
-  opened      Int            @default(0)
-  clicked     Int            @default(0)
-  converted   Int            @default(0)
-  bounced     Int            @default(0)
-  unsubscribed Int           @default(0)
-  
-  // Revenue
-  revenue     Float?         @default(0)
-  roi         Float?
-  
-  // A/B Testing
-  isABTest    Boolean        @default(false)
-  abTestData  Json?
-  
-  // Relations
-  createdById String
-  createdBy   User           @relation(fields: [createdById], references: [id])
-  tags        Tag[]
-  activities  Activity[]
-  
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  @@index([status])
-  @@index([type])
-  @@index([createdById])
-  @@index([createdAt])
-}
-
-enum CampaignType {
-  EMAIL
-  SMS
-  PHONE
-  SOCIAL
-}
-
-enum CampaignStatus {
-  DRAFT
-  SCHEDULED
-  ACTIVE
-  PAUSED
-  COMPLETED
-  CANCELLED
-}
-
-// Activity Tracking
-model Activity {
-  id          String       @id @default(cuid())
-  type        ActivityType
-  title       String
-  description String?
-  
-  // Relations
+model WorkflowExecution {
+  id          String          @id
+  workflowId  String
+  status      ExecutionStatus
+  error       String?
   leadId      String?
-  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  campaignId  String?
-  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  userId      String?
-  user        User?        @relation(fields: [userId], references: [id])
-  
-  // Metadata
   metadata    Json?
-  
-  createdAt   DateTime     @default(now())
-  
-  @@index([leadId])
-  @@index([campaignId])
-  @@index([userId])
-  @@index([type])
-  @@index([createdAt])
+  startedAt   DateTime        @default(now())
+  completedAt DateTime?
+  Workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([startedAt])
+  @@index([status])
+  @@index([workflowId])
 }
 
 enum ActivityType {
@@ -269,130 +419,53 @@ enum ActivityType {
   CAMPAIGN_COMPLETED
 }
 
-// Tasks Management
-model Task {
-  id          String       @id @default(cuid())
-  title       String
-  description String?
-  dueDate     DateTime?
-  priority    TaskPriority @default(MEDIUM)
-  status      TaskStatus   @default(PENDING)
-  
-  // Relations
-  assignedToId String?
-  assignedTo   User?       @relation(fields: [assignedToId], references: [id])
-  leadId       String?
-  
-  completedAt  DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  
-  @@index([assignedToId])
-  @@index([status])
-  @@index([dueDate])
-  @@index([priority])
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
 
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
+enum AppointmentType {
+  CALL
+  MEETING
+  DEMO
+  CONSULTATION
+  FOLLOW_UP
 }
 
-enum TaskStatus {
-  PENDING
-  IN_PROGRESS
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
   COMPLETED
   CANCELLED
 }
 
-// ============================================
-// PHASE 2: COMMUNICATION & AUTOMATION (Week 4-6)
-// ============================================
-
-// Email Templates
-model EmailTemplate {
-  id          String   @id @default(cuid())
-  name        String
-  subject     String
-  body        String
-  category    String?
-  isActive    Boolean  @default(true)
-  variables   Json?    // {name, email, company, etc.}
-  usageCount  Int      @default(0)
-  lastUsedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([category])
-  @@index([isActive])
-}
-
-// SMS Templates
-model SMSTemplate {
-  id          String   @id @default(cuid())
-  name        String
-  body        String
-  category    String?
-  isActive    Boolean  @default(true)
-  variables   Json?
-  usageCount  Int      @default(0)
-  lastUsedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([category])
-  @@index([isActive])
-}
-
-// Communication Inbox
-model Message {
-  id          String        @id @default(cuid())
-  type        MessageType
-  direction   MessageDirection
-  
-  // Content
-  subject     String?
-  body        String
-  
-  // Participants
-  fromAddress String
-  toAddress   String
-  
-  // Status
-  status      MessageStatus @default(PENDING)
-  readAt      DateTime?
-  repliedAt   DateTime?
-  
-  // Relations
-  leadId      String?
-  threadId    String?       // For email threads
-  parentId    String?       // For replies
-  
-  // Provider Info
-  externalId  String?       // Twilio SID, SendGrid ID, etc.
-  provider    String?       // twilio, sendgrid, etc.
-  
-  // Metadata
-  metadata    Json?
-  
-  createdAt   DateTime      @default(now())
-  
-  @@index([leadId])
-  @@index([threadId])
-  @@index([status])
-  @@index([type])
-  @@index([direction])
-  @@index([createdAt])
-}
-
-enum MessageType {
+enum CampaignType {
   EMAIL
   SMS
-  CALL
+  PHONE
   SOCIAL
-  NEWSLETTER
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
 }
 
 enum MessageDirection {
@@ -410,33 +483,46 @@ enum MessageStatus {
   CLICKED
 }
 
-// Automation Workflows
-model Workflow {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  isActive    Boolean        @default(false)
-  
-  // Trigger
-  triggerType WorkflowTrigger
-  triggerData Json?
-  
-  // Actions
-  actions     Json           // Array of action definitions
-  
-  // Stats
-  executions  Int            @default(0)
-  successRate Float?
-  lastRunAt   DateTime?
-  
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  // Relations
-  executionLogs  WorkflowExecution[]
-  
-  @@index([isActive])
-  @@index([triggerType])
+enum MessageType {
+  EMAIL
+  SMS
+  CALL
+  SOCIAL
+  NEWSLETTER
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
 }
 
 enum WorkflowTrigger {
@@ -449,226 +535,4 @@ enum WorkflowTrigger {
   SCORE_THRESHOLD
   TAG_ADDED
   MANUAL
-}
-
-model WorkflowExecution {
-  id          String   @id @default(cuid())
-  workflowId  String
-  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  
-  status      ExecutionStatus
-  error       String?
-  
-  // Context
-  leadId      String?
-  metadata    Json?
-  
-  startedAt   DateTime @default(now())
-  completedAt DateTime?
-  
-  @@index([workflowId])
-  @@index([status])
-  @@index([startedAt])
-}
-
-enum ExecutionStatus {
-  PENDING
-  RUNNING
-  SUCCESS
-  FAILED
-}
-
-// ============================================
-// PHASE 3: SETTINGS & CONFIGURATION MODELS
-// ============================================
-
-// Business Settings
-model BusinessSettings {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  companyName    String?
-  address        String?
-  phone          String?
-  website        String?
-  logo           String?
-  billingEmail   String?
-  businessHours  Json?    // { monday: { open: "9:00", close: "17:00" }, ... }
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-
-// Email Configuration
-model EmailConfig {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  provider    String   @default("sendgrid") // sendgrid, smtp
-  apiKey      String?  // Encrypted
-  fromEmail   String?
-  fromName    String?
-  smtpHost    String?
-  smtpPort    Int?
-  smtpUser    String?
-  smtpPassword String? // Encrypted
-  isActive    Boolean  @default(false)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// SMS Configuration
-model SMSConfig {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  provider      String   @default("twilio")
-  accountSid    String?  // Encrypted
-  authToken     String?  // Encrypted
-  phoneNumber   String?
-  isActive      Boolean  @default(false)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-// Notification Settings
-model NotificationSettings {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  emailNotifications  Boolean  @default(true)
-  pushNotifications   Boolean  @default(true)
-  smsNotifications    Boolean  @default(false)
-  
-  // Channel preferences (JSON)
-  channels            Json?    // { leadAssigned: true, campaignCompleted: true, ... }
-  
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-}
-
-// Integration
-model Integration {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  provider      String   // google_sheets, slack, zapier, etc.
-  isConnected   Boolean  @default(false)
-  credentials   Json?    // Encrypted credentials
-  config        Json?    // Provider-specific config
-  
-  lastSyncAt    DateTime?
-  syncStatus    String?  // idle, syncing, success, error
-  syncError     String?
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  @@unique([userId, provider])
-  @@index([userId])
-  @@index([provider])
-}
-
-// Team Management
-model Team {
-  id          String       @id @default(cuid())
-  name        String
-  slug        String       @unique
-  
-  // Settings
-  settings    Json?
-  
-  // Subscription
-  subscriptionTier SubscriptionTier @default(FREE)
-  
-  // Relations
-  members     TeamMember[]
-  
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  
-  @@index([slug])
-}
-
-model TeamMember {
-  id        String       @id @default(cuid())
-  teamId    String
-  team      Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      TeamRole     @default(MEMBER)
-  
-  joinedAt  DateTime     @default(now())
-  
-  @@unique([teamId, userId])
-  @@index([teamId])
-  @@index([userId])
-}
-
-enum TeamRole {
-  OWNER
-  ADMIN
-  MANAGER
-  MEMBER
-}
-
-// ============================================
-// PHASE 4: APPOINTMENTS & CALENDAR
-// ============================================
-
-model Appointment {
-  id          String            @id @default(cuid())
-  title       String
-  description String?
-  startTime   DateTime
-  endTime     DateTime
-  location    String?
-  meetingUrl  String?
-  type        AppointmentType
-  status      AppointmentStatus @default(SCHEDULED)
-  
-  // Relations
-  userId      String
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  leadId      String?
-  lead        Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  
-  // Attendees stored as JSON array
-  // Format: [{email: string, name: string, confirmed: boolean}]
-  attendees   Json?
-  
-  // Reminders
-  reminderSent Boolean          @default(false)
-  
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  
-  @@index([startTime])
-  @@index([userId])
-  @@index([leadId])
-  @@index([status])
-  @@index([type])
-}
-
-enum AppointmentType {
-  CALL
-  MEETING
-  DEMO
-  CONSULTATION
-  FOLLOW_UP
-}
-
-enum AppointmentStatus {
-  SCHEDULED
-  CONFIRMED
-  COMPLETED
-  CANCELLED
-  NO_SHOW
 }

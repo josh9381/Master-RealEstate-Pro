@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-import { campaignsApi } from '@/lib/api'
-import { mockLeads } from '@/data/mockData'
+import { campaignsApi, leadsApi, CreateCampaignData } from '@/lib/api'
+import { useQuery } from '@tanstack/react-query'
+import { Lead } from '@/types'
 
 const campaignTypes = [
   {
@@ -43,6 +44,20 @@ function CampaignCreate() {
   const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [selectedType, setSelectedType] = useState('')
+  
+  // Fetch leads count for audience selection
+  const { data: leadsData } = useQuery({
+    queryKey: ['leads-count'],
+    queryFn: async () => {
+      const response = await leadsApi.getLeads({ page: 1, limit: 1 })
+      return response.data
+    },
+  })
+
+  const totalLeads = leadsData?.pagination?.total || 0
+  const newLeads = leadsData?.leads?.filter((l: Lead) => l.status === 'new').length || 0
+  const warmLeads = leadsData?.leads?.filter((l: Lead) => l.status === 'contacted' || l.status === 'qualified').length || 0
+  const hotLeads = leadsData?.leads?.filter((l: Lead) => l.status === 'qualified').length || 0
   
   // Form state
   const [formData, setFormData] = useState({
@@ -92,17 +107,27 @@ function CampaignCreate() {
       return
     }
     
-    // Transform formData to match CreateCampaignData interface
-    const campaignData = {
+    // Transform formData to match backend expectations
+    const campaignData: CreateCampaignData = {
       name: formData.name,
-      type: selectedType as 'email' | 'sms' | 'phone',
-      status: 'draft' as const,
+      type: selectedType.toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL', // Backend expects UPPERCASE
+      status: 'DRAFT', // Backend expects UPPERCASE
       subject: formData.subject || undefined,
-      content: formData.content || undefined,
-      scheduledAt: formData.schedule === 'scheduled' && formData.scheduleDate 
+      body: formData.content || undefined, // Backend uses 'body' not 'content'
+      startDate: formData.schedule === 'scheduled' && formData.scheduleDate 
         ? `${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00Z` 
         : undefined,
-      targetAudience: formData.audience === 'custom' ? formData.customAudience : undefined
+      audience: formData.audience === 'custom' 
+        ? formData.customAudience.length 
+        : formData.audience === 'all' 
+        ? totalLeads 
+        : formData.audience === 'new'
+        ? newLeads
+        : formData.audience === 'warm'
+        ? warmLeads
+        : hotLeads,
+      budget: formData.budget ? parseFloat(formData.budget) : undefined,
+      isABTest: formData.enableABTest
     }
     
     createMutation.mutate(campaignData)
@@ -333,10 +358,10 @@ function CampaignCreate() {
                   <div className="flex-1">
                     <div className="font-medium">All Leads</div>
                     <div className="text-sm text-muted-foreground">
-                      Send to all {mockLeads.length} leads in your database
+                      Send to all {totalLeads} leads in your database
                     </div>
                   </div>
-                  <Badge>{mockLeads.length} leads</Badge>
+                  <Badge>{totalLeads} leads</Badge>
                 </label>
 
                 <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
@@ -354,7 +379,7 @@ function CampaignCreate() {
                       Target only new, uncontacted leads
                     </div>
                   </div>
-                  <Badge>{mockLeads.filter(l => l.status === 'new').length} leads</Badge>
+                  <Badge>{newLeads} leads</Badge>
                 </label>
 
                 <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
@@ -372,7 +397,7 @@ function CampaignCreate() {
                       Contacted and qualified leads
                     </div>
                   </div>
-                  <Badge>{mockLeads.filter(l => l.status === 'contacted' || l.status === 'qualified').length} leads</Badge>
+                  <Badge>{warmLeads} leads</Badge>
                 </label>
 
                 <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
@@ -390,7 +415,7 @@ function CampaignCreate() {
                       Highly qualified, ready to convert
                     </div>
                   </div>
-                  <Badge>{mockLeads.filter(l => l.status === 'qualified').length} leads</Badge>
+                  <Badge>{hotLeads} leads</Badge>
                 </label>
               </div>
             </CardContent>

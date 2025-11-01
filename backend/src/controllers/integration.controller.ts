@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
+import { Prisma } from '@prisma/client';
 import { UnauthorizedError, NotFoundError } from '../middleware/errorHandler';
 import { encrypt, decrypt } from '../utils/encryption';
 
@@ -95,8 +96,8 @@ export async function disconnectIntegration(req: Request, res: Response): Promis
     },
     data: {
       isConnected: false,
-      credentials: null,
-      config: null
+      credentials: Prisma.DbNull,
+      config: Prisma.DbNull
     }
   });
 

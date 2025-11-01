@@ -104,7 +104,7 @@ export async function executeWorkflow(
         workflowId,
         status: 'RUNNING',
         leadId: event.leadId,
-        metadata: event.data,
+        metadata: event.data as any,
       },
     });
     executionId = execution.id;

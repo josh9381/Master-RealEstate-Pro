@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
-import { UnauthorizedError, NotFoundError, BadRequestError } from '../middleware/errorHandler';
+import { UnauthorizedError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 import { sendAppointmentReminder } from '../services/reminder.service';
 
 /**
@@ -488,7 +488,7 @@ export async function sendReminder(req: Request, res: Response): Promise<void> {
 
   // Check appointment is in the future
   if (new Date(appointment.startTime) < new Date()) {
-    throw new BadRequestError('Cannot send reminder for past appointments');
+    throw new ValidationError('Cannot send reminder for past appointments');
   }
 
   // Send reminder

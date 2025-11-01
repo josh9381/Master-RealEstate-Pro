@@ -107,20 +107,20 @@ curl -s -X PATCH "$BASE_URL/workflows/$WF1_ID/toggle" \
 
 echo -e "${GREEN}✓ Activated workflow 1${NC}"
 
-# Workflow 2: LEAD_STATUS_CHANGED with condition (status = QUALIFIED)
+# Workflow 2: LEAD_STATUS_CHANGED with condition (status = HOT)
 WF2=$(curl -s -X POST "$BASE_URL/workflows" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Qualified Lead Alert",
-    "description": "Triggers when lead becomes QUALIFIED",
+    "name": "Hot Lead Alert",
+    "description": "Triggers when lead becomes HOT",
     "triggerType": "LEAD_STATUS_CHANGED",
     "triggerData": {
       "conditions": [
         {
           "field": "newStatus",
           "operator": "equals",
-          "value": "QUALIFIED"
+          "value": "HOT"
         }
       ]
     },
@@ -129,7 +129,7 @@ WF2=$(curl -s -X POST "$BASE_URL/workflows" \
         "type": "SEND_SMS",
         "config": {
           "to": "{{manager.phone}}",
-          "message": "Qualified lead alert!"
+          "message": "Hot lead alert!"
         }
       }
     ]
@@ -146,20 +146,20 @@ curl -s -X PATCH "$BASE_URL/workflows/$WF2_ID/toggle" \
 
 echo -e "${GREEN}✓ Activated workflow 2${NC}"
 
-# Workflow 3: LEAD_STATUS_CHANGED with different condition (status = LOST)
+# Workflow 3: LEAD_STATUS_CHANGED with different condition (status = COLD)
 WF3=$(curl -s -X POST "$BASE_URL/workflows" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Lost Lead Re-engagement",
-    "description": "Triggers when lead becomes LOST",
+    "name": "Cold Lead Re-engagement",
+    "description": "Triggers when lead becomes COLD",
     "triggerType": "LEAD_STATUS_CHANGED",
     "triggerData": {
       "conditions": [
         {
           "field": "newStatus",
           "operator": "equals",
-          "value": "LOST"
+          "value": "COLD"
         }
       ]
     },
@@ -234,7 +234,7 @@ test_result $? "Execution status is PENDING or SUCCESS"
 echo ""
 
 # Step 4: Test LEAD_STATUS_CHANGED trigger with matching condition
-echo -e "${YELLOW}Step 4: Test LEAD_STATUS_CHANGED (QUALIFIED - Should Match)${NC}"
+echo -e "${YELLOW}Step 4: Test LEAD_STATUS_CHANGED (HOT - Should Match)${NC}"
 
 # Get initial execution count for WF2
 BEFORE_WF2=$(curl -s -X GET "$BASE_URL/workflows/$WF2_ID" \
@@ -242,15 +242,15 @@ BEFORE_WF2=$(curl -s -X GET "$BASE_URL/workflows/$WF2_ID" \
 
 echo "Initial WF2 executions: $BEFORE_WF2"
 
-# Update lead to QUALIFIED status (should trigger WF2)
-UPDATE1=$(curl -s -X PATCH "$BASE_URL/leads/$LEAD1_ID" \
+# Update lead to HOT status (should trigger WF2)
+UPDATE1=$(curl -s -X PUT "$BASE_URL/leads/$LEAD1_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status": "QUALIFIED"
+    "status": "HOT"
   }')
 
-test_result $? "Update lead to QUALIFIED status"
+test_result $? "Update lead to HOT status"
 
 # Wait for trigger processing
 sleep 1
@@ -261,7 +261,7 @@ AFTER_WF2=$(curl -s -X GET "$BASE_URL/workflows/$WF2_ID" \
 
 echo "After WF2 executions: $AFTER_WF2"
 
-test_result $([ "$AFTER_WF2" -gt "$BEFORE_WF2" ] && echo 0 || echo 1) "QUALIFIED status triggered workflow 2"
+test_result $([ "$AFTER_WF2" -gt "$BEFORE_WF2" ] && echo 0 || echo 1) "HOT status triggered workflow 2"
 
 echo ""
 
@@ -276,8 +276,8 @@ BEFORE_WF2_2=$(curl -s -X GET "$BASE_URL/workflows/$WF2_ID" \
 BEFORE_WF3=$(curl -s -X GET "$BASE_URL/workflows/$WF3_ID" \
   -H "Authorization: Bearer $TOKEN" | grep -o '"executions":[0-9]*' | grep -o '[0-9]*')
 
-# Update to CONTACTED (doesn't match QUALIFIED or LOST)
-UPDATE2=$(curl -s -X PATCH "$BASE_URL/leads/$LEAD1_ID" \
+# Update to CONTACTED (doesn't match HOT or COLD)
+UPDATE2=$(curl -s -X PUT "$BASE_URL/leads/$LEAD1_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -296,26 +296,26 @@ AFTER_WF2_2=$(curl -s -X GET "$BASE_URL/workflows/$WF2_ID" \
 AFTER_WF3=$(curl -s -X GET "$BASE_URL/workflows/$WF3_ID" \
   -H "Authorization: Bearer $TOKEN" | grep -o '"executions":[0-9]*' | grep -o '[0-9]*')
 
-test_result $([ "$AFTER_WF2_2" -eq "$BEFORE_WF2_2" ] && echo 0 || echo 1) "CONTACTED status did NOT trigger QUALIFIED workflow"
-test_result $([ "$AFTER_WF3" -eq "$BEFORE_WF3" ] && echo 0 || echo 1) "CONTACTED status did NOT trigger LOST workflow"
+test_result $([ "$AFTER_WF2_2" -eq "$BEFORE_WF2_2" ] && echo 0 || echo 1) "CONTACTED status did NOT trigger HOT workflow"
+test_result $([ "$AFTER_WF3" -eq "$BEFORE_WF3" ] && echo 0 || echo 1) "CONTACTED status did NOT trigger COLD workflow"
 
 echo ""
 
-# Step 6: Test second conditional trigger (LOST)
-echo -e "${YELLOW}Step 6: Test LEAD_STATUS_CHANGED (LOST - Should Match WF3)${NC}"
+# Step 6: Test second conditional trigger (COLD)
+echo -e "${YELLOW}Step 6: Test LEAD_STATUS_CHANGED (COLD - Should Match WF3)${NC}"
 
 BEFORE_WF3_2=$(curl -s -X GET "$BASE_URL/workflows/$WF3_ID" \
   -H "Authorization: Bearer $TOKEN" | grep -o '"executions":[0-9]*' | grep -o '[0-9]*')
 
-# Update to LOST (should trigger WF3)
-UPDATE3=$(curl -s -X PATCH "$BASE_URL/leads/$LEAD1_ID" \
+# Update to COLD (should trigger WF3)
+UPDATE3=$(curl -s -X PUT "$BASE_URL/leads/$LEAD1_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status": "LOST"
+    "status": "COLD"
   }')
 
-test_result $? "Update lead to LOST status"
+test_result $? "Update lead to COLD status"
 
 # Wait
 sleep 1
@@ -323,7 +323,7 @@ sleep 1
 AFTER_WF3_2=$(curl -s -X GET "$BASE_URL/workflows/$WF3_ID" \
   -H "Authorization: Bearer $TOKEN" | grep -o '"executions":[0-9]*' | grep -o '[0-9]*')
 
-test_result $([ "$AFTER_WF3_2" -gt "$BEFORE_WF3_2" ] && echo 0 || echo 1) "LOST status triggered workflow 3"
+test_result $([ "$AFTER_WF3_2" -gt "$BEFORE_WF3_2" ] && echo 0 || echo 1) "COLD status triggered workflow 3"
 
 echo ""
 

@@ -57,13 +57,16 @@ export const getMessages = async (req: Request, res: Response) => {
   ])
 
   res.json({
-    messages,
-    pagination: {
-      page: pageNum,
-      limit: limitNum,
-      total,
-      totalPages: Math.ceil(total / limitNum),
-    },
+    success: true,
+    data: {
+      messages,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    }
   })
 }
 
@@ -79,7 +82,10 @@ export const getMessage = async (req: Request, res: Response) => {
     throw new NotFoundError('Message not found')
   }
 
-  res.json(message)
+  res.json({
+    success: true,
+    data: { message }
+  })
 }
 
 // Send email
@@ -165,11 +171,17 @@ export const sendEmail = async (req: Request, res: Response) => {
     throw new ValidationError(result.error || 'Failed to send email')
   }
 
+  // Fetch the created message to return full details
+  const message = await prisma.message.findUnique({
+    where: { id: result.messageId }
+  })
+
   res.status(201).json({
     success: true,
-    messageId: result.messageId,
-    threadId: messageThreadId,
-    message: 'Email sent successfully',
+    data: {
+      message,
+      threadId: messageThreadId,
+    }
   })
 }
 
@@ -256,11 +268,17 @@ export const sendSMS = async (req: Request, res: Response) => {
     throw new ValidationError(result.error || 'Failed to send SMS')
   }
 
+  // Fetch the created message to return full details
+  const message = await prisma.message.findUnique({
+    where: { id: result.messageId }
+  })
+
   res.status(201).json({
     success: true,
-    messageId: result.messageId,
-    threadId: messageThreadId,
-    message: 'SMS sent successfully',
+    data: {
+      message,
+      threadId: messageThreadId,
+    }
   })
 }
 
@@ -288,8 +306,11 @@ export const makeCall = async (req: Request, res: Response) => {
   }
 
   res.status(201).json({
-    message,
-    note: 'Call initiated (mock mode - integrate Twilio Voice for production)',
+    success: true,
+    data: {
+      message,
+      note: 'Call initiated (mock mode - integrate Twilio Voice for production)',
+    }
   })
 }
 
@@ -312,7 +333,10 @@ export const markAsRead = async (req: Request, res: Response) => {
     },
   })
 
-  res.json(updatedMessage)
+  res.json({
+    success: true,
+    data: { message: updatedMessage }
+  })
 }
 
 // Delete message
@@ -331,7 +355,10 @@ export const deleteMessage = async (req: Request, res: Response) => {
     where: { id },
   })
 
-  res.json({ message: 'Message deleted successfully' })
+  res.json({
+    success: true,
+    message: 'Message deleted successfully'
+  })
 }
 
 // Get message statistics
@@ -355,15 +382,18 @@ export const getMessageStats = async (req: Request, res: Response) => {
   })
 
   res.json({
-    total,
-    sent,
-    delivered,
-    failed,
-    opened,
-    byType: byType.map((item: { type: string; _count: number }) => ({
-      type: item.type,
-      count: item._count,
-    })),
+    success: true,
+    data: {
+      total,
+      sent,
+      delivered,
+      failed,
+      opened,
+      byType: byType.map((item: { type: string; _count: number }) => ({
+        type: item.type,
+        count: item._count,
+      })),
+    }
   })
 }
 
@@ -386,9 +416,12 @@ export const getThreadMessages = async (req: Request, res: Response) => {
   }
 
   res.json({
-    threadId,
-    messageCount: messages.length,
-    messages,
+    success: true,
+    data: {
+      threadId,
+      messageCount: messages.length,
+      messages,
+    }
   })
 }
 

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { aiApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { MOCK_DATA_CONFIG } from '@/config/mockData.config';
 
 // Icon mapping for API responses (which return icon names as strings)
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -56,14 +57,14 @@ const AIHub = () => {
         recommendationsData,
         importanceData,
       ] = await Promise.all([
-        aiApi.getStats().catch(() => ({ data: getMockStats() })),
-        aiApi.getFeatures().catch(() => ({ data: getMockFeatures() })),
-        aiApi.getModelPerformance(6).catch(() => ({ data: getMockPerformance() })),
-        aiApi.getTrainingModels().catch(() => ({ data: getMockTrainingModels() })),
-        aiApi.getDataQuality().catch(() => ({ data: getMockDataQuality() })),
-        aiApi.getInsights({ limit: 3 }).catch(() => ({ data: getMockInsights() })),
-        aiApi.getRecommendations({ limit: 3 }).catch(() => ({ data: getMockRecommendations() })),
-        aiApi.getFeatureImportance('lead-scoring').catch(() => ({ data: getMockFeatureImportance() })),
+        aiApi.getStats().catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockStats() : null })),
+        aiApi.getFeatures().catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockFeatures() : [] })),
+        aiApi.getModelPerformance(6).catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockPerformance() : [] })),
+        aiApi.getTrainingModels().catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockTrainingModels() : [] })),
+        aiApi.getDataQuality().catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockDataQuality() : [] })),
+        aiApi.getInsights({ limit: 3 }).catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockInsights() : [] })),
+        aiApi.getRecommendations({ limit: 3 }).catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockRecommendations() : [] })),
+        aiApi.getFeatureImportance('lead-scoring').catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockFeatureImportance() : [] })),
       ])
 
       setStats(statsData.data)
@@ -76,17 +77,29 @@ const AIHub = () => {
       setFeatureImportance(importanceData.data)
     } catch (error) {
       console.error('Error loading AI data:', error)
-      toast.warning('Error loading AI data', 'Using fallback data')
-      
-      // Use fallback mock data
-      setStats(getMockStats())
-      setAiFeatures(getMockFeatures())
-      setModelPerformance(getMockPerformance())
-      setTrainingModels(getMockTrainingModels())
-      setDataQuality(getMockDataQuality())
-      setRecentInsights(getMockInsights())
-      setRecommendations(getMockRecommendations())
-      setFeatureImportance(getMockFeatureImportance())
+      if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
+        toast.warning('Error loading AI data', 'Using fallback data')
+        // Use fallback mock data
+        setStats(getMockStats())
+        setAiFeatures(getMockFeatures())
+        setModelPerformance(getMockPerformance())
+        setTrainingModels(getMockTrainingModels())
+        setDataQuality(getMockDataQuality())
+        setRecentInsights(getMockInsights())
+        setRecommendations(getMockRecommendations())
+        setFeatureImportance(getMockFeatureImportance())
+      } else {
+        toast.error('Error loading AI data')
+        // Set empty/zero values
+        setStats(null)
+        setAiFeatures([])
+        setModelPerformance([])
+        setTrainingModels([])
+        setDataQuality([])
+        setRecentInsights([])
+        setRecommendations([])
+        setFeatureImportance([])
+      }
     } finally {
       setLoading(false)
     }

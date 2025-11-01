@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
-import { leadsApi } from '@/lib/api'
+import { leadsApi, CreateLeadData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
 
 export default function LeadCreate() {
@@ -48,16 +48,30 @@ export default function LeadCreate() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Transform formData to match CreateLeadData interface
-    const leadData = {
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
+    // Transform formData to match backend expectations
+    const leadData: CreateLeadData = {
       name: `${formData.firstName} ${formData.lastName}`.trim(),
       email: formData.email,
       phone: formData.phone || undefined,
       company: formData.company || undefined,
-      status: formData.status,
-      source: formData.source,
-      assignedTo: formData.assignedTo || undefined,
-      tags: formData.tags
+      position: formData.jobTitle || undefined,
+      status: formData.status.toUpperCase(), // Backend expects UPPERCASE
+      source: formData.source || 'website',
+      assignedToId: formData.assignedTo || undefined, // Backend expects assignedToId
+      value: formData.dealValue ? parseInt(formData.dealValue) : undefined,
+      customFields: {
+        address: formData.address || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        zipCode: formData.zipCode || undefined,
+        country: formData.country || undefined,
+      }
     }
     
     createMutation.mutate(leadData)

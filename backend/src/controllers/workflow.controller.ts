@@ -36,8 +36,11 @@ export const getWorkflows = async (req: Request, res: Response) => {
   })
 
   res.json({
-    workflows,
-    total: workflows.length,
+    success: true,
+    data: {
+      workflows,
+      total: workflows.length,
+    }
   })
 }
 
@@ -59,12 +62,15 @@ export const getWorkflow = async (req: Request, res: Response) => {
     throw new NotFoundError('Workflow not found')
   }
 
-  res.json(workflow)
+  res.json({
+    success: true,
+    data: { workflow }
+  })
 }
 
 // Create workflow
 export const createWorkflow = async (req: Request, res: Response) => {
-  const { name, description, triggerType, triggerData, actions } = req.body
+  const { name, description, triggerType, triggerData, actions, isActive } = req.body
 
   if (!name || !triggerType || !actions) {
     throw new ValidationError('Name, triggerType, and actions are required')
@@ -81,11 +87,14 @@ export const createWorkflow = async (req: Request, res: Response) => {
       triggerType,
       triggerData: triggerData || {},
       actions,
-      isActive: false, // New workflows start inactive
+      isActive: isActive !== undefined ? isActive : false, // Default to false if not specified
     },
   })
 
-  res.status(201).json(workflow)
+  res.status(201).json({
+    success: true,
+    data: { workflow }
+  })
 }
 
 // Update workflow
@@ -117,7 +126,10 @@ export const updateWorkflow = async (req: Request, res: Response) => {
     },
   })
 
-  res.json(workflow)
+  res.json({
+    success: true,
+    data: { workflow }
+  })
 }
 
 // Delete workflow
@@ -141,7 +153,10 @@ export const deleteWorkflow = async (req: Request, res: Response) => {
     where: { id },
   })
 
-  res.json({ message: 'Workflow deleted successfully' })
+  res.json({
+    success: true,
+    message: 'Workflow deleted successfully'
+  })
 }
 
 // Toggle workflow active state
@@ -169,7 +184,8 @@ export const toggleWorkflow = async (req: Request, res: Response) => {
   })
 
   res.json({
-    workflow,
+    success: true,
+    data: { workflow },
     message: `Workflow ${isActive ? 'activated' : 'deactivated'} successfully`,
   })
 }
@@ -206,9 +222,12 @@ export const testWorkflow = async (req: Request, res: Response) => {
   // For now, we'll just simulate success
 
   res.json({
-    execution,
-    note: 'Workflow test executed successfully (mock mode)',
-    actions: workflow.actions,
+    success: true,
+    data: {
+      execution,
+      note: 'Workflow test executed successfully (mock mode)',
+      actions: workflow.actions,
+    }
   })
 }
 
@@ -240,13 +259,16 @@ export const getWorkflowExecutions = async (req: Request, res: Response) => {
   ])
 
   res.json({
-    executions,
-    pagination: {
-      page: pageNum,
-      limit: limitNum,
-      total,
-      totalPages: Math.ceil(total / limitNum),
-    },
+    success: true,
+    data: {
+      executions,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    }
   })
 }
 
@@ -270,12 +292,15 @@ export const getWorkflowStats = async (req: Request, res: Response) => {
     : 0
 
   res.json({
-    totalWorkflows,
-    activeWorkflows,
-    inactiveWorkflows: totalWorkflows - activeWorkflows,
-    totalExecutions,
-    successfulExecutions,
-    failedExecutions,
-    successRate: Number(successRate),
+    success: true,
+    data: {
+      totalWorkflows,
+      activeWorkflows,
+      inactiveWorkflows: totalWorkflows - activeWorkflows,
+      totalExecutions,
+      successfulExecutions,
+      failedExecutions,
+      successRate: Number(successRate),
+    }
   })
 }

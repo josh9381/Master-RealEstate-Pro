@@ -40,7 +40,7 @@ import {
   Legend
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
-import { analyticsApi, leadsApi, campaignsApi } from '@/lib/api'
+import { analyticsApi, campaignsApi, tasksApi } from '@/lib/api'
 
 // Types
 interface StatCard {
@@ -52,108 +52,6 @@ interface StatCard {
   target: string
   progress: number
 }
-
-// Mock data as fallback
-const mockStats = [
-  {
-    name: 'Total Revenue',
-    value: '$45,231',
-    change: '+20.1%',
-    trend: 'up',
-    icon: DollarSign,
-    target: '$50,000',
-    progress: 90
-  },
-  {
-    name: 'Total Leads',
-    value: '2,345',
-    change: '+15.3%',
-    trend: 'up',
-    icon: Users,
-    target: '3,000',
-    progress: 78
-  },
-  {
-    name: 'Conversion Rate',
-    value: '18.5%',
-    change: '-2.4%',
-    trend: 'down',
-    icon: Target,
-    target: '20%',
-    progress: 92
-  },
-  {
-    name: 'Active Campaigns',
-    value: '12',
-    change: '+3',
-    trend: 'up',
-    icon: Megaphone,
-    target: '15',
-    progress: 80
-  },
-]
-
-const revenueData = [
-  { month: 'Jan', revenue: 4000, leads: 180, campaigns: 8 },
-  { month: 'Feb', revenue: 3000, leads: 140, campaigns: 6 },
-  { month: 'Mar', revenue: 5000, leads: 220, campaigns: 10 },
-  { month: 'Apr', revenue: 4500, leads: 190, campaigns: 9 },
-  { month: 'May', revenue: 6000, leads: 260, campaigns: 12 },
-  { month: 'Jun', revenue: 5500, leads: 240, campaigns: 11 },
-]
-
-const conversionData = [
-  { stage: 'New', count: 450, rate: 100 },
-  { stage: 'Contacted', count: 340, rate: 76 },
-  { stage: 'Qualified', count: 220, rate: 49 },
-  { stage: 'Proposal', count: 120, rate: 27 },
-  { stage: 'Won', count: 85, rate: 19 },
-]
-
-const campaignPerformance = [
-  { name: 'Email', opens: 1240, clicks: 340, conversions: 68 },
-  { name: 'SMS', opens: 980, clicks: 520, conversions: 104 },
-  { name: 'Phone', opens: 0, clicks: 0, conversions: 45 },
-  { name: 'Social', opens: 2100, clicks: 680, conversions: 92 },
-]
-
-const leadSourceData = [
-  { name: 'Website', value: 35, color: '#3b82f6' },
-  { name: 'Referral', value: 25, color: '#10b981' },
-  { name: 'Social Media', value: 20, color: '#f59e0b' },
-  { name: 'Email Campaign', value: 15, color: '#8b5cf6' },
-  { name: 'Other', value: 5, color: '#6b7280' },
-]
-
-const recentActivities = [
-  { id: 1, type: 'lead', action: 'New lead created', lead: 'John Doe - Tech Corp', time: '5 min ago', icon: Users },
-  { id: 2, type: 'email', action: 'Email sent', lead: 'Q4 Product Launch Campaign', time: '12 min ago', icon: Mail },
-  { id: 3, type: 'call', action: 'Call completed', lead: 'Jane Smith - Enterprise Inc', time: '24 min ago', icon: Phone },
-  { id: 4, type: 'deal', action: 'Deal won', lead: '$25,000 - Global Solutions', time: '1 hour ago', icon: CheckCircle2 },
-  { id: 5, type: 'meeting', action: 'Meeting scheduled', lead: 'Bob Johnson - Startup Co', time: '2 hours ago', icon: Calendar },
-  { id: 6, type: 'lead', action: 'Lead qualified', lead: 'Alice Brown - Fortune 500', time: '3 hours ago', icon: Target },
-]
-
-const upcomingTasks = [
-  { id: 1, title: 'Follow up with Tech Corp', due: 'Today, 2:00 PM', priority: 'high', status: 'pending' },
-  { id: 2, title: 'Send proposal to Enterprise Inc', due: 'Today, 4:30 PM', priority: 'high', status: 'pending' },
-  { id: 3, title: 'Demo call with Startup Co', due: 'Tomorrow, 10:00 AM', priority: 'medium', status: 'scheduled' },
-  { id: 4, title: 'Review contract for Global Solutions', due: 'Tomorrow, 2:00 PM', priority: 'medium', status: 'in_progress' },
-  { id: 5, title: 'Quarterly review meeting', due: 'Friday, 9:00 AM', priority: 'low', status: 'scheduled' },
-]
-
-const topCampaigns = [
-  { id: 1, name: 'Q4 Product Launch', type: 'Email', opens: 2340, clicks: 680, conversions: 145, roi: '340%' },
-  { id: 2, name: 'Holiday Promotion', type: 'SMS', opens: 1890, clicks: 920, conversions: 198, roi: '420%' },
-  { id: 3, name: 'Webinar Invitation', type: 'Email', opens: 1560, clicks: 520, conversions: 89, roi: '280%' },
-]
-
-const quickStats = [
-  { label: 'Open Emails', value: '1,234', change: '+12%' },
-  { label: 'Meetings Today', value: '8', change: '+2' },
-  { label: 'Calls Made', value: '45', change: '+18%' },
-  { label: 'Tasks Completed', value: '23/30', change: '77%' },
-]
 
 function Dashboard() {
   const navigate = useNavigate()
@@ -170,23 +68,131 @@ function Dashboard() {
     },
   })
 
-  // Fetch recent leads (for future use in Recent Activity section)
-  const { isLoading: leadsLoading } = useQuery({
-    queryKey: ['recentLeads'],
+  // Fetch lead analytics for charts
+  const { data: leadAnalyticsData } = useQuery({
+    queryKey: ['lead-analytics', dateRange],
     queryFn: async () => {
-      const response = await leadsApi.getLeads({ page: 1, limit: 5, sortBy: 'createdAt', sortOrder: 'desc' })
+      const response = await analyticsApi.getLeadAnalytics()
       return response.data
     },
   })
 
-  // Fetch active campaigns (for future use in Active Campaigns section)
-  const { isLoading: campaignsLoading } = useQuery({
-    queryKey: ['activeCampaigns'],
+  // Fetch campaign analytics for charts
+  const { data: campaignAnalyticsData } = useQuery({
+    queryKey: ['campaign-analytics', dateRange],
     queryFn: async () => {
-      const response = await campaignsApi.getCampaigns({ page: 1, limit: 5 })
+      const response = await analyticsApi.getCampaignAnalytics()
       return response.data
     },
   })
+
+  // Fetch conversion funnel for charts
+  const { data: conversionFunnelData } = useQuery({
+    queryKey: ['conversion-funnel', dateRange],
+    queryFn: async () => {
+      const response = await analyticsApi.getConversionFunnel()
+      return response.data
+    },
+  })
+
+  // Fetch activity feed for recent activities
+  const { data: activityFeedData } = useQuery({
+    queryKey: ['activity-feed'],
+    queryFn: async () => {
+      const response = await analyticsApi.getActivityFeed({ limit: 6 })
+      return response.data
+    },
+  })
+
+  // Fetch recent tasks
+  const { data: tasksData } = useQuery({
+    queryKey: ['recent-tasks'],
+    queryFn: async () => {
+      const response = await tasksApi.getTasks({ page: 1, limit: 5 })
+      return response.data
+    },
+  })
+
+  // Fetch top campaigns
+  const { data: topCampaignsData } = useQuery({
+    queryKey: ['top-campaigns'],
+    queryFn: async () => {
+      const response = await campaignsApi.getCampaigns({ page: 1, limit: 3, sortBy: 'converted', sortOrder: 'desc' })
+      return response.data
+    },
+  })
+
+  const isLoading = statsLoading
+
+  // Transform API data for charts
+  // Lead source data for pie chart
+  const leadSourceData = leadAnalyticsData?.bySource 
+    ? Object.entries(leadAnalyticsData.bySource).map(([name, value], index) => ({
+        name,
+        value: typeof value === 'number' ? value : 0,
+        color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280'][index] || '#6b7280'
+      }))
+    : []
+
+  // Conversion funnel data
+  const conversionData = conversionFunnelData?.stages 
+    ? conversionFunnelData.stages.map((stage: any) => ({
+        stage: stage.name,
+        count: stage.count || 0,
+        rate: stage.percentage || 0
+      }))
+    : []
+
+  // Campaign performance by type
+  const campaignPerformance = campaignAnalyticsData?.byType
+    ? Object.entries(campaignAnalyticsData.byType).map(([name, count]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(),
+        opens: 0, // Not available in current API
+        clicks: 0,
+        conversions: typeof count === 'number' ? count : 0
+      }))
+    : []
+
+  // Recent activities from API
+  const recentActivities = activityFeedData?.activities?.slice(0, 6).map((activity: any) => ({
+    id: activity.id,
+    type: activity.type.toLowerCase(),
+    action: activity.title,
+    lead: activity.lead?.name || activity.description,
+    time: new Date(activity.createdAt).toLocaleString(),
+    icon: Users // Default icon
+  })) || []
+
+  // Upcoming tasks from API
+  const upcomingTasks = tasksData?.tasks?.slice(0, 5).map((task: any) => ({
+    id: task.id,
+    title: task.title,
+    due: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date',
+    priority: task.priority.toLowerCase(),
+    status: task.status.toLowerCase()
+  })) || []
+
+  // Top campaigns from API
+  const topCampaigns = topCampaignsData?.campaigns?.slice(0, 3).map((campaign: any) => ({
+    id: campaign.id,
+    name: campaign.name,
+    type: campaign.type,
+    opens: campaign.opened || 0,
+    clicks: campaign.clicked || 0,
+    conversions: campaign.converted || 0,
+    roi: campaign.roi ? `${campaign.roi}%` : '0%'
+  })) || []
+
+  // Revenue data - using empty array for now since we don't have time-series revenue data
+  const revenueData: any[] = []
+
+  // Quick stats from API
+  const quickStats = [
+    { label: 'Total Activities', value: dashboardData?.activities?.total?.toString() || '0', change: '+0%' },
+    { label: 'Tasks Due Today', value: dashboardData?.tasks?.dueToday?.toString() || '0', change: '+0' },
+    { label: 'Active Campaigns', value: dashboardData?.campaigns?.active?.toString() || '0', change: '+0' },
+    { label: 'Tasks Completed', value: `${dashboardData?.tasks?.completed || 0}/${dashboardData?.tasks?.total || 0}`, change: `${dashboardData?.tasks?.completionRate || 0}%` },
+  ]
 
   // Transform API data into UI format
   const stats = dashboardData ? [
@@ -226,12 +232,44 @@ function Dashboard() {
       target: '100%',
       progress: dashboardData.tasks?.completionRate || 0
     },
-  ] as StatCard[] : mockStats
-
-  // Data extracted from API (available for future use in Recent Leads/Campaigns sections)
-  // const recentLeads = leadsData?.leads || []
-  // const activeCampaigns = campaignsData?.campaigns || []
-  const isLoading = statsLoading || leadsLoading || campaignsLoading
+  ] as StatCard[] : [
+    {
+      name: 'Total Leads',
+      value: '0',
+      change: '+0',
+      trend: 'up' as const,
+      icon: Users,
+      target: '3,000',
+      progress: 0
+    },
+    {
+      name: 'Active Campaigns',
+      value: '0',
+      change: '+0',
+      trend: 'up' as const,
+      icon: Megaphone,
+      target: '15',
+      progress: 0
+    },
+    {
+      name: 'Conversion Rate',
+      value: '0.0%',
+      change: '+0%',
+      trend: 'up' as const,
+      icon: Target,
+      target: '20%',
+      progress: 0
+    },
+    {
+      name: 'Tasks Completed',
+      value: '0/0',
+      change: '0%',
+      trend: 'up' as const,
+      icon: CheckCircle2,
+      target: '100%',
+      progress: 0
+    },
+  ] as StatCard[]
 
   const handleRefresh = () => {
     setRefreshing(true)

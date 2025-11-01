@@ -216,13 +216,13 @@ async function mockSMSSend(options: SMSOptions): Promise<SMSResult> {
   console.log('Message:', message.substring(0, 100) + (message.length > 100 ? '...' : ''));
 
   // Create message record
-  await createMessageRecord({
+  const smsMessage = await createMessageRecord({
     type: 'SMS',
     direction: 'OUTBOUND',
     body: message,
     fromAddress: TWILIO_PHONE_NUMBER || '+1234567890',
     toAddress: to,
-    status: 'SENT',
+    status: 'DELIVERED', // Mock mode treats as immediately delivered
     provider: 'mock',
     leadId,
     metadata: {
@@ -233,7 +233,7 @@ async function mockSMSSend(options: SMSOptions): Promise<SMSResult> {
 
   return {
     success: true,
-    messageId: `mock_sms_${Date.now()}`,
+    messageId: smsMessage?.id || `mock_sms_${Date.now()}`,
   };
 }
 
@@ -243,9 +243,10 @@ async function mockSMSSend(options: SMSOptions): Promise<SMSResult> {
 async function createMessageRecord(data: Record<string, unknown>) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await prisma.message.create({ data: data as any });
+    return await prisma.message.create({ data: data as any });
   } catch (error) {
     console.error('[SMS] Failed to create message record:', error);
+    return null;
   }
 }
 
@@ -272,7 +273,7 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
     }
 
     // Update message status based on Twilio status
-    let newStatus: string;
+    let newStatus: 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED' | 'OPENED' | 'CLICKED';
     switch (MessageStatus) {
       case 'delivered':
         newStatus = 'DELIVERED';

@@ -1,5 +1,5 @@
 import { prisma } from '../config/database'
-import type { Workflow, WorkflowExecution } from '@prisma/client'
+import type { Lead, WorkflowExecution } from '@prisma/client'
 
 /**
  * Workflow Executor Service
@@ -19,7 +19,7 @@ interface ExecutionContext {
   executionId: string
   leadId?: string
   eventData: Record<string, unknown>
-  lead?: any
+  lead?: Lead | null
 }
 
 export class WorkflowExecutorService {
@@ -85,7 +85,7 @@ export class WorkflowExecutorService {
       }
 
       // Parse actions from workflow
-      const actions = workflow.actions as WorkflowAction[]
+      const actions = workflow.actions as unknown as WorkflowAction[]
 
       console.log(`   Actions to execute: ${actions.length}`)
 
@@ -287,12 +287,16 @@ export class WorkflowExecutorService {
     }
 
     // Create the task
+    const validPriority = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(priority as string) 
+      ? (priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT')
+      : 'MEDIUM'
+    
     const task = await prisma.task.create({
       data: {
         title: processedTitle,
         description: processedDescription as string | undefined,
         dueDate: dueDateValue,
-        priority: (priority as string) || 'MEDIUM',
+        priority: validPriority,
         status: 'PENDING',
         leadId: context.leadId,
       },
@@ -317,9 +321,14 @@ export class WorkflowExecutorService {
 
     console.log(`      🔄 Updating lead status to: ${status}`)
 
+    const validStatuses = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']
+    const validStatus = validStatuses.includes(status as string)
+      ? (status as 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'PROPOSAL' | 'NEGOTIATION' | 'WON' | 'LOST')
+      : 'NEW'
+
     await prisma.lead.update({
       where: { id: context.leadId },
-      data: { status: status as string },
+      data: { status: validStatus },
     })
 
     // Log activity
@@ -332,7 +341,7 @@ export class WorkflowExecutorService {
         metadata: {
           workflowId: context.workflowId,
           executionId: context.executionId,
-          newStatus: status,
+          newStatus: status as string,
         },
       },
     })
@@ -418,13 +427,14 @@ export class WorkflowExecutorService {
     // Replace lead variables
     if (context.lead) {
       result = result.replace(/\{\{lead\.(\w+)\}\}/g, (match, field) => {
-        return context.lead[field] || match
+        const leadData = context.lead as Record<string, unknown>
+        return leadData[field] !== undefined ? String(leadData[field]) : match
       })
     }
 
     // Replace event data variables
     result = result.replace(/\{\{(\w+)\}\}/g, (match, field) => {
-      const value = (context.eventData as any)[field]
+      const value = (context.eventData as Record<string, unknown>)[field]
       return value !== undefined ? String(value) : match
     })
 

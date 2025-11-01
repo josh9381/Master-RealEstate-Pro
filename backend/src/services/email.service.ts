@@ -269,14 +269,14 @@ async function mockEmailSend(options: EmailOptions): Promise<EmailResult> {
   console.log('Body preview:', (html || text || '').substring(0, 100) + '...');
 
   // Create message record
-  await createMessageRecord({
+  const message = await createMessageRecord({
     type: 'EMAIL',
     direction: 'OUTBOUND',
     subject,
     body: html || text || '',
     fromAddress: FROM_EMAIL,
     toAddress: Array.isArray(to) ? to.join(', ') : to,
-    status: 'SENT',
+    status: 'DELIVERED', // Mock mode treats as immediately delivered
     provider: 'mock',
     leadId,
     metadata: {
@@ -287,7 +287,7 @@ async function mockEmailSend(options: EmailOptions): Promise<EmailResult> {
 
   return {
     success: true,
-    messageId: `mock_${Date.now()}`,
+    messageId: message?.id || `mock_${Date.now()}`,
   };
 }
 
@@ -297,9 +297,10 @@ async function mockEmailSend(options: EmailOptions): Promise<EmailResult> {
 async function createMessageRecord(data: Record<string, unknown>) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await prisma.message.create({ data: data as any });
+    return await prisma.message.create({ data: data as any });
   } catch (error) {
     console.error('[EMAIL] Failed to create message record:', error);
+    return null;
   }
 }
 
@@ -312,7 +313,7 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
 
     // Find message by external ID
     const message = await prisma.message.findFirst({
-      where: { externalId: sg_message_id },
+      where: { externalId: String(sg_message_id) },
     });
 
     if (!message) {

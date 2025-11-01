@@ -201,9 +201,13 @@ export interface CreateLeadData {
   email: string
   phone?: string
   company?: string
+  position?: string
   status?: string
   source?: string
-  assignedTo?: string
+  value?: number
+  stage?: string
+  assignedToId?: string
+  customFields?: Record<string, any>
   tags?: string[]
 }
 
@@ -348,12 +352,18 @@ export interface CampaignsQuery {
 
 export interface CreateCampaignData {
   name: string
-  type: 'email' | 'sms' | 'phone'
-  status?: 'draft' | 'scheduled' | 'active' | 'paused' | 'completed'
+  type: 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL'
+  status?: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
   subject?: string
-  content?: string
-  scheduledAt?: string
-  targetAudience?: string[]
+  body?: string
+  previewText?: string
+  startDate?: string
+  endDate?: string
+  budget?: number
+  audience?: number
+  isABTest?: boolean
+  abTestData?: Record<string, unknown>
+  tagIds?: string[]
 }
 
 export const campaignsApi = {

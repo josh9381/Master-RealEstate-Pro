@@ -79,7 +79,7 @@ export const getTasks = async (req: Request, res: Response) => {
   // Add isOverdue flag
   const tasksWithOverdue = tasks.map(task => ({
     ...task,
-    isOverdue: task.dueDate < new Date() && task.status !== 'COMPLETED' && task.status !== 'CANCELLED',
+    isOverdue: task.dueDate ? task.dueDate < new Date() && task.status !== 'COMPLETED' && task.status !== 'CANCELLED' : false,
   }));
 
   res.json({
@@ -125,7 +125,7 @@ export const getTask = async (req: Request, res: Response) => {
   // Add isOverdue flag
   const taskWithOverdue = {
     ...task,
-    isOverdue: task.dueDate < new Date() && task.status !== 'COMPLETED' && task.status !== 'CANCELLED',
+    isOverdue: task.dueDate ? task.dueDate < new Date() && task.status !== 'COMPLETED' && task.status !== 'CANCELLED' : false,
   };
 
   res.json({

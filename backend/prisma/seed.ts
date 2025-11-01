@@ -72,10 +72,12 @@ async function main() {
 
   console.log('✅ Created tags:', tags.length);
 
-  // Create sample leads
+  // Create sample leads (using upsert to avoid conflicts)
   const leads = await Promise.all([
-    prisma.lead.create({
-      data: {
+    prisma.lead.upsert({
+      where: { email: 'john.smith@example.com' },
+      update: {},
+      create: {
         name: 'John Smith',
         email: 'john.smith@example.com',
         phone: '+1-555-0101',
@@ -91,8 +93,10 @@ async function main() {
         },
       },
     }),
-    prisma.lead.create({
-      data: {
+    prisma.lead.upsert({
+      where: { email: 'sarah.j@example.com' },
+      update: {},
+      create: {
         name: 'Sarah Johnson',
         email: 'sarah.j@example.com',
         phone: '+1-555-0102',
@@ -108,8 +112,10 @@ async function main() {
         },
       },
     }),
-    prisma.lead.create({
-      data: {
+    prisma.lead.upsert({
+      where: { email: 'mbrown@example.com' },
+      update: {},
+      create: {
         name: 'Michael Brown',
         email: 'mbrown@example.com',
         phone: '+1-555-0103',
@@ -124,8 +130,10 @@ async function main() {
         },
       },
     }),
-    prisma.lead.create({
-      data: {
+    prisma.lead.upsert({
+      where: { email: 'emily.davis@example.com' },
+      update: {},
+      create: {
         name: 'Emily Davis',
         email: 'emily.davis@example.com',
         phone: '+1-555-0104',
@@ -235,6 +243,220 @@ async function main() {
   });
 
   console.log('✅ Created tasks');
+
+  // Create example workflows
+  const workflows = await Promise.all([
+    // 1. Welcome Series Workflow
+    prisma.workflow.create({
+      data: {
+        name: 'New Lead Welcome Series',
+        description: 'Automatically send welcome email and create follow-up task for new leads',
+        isActive: true,
+        triggerType: 'LEAD_CREATED',
+        triggerData: {},
+        actions: [
+          {
+            type: 'SEND_EMAIL',
+            config: {
+              to: '{{lead.email}}',
+              subject: 'Welcome to Our Real Estate Platform',
+              body: 'Hi {{lead.firstName}},\n\nThank you for your interest in our real estate services. We\'re excited to help you find the perfect property.\n\nBest regards,\nThe Team',
+            },
+          },
+          {
+            type: 'CREATE_TASK',
+            config: {
+              title: 'Follow up with {{lead.name}}',
+              description: 'Initial contact and needs assessment',
+              dueDate: '+3 days',
+              priority: 'HIGH',
+            },
+          },
+        ],
+        executions: 0,
+      },
+    }),
+
+    // 2. Hot Lead Alert Workflow
+    prisma.workflow.create({
+      data: {
+        name: 'Hot Lead Notification',
+        description: 'Alert sales team when lead status changes to HOT and create urgent task',
+        isActive: true,
+        triggerType: 'LEAD_STATUS_CHANGED',
+        triggerData: {
+          conditions: [
+            {
+              field: 'newStatus',
+              operator: 'equals',
+              value: 'HOT',
+            },
+          ],
+        },
+        actions: [
+          {
+            type: 'SEND_SMS',
+            config: {
+              to: '{{manager.phone}}',
+              message: '🔥 Hot Lead Alert: {{lead.name}} ({{lead.email}}) - Contact ASAP!',
+            },
+          },
+          {
+            type: 'CREATE_TASK',
+            config: {
+              title: 'Contact hot lead: {{lead.name}}',
+              description: 'Priority contact required - Lead is highly interested',
+              dueDate: '+1 day',
+              priority: 'URGENT',
+            },
+          },
+          {
+            type: 'ADD_TAG',
+            config: {
+              tagName: 'Urgent Follow-up',
+            },
+          },
+        ],
+        executions: 0,
+      },
+    }),
+
+    // 3. Re-engagement Campaign Workflow
+    prisma.workflow.create({
+      data: {
+        name: 'Cold Lead Re-engagement',
+        description: 'Automatically re-engage cold leads after 7 days with follow-up email',
+        isActive: false, // Start inactive for this example
+        triggerType: 'LEAD_STATUS_CHANGED',
+        triggerData: {
+          conditions: [
+            {
+              field: 'newStatus',
+              operator: 'equals',
+              value: 'COLD',
+            },
+          ],
+        },
+        actions: [
+          {
+            type: 'SEND_EMAIL',
+            config: {
+              to: '{{lead.email}}',
+              subject: 'Still Looking for the Perfect Property?',
+              body: 'Hi {{lead.firstName}},\n\nWe noticed you were interested in our services. We have some exciting new properties that might interest you.\n\nWould you like to schedule a call to discuss your needs?\n\nBest regards,\nThe Team',
+            },
+          },
+          {
+            type: 'ADD_TAG',
+            config: {
+              tagName: 'Re-engagement Campaign',
+            },
+          },
+          {
+            type: 'UPDATE_STATUS',
+            config: {
+              status: 'CONTACTED',
+            },
+          },
+        ],
+        executions: 0,
+      },
+    }),
+  ]);
+
+  console.log('✅ Created workflows:', workflows.length);
+
+  // Create some email templates
+  const emailTemplates = await Promise.all([
+    prisma.emailTemplate.create({
+      data: {
+        name: 'Welcome Email',
+        subject: 'Welcome to {{company}}',
+        body: 'Hi {{firstName}},\n\nThank you for joining us!\n\nBest regards,\nThe Team',
+        category: 'welcome',
+        isActive: true,
+        variables: { firstName: 'string', company: 'string' },
+      },
+    }),
+    prisma.emailTemplate.create({
+      data: {
+        name: 'Follow-up Email',
+        subject: 'Following up on your inquiry',
+        body: 'Hi {{firstName}},\n\nI wanted to follow up on your recent inquiry about {{topic}}.\n\nBest regards,\n{{senderName}}',
+        category: 'follow-up',
+        isActive: true,
+        variables: { firstName: 'string', topic: 'string', senderName: 'string' },
+      },
+    }),
+  ]);
+
+  console.log('✅ Created email templates:', emailTemplates.length);
+
+  // Create some SMS templates
+  const smsTemplates = await Promise.all([
+    prisma.sMSTemplate.create({
+      data: {
+        name: 'Meeting Reminder',
+        body: 'Hi {{firstName}}, reminder: Meeting tomorrow at {{time}}. Reply CONFIRM.',
+        category: 'reminder',
+        isActive: true,
+        variables: { firstName: 'string', time: 'string' },
+      },
+    }),
+    prisma.sMSTemplate.create({
+      data: {
+        name: 'Hot Lead Alert',
+        body: '🔥 Hot lead: {{leadName}} - {{phone}}. Contact ASAP!',
+        category: 'alert',
+        isActive: true,
+        variables: { leadName: 'string', phone: 'string' },
+      },
+    }),
+  ]);
+
+  console.log('✅ Created SMS templates:', smsTemplates.length);
+
+  // Create some appointments
+  const appointmentDate1 = new Date();
+  appointmentDate1.setDate(appointmentDate1.getDate() + 2);
+  appointmentDate1.setHours(14, 0, 0, 0);
+
+  const appointmentDate2 = new Date();
+  appointmentDate2.setDate(appointmentDate2.getDate() + 5);
+  appointmentDate2.setHours(10, 30, 0, 0);
+
+  const appointments = await Promise.all([
+    prisma.appointment.create({
+      data: {
+        title: 'Property Viewing - Downtown Condo',
+        description: 'Show luxury condo to John Smith',
+        startTime: appointmentDate1,
+        endTime: new Date(appointmentDate1.getTime() + 60 * 60 * 1000), // +1 hour
+        location: '123 Main St, Downtown',
+        type: 'MEETING',
+        status: 'SCHEDULED',
+        userId: adminUser.id,
+        leadId: leads[0].id,
+        attendees: ['john.smith@example.com', 'admin@realestate.com'],
+      },
+    }),
+    prisma.appointment.create({
+      data: {
+        title: 'Initial Consultation - Sarah Johnson',
+        description: 'Discuss investment opportunities',
+        startTime: appointmentDate2,
+        endTime: new Date(appointmentDate2.getTime() + 45 * 60 * 1000), // +45 min
+        meetingUrl: 'https://zoom.us/j/123456789',
+        type: 'CONSULTATION',
+        status: 'SCHEDULED',
+        userId: testUser.id,
+        leadId: leads[1].id,
+        attendees: ['sarah.j@example.com', 'test@realestate.com'],
+      },
+    }),
+  ]);
+
+  console.log('✅ Created appointments:', appointments.length);
 
   console.log('🎉 Database seeded successfully!');
 }

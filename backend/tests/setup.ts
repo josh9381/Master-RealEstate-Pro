@@ -23,12 +23,9 @@ beforeAll(async () => {
 });
 
 // Clean up after all tests
+// Note: We do NOT clean between individual tests to allow integration tests
+// to maintain state and test workflows across multiple operations
 afterAll(async () => {
-  await prisma.$disconnect();
-});
-
-// Clean database between tests
-afterEach(async () => {
   // Delete in correct order to avoid foreign key constraint violations
   // 1. Delete junction tables first (if they exist)
   try {
@@ -38,13 +35,22 @@ afterEach(async () => {
   }
   
   // 2. Delete dependent records (those with foreign keys to users/leads/campaigns)
-  await prisma.activity.deleteMany();
-  await prisma.task.deleteMany();
-  await prisma.note.deleteMany();
+  await prisma.activity.deleteMany().catch(() => {});
+  await prisma.task.deleteMany().catch(() => {});
+  await prisma.note.deleteMany().catch(() => {});
+  await prisma.appointment.deleteMany().catch(() => {});
+  await prisma.message.deleteMany().catch(() => {});
+  await prisma.emailTemplate.deleteMany().catch(() => {});
+  await prisma.sMSTemplate.deleteMany().catch(() => {});
+  await prisma.workflow.deleteMany().catch(() => {});
+  await prisma.workflowExecution.deleteMany().catch(() => {});
   
   // 3. Delete parent records
-  await prisma.campaign.deleteMany();
-  await prisma.lead.deleteMany();
-  await prisma.tag.deleteMany();
-  await prisma.user.deleteMany();
+  await prisma.campaign.deleteMany().catch(() => {});
+  await prisma.lead.deleteMany().catch(() => {});
+  await prisma.tag.deleteMany().catch(() => {});
+  await prisma.user.deleteMany().catch(() => {});
+  
+  // Disconnect from database
+  await prisma.$disconnect();
 });

@@ -5,6 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/Dialog'
 import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X } from 'lucide-react'
 import { AIEmailComposer } from '@/components/ai/AIEmailComposer'
 import { AISMSComposer } from '@/components/ai/AISMSComposer'
@@ -14,6 +24,7 @@ import { Lead } from '@/types'
 import { useToast } from '@/hooks/useToast'
 import { leadsApi, UpdateLeadData } from '@/lib/api'
 import { mockLeads } from '@/data/mockData'
+import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 
 function LeadDetail() {
   const { id } = useParams()
@@ -23,6 +34,7 @@ function LeadDetail() {
   const [showEmailComposer, setShowEmailComposer] = useState(false)
   const [showSMSComposer, setShowSMSComposer] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
 
   // Fetch lead details from API
@@ -31,16 +43,19 @@ function LeadDetail() {
     queryFn: async () => {
       try {
         const response = await leadsApi.getLead(id!)
-        return response.data
+        // Backend returns { success: true, data: { lead } }
+        return response.data?.lead || response.data
       } catch (error) {
-        // If API fails, try to find lead in mock data
-        console.log('API fetch failed, using mock data')
-        const mockLead = mockLeads.find(lead => lead.id === Number(id))
-        return mockLead || null
+        // If API fails, try to find lead in mock data (if enabled)
+        console.log('API fetch failed')
+        if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
+          const mockLead = mockLeads.find(lead => lead.id === Number(id))
+          return mockLead || null
+        }
+        return null
       }
     },
     enabled: !!id,
-    retry: false,
     refetchOnWindowFocus: false,
   })
 
@@ -106,7 +121,23 @@ function LeadDetail() {
   ]
 
   const handleEditLead = () => {
-    setEditingLead(lead)
+    if (!lead) {
+      toast.error('Lead data not loaded')
+      return
+    }
+    // Create a copy with all necessary fields
+    setEditingLead({
+      ...lead,
+      name: lead.name || '',
+      email: lead.email || '',
+      phone: lead.phone || '',
+      company: lead.company || '',
+      position: lead.position || '',
+      status: lead.status || 'NEW',
+      source: lead.source || '',
+      score: lead.score || 0,
+      notes: lead.notes || ''
+    })
     setShowEditModal(true)
   }
 
@@ -120,7 +151,9 @@ function LeadDetail() {
         status: editingLead.status,
         source: editingLead.source,
         score: editingLead.score,
-        assignedTo: editingLead.assignedTo || undefined,
+        assignedToId: typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null 
+          ? (editingLead.assignedTo as any).id 
+          : editingLead.assignedTo || undefined,
         tags: editingLead.tags,
       }
       
@@ -134,9 +167,18 @@ function LeadDetail() {
   }
 
   const handleDeleteLead = () => {
-    if (id && window.confirm('Are you sure you want to delete this lead?')) {
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = () => {
+    if (id) {
       deleteLeadMutation.mutate(id)
+      setShowDeleteConfirm(false)
     }
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false)
   }
 
   return (
@@ -144,8 +186,10 @@ function LeadDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{lead.name}</h1>
-          <p className="mt-2 text-muted-foreground">{lead.position} at {lead.company}</p>
+          <h1 className="text-3xl font-bold">{lead?.name || 'Unknown Lead'}</h1>
+          <p className="mt-2 text-muted-foreground">
+            {lead?.position || 'No position'} at {lead?.company || 'No company'}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleEditLead}>
@@ -191,28 +235,34 @@ function LeadDetail() {
                 <Mail className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">{lead.email}</p>
+                  <p className="text-sm text-muted-foreground">{lead?.email || 'No email provided'}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Phone</p>
-                  <p className="text-sm text-muted-foreground">{lead.phone}</p>
+                  <p className="text-sm text-muted-foreground">{lead?.phone || 'No phone provided'}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <Building className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Company</p>
-                  <p className="text-sm text-muted-foreground">{lead.company}</p>
+                  <p className="text-sm text-muted-foreground">{lead?.company || 'No company provided'}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Created</p>
-                  <p className="text-sm text-muted-foreground">{lead.createdAt}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {lead?.createdAt ? new Date(lead.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    }) : 'Unknown'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -278,22 +328,31 @@ function LeadDetail() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm font-medium">Status</p>
-                <Badge variant="success" className="mt-1">{lead.status}</Badge>
+                <Badge variant="success" className="mt-1">{lead?.status || 'NEW'}</Badge>
               </div>
               <div>
                 <p className="text-sm font-medium">Source</p>
-                <p className="mt-1 text-sm text-muted-foreground">{lead.source}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{lead?.source || 'Unknown'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium">Assigned To</p>
-                <p className="mt-1 text-sm text-muted-foreground">{lead.assignedTo}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {typeof lead?.assignedTo === 'object' && lead?.assignedTo !== null
+                    ? `${(lead.assignedTo as any).firstName || ''} ${(lead.assignedTo as any).lastName || ''}`.trim()
+                    : lead?.assignedTo || 'Unassigned'}
+                </p>
               </div>
               <div>
                 <p className="text-sm font-medium">Tags</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {(lead.tags || []).map((tag) => (
-                    <Badge key={tag} variant="secondary">{tag}</Badge>
-                  ))}
+                  {Array.isArray(lead?.tags) && lead.tags.length > 0 ? (
+                    lead.tags.map((tag, index) => {
+                      const tagName = typeof tag === 'object' && tag !== null ? (tag as any).name : tag
+                      return <Badge key={`${tagName}-${index}`} variant="secondary">{tagName}</Badge>
+                    })
+                  ) : (
+                    <span className="text-sm text-muted-foreground">No tags</span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -305,14 +364,14 @@ function LeadDetail() {
       <AIEmailComposer
         isOpen={showEmailComposer}
         onClose={() => setShowEmailComposer(false)}
-        leadName={lead.name}
-        leadEmail={lead.email}
+        leadName={lead?.name || ''}
+        leadEmail={lead?.email || ''}
       />
       <AISMSComposer
         isOpen={showSMSComposer}
         onClose={() => setShowSMSComposer(false)}
-        leadName={lead.name.split(' ')[0]}
-        leadPhone={lead.phone}
+        leadName={lead?.name?.split(' ')[0] || lead?.name || ''}
+        leadPhone={lead?.phone || ''}
       />
 
       {/* Edit Lead Modal */}
@@ -337,8 +396,8 @@ function LeadDetail() {
                   <div>
                     <label className="text-sm font-medium">Full Name *</label>
                     <Input
-                      value={editingLead.name}
-                      onChange={(e) => setEditingLead({...editingLead, name: e.target.value})}
+                      value={editingLead?.name || ''}
+                      onChange={(e) => setEditingLead({...editingLead!, name: e.target.value})}
                       className="mt-1"
                       placeholder="John Doe"
                     />
@@ -346,8 +405,8 @@ function LeadDetail() {
                   <div>
                     <label className="text-sm font-medium">Position/Title</label>
                     <Input
-                      value={editingLead.position || ''}
-                      onChange={(e) => setEditingLead({...editingLead, position: e.target.value})}
+                      value={editingLead?.position || ''}
+                      onChange={(e) => setEditingLead({...editingLead!, position: e.target.value})}
                       className="mt-1"
                       placeholder="CEO, Manager, etc."
                     />
@@ -356,8 +415,8 @@ function LeadDetail() {
                     <label className="text-sm font-medium">Email *</label>
                     <Input
                       type="email"
-                      value={editingLead.email}
-                      onChange={(e) => setEditingLead({...editingLead, email: e.target.value})}
+                      value={editingLead?.email || ''}
+                      onChange={(e) => setEditingLead({...editingLead!, email: e.target.value})}
                       className="mt-1"
                       placeholder="john@example.com"
                     />
@@ -365,8 +424,8 @@ function LeadDetail() {
                   <div>
                     <label className="text-sm font-medium">Phone</label>
                     <Input
-                      value={editingLead.phone}
-                      onChange={(e) => setEditingLead({...editingLead, phone: e.target.value})}
+                      value={editingLead?.phone || ''}
+                      onChange={(e) => setEditingLead({...editingLead!, phone: e.target.value})}
                       className="mt-1"
                       placeholder="+1 (555) 123-4567"
                     />
@@ -381,8 +440,8 @@ function LeadDetail() {
                   <div>
                     <label className="text-sm font-medium">Company Name</label>
                     <Input
-                      value={editingLead.company}
-                      onChange={(e) => setEditingLead({...editingLead, company: e.target.value})}
+                      value={editingLead?.company || ''}
+                      onChange={(e) => setEditingLead({...editingLead!, company: e.target.value})}
                       className="mt-1"
                       placeholder="Acme Inc"
                     />
@@ -623,6 +682,30 @@ function LeadDetail() {
           </Card>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this lead? This action cannot be undone and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="outline" onClick={cancelDelete}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteLeadMutation.isPending}
+            >
+              {deleteLeadMutation.isPending ? 'Deleting...' : 'Delete Lead'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -39,6 +39,11 @@ if (isDevelopment && process.env.CODESPACE_NAME) {
  */
 export const corsOptions: CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Development mode - allow all origins
+    if (isDevelopment) {
+      return callback(null, true);
+    }
+
     // Allow requests with no origin (like mobile apps, Postman, curl) in development
     if (!origin && isDevelopment) {
       return callback(null, true);
@@ -51,27 +56,6 @@ export const corsOptions: CorsOptions = {
 
     const origin_str = origin || '';
 
-    // Development mode - permissive
-    if (isDevelopment) {
-      // Check against development whitelist
-      if (developmentOrigins.some(allowed => origin_str.startsWith(allowed))) {
-        return callback(null, true);
-      }
-
-      // Allow any localhost in development
-      if (origin_str.includes('localhost') || origin_str.includes('127.0.0.1')) {
-        return callback(null, true);
-      }
-
-      // Allow Codespaces URLs
-      if (origin_str.includes('.app.github.dev')) {
-        return callback(null, true);
-      }
-
-      console.warn(`⚠️  CORS blocked (dev): ${origin_str}`);
-      return callback(new Error(`Origin ${origin_str} not allowed by CORS`));
-    }
-
     // Production mode - strict whitelist only
     if (productionOrigins.includes(origin_str)) {
       return callback(null, true);
@@ -82,10 +66,11 @@ export const corsOptions: CorsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Length', 'X-Request-Id'],
   maxAge: 86400, // 24 hours - cache preflight requests
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
 // Log CORS configuration on startup

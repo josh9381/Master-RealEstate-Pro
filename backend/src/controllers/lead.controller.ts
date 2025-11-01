@@ -252,19 +252,24 @@ export async function createLead(req: Request, res: Response): Promise<void> {
   });
 
   // Log activity
-  await prisma.activity.create({
-    data: {
-      type: 'LEAD_CREATED',
-      title: 'Lead created',
-      description: `Lead "${name}" was created`,
-      leadId: lead.id,
-      userId: req.user!.userId,
-      metadata: {
-        source,
-        status: lead.status,
+  try {
+    await prisma.activity.create({
+      data: {
+        type: 'LEAD_CREATED',
+        title: 'Lead created',
+        description: `Lead "${name}" was created`,
+        leadId: lead.id,
+        userId: req.user!.userId,
+        metadata: {
+          source,
+          status: lead.status,
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.error('Error creating activity:', error);
+    // Don't fail lead creation if activity logging fails
+  }
 
   // Trigger workflows for LEAD_CREATED event
   try {
