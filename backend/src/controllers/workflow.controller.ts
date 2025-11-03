@@ -28,7 +28,7 @@ export const getWorkflows = async (req: Request, res: Response) => {
     where,
     orderBy: { createdAt: 'desc' },
     include: {
-      executionLogs: {
+      workflowExecutions: {
         take: 5,
         orderBy: { startedAt: 'desc' },
       },
@@ -51,7 +51,7 @@ export const getWorkflow = async (req: Request, res: Response) => {
   const workflow = await prisma.workflow.findUnique({
     where: { id },
     include: {
-      executionLogs: {
+      workflowExecutions: {
         take: 20,
         orderBy: { startedAt: 'desc' },
       },

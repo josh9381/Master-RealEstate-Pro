@@ -6,6 +6,7 @@
 import sgMail from '@sendgrid/mail';
 import Handlebars from 'handlebars';
 import { prisma } from '../config/database';
+import { decrypt } from '../utils/encryption';
 
 // Initialize SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
@@ -14,6 +15,56 @@ const FROM_NAME = process.env.FROM_NAME || 'RealEstate Pro';
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
+}
+
+/**
+ * Get email configuration for a user
+ * Falls back to environment variables if no user config exists
+ */
+async function getEmailConfig(userId?: string) {
+  // If no userId provided, use environment variables
+  if (!userId) {
+    return {
+      apiKey: SENDGRID_API_KEY,
+      fromEmail: FROM_EMAIL,
+      fromName: FROM_NAME,
+      mode: 'environment' as const
+    };
+  }
+
+  // Try to get user's config from database
+  try {
+    const config = await prisma.emailConfig.findUnique({
+      where: { userId }
+    });
+
+    // If user has config with API key, use it
+    if (config?.apiKey) {
+      return {
+        apiKey: decrypt(config.apiKey),
+        fromEmail: config.fromEmail || FROM_EMAIL,
+        fromName: config.fromName || FROM_NAME,
+        mode: 'database' as const
+      };
+    }
+
+    // Fall back to environment variables
+    return {
+      apiKey: SENDGRID_API_KEY,
+      fromEmail: FROM_EMAIL,
+      fromName: FROM_NAME,
+      mode: 'environment' as const
+    };
+  } catch (error) {
+    console.error('Error fetching email config:', error);
+    // Fall back to environment variables on error
+    return {
+      apiKey: SENDGRID_API_KEY,
+      fromEmail: FROM_EMAIL,
+      fromName: FROM_NAME,
+      mode: 'environment' as const
+    };
+  }
 }
 
 export interface EmailOptions {
@@ -35,6 +86,7 @@ export interface EmailOptions {
   }>;
   leadId?: string;
   campaignId?: string;
+  userId?: string; // User ID to fetch custom config
   trackOpens?: boolean;
   trackClicks?: boolean;
 }
@@ -59,23 +111,32 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     attachments,
     leadId,
     campaignId,
+    userId,
     trackOpens = true,
     trackClicks = true,
   } = options;
 
   try {
+    // Get email configuration (database or environment)
+    const config = await getEmailConfig(userId);
+
     // Check if SendGrid is configured
-    if (!SENDGRID_API_KEY) {
+    if (!config.apiKey) {
       console.warn('[EMAIL] SendGrid API key not configured, using mock mode');
       return mockEmailSend(options);
     }
+
+    // Set API key for this request
+    sgMail.setApiKey(config.apiKey);
+
+    console.log(`[EMAIL] Using config from ${config.mode} (userId: ${userId || 'none'})`);
 
     // Prepare email message
     const message = {
       to: Array.isArray(to) ? to : [to],
       from: from || {
-        email: FROM_EMAIL,
-        name: FROM_NAME,
+        email: config.fromEmail,
+        name: config.fromName,
       },
       subject,
       html: html || '',
@@ -229,7 +290,8 @@ export async function sendBulkEmails(
     html: string;
     leadId?: string;
   }>,
-  campaignId?: string
+  campaignId?: string,
+  userId?: string
 ): Promise<{ success: number; failed: number }> {
   const results = {
     success: 0,
@@ -240,6 +302,7 @@ export async function sendBulkEmails(
     const result = await sendEmail({
       ...email,
       campaignId,
+      userId,
       trackOpens: true,
       trackClicks: true,
     });
@@ -287,7 +350,7 @@ async function mockEmailSend(options: EmailOptions): Promise<EmailResult> {
 
   return {
     success: true,
-    messageId: message?.id || `mock_${Date.now()}`,
+    messageId: `mock_${Date.now()}`, // Always use mock_ prefix for mode detection
   };
 }
 

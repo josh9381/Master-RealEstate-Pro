@@ -6,6 +6,7 @@
 import twilio from 'twilio';
 import Handlebars from 'handlebars';
 import { prisma } from '../config/database';
+import { decrypt } from '../utils/encryption';
 
 // Initialize Twilio
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
@@ -18,11 +19,70 @@ if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
   twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 }
 
+/**
+ * Get SMS configuration for a user
+ * Falls back to environment variables if no user config exists
+ */
+async function getSMSConfig(userId?: string) {
+  // If no userId provided, use environment variables
+  if (!userId) {
+    return {
+      accountSid: TWILIO_ACCOUNT_SID,
+      authToken: TWILIO_AUTH_TOKEN,
+      phoneNumber: TWILIO_PHONE_NUMBER,
+      client: twilioClient,
+      mode: 'environment' as const
+    };
+  }
+
+  // Try to get user's config from database
+  try {
+    const config = await prisma.sMSConfig.findUnique({
+      where: { userId }
+    });
+
+    // If user has config with credentials, use it
+    if (config?.accountSid && config?.authToken) {
+      const accountSid = decrypt(config.accountSid);
+      const authToken = decrypt(config.authToken);
+      const client = twilio(accountSid, authToken);
+
+      return {
+        accountSid,
+        authToken,
+        phoneNumber: config.phoneNumber || TWILIO_PHONE_NUMBER,
+        client,
+        mode: 'database' as const
+      };
+    }
+
+    // Fall back to environment variables
+    return {
+      accountSid: TWILIO_ACCOUNT_SID,
+      authToken: TWILIO_AUTH_TOKEN,
+      phoneNumber: TWILIO_PHONE_NUMBER,
+      client: twilioClient,
+      mode: 'environment' as const
+    };
+  } catch (error) {
+    console.error('Error fetching SMS config:', error);
+    // Fall back to environment variables on error
+    return {
+      accountSid: TWILIO_ACCOUNT_SID,
+      authToken: TWILIO_AUTH_TOKEN,
+      phoneNumber: TWILIO_PHONE_NUMBER,
+      client: twilioClient,
+      mode: 'environment' as const
+    };
+  }
+}
+
 export interface SMSOptions {
   to: string;
   message: string;
   leadId?: string;
   campaignId?: string;
+  userId?: string; // User ID to fetch custom config
   mediaUrl?: string[]; // For MMS
 }
 
@@ -36,14 +96,19 @@ export interface SMSResult {
  * Send an SMS via Twilio
  */
 export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
-  const { to, message, leadId, campaignId, mediaUrl } = options;
+  const { to, message, leadId, campaignId, userId, mediaUrl } = options;
 
   try {
+    // Get SMS configuration (database or environment)
+    const config = await getSMSConfig(userId);
+
     // Check if Twilio is configured
-    if (!twilioClient) {
+    if (!config.client) {
       console.warn('[SMS] Twilio not configured, using mock mode');
       return mockSMSSend(options);
     }
+
+    console.log(`[SMS] Using config from ${config.mode} (userId: ${userId || 'none'})`);
 
     // Validate phone number format
     const cleanedPhone = to.replace(/[\s-()]/g, '');
@@ -58,10 +123,10 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
     }
 
     // Send SMS via Twilio
-    const twilioMessage = await twilioClient.messages.create({
+    const twilioMessage = await config.client.messages.create({
       body: message,
       to: cleanedPhone,
-      from: TWILIO_PHONE_NUMBER,
+      from: config.phoneNumber,
       ...(mediaUrl && mediaUrl.length > 0 ? { mediaUrl } : {}),
     });
 
@@ -75,7 +140,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
       type: 'SMS',
       direction: 'OUTBOUND',
       body: message,
-      fromAddress: TWILIO_PHONE_NUMBER,
+      fromAddress: config.phoneNumber,
       toAddress: cleanedPhone,
       status: twilioMessage.status === 'queued' || twilioMessage.status === 'sent' ? 'SENT' : 'PENDING',
       externalId: twilioMessage.sid,
@@ -85,6 +150,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
         campaignId,
         mediaUrl,
         numSegments: twilioMessage.numSegments,
+        configMode: config.mode,
       },
     });
 
@@ -96,18 +162,22 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[SMS] Send failed:', errorMessage);
 
+    // Get config for error logging (reuse if possible, or fetch again)
+    const config = await getSMSConfig(userId);
+
     // Log failed message
     await createMessageRecord({
       type: 'SMS',
       direction: 'OUTBOUND',
       body: message,
-      fromAddress: TWILIO_PHONE_NUMBER,
+      fromAddress: config.phoneNumber,
       toAddress: to,
       status: 'FAILED',
       provider: 'twilio',
       leadId,
       metadata: {
         error: errorMessage,
+        configMode: config.mode,
       },
     });
 
@@ -171,7 +241,7 @@ export async function sendTemplateSMS(
 }
 
 /**
- * Bulk send SMS (for campaigns)
+ * Bulk send SMS messages (for campaigns)
  */
 export async function sendBulkSMS(
   messages: Array<{
@@ -179,7 +249,8 @@ export async function sendBulkSMS(
     message: string;
     leadId?: string;
   }>,
-  campaignId?: string
+  campaignId?: string,
+  userId?: string
 ): Promise<{ success: number; failed: number }> {
   const results = {
     success: 0,
@@ -190,6 +261,7 @@ export async function sendBulkSMS(
     const result = await sendSMS({
       ...sms,
       campaignId,
+      userId,
     });
 
     if (result.success) {
@@ -233,7 +305,7 @@ async function mockSMSSend(options: SMSOptions): Promise<SMSResult> {
 
   return {
     success: true,
-    messageId: smsMessage?.id || `mock_sms_${Date.now()}`,
+    messageId: `mock_sms_${Date.now()}`, // Always use mock_ prefix for mode detection
   };
 }
 

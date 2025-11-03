@@ -69,7 +69,7 @@ export async function sendAppointmentReminder(options: SendReminderOptions): Pro
     ${appointment.lead ? `
       <h3>Contact Information:</h3>
       <ul>
-        <li><strong>Name:</strong> ${appointment.lead.name}</li>
+        <li><strong>Name:</strong> ${appointment.lead.firstName} ${appointment.lead.lastName}</li>
         ${appointment.lead.email ? `<li><strong>Email:</strong> ${appointment.lead.email}</li>` : ''}
         ${appointment.lead.phone ? `<li><strong>Phone:</strong> ${appointment.lead.phone}</li>` : ''}
       </ul>

@@ -67,7 +67,8 @@ export const getNote = async (req: Request, res: Response) => {
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+          lastName: true,
           email: true,
           status: true,
         },

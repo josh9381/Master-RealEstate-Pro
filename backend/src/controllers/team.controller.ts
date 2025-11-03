@@ -61,7 +61,7 @@ export async function createTeam(req: Request, res: Response): Promise<void> {
     data: {
       name,
       slug: finalSlug,
-      members: {
+      teamMembers: {
         create: {
           userId: req.user.userId,
           role: 'OWNER'
@@ -69,7 +69,7 @@ export async function createTeam(req: Request, res: Response): Promise<void> {
       }
     },
     include: {
-      members: true
+      teamMembers: true
     }
   });
 
@@ -94,7 +94,7 @@ export async function getTeam(req: Request, res: Response): Promise<void> {
   const team = await prisma.team.findUnique({
     where: { id },
     include: {
-      members: {
+      teamMembers: {
         include: {
           user: {
             select: {
@@ -115,7 +115,7 @@ export async function getTeam(req: Request, res: Response): Promise<void> {
   }
 
   // Check if user is a member
-  const isMember = team.members.some(m => m.userId === req.user!.userId);
+  const isMember = team.teamMembers.some(m => m.userId === req.user!.userId);
 
   if (!isMember) {
     throw new UnauthorizedError('You are not a member of this team');

@@ -86,7 +86,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         lead: {
           select: {
             id: true,
-            name: true
+            firstName: true,
+            lastName: true
           }
         }
       }
@@ -181,7 +182,8 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
       orderBy: { score: 'desc' },
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         score: true,
         status: true,
@@ -385,7 +387,8 @@ export const getActivityFeed = async (req: Request, res: Response) => {
         lead: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         },

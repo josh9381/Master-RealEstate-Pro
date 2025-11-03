@@ -44,12 +44,12 @@ function CampaignsList() {
       try {
         const params: { 
           search?: string; 
-          status?: 'draft' | 'scheduled' | 'active' | 'paused' | 'completed';
-          type?: 'email' | 'sms' | 'phone';
+          status?: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+          type?: 'EMAIL' | 'SMS' | 'PHONE';
         } = {}
         if (searchQuery) params.search = searchQuery
         if (activeTab !== 'all') {
-          params.status = activeTab as 'draft' | 'scheduled' | 'active' | 'paused' | 'completed'
+          params.status = activeTab.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED'
         }
         
         const response = await campaignsApi.getCampaigns(params)

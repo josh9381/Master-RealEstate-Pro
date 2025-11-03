@@ -98,14 +98,20 @@ api.interceptors.response.use(
       }
 
       try {
-        const response = await axios.post('/api/auth/refresh', { refreshToken })
-        const { accessToken } = response.data
+        const response = await axios.post(`${getApiBaseUrl()}/auth/refresh`, { refreshToken })
+        // Handle both token structures: {data: {accessToken}} and {data: {tokens: {accessToken}}}
+        const data = response.data.data || response.data
+        const newAccessToken = data.tokens?.accessToken || data.accessToken
 
-        localStorage.setItem('accessToken', accessToken)
-        processQueue(null, accessToken)
+        if (!newAccessToken) {
+          throw new Error('No access token in refresh response')
+        }
+
+        localStorage.setItem('accessToken', newAccessToken)
+        processQueue(null, newAccessToken)
 
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
         }
         return api(originalRequest)
       } catch (refreshError) {
@@ -197,7 +203,8 @@ export interface LeadsQuery {
 }
 
 export interface CreateLeadData {
-  name: string
+  firstName: string
+  lastName: string
   email: string
   phone?: string
   company?: string
@@ -344,8 +351,8 @@ export interface CampaignsQuery {
   page?: number
   limit?: number
   search?: string
-  type?: 'email' | 'sms' | 'phone'
-  status?: 'draft' | 'scheduled' | 'active' | 'paused' | 'completed'
+  type?: 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL'
+  status?: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
 }
@@ -402,8 +409,15 @@ export const campaignsApi = {
     return response.data
   },
 
-  sendCampaign: async (id: string) => {
-    const response = await api.post(`/campaigns/${id}/send`)
+  sendCampaign: async (id: string, options?: { leadIds?: string[], filters?: any }) => {
+    const response = await api.post(`/campaigns/${id}/send`, options || {})
+    return response.data
+  },
+
+  previewCampaign: async (id: string, leadIds?: string[]) => {
+    const response = await api.get(`/campaigns/${id}/preview`, {
+      params: leadIds ? { leadIds: leadIds.join(',') } : {}
+    })
     return response.data
   },
 
@@ -913,33 +927,33 @@ export const settingsApi = {
   // Email Configuration
   getEmailConfig: async () => {
     const response = await api.get('/settings/email')
-    return response.data
+    return response.data.data // Unwrap { success, data: { config } }
   },
 
   updateEmailConfig: async (data: any) => {
     const response = await api.put('/settings/email', data)
-    return response.data
+    return response.data.data
   },
 
   testEmail: async (data: any) => {
     const response = await api.post('/settings/email/test', data)
-    return response.data
+    return response.data.data
   },
 
   // SMS Configuration
   getSMSConfig: async () => {
     const response = await api.get('/settings/sms')
-    return response.data
+    return response.data.data // Unwrap { success, data: { config } }
   },
 
   updateSMSConfig: async (data: any) => {
     const response = await api.put('/settings/sms', data)
-    return response.data
+    return response.data.data
   },
 
   testSMS: async (data: any) => {
     const response = await api.post('/settings/sms/test', data)
-    return response.data
+    return response.data.data
   },
 
   // Notification Settings

@@ -201,7 +201,7 @@ export async function getLead(req: Request, res: Response): Promise<void> {
  * POST /api/leads
  */
 export async function createLead(req: Request, res: Response): Promise<void> {
-  const { name, email, phone, company, position, status, source, value, stage, assignedToId, customFields } = req.body;
+  const { firstName, lastName, email, phone, company, position, status, source, value, stage, assignedToId, customFields } = req.body;
 
   // Check if email already exists
   const existingLead = await prisma.lead.findUnique({
@@ -226,7 +226,8 @@ export async function createLead(req: Request, res: Response): Promise<void> {
   // Create the lead
   const lead = await prisma.lead.create({
     data: {
-      name,
+      firstName,
+      lastName,
       email,
       phone,
       company,
@@ -257,7 +258,7 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       data: {
         type: 'LEAD_CREATED',
         title: 'Lead created',
-        description: `Lead "${name}" was created`,
+        description: `Lead "${firstName} ${lastName}" was created`,
         leadId: lead.id,
         userId: req.user!.userId,
         metadata: {

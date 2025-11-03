@@ -635,12 +635,12 @@ const AIHub = () => {
           <div className="grid gap-4 md:grid-cols-3">
             {recommendations.map((rec) => {
               // Handle both component references (mock data) and string names (API data)
-              const Icon = typeof rec.icon === 'string' ? iconMap[rec.icon] || Target : rec.icon
+              const Icon = typeof rec.icon === 'string' ? (iconMap[rec.icon] || Target) : (rec.icon || Target)
               return (
                 <div key={rec.id} className="rounded-lg border p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="p-2 bg-primary/10 rounded-lg">
-                      <Icon className="h-5 w-5 text-primary" />
+                      {Icon && <Icon className="h-5 w-5 text-primary" />}
                     </div>
                     <Badge
                       variant={

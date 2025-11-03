@@ -78,7 +78,8 @@ async function main() {
       where: { email: 'john.smith@example.com' },
       update: {},
       create: {
-        name: 'John Smith',
+        firstName: 'John',
+        lastName: 'Smith',
         email: 'john.smith@example.com',
         phone: '+1-555-0101',
         company: 'Smith Properties',
@@ -97,7 +98,8 @@ async function main() {
       where: { email: 'sarah.j@example.com' },
       update: {},
       create: {
-        name: 'Sarah Johnson',
+        firstName: 'Sarah',
+        lastName: 'Johnson',
         email: 'sarah.j@example.com',
         phone: '+1-555-0102',
         company: 'Johnson Real Estate',
@@ -116,7 +118,8 @@ async function main() {
       where: { email: 'mbrown@example.com' },
       update: {},
       create: {
-        name: 'Michael Brown',
+        firstName: 'Michael',
+        lastName: 'Brown',
         email: 'mbrown@example.com',
         phone: '+1-555-0103',
         company: 'Brown Investments',
@@ -134,7 +137,8 @@ async function main() {
       where: { email: 'emily.davis@example.com' },
       update: {},
       create: {
-        name: 'Emily Davis',
+        firstName: 'Emily',
+        lastName: 'Davis',
         email: 'emily.davis@example.com',
         phone: '+1-555-0104',
         status: 'NEW',

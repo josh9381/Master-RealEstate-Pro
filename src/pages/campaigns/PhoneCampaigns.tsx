@@ -26,7 +26,7 @@ const PhoneCampaigns = () => {
   const loadCampaigns = async () => {
     setIsLoading(true);
     try {
-      const response = await campaignsApi.getCampaigns({ type: 'phone', limit: 50 });
+      const response = await campaignsApi.getCampaigns({ type: 'PHONE', limit: 50 });
       const phoneCampaigns = response.data || [];
       
       setCampaigns(phoneCampaigns);

@@ -104,6 +104,18 @@ router.post(
 );
 
 /**
+ * @route   GET /api/campaigns/:id/preview
+ * @desc    Preview campaign messages before sending
+ * @access  Private
+ * @note    Temporarily disabled - function needs to be implemented
+ */
+// router.get(
+//   '/:id/preview',
+//   validateParams(campaignIdSchema),
+//   asyncHandler(previewCampaignMessages)
+// );
+
+/**
  * @route   POST /api/campaigns/:id/send
  * @desc    Send/Launch a campaign
  * @access  Private

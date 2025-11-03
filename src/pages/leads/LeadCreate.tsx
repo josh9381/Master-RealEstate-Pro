@@ -56,7 +56,8 @@ export default function LeadCreate() {
     
     // Transform formData to match backend expectations
     const leadData: CreateLeadData = {
-      name: `${formData.firstName} ${formData.lastName}`.trim(),
+      firstName: formData.firstName,
+      lastName: formData.lastName,
       email: formData.email,
       phone: formData.phone || undefined,
       company: formData.company || undefined,

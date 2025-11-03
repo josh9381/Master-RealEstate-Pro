@@ -10,7 +10,7 @@ type MessageType = 'EMAIL' | 'SMS' | 'CALL' | 'SOCIAL' | 'NEWSLETTER'
 type MessageDirection = 'INBOUND' | 'OUTBOUND'
 type MessageStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED' | 'OPENED' | 'CLICKED'
 
-// Get all messages (inbox)
+// Get all messages (inbox) - grouped by threads
 export const getMessages = async (req: Request, res: Response) => {
   const { type, direction, status, leadId, search, page = 1, limit = 50 } = req.query
 
@@ -46,20 +46,92 @@ export const getMessages = async (req: Request, res: Response) => {
   const limitNum = Number(limit)
   const skip = (pageNum - 1) * limitNum
 
-  const [messages, total] = await Promise.all([
-    prisma.message.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limitNum,
-    }),
-    prisma.message.count({ where }),
-  ])
+  // Get all messages first
+  const messages = await prisma.message.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      lead: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+        },
+      },
+    },
+  })
+
+  // Group messages into threads
+  const threadMap = new Map<string, any>()
+
+  messages.forEach((message) => {
+    const threadKey = message.threadId || message.leadId || message.fromAddress
+
+    if (!threadMap.has(threadKey)) {
+      // Create new thread
+      const contactName = message.lead
+        ? `${message.lead.firstName} ${message.lead.lastName}`
+        : message.direction === 'INBOUND'
+        ? message.fromAddress
+        : message.toAddress
+
+      threadMap.set(threadKey, {
+        id: threadKey,
+        threadId: message.threadId || threadKey,
+        contact: contactName,
+        type: message.type.toLowerCase(),
+        subject: message.subject || '',
+        lastMessage: message.body.substring(0, 100),
+        timestamp: message.createdAt,
+        unread: message.status === 'DELIVERED' || message.status === 'SENT' ? 1 : 0,
+        messages: [],
+        leadId: message.leadId,
+        lead: message.lead,
+      })
+    }
+
+    // Add message to thread
+    const thread = threadMap.get(threadKey)
+    thread.messages.push({
+      id: message.id,
+      threadId: message.threadId || threadKey,
+      type: message.type.toLowerCase(),
+      from: message.fromAddress,
+      to: message.toAddress,
+      contact: thread.contact,
+      subject: message.subject,
+      body: message.body,
+      timestamp: message.createdAt,
+      date: message.createdAt,
+      unread: message.status === 'DELIVERED' || message.status === 'SENT',
+      starred: false,
+      status: message.status.toLowerCase(),
+      emailOpened: message.status === 'OPENED' || message.status === 'CLICKED',
+      emailClicked: message.status === 'CLICKED',
+    })
+
+    // Update thread's last message time if this is more recent
+    if (new Date(message.createdAt) > new Date(thread.timestamp)) {
+      thread.timestamp = message.createdAt
+      thread.lastMessage = message.body.substring(0, 100)
+    }
+  })
+
+  // Convert map to array and sort by most recent
+  const threads = Array.from(threadMap.values()).sort((a, b) =>
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  )
+
+  // Apply pagination
+  const paginatedThreads = threads.slice(skip, skip + limitNum)
+  const total = threads.length
 
   res.json({
     success: true,
     data: {
-      messages,
+      threads: paginatedThreads,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -121,10 +193,10 @@ export const sendEmail = async (req: Request, res: Response) => {
     if (leadId) {
       const lead = await prisma.lead.findUnique({ where: { id: leadId } })
       if (lead) {
-        const {firstName, lastName} = templateService.parseFullName(lead.name)
+        const {firstName, lastName} = { firstName: lead.firstName, lastName: lead.lastName }
         context.lead = {
           id: lead.id,
-          name: lead.name,
+          name: `${lead.firstName} ${lead.lastName}`.trim(),
           firstName,
           lastName,
           email: lead.email,
@@ -217,10 +289,10 @@ export const sendSMS = async (req: Request, res: Response) => {
     if (leadId) {
       const lead = await prisma.lead.findUnique({ where: { id: leadId } })
       if (lead) {
-        const {firstName, lastName} = templateService.parseFullName(lead.name)
+        const {firstName, lastName} = { firstName: lead.firstName, lastName: lead.lastName }
         context.lead = {
           id: lead.id,
-          name: lead.name,
+          name: `${lead.firstName} ${lead.lastName}`.trim(),
           firstName,
           lastName,
           email: lead.email,

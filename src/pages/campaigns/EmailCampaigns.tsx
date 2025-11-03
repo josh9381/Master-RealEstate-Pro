@@ -28,7 +28,7 @@ const EmailCampaigns = () => {
   const loadCampaigns = async () => {
     setIsLoading(true);
     try {
-      const response = await campaignsApi.getCampaigns({ type: 'email', limit: 50 });
+      const response = await campaignsApi.getCampaigns({ type: 'EMAIL', limit: 50 });
       const emailCampaigns = response.data || [];
       
       setCampaigns(emailCampaigns);

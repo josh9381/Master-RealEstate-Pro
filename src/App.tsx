@@ -80,6 +80,7 @@ import GoogleIntegration from './pages/settings/GoogleIntegration'
 import TwilioSetup from './pages/settings/TwilioSetup'
 import ServiceConfiguration from './pages/settings/ServiceConfiguration'
 import DemoDataGenerator from './pages/settings/DemoDataGenerator'
+import Integrations from './pages/settings/Integrations'
 
 // Admin
 import AdminPanel from './pages/admin/AdminPanel'
@@ -219,6 +220,7 @@ function App() {
         <Route path="/settings/tags" element={<TagsManager />} />
         <Route path="/settings/custom-fields" element={<CustomFieldsManager />} />
         <Route path="/settings/security/password" element={<PasswordSecurityPage />} />
+        <Route path="/integrations" element={<Integrations />} />
         
         {/* Notifications */}
         <Route path="/notifications" element={<NotificationsPage />} />

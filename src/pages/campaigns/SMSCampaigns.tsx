@@ -27,7 +27,7 @@ const SMSCampaigns = () => {
   const loadCampaigns = async () => {
     setIsLoading(true);
     try {
-      const response = await campaignsApi.getCampaigns({ type: 'sms', limit: 50 });
+      const response = await campaignsApi.getCampaigns({ type: 'SMS', limit: 50 });
       const campaigns = response.data || [];
       
       setSmsCampaigns(campaigns);

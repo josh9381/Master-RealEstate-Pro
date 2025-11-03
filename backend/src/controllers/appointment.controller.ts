@@ -50,7 +50,8 @@ export async function listAppointments(req: Request, res: Response): Promise<voi
         lead: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
             phone: true,
           },
@@ -128,7 +129,8 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
           phone: true,
         },
@@ -160,7 +162,8 @@ export async function getAppointment(req: Request, res: Response): Promise<void>
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
           phone: true,
           company: true,
@@ -257,7 +260,8 @@ export async function updateAppointment(req: Request, res: Response): Promise<vo
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
           phone: true,
         },
@@ -339,7 +343,8 @@ export async function confirmAppointment(req: Request, res: Response): Promise<v
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
         },
       },
@@ -379,7 +384,8 @@ export async function getCalendarView(req: Request, res: Response): Promise<void
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
         },
       },
@@ -441,7 +447,8 @@ export async function getUpcomingAppointments(req: Request, res: Response): Prom
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
           phone: true,
         },

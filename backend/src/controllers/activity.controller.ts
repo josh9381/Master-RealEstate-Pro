@@ -49,7 +49,8 @@ export const getActivities = async (req: Request, res: Response) => {
         lead: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
             status: true
           }
@@ -159,7 +160,8 @@ export const getActivity = async (req: Request, res: Response) => {
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+          lastName: true,
           email: true,
           phone: true,
           status: true,
@@ -231,7 +233,8 @@ export const createActivity = async (req: Request, res: Response) => {
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
           status: true
         }
@@ -285,7 +288,8 @@ export const updateActivity = async (req: Request, res: Response) => {
       lead: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
           status: true
         }
@@ -411,7 +415,8 @@ export const getCampaignActivities = async (req: Request, res: Response) => {
         lead: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         }

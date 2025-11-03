@@ -11,9 +11,17 @@ const TwilioSetup = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [connected, setConnected] = useState(true);
-  const [accountSid, setAccountSid] = useState('AC1234567890abcdef1234567890abcd');
-  const [authToken, setAuthToken] = useState('abcdef1234567890abcdef123456');
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [accountSid, setAccountSid] = useState('');
+  const [authToken, setAuthToken] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  
+  // Status indicators
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [configMode, setConfigMode] = useState<'production' | 'mock' | 'environment'>('mock');
+  const [lastTested, setLastTested] = useState<string | null>(null);
+  
   const [phoneNumbers] = useState([
     {
       id: '1',
@@ -40,16 +48,31 @@ const TwilioSetup = () => {
     else setLoading(true);
     
     try {
-      const config = await settingsApi.getSMSConfig();
+      const response = await settingsApi.getSMSConfig();
+      const config = response?.config;
+      
       if (config) {
-        setAccountSid(config.accountSid || 'AC1234567890abcdef1234567890abcd');
-        setAuthToken(config.authToken || 'abcdef1234567890abcdef123456');
-        setConnected(config.connected ?? true);
+        // Don't set credentials if they're masked
+        if (config.accountSid && !config.accountSid.startsWith('••••')) {
+          setAccountSid(config.accountSid);
+        }
+        if (config.authToken && !config.authToken.startsWith('••••')) {
+          setAuthToken(config.authToken);
+        }
+        setPhoneNumber(config.phoneNumber || '');
+        setConnected(!!config.isActive && !!config.accountSid && !!config.authToken);
+        
+        // Update status indicators
+        const hasCredentials = config.accountSid && config.authToken && !config.accountSid.startsWith('••••');
+        setIsConfigured(config.isActive && hasCredentials);
+        setConfigMode(hasCredentials ? 'production' : 'mock');
       }
       if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
       console.error('Failed to load Twilio config:', error);
       toast.error('Failed to load settings, using defaults');
+      setConfigMode('mock');
+      setIsConfigured(false);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -59,31 +82,69 @@ const TwilioSetup = () => {
   const handleRefresh = () => loadTwilioConfig(true);
 
   const handleSaveCredentials = async () => {
+    if (!accountSid || !authToken || !phoneNumber) {
+      toast.error('Please fill in all Twilio credentials');
+      return;
+    }
+
+    if (!accountSid.startsWith('AC')) {
+      toast.error('Invalid Account SID. Must start with "AC"');
+      return;
+    }
+
     setSaving(true);
     try {
-      await settingsApi.updateSMSConfig({ accountSid, authToken });
-      toast.success('Credentials Saved', 'Twilio credentials have been updated successfully.');
+      await settingsApi.updateSMSConfig({ 
+        provider: 'twilio',
+        accountSid, 
+        authToken,
+        phoneNumber,
+        isActive: true
+      });
+      toast.success('Twilio credentials saved successfully');
+      setConnected(true);
       loadTwilioConfig(); // Reload
     } catch (error) {
       console.error('Failed to save credentials:', error);
-      toast.error('Error', 'Failed to save credentials.');
+      toast.error('Failed to save credentials');
     } finally {
       setSaving(false);
     }
   };
 
   const handleTestConnection = async () => {
-    setLoading(true);
+    if (!phoneNumber) {
+      toast.error('Please enter a phone number to send test SMS');
+      return;
+    }
+
+    setTestingConnection(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setConnected(true);
-      toast.success('Connection Successful', 'Successfully connected to Twilio API.');
-    } catch (error) {
+      const result = await settingsApi.testSMS({ 
+        to: phoneNumber, // Test SMS to your Twilio number (won't work but will test API)
+        message: 'Test SMS from RealEstate Pro. If you receive this, your Twilio configuration is working!'
+      });
+      
+      // Update status based on test result
+      setLastTested(new Date().toLocaleString());
+      setConfigMode(result.mode === 'mock' ? 'mock' : 'production');
+      setIsConfigured(result.mode !== 'mock');
+      setConnected(result.mode !== 'mock');
+      
+      if (result.mode === 'mock') {
+        toast.success('Test SMS sent in MOCK mode (no actual delivery). Save your credentials first.');
+      } else {
+        toast.success(`Test SMS sent successfully in PRODUCTION mode!`);
+      }
+    } catch (error: any) {
+      console.error('Failed to test connection:', error);
+      const message = error.response?.data?.error || error.message || 'Failed to send test SMS';
+      toast.error(message);
       setConnected(false);
-      toast.error('Connection Failed', 'Unable to connect to Twilio. Please check your credentials.');
+      setConfigMode('mock');
+      setIsConfigured(false);
     } finally {
-      setLoading(false);
+      setTestingConnection(false);
     }
   };
 
@@ -122,28 +183,73 @@ const TwilioSetup = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Connection Status</CardTitle>
-              <CardDescription>Current Twilio API connection</CardDescription>
+              <CardTitle>SMS Service Status</CardTitle>
+              <CardDescription>Current SMS delivery configuration</CardDescription>
             </div>
-            <Badge variant={connected ? "success" : "secondary"}>
-              {connected ? 'Connected' : 'Disconnected'}
-            </Badge>
+            <div className="flex items-center space-x-2">
+              {configMode === 'production' ? (
+                <Badge variant="success">Production Mode</Badge>
+              ) : configMode === 'environment' ? (
+                <Badge variant="default">Environment Mode</Badge>
+              ) : (
+                <Badge variant="secondary">Mock Mode</Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4">
-            <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-green-100' : 'bg-gray-100'}`}>
-              <Power className={`h-6 w-6 ${connected ? 'text-green-600' : 'text-gray-400'}`} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex items-center space-x-3">
+              <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-green-100' : 'bg-gray-100'}`}>
+                <Power className={`h-6 w-6 ${connected ? 'text-green-600' : 'text-gray-400'}`} />
+              </div>
+              <div>
+                <p className="font-medium">
+                  {isConfigured ? 'Credentials Configured' : 'No Credentials'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {isConfigured ? 'Using database configuration' : 'Add Twilio credentials to enable'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium">
-                {connected ? 'Successfully connected to Twilio' : 'Not connected'}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {connected ? 'Last verified: 2 minutes ago' : 'Connect to verify'}
-              </p>
+            <div className="flex items-center space-x-3">
+              {lastTested ? (
+                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-green-100">
+                  <MessageSquare className="h-6 w-6 text-green-600" />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-gray-100">
+                  <MessageSquare className="h-6 w-6 text-gray-400" />
+                </div>
+              )}
+              <div>
+                <p className="font-medium">
+                  {lastTested ? 'Connection Tested' : 'Not Tested'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {lastTested ? `Last test: ${lastTested}` : 'Click "Send Test SMS" to verify'}
+                </p>
+              </div>
             </div>
           </div>
+          
+          {configMode === 'mock' && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Mock Mode:</strong> SMS messages will be logged but not actually sent. 
+                Add your Twilio credentials above and save to enable production mode.
+              </p>
+            </div>
+          )}
+          
+          {configMode === 'production' && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                <strong>Production Mode:</strong> SMS messages will be sent using your Twilio credentials. 
+                All campaign messages will be delivered to recipients.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -174,12 +280,25 @@ const TwilioSetup = () => {
               className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
             />
           </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Phone Number</label>
+            <input
+              type="text"
+              placeholder="+15551234567"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Your Twilio phone number in E.164 format (e.g., +15551234567)
+            </p>
+          </div>
           <div className="flex space-x-2">
             <Button onClick={handleSaveCredentials} disabled={saving}>
               {saving ? 'Saving...' : 'Save Credentials'}
             </Button>
-            <Button variant="outline" onClick={handleTestConnection} disabled={saving}>
-              Test Connection
+            <Button variant="outline" onClick={handleTestConnection} disabled={testingConnection}>
+              {testingConnection ? 'Testing...' : 'Send Test SMS'}
             </Button>
           </div>
         </CardContent>

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../config/database';
 import { UnauthorizedError } from '../../middleware/errorHandler';
 import { encrypt, decrypt } from '../../utils/encryption';
+import { sendEmail } from '../../services/email.service';
 
 /**
  * Get email configuration
@@ -121,24 +122,53 @@ export async function testEmail(req: Request, res: Response): Promise<void> {
     where: { userId: req.user.userId }
   });
 
-  if (!config || !config.isActive) {
-    throw new Error('Email configuration not found or not active');
+  if (!config) {
+    throw new Error('Email configuration not found. Please configure email settings first.');
   }
 
-  // TODO: Integrate with actual email service (SendGrid/SMTP)
-  // For now, just return success
-  console.log('Test email would be sent to:', to);
-  console.log('Subject:', subject || 'Test Email from Master RealEstate Pro');
-  console.log('Message:', message || 'This is a test email.');
+  if (!config.apiKey && !config.smtpHost) {
+    throw new Error('Email configuration incomplete. Please add SendGrid API key or SMTP settings.');
+  }
+
+  // Use recipient email or user's from email as fallback
+  const testRecipient = to || config.fromEmail;
+  const testSubject = subject || 'Test Email from Master RealEstate Pro';
+  const testMessage = message || `
+    <h2>Test Email Successful!</h2>
+    <p>This is a test email from your Master RealEstate Pro CRM.</p>
+    <p><strong>Configuration:</strong></p>
+    <ul>
+      <li>Provider: ${config.provider}</li>
+      <li>From: ${config.fromName || 'CRM'} &lt;${config.fromEmail}&gt;</li>
+      <li>Status: ${config.isActive ? 'Active' : 'Inactive'}</li>
+    </ul>
+    <p>If you received this email, your email configuration is working correctly!</p>
+  `;
+
+  // Send actual test email using the email service
+  const result = await sendEmail({
+    to: testRecipient || '',
+    subject: testSubject,
+    html: testMessage,
+    userId: req.user.userId // Pass userId for config lookup
+  });
+
+  if (!result.success) {
+    throw new Error(`Failed to send test email: ${result.error}`);
+  }
 
   res.status(200).json({
     success: true,
-    message: 'Test email sent successfully (mock mode)',
+    message: result.messageId?.startsWith('mock_') 
+      ? 'Test email sent successfully (mock mode - no API key configured)'
+      : 'Test email sent successfully! Check your inbox.',
     data: {
-      to,
+      to: testRecipient,
       from: config.fromEmail,
-      subject: subject || 'Test Email',
-      provider: config.provider
+      subject: testSubject,
+      provider: config.provider,
+      messageId: result.messageId,
+      mode: result.messageId?.startsWith('mock_') ? 'mock' : 'production'
     }
   });
 }

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import type { CampaignStatus, CampaignType } from '@prisma/client';
+import { executeCampaign } from '../services/campaign-executor.service';
 
 /**
  * Get all campaigns with filtering and pagination
@@ -48,7 +49,7 @@ export const getCampaigns = async (req: Request, res: Response) => {
     prisma.campaign.findMany({
       where,
       include: {
-        createdBy: {
+        user: {
           select: {
             id: true,
             firstName: true,
@@ -112,7 +113,7 @@ export const getCampaign = async (req: Request, res: Response) => {
   const campaign = await prisma.campaign.findUnique({
     where: { id },
     include: {
-      createdBy: {
+      user: {
         select: {
           id: true,
           firstName: true,
@@ -203,7 +204,7 @@ export const createCampaign = async (req: Request, res: Response) => {
       }),
     },
     include: {
-      createdBy: {
+      user: {
         select: {
           id: true,
           firstName: true,
@@ -216,7 +217,7 @@ export const createCampaign = async (req: Request, res: Response) => {
     },
   });
 
-  res.status(201).json({
+  res.json({
     success: true,
     data: { campaign },
     message: 'Campaign created successfully',
@@ -268,7 +269,7 @@ export const updateCampaign = async (req: Request, res: Response) => {
     where: { id },
     data: processedData,
     include: {
-      createdBy: {
+      user: {
         select: {
           id: true,
           firstName: true,
@@ -451,7 +452,7 @@ export const pauseCampaign = async (req: Request, res: Response) => {
     where: { id },
     data: { status: 'PAUSED' },
     include: {
-      createdBy: {
+      user: {
         select: {
           id: true,
           firstName: true,
@@ -474,9 +475,11 @@ export const pauseCampaign = async (req: Request, res: Response) => {
 /**
  * Send/Launch a campaign
  * POST /api/campaigns/:id/send
+ * Body: { leadIds?: string[], filters?: { status?: string[], tags?: string[], minScore?: number } }
  */
 export const sendCampaign = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const { leadIds, filters } = req.body;
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -492,20 +495,29 @@ export const sendCampaign = async (req: Request, res: Response) => {
     throw new NotFoundError('Campaign not found');
   }
 
-  // Update campaign status to ACTIVE and set start date if not set
-  const updateData: any = { 
-    status: 'ACTIVE',
-  };
+  // Execute the campaign (actually send messages)
+  console.log(`[CAMPAIGN] Starting execution for campaign: ${existingCampaign.name}`);
   
-  if (!existingCampaign.startDate) {
-    updateData.startDate = new Date();
+  const executionResult = await executeCampaign({
+    campaignId: id,
+    leadIds,
+    filters,
+  });
+
+  if (!executionResult.success) {
+    res.status(400).json({
+      success: false,
+      message: 'Campaign execution failed',
+      data: executionResult,
+    });
+    return;
   }
 
-  const campaign = await prisma.campaign.update({
+  // Get updated campaign with metrics
+  const campaign = await prisma.campaign.findUnique({
     where: { id },
-    data: updateData,
     include: {
-      createdBy: {
+      user: {
         select: {
           id: true,
           firstName: true,
@@ -520,7 +532,14 @@ export const sendCampaign = async (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    data: { campaign },
-    message: 'Campaign sent successfully',
+    data: { 
+      campaign,
+      execution: {
+        totalLeads: executionResult.totalLeads,
+        sent: executionResult.sent,
+        failed: executionResult.failed,
+      }
+    },
+    message: `Campaign sent successfully to ${executionResult.sent} leads`,
   });
 };

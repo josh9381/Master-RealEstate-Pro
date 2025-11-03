@@ -43,7 +43,8 @@ export const getTag = async (req: Request, res: Response) => {
       leads: {
         select: {
           id: true,
-          name: true,
+          firstName: true,
+            lastName: true,
           email: true,
           status: true,
         },
@@ -248,7 +249,7 @@ export const addTagsToLead = async (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    data: { lead: updatedLead },
+    data: { leads: updatedLead },
     message: `${newTagIds.length} tag(s) added to lead`,
   });
 };
@@ -294,7 +295,7 @@ export const removeTagFromLead = async (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    data: { lead: updatedLead },
+    data: { leads: updatedLead },
     message: 'Tag removed from lead',
   });
 };

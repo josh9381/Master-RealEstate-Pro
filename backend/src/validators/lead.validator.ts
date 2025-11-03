@@ -17,7 +17,8 @@ const leadStatusSchema = z.enum([
  * Create lead validation schema
  */
 export const createLeadSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255),
+  firstName: z.string().min(1, 'First name is required').max(100),
+  lastName: z.string().min(1, 'Last name is required').max(100),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10).max(20).optional(),
   company: z.string().max(255).optional(),
@@ -34,7 +35,8 @@ export const createLeadSchema = z.object({
  * Update lead validation schema (all fields optional)
  */
 export const updateLeadSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
   phone: z.string().min(10).max(20).optional().nullable(),
   company: z.string().max(255).optional().nullable(),
@@ -58,8 +60,8 @@ export const listLeadsQuerySchema = z.object({
   status: leadStatusSchema.optional(),
   source: z.string().optional(),
   assignedToId: z.string().cuid().optional(),
-  search: z.string().optional(), // Search in name, email, company
-  sortBy: z.enum(['createdAt', 'updatedAt', 'score', 'value', 'name']).optional().default('createdAt'),
+  search: z.string().optional(), // Search in firstName, lastName, email, company
+  sortBy: z.enum(['createdAt', 'updatedAt', 'score', 'value', 'firstName', 'lastName']).optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
   minScore: z.string().regex(/^\d+$/).transform(Number).optional(),
   maxScore: z.string().regex(/^\d+$/).transform(Number).optional(),

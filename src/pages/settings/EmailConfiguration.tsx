@@ -13,6 +13,11 @@ const EmailConfiguration = () => {
   const [saving, setSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   
+  // Status indicators
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [configMode, setConfigMode] = useState<'production' | 'mock' | 'environment'>('mock');
+  const [lastTested, setLastTested] = useState<string | null>(null);
+  
   // SMTP Settings
   const [smtpHost, setSmtpHost] = useState('smtp.sendgrid.net');
   const [smtpPort, setSmtpPort] = useState('587');
@@ -53,17 +58,26 @@ const EmailConfiguration = () => {
     }
 
     try {
-      const config = await settingsApi.getEmailConfig();
+      const response = await settingsApi.getEmailConfig();
+      const config = response?.config;
       
       if (config) {
+        // Update SMTP settings from API
         setSmtpHost(config.smtpHost || 'smtp.sendgrid.net');
-        setSmtpPort(config.smtpPort || '587');
-        setUsername(config.username || 'apikey');
-        setPassword(config.password || 'SG.xxxxxxxxxxxxxxxxxxxxxxxx');
-        setEncryption(config.encryption || 'tls');
+        setSmtpPort(String(config.smtpPort) || '587');
+        setUsername(config.smtpUser || 'apikey');
+        // Don't set password if it's masked
+        if (config.apiKey && !config.apiKey.startsWith('••••')) {
+          setPassword(config.apiKey);
+        }
+        setEncryption('tls'); // SendGrid uses TLS
         setFromName(config.fromName || 'Your CRM Team');
         setFromEmail(config.fromEmail || 'noreply@yourcrm.com');
-        setReplyToEmail(config.replyToEmail || 'support@yourcrm.com');
+        
+        // Update status indicators
+        const hasApiKey = config.apiKey && config.apiKey !== '••••••••';
+        setIsConfigured(config.isActive && hasApiKey);
+        setConfigMode(hasApiKey ? 'production' : 'mock');
       }
       
       if (isRefresh) {
@@ -72,6 +86,8 @@ const EmailConfiguration = () => {
     } catch (error) {
       console.error('Failed to load email config:', error);
       toast.error('Failed to load email configuration, using defaults');
+      setConfigMode('mock');
+      setIsConfigured(false);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -83,45 +99,63 @@ const EmailConfiguration = () => {
   };
   
   const handleTestConnection = async () => {
-    if (!smtpHost || !smtpPort || !username || !password) {
-      toast.error('Please fill in all SMTP settings');
+    if (!fromEmail) {
+      toast.error('Please enter a "From Email" address');
+      return;
+    }
+    
+    if (!password || password === 'SG.xxxxxxxxxxxxxxxxxxxxxxxx') {
+      toast.error('Please enter a valid SendGrid API key and save settings first');
       return;
     }
     
     setTestingConnection(true);
     try {
-      await settingsApi.testEmail({ smtpHost, smtpPort, username, password, encryption });
-      toast.success('SMTP connection successful! Test email sent.');
-    } catch (error) {
+      const result = await settingsApi.testEmail({ 
+        to: fromEmail, // Test email to yourself
+        subject: 'Test Email from RealEstate Pro',
+        message: 'If you receive this email, your SendGrid configuration is working correctly!'
+      });
+      
+      // Update status based on test result
+      setLastTested(new Date().toLocaleString());
+      setConfigMode(result.mode === 'mock' ? 'mock' : 'production');
+      setIsConfigured(result.mode !== 'mock');
+      
+      if (result.mode === 'mock') {
+        toast.success(`Test email sent in MOCK mode (no actual delivery). Save your API key first.`);
+      } else {
+        toast.success(`Test email sent successfully in PRODUCTION mode! Check ${fromEmail}`);
+      }
+    } catch (error: any) {
       console.error('Failed to test connection:', error);
-      toast.error('Failed to connect to SMTP server');
+      const message = error.response?.data?.error || error.message || 'Failed to send test email';
+      toast.error(message);
+      setConfigMode('mock');
+      setIsConfigured(false);
     } finally {
       setTestingConnection(false);
     }
   };
   
   const handleSaveSettings = async () => {
+    if (!password || password === 'SG.xxxxxxxxxxxxxxxxxxxxxxxx') {
+      toast.error('Please enter a valid SendGrid API key');
+      return;
+    }
+
     setSaving(true);
     try {
       await settingsApi.updateEmailConfig({
-        smtpHost,
-        smtpPort,
-        username,
-        password,
-        encryption,
-        fromName,
+        provider: 'sendgrid',
+        apiKey: password, // SendGrid API key
         fromEmail,
-        replyToEmail,
-        bccEmail,
-        domain,
-        includeUnsubscribe,
-        trackOpens,
-        trackClicks,
-        includeLogo,
-        includeSocial,
-        dailyLimit,
-        rateLimit,
-        bounceHandling,
+        fromName,
+        smtpHost,
+        smtpPort: parseInt(smtpPort),
+        smtpUser: username,
+        smtpPassword: null, // Not using SMTP password for SendGrid API
+        isActive: true,
       });
       toast.success('Email configuration saved successfully');
       loadEmailConfig(); // Reload from API
@@ -182,35 +216,70 @@ const EmailConfiguration = () => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Email Service Status</CardTitle>
-              <CardDescription>Current email delivery status</CardDescription>
+              <CardDescription>Current email delivery configuration</CardDescription>
             </div>
-            <Badge variant="success">Operational</Badge>
+            <div className="flex items-center space-x-2">
+              {configMode === 'production' ? (
+                <Badge variant="success">Production Mode</Badge>
+              ) : configMode === 'environment' ? (
+                <Badge variant="default">Environment Mode</Badge>
+              ) : (
+                <Badge variant="secondary">Mock Mode</Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="flex items-center space-x-3">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              {isConfigured ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+              )}
               <div>
-                <p className="font-medium">SMTP Connected</p>
-                <p className="text-xs text-muted-foreground">Last test: 5 min ago</p>
+                <p className="font-medium">
+                  {isConfigured ? 'API Key Configured' : 'No API Key'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isConfigured ? 'Using database configuration' : 'Add SendGrid API key to enable'}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              {lastTested ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+              )}
               <div>
-                <p className="font-medium">Domain Verified</p>
-                <p className="text-xs text-muted-foreground">crm.yourcompany.com</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="font-medium">SPF/DKIM Configured</p>
-                <p className="text-xs text-muted-foreground">All checks passed</p>
+                <p className="font-medium">
+                  {lastTested ? 'Connection Tested' : 'Not Tested'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {lastTested ? `Last test: ${lastTested}` : 'Click "Send Test Email" to verify'}
+                </p>
               </div>
             </div>
           </div>
+          
+          {configMode === 'mock' && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Mock Mode:</strong> Emails will be logged but not actually sent. 
+                Add your SendGrid API key above and save to enable production mode.
+              </p>
+            </div>
+          )}
+          
+          {configMode === 'production' && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                <strong>Production Mode:</strong> Emails will be sent using your SendGrid API key. 
+                All campaign emails will be delivered to recipients.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

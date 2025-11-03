@@ -18,6 +18,16 @@ pkill -f "dist/server.js" 2>/dev/null
 pkill -f "vite" 2>/dev/null
 sleep 2
 
+# Build Backend first
+echo -e "${BLUE}🔨 Building Backend...${NC}"
+cd /workspaces/Master-RealEstate-Pro/backend
+if ! npm run build > /tmp/backend-build.log 2>&1; then
+  echo -e "${YELLOW}⚠️  Backend build failed! Check /tmp/backend-build.log for errors${NC}"
+  cat /tmp/backend-build.log
+  exit 1
+fi
+echo -e "${GREEN}✅ Backend built successfully${NC}"
+
 # Start Backend Server
 echo -e "${BLUE}📦 Starting Backend Server (Port 8000)...${NC}"
 cd /workspaces/Master-RealEstate-Pro/backend
@@ -27,6 +37,13 @@ echo -e "${GREEN}✅ Backend started (PID: $BACKEND_PID)${NC}"
 
 # Wait a moment for backend to initialize
 sleep 3
+
+# Check if backend is actually running
+if ! ps -p $BACKEND_PID > /dev/null 2>&1; then
+  echo -e "${YELLOW}⚠️  Backend failed to start! Check /tmp/backend.log for errors${NC}"
+  tail -20 /tmp/backend.log
+  exit 1
+fi
 
 # Start Prisma Studio (if not already running)
 echo -e "${BLUE}🗄️  Starting Prisma Studio (Port 5555)...${NC}"
@@ -75,13 +92,10 @@ echo "$BACKEND_PID" > /tmp/dev-pids.txt
 echo "$PRISMA_PID" >> /tmp/dev-pids.txt
 echo "$FRONTEND_PID" >> /tmp/dev-pids.txt
 
-# Keep script running to show status
-echo ""
-echo -e "${GREEN}✨ Press Ctrl+C to stop all services${NC}"
-echo ""
+# Disown processes so they continue running after script exits
+disown $BACKEND_PID $PRISMA_PID $FRONTEND_PID 2>/dev/null
 
-# Trap Ctrl+C to clean up
-trap 'echo ""; echo "🛑 Stopping all services..."; kill $BACKEND_PID $PRISMA_PID $FRONTEND_PID 2>/dev/null; rm -f /tmp/dev-pids.txt; echo "✅ All services stopped"; exit 0' INT
-
-# Wait indefinitely
-wait
+echo ""
+echo -e "${GREEN}✨ All services are running in the background${NC}"
+echo -e "${BLUE}🛑 To stop all services, run: ./stop-dev.sh${NC}"
+echo ""
