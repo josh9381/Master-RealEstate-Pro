@@ -53,7 +53,7 @@ const SMSCenter = () => {
         setLoading(true)
       }
 
-      const response = await messagesApi.getMessages({ type: 'sms' })
+      const response = await messagesApi.getMessages({ type: 'SMS' })
       
       if (response && Array.isArray(response)) {
         setRecentMessages(response)

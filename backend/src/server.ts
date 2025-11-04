@@ -22,6 +22,7 @@ import settingsRoutes from './routes/settings.routes'
 import integrationRoutes from './routes/integration.routes'
 import teamRoutes from './routes/team.routes'
 import appointmentRoutes from './routes/appointment.routes'
+import webhookRoutes from './routes/webhook.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
@@ -144,6 +145,7 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/integrations', integrationRoutes)
 app.use('/api/teams', teamRoutes)
 app.use('/api/appointments', appointmentRoutes)
+app.use('/api/webhooks', webhookRoutes)
 
 // 404 handler
 app.use(notFoundHandler)

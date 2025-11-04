@@ -19,11 +19,14 @@ import {
   sendSMS,
   makeCall,
   markAsRead,
+  markAsUnread,
   deleteMessage,
   getMessageStats,
   getThreadMessages,
   replyToMessage,
   markMessagesAsRead,
+  markMessagesAsUnread,
+  markAllAsRead,
 } from '../controllers/message.controller'
 
 const router = Router()
@@ -97,6 +100,13 @@ router.post(
 router.patch('/:id/read', asyncHandler(markAsRead))
 
 /**
+ * @route   PATCH /api/messages/:id/unread
+ * @desc    Mark message as unread
+ * @access  Private
+ */
+router.patch('/:id/unread', asyncHandler(markAsUnread))
+
+/**
  * @route   DELETE /api/messages/:id
  * @desc    Delete message
  * @access  Private
@@ -133,6 +143,27 @@ router.post(
   '/mark-read',
   validateBody(markAsReadSchema),
   asyncHandler(markMessagesAsRead)
+)
+
+/**
+ * @route   POST /api/messages/mark-unread
+ * @desc    Mark multiple messages as unread
+ * @access  Private
+ */
+router.post(
+  '/mark-unread',
+  validateBody(markAsReadSchema),
+  asyncHandler(markMessagesAsUnread)
+)
+
+/**
+ * @route   POST /api/messages/mark-all-read
+ * @desc    Mark all messages as read
+ * @access  Private
+ */
+router.post(
+  '/mark-all-read',
+  asyncHandler(markAllAsRead)
 )
 
 export default router

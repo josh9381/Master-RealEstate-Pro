@@ -16,7 +16,7 @@ import { getEmailConfig, updateEmailConfig, testEmail } from '../controllers/set
 import { updateEmailConfigSchema, testEmailSchema } from '../validators/settings/email.validator';
 
 // SMS
-import { getSMSConfig, updateSMSConfig, testSMS } from '../controllers/settings/sms.controller';
+import { getSMSConfig, updateSMSConfig, deleteSMSConfig, testSMS } from '../controllers/settings/sms.controller';
 import { updateSMSConfigSchema, testSMSSchema } from '../validators/settings/sms.validator';
 
 // Notifications
@@ -124,6 +124,13 @@ router.get('/sms', asyncHandler(getSMSConfig));
  * @access  Private
  */
 router.put('/sms', validateBody(updateSMSConfigSchema), asyncHandler(updateSMSConfig));
+
+/**
+ * @route   DELETE /api/settings/sms
+ * @desc    Delete SMS credentials
+ * @access  Private
+ */
+router.delete('/sms', asyncHandler(deleteSMSConfig));
 
 /**
  * @route   POST /api/settings/sms/test

@@ -55,7 +55,7 @@ const NewsletterManagement = () => {
         setLoading(true)
       }
 
-      const response = await messagesApi.getMessages({ type: 'newsletter' })
+      const response = await messagesApi.getMessages({ type: 'NEWSLETTER' })
       
       if (response && Array.isArray(response)) {
         setNewsletters(response)

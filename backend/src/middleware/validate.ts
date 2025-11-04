@@ -39,6 +39,8 @@ export function validate(schema: {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
+        console.error('❌ Validation error:', error.issues)
+        console.error('📥 Request body that failed validation:', JSON.stringify(req.body))
         res.status(400).json({
           success: false,
           error: 'Validation error',

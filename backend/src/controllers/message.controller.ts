@@ -63,19 +63,56 @@ export const getMessages = async (req: Request, res: Response) => {
     },
   })
 
+  // Helper function to normalize phone numbers for consistent grouping
+  const normalizePhone = (phone: string): string => {
+    // Remove all non-digit characters
+    const digits = phone.replace(/\D/g, '')
+    // If it starts with 1 and has 11 digits, it's a US number with country code
+    if (digits.length === 11 && digits.startsWith('1')) {
+      return digits.substring(1) // Remove leading 1
+    }
+    // If it has 10 digits, it's already normalized
+    if (digits.length === 10) {
+      return digits
+    }
+    // Otherwise return as-is (might be international)
+    return digits
+  }
+
   // Group messages into threads
   const threadMap = new Map<string, any>()
 
   messages.forEach((message) => {
-    const threadKey = message.threadId || message.leadId || message.fromAddress
+    // Normalize thread grouping: use leadId first, then group by contact phone/email
+    // For SMS/calls, the contact is either fromAddress (inbound) or toAddress (outbound)
+    let threadKey: string
+    let contactIdentifier: string
+    
+    if (message.leadId) {
+      // If we have a lead, use that as the thread key
+      threadKey = message.leadId
+      contactIdentifier = message.direction === 'INBOUND' ? message.fromAddress : message.toAddress
+    } else if (message.type === 'SMS' || message.type === 'CALL') {
+      // For SMS/calls without a lead, group by the other party's phone number (normalized)
+      const rawContact = message.direction === 'INBOUND' ? message.fromAddress : message.toAddress
+      contactIdentifier = rawContact
+      // Normalize the phone number for consistent threading
+      threadKey = normalizePhone(rawContact)
+    } else if (message.type === 'EMAIL') {
+      // For emails without a lead, group by the other party's email (lowercase)
+      contactIdentifier = message.direction === 'INBOUND' ? message.fromAddress : message.toAddress
+      threadKey = contactIdentifier.toLowerCase()
+    } else {
+      // Fallback to original logic
+      threadKey = message.threadId || message.fromAddress
+      contactIdentifier = message.direction === 'INBOUND' ? message.fromAddress : message.toAddress
+    }
 
     if (!threadMap.has(threadKey)) {
       // Create new thread
       const contactName = message.lead
         ? `${message.lead.firstName} ${message.lead.lastName}`
-        : message.direction === 'INBOUND'
-        ? message.fromAddress
-        : message.toAddress
+        : contactIdentifier
 
       threadMap.set(threadKey, {
         id: threadKey,
@@ -85,7 +122,7 @@ export const getMessages = async (req: Request, res: Response) => {
         subject: message.subject || '',
         lastMessage: message.body.substring(0, 100),
         timestamp: message.createdAt,
-        unread: message.status === 'DELIVERED' || message.status === 'SENT' ? 1 : 0,
+        unread: 0, // Will be calculated after all messages are added
         messages: [],
         leadId: message.leadId,
         lead: message.lead,
@@ -98,6 +135,7 @@ export const getMessages = async (req: Request, res: Response) => {
       id: message.id,
       threadId: message.threadId || threadKey,
       type: message.type.toLowerCase(),
+      direction: message.direction, // Include direction for proper UI display
       from: message.fromAddress,
       to: message.toAddress,
       contact: thread.contact,
@@ -105,11 +143,12 @@ export const getMessages = async (req: Request, res: Response) => {
       body: message.body,
       timestamp: message.createdAt,
       date: message.createdAt,
-      unread: message.status === 'DELIVERED' || message.status === 'SENT',
+      unread: !message.readAt && message.direction === 'INBOUND',
       starred: false,
       status: message.status.toLowerCase(),
       emailOpened: message.status === 'OPENED' || message.status === 'CLICKED',
       emailClicked: message.status === 'CLICKED',
+      readAt: message.readAt,
     })
 
     // Update thread's last message time if this is more recent
@@ -119,8 +158,16 @@ export const getMessages = async (req: Request, res: Response) => {
     }
   })
 
-  // Convert map to array and sort by most recent
-  const threads = Array.from(threadMap.values()).sort((a, b) =>
+  // Convert map to array and sort threads by most recent
+  const threads = Array.from(threadMap.values()).map(thread => {
+    // Sort messages within each thread by timestamp (oldest first, like iMessage)
+    thread.messages.sort((a: any, b: any) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+    // Calculate total unread count for the thread (only INBOUND messages that haven't been read)
+    thread.unread = thread.messages.filter((m: any) => m.unread).length
+    return thread
+  }).sort((a, b) =>
     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   )
 
@@ -229,7 +276,7 @@ export const sendEmail = async (req: Request, res: Response) => {
   // Generate threadId if not provided
   const messageThreadId = threadId || crypto.randomBytes(16).toString('hex')
 
-  // Use the email service
+  // Use the email service with userId for config lookup
   const result = await sendEmailService({
     to,
     subject: finalSubject,
@@ -237,6 +284,7 @@ export const sendEmail = async (req: Request, res: Response) => {
     leadId,
     trackOpens: true,
     trackClicks: true,
+    userId: req.user?.userId, // Pass user ID to use their email credentials
   })
 
   if (!result.success) {
@@ -329,11 +377,12 @@ export const sendSMS = async (req: Request, res: Response) => {
   // Generate threadId if not provided
   const messageThreadId = threadId || crypto.randomBytes(16).toString('hex')
 
-  // Use the SMS service
+  // Use the SMS service with userId for config lookup
   const result = await sendSMSService({
     to,
     message: finalBody,
     leadId,
+    userId: req.user?.userId, // Pass user ID to use their Twilio credentials
   })
 
   if (!result.success) {
@@ -402,6 +451,31 @@ export const markAsRead = async (req: Request, res: Response) => {
     where: { id },
     data: {
       readAt: new Date(),
+    },
+  })
+
+  res.json({
+    success: true,
+    data: { message: updatedMessage }
+  })
+}
+
+// Mark message as unread
+export const markAsUnread = async (req: Request, res: Response) => {
+  const { id } = req.params
+
+  const message = await prisma.message.findUnique({
+    where: { id },
+  })
+
+  if (!message) {
+    throw new NotFoundError('Message not found')
+  }
+
+  const updatedMessage = await prisma.message.update({
+    where: { id },
+    data: {
+      readAt: null,
     },
   })
 
@@ -559,7 +633,9 @@ export const replyToMessage = async (req: Request, res: Response) => {
 
 // Mark multiple messages as read
 export const markMessagesAsRead = async (req: Request, res: Response) => {
+  console.log('📥 Mark as read request body:', JSON.stringify(req.body))
   const { messageIds } = req.body
+  console.log('📥 Extracted messageIds:', messageIds)
 
   await prisma.message.updateMany({
     where: {
@@ -575,5 +651,47 @@ export const markMessagesAsRead = async (req: Request, res: Response) => {
   res.json({
     success: true,
     message: `${messageIds.length} message(s) marked as read`,
+  })
+}
+
+// Mark multiple messages as unread
+export const markMessagesAsUnread = async (req: Request, res: Response) => {
+  const { messageIds } = req.body
+
+  await prisma.message.updateMany({
+    where: {
+      id: {
+        in: messageIds
+      }
+    },
+    data: {
+      readAt: null,
+    },
+  })
+
+  res.json({
+    success: true,
+    message: `${messageIds.length} message(s) marked as unread`,
+  })
+}
+
+// Mark all messages as read
+export const markAllAsRead = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id
+
+  const result = await prisma.message.updateMany({
+    where: {
+      readAt: null,
+      direction: 'INBOUND',
+    },
+    data: {
+      readAt: new Date(),
+    },
+  })
+
+  res.json({
+    success: true,
+    message: `${result.count} message(s) marked as read`,
+    count: result.count,
   })
 }

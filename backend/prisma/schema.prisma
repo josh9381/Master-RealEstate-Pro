@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Activity {
-  id          String       @id @default(cuid())
+  id          String       @id
   type        ActivityType
   title       String
   description String?
@@ -17,9 +17,9 @@ model Activity {
   userId      String?
   metadata    Json?
   createdAt   DateTime     @default(now())
-  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  user        User?        @relation(fields: [userId], references: [id])
+  Campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  Lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  User        User?        @relation(fields: [userId], references: [id])
 
   @@index([campaignId])
   @@index([createdAt])
@@ -28,8 +28,22 @@ model Activity {
   @@index([userId])
 }
 
+model APIKeyAudit {
+  id         String   @id @default(cuid())
+  userId     String
+  provider   String   // 'twilio', 'sendgrid', etc.
+  action     String   // 'created', 'updated', 'accessed', 'deleted'
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([provider])
+}
+
 model Appointment {
-  id           String            @id @default(cuid())
+  id           String            @id
   title        String
   description  String?
   startTime    DateTime
@@ -43,9 +57,9 @@ model Appointment {
   attendees    Json?
   reminderSent Boolean           @default(false)
   createdAt    DateTime          @default(now())
-  updatedAt    DateTime @updatedAt
-  lead         Lead?             @relation(fields: [leadId], references: [id])
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime
+  Lead         Lead?             @relation(fields: [leadId], references: [id])
+  User         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([startTime])
@@ -55,7 +69,7 @@ model Appointment {
 }
 
 model BusinessSettings {
-  id            String   @id @default(cuid())
+  id            String   @id
   userId        String   @unique
   companyName   String?
   address       String?
@@ -65,12 +79,12 @@ model BusinessSettings {
   billingEmail  String?
   businessHours Json?
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt     DateTime
+  User          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Campaign {
-  id           String         @id @default(cuid())
+  id           String         @id
   name         String
   type         CampaignType
   status       CampaignStatus @default(DRAFT)
@@ -95,10 +109,10 @@ model Campaign {
   abTestData   Json?
   createdById  String
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime @updatedAt
-  activities   Activity[]
-  user         User           @relation(fields: [createdById], references: [id])
-  tags         Tag[]
+  updatedAt    DateTime
+  Activity     Activity[]
+  User         User           @relation(fields: [createdById], references: [id])
+  Tag          Tag[]
 
   @@index([createdAt])
   @@index([createdById])
@@ -107,7 +121,7 @@ model Campaign {
 }
 
 model EmailConfig {
-  id           String   @id @default(cuid())
+  id           String   @id
   userId       String   @unique
   provider     String   @default("sendgrid")
   apiKey       String?
@@ -119,12 +133,12 @@ model EmailConfig {
   smtpPassword String?
   isActive     Boolean  @default(false)
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model EmailTemplate {
-  id         String    @id @default(cuid())
+  id         String    @id
   name       String
   subject    String
   body       String
@@ -134,14 +148,14 @@ model EmailTemplate {
   usageCount Int       @default(0)
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime
 
   @@index([category])
   @@index([isActive])
 }
 
 model Integration {
-  id          String    @id @default(cuid())
+  id          String    @id
   userId      String
   provider    String
   isConnected Boolean   @default(false)
@@ -151,8 +165,8 @@ model Integration {
   syncStatus  String?
   syncError   String?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
   @@index([provider])
@@ -160,9 +174,7 @@ model Integration {
 }
 
 model Lead {
-  id            String        @id @default(cuid())
-  firstName     String
-  lastName      String
+  id            String        @id
   email         String        @unique
   phone         String?
   company       String?
@@ -174,15 +186,16 @@ model Lead {
   stage         String?
   assignedToId  String?
   createdAt     DateTime      @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime
   lastContactAt DateTime?
   customFields  Json?
-  activities    Activity[]
-  appointments  Appointment[]
-  assignedTo    User?         @relation(fields: [assignedToId], references: [id])
-  messages      Message[]
-  notes         Note[]
-  tags          Tag[]
+  firstName     String
+  lastName      String
+  Activity      Activity[]
+  Appointment   Appointment[]
+  User          User?         @relation(fields: [assignedToId], references: [id])
+  Note          Note[]
+  Tag           Tag[]
 
   @@index([assignedToId])
   @@index([createdAt])
@@ -192,7 +205,7 @@ model Lead {
 }
 
 model Message {
-  id          String           @id @default(cuid())
+  id          String           @id
   type        MessageType
   direction   MessageDirection
   subject     String?
@@ -209,7 +222,6 @@ model Message {
   provider    String?
   metadata    Json?
   createdAt   DateTime         @default(now())
-  lead        Lead?            @relation(fields: [leadId], references: [id])
 
   @@index([createdAt])
   @@index([direction])
@@ -220,33 +232,33 @@ model Message {
 }
 
 model Note {
-  id        String   @id @default(cuid())
+  id        String   @id
   content   String
   leadId    String
   authorId  String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User     @relation(fields: [authorId], references: [id])
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  updatedAt DateTime
+  User      User     @relation(fields: [authorId], references: [id])
+  Lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
   @@index([leadId])
 }
 
 model NotificationSettings {
-  id                 String   @id @default(cuid())
+  id                 String   @id
   userId             String   @unique
   emailNotifications Boolean  @default(true)
   pushNotifications  Boolean  @default(true)
   smsNotifications   Boolean  @default(false)
   channels           Json?
   createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt          DateTime
+  User               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SMSConfig {
-  id          String   @id @default(cuid())
+  id          String   @id
   userId      String   @unique
   provider    String   @default("twilio")
   accountSid  String?
@@ -254,12 +266,12 @@ model SMSConfig {
   phoneNumber String?
   isActive    Boolean  @default(false)
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SMSTemplate {
-  id         String    @id @default(cuid())
+  id         String    @id
   name       String
   body       String
   category   String?
@@ -268,23 +280,23 @@ model SMSTemplate {
   usageCount Int       @default(0)
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime
 
   @@index([category])
   @@index([isActive])
 }
 
 model Tag {
-  id        String     @id @default(cuid())
+  id        String     @id
   name      String     @unique
   color     String?
   createdAt DateTime   @default(now())
-  campaigns Campaign[]
-  leads     Lead[]
+  Campaign  Campaign[]
+  Lead      Lead[]
 }
 
 model Task {
-  id           String       @id @default(cuid())
+  id           String       @id
   title        String
   description  String?
   dueDate      DateTime?
@@ -294,8 +306,8 @@ model Task {
   leadId       String?
   completedAt  DateTime?
   createdAt    DateTime     @default(now())
-  updatedAt    DateTime @updatedAt
-  assignedTo   User?        @relation(fields: [assignedToId], references: [id])
+  updatedAt    DateTime
+  User         User?        @relation(fields: [assignedToId], references: [id])
 
   @@index([assignedToId])
   @@index([dueDate])
@@ -304,26 +316,26 @@ model Task {
 }
 
 model Team {
-  id               String           @id @default(cuid())
+  id               String           @id
   name             String
   slug             String           @unique
   settings         Json?
   subscriptionTier SubscriptionTier @default(FREE)
   createdAt        DateTime         @default(now())
-  updatedAt        DateTime @updatedAt
-  teamMembers      TeamMember[]
+  updatedAt        DateTime
+  TeamMember       TeamMember[]
 
   @@index([slug])
 }
 
 model TeamMember {
-  id       String   @id @default(cuid())
+  id       String   @id
   teamId   String
   userId   String
   role     TeamRole @default(MEMBER)
   joinedAt DateTime @default(now())
-  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  User     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
   @@index([teamId])
@@ -331,7 +343,7 @@ model TeamMember {
 }
 
 model User {
-  id                   String                @id @default(cuid())
+  id                   String                @id
   email                String                @unique
   password             String
   firstName            String
@@ -350,26 +362,27 @@ model User {
   subscriptionId       String?
   trialEndsAt          DateTime?
   createdAt            DateTime              @default(now())
-  updatedAt            DateTime @updatedAt
-  activities           Activity[]
-  appointments         Appointment[]
-  businessSettings     BusinessSettings?
-  campaigns            Campaign[]
-  emailConfig          EmailConfig?
-  integrations         Integration[]
-  leads                Lead[]
-  notes                Note[]
-  notificationSettings NotificationSettings?
-  smsConfig            SMSConfig?
-  tasks                Task[]
-  teamMembers          TeamMember[]
+  updatedAt            DateTime
+  Activity             Activity[]
+  APIKeyAudit          APIKeyAudit[]
+  Appointment          Appointment[]
+  BusinessSettings     BusinessSettings?
+  Campaign             Campaign[]
+  EmailConfig          EmailConfig?
+  Integration          Integration[]
+  Lead                 Lead[]
+  Note                 Note[]
+  NotificationSettings NotificationSettings?
+  SMSConfig            SMSConfig?
+  Task                 Task[]
+  TeamMember           TeamMember[]
 
   @@index([email])
   @@index([role])
 }
 
 model Workflow {
-  id                String              @id @default(cuid())
+  id                String              @id
   name              String
   description       String?
   isActive          Boolean             @default(false)
@@ -378,17 +391,17 @@ model Workflow {
   actions           Json
   executions        Int                 @default(0)
   successRate       Float?
-  lastRunAt          DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime @updatedAt
-  workflowExecutions WorkflowExecution[]
+  lastRunAt         DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  WorkflowExecution WorkflowExecution[]
 
   @@index([isActive])
   @@index([triggerType])
 }
 
 model WorkflowExecution {
-  id          String          @id @default(cuid())
+  id          String          @id
   workflowId  String
   status      ExecutionStatus
   error       String?
@@ -396,7 +409,7 @@ model WorkflowExecution {
   metadata    Json?
   startedAt   DateTime        @default(now())
   completedAt DateTime?
-  workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  Workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@index([startedAt])
   @@index([status])

@@ -80,7 +80,7 @@ export const listCampaignsQuerySchema = z.object({
   status: campaignStatusSchema.optional(),
   type: campaignTypeSchema.optional(),
   search: z.string().optional(), // Search in name, subject
-  sortBy: z.enum(['createdAt', 'updatedAt', 'startDate', 'name', 'sent', 'opened']).optional().default('createdAt'),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'startDate', 'name', 'sent', 'opened', 'clicked', 'converted', 'delivered', 'bounced']).optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 

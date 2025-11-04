@@ -56,7 +56,7 @@ const CallCenter = () => {
         setLoading(true)
       }
 
-      const response = await messagesApi.getMessages({ type: 'call' })
+      const response = await messagesApi.getMessages({ type: 'CALL' })
       
       if (response && Array.isArray(response)) {
         setRecentCalls(response)

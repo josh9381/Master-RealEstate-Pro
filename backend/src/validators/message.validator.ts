@@ -65,7 +65,7 @@ export const messageQuerySchema = z.object({
  * Validator for marking messages as read
  */
 export const markAsReadSchema = z.object({
-  messageIds: z.array(z.string().cuid()).min(1, 'At least one message ID is required')
+  messageIds: z.array(z.string().min(1)).min(1, 'At least one message ID is required')
 })
 
 /**

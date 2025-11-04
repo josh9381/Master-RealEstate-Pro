@@ -43,17 +43,24 @@ async function getSMSConfig(userId?: string) {
 
     // If user has config with credentials, use it
     if (config?.accountSid && config?.authToken) {
-      const accountSid = decrypt(config.accountSid);
-      const authToken = decrypt(config.authToken);
-      const client = twilio(accountSid, authToken);
+      try {
+        const accountSid = decrypt(config.accountSid);
+        const authToken = decrypt(config.authToken);
+        const client = twilio(accountSid, authToken);
 
-      return {
-        accountSid,
-        authToken,
-        phoneNumber: config.phoneNumber || TWILIO_PHONE_NUMBER,
-        client,
-        mode: 'database' as const
-      };
+        console.log(`[SMS] Using user's Twilio credentials (userId: ${userId})`);
+        
+        return {
+          accountSid,
+          authToken,
+          phoneNumber: config.phoneNumber || TWILIO_PHONE_NUMBER,
+          client,
+          mode: 'database' as const
+        };
+      } catch (decryptError) {
+        console.error('[SMS] Failed to decrypt user credentials:', decryptError);
+        // Fall through to environment variables
+      }
     }
 
     // Fall back to environment variables

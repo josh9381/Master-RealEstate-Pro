@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   Mail, 
   MessageSquare, 
@@ -21,19 +21,31 @@ import {
   Settings,
   Download,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Pin
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/Dialog'
 import { useToast } from '@/hooks/useToast'
-import { messagesApi } from '@/lib/api'
+import { messagesApi, leadsApi } from '@/lib/api'
 
 interface Message {
   id: number
   threadId: number
   type: 'email' | 'sms' | 'call'
+  direction?: 'INBOUND' | 'OUTBOUND' // Added direction field from backend
   from: string
   to: string
   contact: string
@@ -51,6 +63,7 @@ interface Message {
   snoozed?: number // timestamp (ms) until which the message is snoozed
   archived?: boolean
   trashed?: boolean
+  pinned?: boolean
   // Attachments
   attachments?: Array<{
     id: number
@@ -72,148 +85,14 @@ interface Thread {
   subject?: string
 }
 
-const mockThreads: Thread[] = [
-  {
-    id: 1,
-    contact: 'John Smith',
-    lastMessage: 'Thanks for reaching out! I would love to schedule...',
-    timestamp: '10 min ago',
-    unread: 2,
-    type: 'email',
-    subject: 'Re: Product Demo Request',
-    messages: [
-      {
-        id: 1,
-        threadId: 1,
-        type: 'email',
-        from: 'you@company.com',
-        to: 'john@techcorp.com',
-        contact: 'John Smith',
-        subject: 'Product Demo Request',
-        body: 'Hi John,\n\nI wanted to reach out to see if you\'d be interested in scheduling a product demo. We have some exciting new features that I think would be perfect for your team.\n\nLet me know what times work best for you!\n\nBest regards',
-        timestamp: '2 hours ago',
-        date: 'Oct 20, 2025 8:30 AM',
-        unread: false,
-        starred: false,
-        status: 'read',
-        emailOpened: true,
-        emailClicked: true
-      },
-      {
-        id: 2,
-        threadId: 1,
-        type: 'email',
-        from: 'john@techcorp.com',
-        to: 'you@company.com',
-        contact: 'John Smith',
-        subject: 'Re: Product Demo Request',
-        body: 'Thanks for reaching out! I would love to schedule a demo for next week. Tuesday or Wednesday afternoon would work best for me.\n\nLooking forward to seeing what you have!\n\nJohn',
-        timestamp: '10 min ago',
-        date: 'Oct 20, 2025 10:20 AM',
-        unread: true,
-        starred: false,
-      },
-    ]
-  },
-  {
-    id: 2,
-    contact: 'Sarah Johnson',
-    lastMessage: 'Yes, I am interested in learning more about pricing',
-    timestamp: '25 min ago',
-    unread: 1,
-    type: 'sms',
-    messages: [
-      {
-        id: 3,
-        threadId: 2,
-        type: 'sms',
-        from: 'you@company.com',
-        to: '+1 (555) 123-4567',
-        contact: 'Sarah Johnson',
-        body: 'Hi Sarah! I wanted to follow up on our conversation about pricing options. Do you have time for a quick call this week?',
-        timestamp: '1 hour ago',
-        date: 'Oct 20, 2025 9:30 AM',
-        unread: false,
-        starred: false,
-        status: 'delivered'
-      },
-      {
-        id: 4,
-        threadId: 2,
-        type: 'sms',
-        from: '+1 (555) 123-4567',
-        to: 'you@company.com',
-        contact: 'Sarah Johnson',
-        body: 'Yes, I am interested in learning more about pricing. Thursday at 2pm works for me.',
-        timestamp: '25 min ago',
-        date: 'Oct 20, 2025 10:05 AM',
-        unread: true,
-        starred: false,
-      },
-    ]
-  },
-  {
-    id: 3,
-    contact: 'Mike Wilson',
-    lastMessage: 'Does your platform integrate with Salesforce?',
-    timestamp: '1 hour ago',
-    unread: 0,
-    type: 'email',
-    subject: 'Question about Integration',
-    messages: [
-      {
-        id: 5,
-        threadId: 3,
-        type: 'email',
-        from: 'mike@startup.com',
-        to: 'you@company.com',
-        contact: 'Mike Wilson',
-        subject: 'Question about Integration',
-        body: 'Does your platform integrate with Salesforce? We currently use it for all our CRM needs and would need seamless integration.',
-        timestamp: '1 hour ago',
-        date: 'Oct 20, 2025 9:30 AM',
-        unread: false,
-        starred: true,
-        hasAttachment: true,
-        attachments: [
-          { id: 1, name: 'integration-requirements.pdf', size: '245 KB', type: 'pdf' },
-          { id: 2, name: 'system-diagram.png', size: '1.2 MB', type: 'image', url: 'https://via.placeholder.com/400x300/3b82f6/ffffff?text=System+Diagram' }
-        ]
-      },
-    ]
-  },
-  {
-    id: 4,
-    contact: 'Emily Davis',
-    lastMessage: 'Voicemail: Hi, this is Emily from Big Company...',
-    timestamp: '2 hours ago',
-    unread: 1,
-    type: 'call',
-    messages: [
-      {
-        id: 6,
-        threadId: 4,
-        type: 'call',
-        from: '+1 (555) 987-6543',
-        to: 'you@company.com',
-        contact: 'Emily Davis',
-        body: 'Voicemail: "Hi, this is Emily from Big Company. I wanted to discuss potential partnership opportunities. Please give me a call back when you get a chance. Thanks!"',
-        timestamp: '2 hours ago',
-        date: 'Oct 20, 2025 8:30 AM',
-        unread: true,
-        starred: false,
-      },
-    ]
-  },
-]
-
+// Mock data removed - using real API data
 const CommunicationInbox = () => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedChannel, setSelectedChannel] = useState<'all' | 'email' | 'sms' | 'call'>('all')
   const [selectedFolder, setSelectedFolder] = useState<'inbox' | 'unread' | 'starred' | 'snoozed' | 'archived' | 'trash'>('inbox')
-  const [threads, setThreads] = useState<Thread[]>(mockThreads)
-  const [selectedThread, setSelectedThread] = useState<Thread | null>(mockThreads[0])
+  const [threads, setThreads] = useState<Thread[]>([])
+  const [selectedThread, setSelectedThread] = useState<Thread | null>(null)
   const [replyText, setReplyText] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showTemplates, setShowTemplates] = useState(false)
@@ -235,20 +114,127 @@ const CommunicationInbox = () => {
     sender: ''
   })
   const [showComposeModal, setShowComposeModal] = useState(false)
-  const [composeType, setComposeType] = useState<'email' | 'sms' | 'call'>('email')
+  const [composeType, setComposeType] = useState<'email' | 'sms' | 'call'>('sms')
   const [composeTo, setComposeTo] = useState('')
   const [composeSubject, setComposeSubject] = useState('')
   const [composeBody, setComposeBody] = useState('')
+  const [composeLeadId, setComposeLeadId] = useState<string>('')
+  const [leads, setLeads] = useState<Array<{id: string, name: string, phone: string, email: string}>>([])
+  const [loadingLeads, setLoadingLeads] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showAttachmentModal, setShowAttachmentModal] = useState(false)
+  const [bulkSelectMode, setBulkSelectMode] = useState(false)
+  const [selectedThreadIds, setSelectedThreadIds] = useState<Set<number>>(new Set())
+  const [showQuickReplies, setShowQuickReplies] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [threadToDelete, setThreadToDelete] = useState<number | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
+
+  // Scroll to bottom of messages (most recent)
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   useEffect(() => {
     loadMessages()
+    loadLeads()
   }, [])
 
-  const loadMessages = async (showRefreshState = false) => {
+  // Auto-scroll to bottom when thread or messages change
+  useEffect(() => {
+    if (selectedThread) {
+      // Small delay to ensure DOM is updated
+      setTimeout(scrollToBottom, 100)
+    }
+  }, [selectedThread?.id, selectedThread?.messages?.length])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when not typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      // Cmd/Ctrl + R: Mark as read
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r' && selectedThread) {
+        e.preventDefault()
+        handleMarkRead()
+      }
+
+      // Cmd/Ctrl + U: Mark as unread
+      if ((e.metaKey || e.ctrlKey) && e.key === 'u' && selectedThread) {
+        e.preventDefault()
+        handleMarkUnread()
+      }
+
+      // Cmd/Ctrl + Shift + A: Mark all as read
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'A') {
+        e.preventDefault()
+        handleMarkAllAsRead()
+      }
+
+      // E: Archive
+      if (e.key === 'e' && selectedThread) {
+        e.preventDefault()
+        archiveThread(selectedThread.id)
+      }
+
+      // S: Star/Unstar
+      if (e.key === 's' && selectedThread) {
+        e.preventDefault()
+        toggleStarThread(selectedThread.id)
+      }
+
+      // X: Bulk select mode
+      if (e.key === 'x') {
+        e.preventDefault()
+        handleToggleBulkSelect()
+      }
+
+      // Delete: Move to trash
+      if (e.key === 'Delete' && selectedThread) {
+        e.preventDefault()
+        trashThread(selectedThread.id)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedThread, bulkSelectMode])
+
+  const loadLeads = async () => {
+    try {
+      setLoadingLeads(true)
+      const response = await leadsApi.getLeads({ limit: 100 })
+      const leadsData = response?.data?.leads || response?.leads || response || []
+      const formattedLeads = leadsData.map((lead: any) => ({
+        id: lead.id,
+        name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.email || lead.phone,
+        phone: lead.phone || '',
+        email: lead.email || ''
+      }))
+      setLeads(formattedLeads)
+    } catch (error) {
+      console.error('Failed to load leads:', error)
+      // Fallback: extract leads from existing threads
+      const uniqueLeads = threads
+        .filter(t => t.lead)
+        .map(t => ({
+          id: t.lead.id,
+          name: `${t.lead.firstName} ${t.lead.lastName}`,
+          phone: t.lead.phone || '',
+          email: t.lead.email || ''
+        }))
+      setLeads(uniqueLeads)
+    } finally {
+      setLoadingLeads(false)
+    }
+  }
+
+  const loadMessages = async (showRefreshState = false, preserveSelection = true) => {
     try {
       if (showRefreshState) {
         setRefreshing(true)
@@ -257,20 +243,36 @@ const CommunicationInbox = () => {
       }
 
       const response = await messagesApi.getMessages()
+      console.log('📥 Messages API response:', response)
       
       // Transform API response to thread format if needed
-      if (response && Array.isArray(response)) {
-        setThreads(response)
-        if (response.length > 0) {
-          setSelectedThread(response[0])
+      const threadsData = response?.data?.threads || response?.threads || response
+      
+      if (threadsData && Array.isArray(threadsData)) {
+        setThreads(threadsData)
+        
+        // Preserve the currently selected thread when refreshing
+        if (preserveSelection && selectedThread) {
+          const updatedSelectedThread = threadsData.find((t: Thread) => t.id === selectedThread.id)
+          if (updatedSelectedThread) {
+            // Update selected thread without triggering auto-mark-as-read
+            setSelectedThread(updatedSelectedThread)
+            console.log('✅ Preserved thread selection, unread:', updatedSelectedThread.unread)
+          }
+        } else if (threadsData.length > 0 && !selectedThread) {
+          // Only auto-select first thread on initial load when nothing is selected
+          // Don't auto-mark as read on initial load
+          setSelectedThread(threadsData[0])
         }
+      } else {
+        setThreads([])
+        setSelectedThread(null)
       }
     } catch (error) {
       console.error('Failed to load messages:', error)
-      toast.error('Failed to load messages, using sample data')
-      // Keep using mock data on error
-      setThreads(mockThreads)
-      setSelectedThread(mockThreads[0])
+      toast.error('Failed to load messages')
+      setThreads([])
+      setSelectedThread(null)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -278,7 +280,7 @@ const CommunicationInbox = () => {
   }
 
   const handleRefresh = () => {
-    loadMessages(true)
+    loadMessages(true, true) // Refresh but preserve selection
   }
 
   const templates = [
@@ -289,6 +291,15 @@ const CommunicationInbox = () => {
     { id: 5, name: 'Thank you', content: 'Hi {contact},\n\nThank you so much for your time today. I really appreciated our conversation. Please don\'t hesitate to reach out if you need anything.\n\nBest regards' },
   ]
 
+  const quickReplies = [
+    { id: 1, text: 'Thanks! 👍', emoji: '👍' },
+    { id: 2, text: 'Will call you soon 📞', emoji: '📞' },
+    { id: 3, text: 'Received ✅', emoji: '✅' },
+    { id: 4, text: 'Perfect! 🎉', emoji: '🎉' },
+    { id: 5, text: 'Got it 👌', emoji: '👌' },
+    { id: 6, text: 'On my way! 🚗', emoji: '🚗' },
+  ]
+
   const insertTemplate = (templateContent: string) => {
     const personalizedContent = templateContent.replace('{contact}', selectedThread?.contact || 'there')
     setReplyText(personalizedContent)
@@ -296,30 +307,158 @@ const CommunicationInbox = () => {
     toast.success('Template inserted')
   }
 
+  const insertQuickReply = async (text: string) => {
+    if (!selectedThread) return
+    
+    setReplyText(text)
+    setShowQuickReplies(false)
+    
+    // Auto-send the quick reply immediately
+    setTimeout(() => {
+      handleSendReply()
+    }, 100)
+  }
+
   const insertEmoji = (emoji: string) => {
     setReplyText(replyText + emoji)
     setShowEmojiPicker(false)
   }
 
-  const handleMarkUnread = () => {
+  const handleMarkUnread = async () => {
     if (!selectedThread) return
-    setThreads(prev => prev.map(t => t.id === selectedThread.id ? { ...t, unread: Math.max(1, t.unread) } : t))
-    toast.success('Marked as unread')
+    
+    try {
+      // Get all inbound message IDs in the thread
+      const inboundMessageIds = selectedThread.messages
+        .filter(m => m.direction === 'INBOUND')
+        .map(m => String(m.id))
+      
+      if (inboundMessageIds.length > 0) {
+        // Call API to mark messages as unread
+        await messagesApi.markAsUnread({ messageIds: inboundMessageIds })
+      }
+      
+      // Update local state
+      setThreads(prev => prev.map(t => 
+        t.id === selectedThread.id 
+          ? { 
+              ...t, 
+              unread: inboundMessageIds.length,
+              messages: t.messages.map(m => ({ 
+                ...m, 
+                unread: m.direction === 'INBOUND' 
+              }))
+            } 
+          : t
+      ))
+      
+      // Update selected thread
+      if (selectedThread.id === selectedThread.id) {
+        setSelectedThread(prev => prev ? {
+          ...prev,
+          unread: inboundMessageIds.length,
+          messages: prev.messages.map(m => ({ 
+            ...m, 
+            unread: m.direction === 'INBOUND' 
+          }))
+        } : null)
+      }
+      
+      toast.success('Marked as unread')
+    } catch (error) {
+      console.error('Failed to mark as unread:', error)
+      toast.error('Failed to mark as unread')
+    }
     setShowMoreMenu(false)
   }
 
-  const handleMarkRead = () => {
+  const handleMarkRead = async () => {
     if (!selectedThread) return
-    setThreads(prev => prev.map(t => t.id === selectedThread.id ? { ...t, unread: 0 } : t))
-    toast.success('Marked as read')
+    
+    try {
+      // Get all unread message IDs in the thread
+      const unreadMessageIds = selectedThread.messages
+        .filter(m => m.unread)
+        .map(m => String(m.id))
+      
+      if (unreadMessageIds.length > 0) {
+        // Call API to mark messages as read
+        await messagesApi.markAsRead({ messageIds: unreadMessageIds })
+      }
+      
+      // Update local state
+      setThreads(prev => prev.map(t => 
+        t.id === selectedThread.id 
+          ? { ...t, unread: 0, messages: t.messages.map(m => ({ ...m, unread: false })) } 
+          : t
+      ))
+      
+      // Update selected thread
+      if (selectedThread.id === selectedThread.id) {
+        setSelectedThread(prev => prev ? {
+          ...prev,
+          unread: 0,
+          messages: prev.messages.map(m => ({ ...m, unread: false }))
+        } : null)
+      }
+      
+      toast.success('Marked as read')
+    } catch (error) {
+      console.error('Failed to mark as read:', error)
+      toast.error('Failed to mark as read')
+    }
     setShowMoreMenu(false)
   }
 
-  const handleSelectThread = (thread: Thread) => {
+  const handleSelectThread = async (thread: Thread, autoMarkRead = true) => {
+    console.log('📖 Selecting thread:', thread.id, 'Unread:', thread.unread, 'Auto-mark:', autoMarkRead)
     setSelectedThread(thread)
-    // Auto-mark as read when opening a thread
-    if (thread.unread > 0) {
-      setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, unread: 0 } : t))
+    
+    // Auto-mark as read when opening a thread (only if explicitly requested)
+    if (autoMarkRead && thread.unread > 0) {
+      try {
+        const unreadMessageIds = thread.messages
+          .filter(m => m.unread && m.id) // Ensure message has an ID
+          .map(m => String(m.id))
+          .filter(id => id && id !== 'undefined' && id !== 'null') // Filter out invalid IDs
+        
+        console.log('📝 Unread message IDs to mark:', unreadMessageIds)
+        console.log('📝 Sample message object:', thread.messages[0])
+        console.log('📝 All messages in thread:', thread.messages.map(m => ({ id: m.id, unread: m.unread })))
+        
+        // Update local state immediately for responsive UI
+        setThreads(prev => prev.map(t => 
+          t.id === thread.id 
+            ? { ...t, unread: 0, messages: t.messages.map(m => ({ ...m, unread: false })) } 
+            : t
+        ))
+        
+        // Call API and await it to ensure it completes before any potential reload
+        if (unreadMessageIds.length > 0) {
+          console.log('🚀 Calling markAsRead API with:', { messageIds: unreadMessageIds })
+          await messagesApi.markAsRead({ messageIds: unreadMessageIds })
+          console.log('✅ Successfully marked messages as read via API')
+        } else {
+          console.log('⚠️ No valid message IDs to mark as read')
+        }
+      } catch (error: any) {
+        console.error('❌ Error marking thread as read:', error)
+        console.error('Error response:', error.response)
+        console.error('Error data:', JSON.stringify(error.response?.data, null, 2))
+        console.error('Thread ID:', thread.id)
+        console.error('Status code:', error.response?.status)
+        // Revert local state if API call failed
+        setThreads(prev => prev.map(t => 
+          t.id === thread.id 
+            ? { ...t, unread: thread.unread, messages: thread.messages } 
+            : t
+        ))
+        const errorMsg = error.response?.data?.error || error.message
+        const details = error.response?.data?.details ? ` (${JSON.stringify(error.response.data.details)})` : ''
+        toast.error(`Failed to mark as read: ${errorMsg}${details}`)
+      }
+    } else if (thread.unread > 0) {
+      console.log('⏭️ Skipping auto-mark-as-read (autoMarkRead=false)')
     }
   }
 
@@ -352,6 +491,13 @@ const CommunicationInbox = () => {
     if (filters.sender && !thread.contact.toLowerCase().includes(filters.sender.toLowerCase())) return false
 
     return matchesChannel && matchesSearch
+  }).sort((a, b) => {
+    // Pinned threads always at the top
+    const aPinned = a.messages.some(m => m.pinned)
+    const bPinned = b.messages.some(m => m.pinned)
+    if (aPinned && !bPinned) return -1
+    if (!aPinned && bPinned) return 1
+    return 0 // Keep original order for non-pinned threads
   })
 
   const totalUnread = threads.reduce((acc: number, thread: Thread) => acc + thread.unread, 0)
@@ -422,6 +568,9 @@ const CommunicationInbox = () => {
       toast.success('Reply sent successfully')
       setReplyText('')
       
+      // Scroll to bottom to show new message
+      setTimeout(scrollToBottom, 100)
+      
       // Refresh messages to get updated data
       await loadMessages(true)
     } catch (error) {
@@ -439,18 +588,53 @@ const CommunicationInbox = () => {
   }
 
   const toggleStarThread = (threadId: number) => {
-    setThreads(prev => prev.map(t => t.id === threadId ? { ...t, messages: t.messages.map(m => ({ ...m, starred: !m.starred })) } : t))
-    toast.success('Toggled star')
+    const thread = threads.find(t => t.id === threadId)
+    const isStarred = thread?.messages.some(m => m.starred)
+    
+    setThreads(prev => prev.map(t => 
+      t.id === threadId 
+        ? { ...t, messages: t.messages.map(m => ({ ...m, starred: !isStarred })) } 
+        : t
+    ))
+    toast.success(isStarred ? 'Removed star' : 'Starred')
+  }
+
+  const togglePinThread = (threadId: number) => {
+    const thread = threads.find(t => t.id === threadId)
+    const isPinned = thread?.messages.some(m => m.pinned)
+    
+    setThreads(prev => prev.map(t => 
+      t.id === threadId 
+        ? { ...t, messages: t.messages.map(m => ({ ...m, pinned: !isPinned })) } 
+        : t
+    ))
+    toast.success(isPinned ? 'Unpinned thread' : 'Pinned to top')
   }
 
   const archiveThread = (threadId: number) => {
     setThreads(prev => prev.map(t => t.id === threadId ? { ...t, messages: t.messages.map(m => ({ ...m, archived: true })) } : t))
     toast.success('Thread archived')
+    setSelectedThread(null) // Close the thread view
   }
 
   const trashThread = (threadId: number) => {
-    setThreads(prev => prev.map(t => t.id === threadId ? { ...t, messages: t.messages.map(m => ({ ...m, trashed: true })) } : t))
-    toast.success('Moved to trash')
+    setThreadToDelete(threadId)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmTrashThread = () => {
+    if (threadToDelete) {
+      setThreads(prev => prev.map(t => t.id === threadToDelete ? { ...t, messages: t.messages.map(m => ({ ...m, trashed: true })) } : t))
+      toast.success('Moved to trash')
+      setSelectedThread(null) // Close the thread view
+    }
+    setShowDeleteConfirm(false)
+    setThreadToDelete(null)
+  }
+
+  const cancelTrashThread = () => {
+    setShowDeleteConfirm(false)
+    setThreadToDelete(null)
   }
 
   const snoozeThread = (threadId: number, minutes = 60) => {
@@ -465,6 +649,101 @@ const CommunicationInbox = () => {
     setTimeout(() => {
       setReplyText('Hi ' + selectedThread?.contact + ',\n\nThank you for your message. I\'d be happy to help with that. Let me know if you have any other questions!\n\nBest regards')
     }, 500)
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const result = await messagesApi.markAllAsRead()
+      toast.success(result.message || 'All messages marked as read')
+      // Reload messages to reflect changes
+      await loadMessages(true)
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
+      toast.error('Failed to mark all as read')
+    }
+  }
+
+  const handleToggleBulkSelect = () => {
+    setBulkSelectMode(!bulkSelectMode)
+    setSelectedThreadIds(new Set())
+  }
+
+  const handleToggleThreadSelect = (threadId: number) => {
+    setSelectedThreadIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(threadId)) {
+        newSet.delete(threadId)
+      } else {
+        newSet.add(threadId)
+      }
+      return newSet
+    })
+  }
+
+  const handleBulkMarkRead = async () => {
+    if (selectedThreadIds.size === 0) {
+      toast.error('No threads selected')
+      return
+    }
+
+    try {
+      const selectedThreadsList = threads.filter(t => selectedThreadIds.has(t.id))
+      const allMessageIds = selectedThreadsList.flatMap(t => 
+        t.messages.filter(m => m.unread).map(m => String(m.id))
+      )
+
+      if (allMessageIds.length > 0) {
+        await messagesApi.markAsRead({ messageIds: allMessageIds })
+      }
+
+      // Update local state
+      setThreads(prev => prev.map(t => 
+        selectedThreadIds.has(t.id)
+          ? { ...t, unread: 0, messages: t.messages.map(m => ({ ...m, unread: false })) }
+          : t
+      ))
+
+      toast.success(`${selectedThreadIds.size} thread(s) marked as read`)
+      setSelectedThreadIds(new Set())
+      setBulkSelectMode(false)
+    } catch (error) {
+      console.error('Failed to bulk mark as read:', error)
+      toast.error('Failed to mark threads as read')
+    }
+  }
+
+  const handleBulkArchive = () => {
+    if (selectedThreadIds.size === 0) {
+      toast.error('No threads selected')
+      return
+    }
+
+    setThreads(prev => prev.map(t => 
+      selectedThreadIds.has(t.id)
+        ? { ...t, messages: t.messages.map(m => ({ ...m, archived: true })) }
+        : t
+    ))
+
+    toast.success(`${selectedThreadIds.size} thread(s) archived`)
+    setSelectedThreadIds(new Set())
+    setBulkSelectMode(false)
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedThreadIds.size === 0) {
+      toast.error('No threads selected')
+      return
+    }
+
+    setThreads(prev => prev.map(t => 
+      selectedThreadIds.has(t.id)
+        ? { ...t, messages: t.messages.map(m => ({ ...m, trashed: true })) }
+        : t
+    ))
+
+    toast.success(`${selectedThreadIds.size} thread(s) moved to trash`)
+    setSelectedThreadIds(new Set())
+    setBulkSelectMode(false)
   }
 
   const handleSendCompose = async () => {
@@ -483,17 +762,20 @@ const CommunicationInbox = () => {
         await messagesApi.sendEmail({
           to: composeTo,
           subject: composeSubject,
-          body: messageBody
+          body: messageBody,
+          leadId: composeLeadId || undefined
         })
       } else if (composeType === 'sms') {
         await messagesApi.sendSMS({
           to: composeTo,
-          body: messageBody
+          body: messageBody,
+          leadId: composeLeadId || undefined
         })
       } else if (composeType === 'call') {
         await messagesApi.makeCall({
           to: composeTo,
-          notes: messageBody
+          notes: messageBody,
+          leadId: composeLeadId || undefined
         })
       }
 
@@ -534,7 +816,11 @@ const CommunicationInbox = () => {
       setComposeTo('')
       setComposeSubject('')
       setComposeBody('')
+      setComposeLeadId('')
       toast.success('Message sent successfully')
+
+      // Scroll to bottom to show new message
+      setTimeout(scrollToBottom, 100)
 
       // Refresh messages to get updated data
       await loadMessages(true)
@@ -555,6 +841,31 @@ const CommunicationInbox = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          {bulkSelectMode && selectedThreadIds.size > 0 && (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={handleBulkMarkRead}
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Mark {selectedThreadIds.size} as Read
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleBulkArchive}
+              >
+                <Archive className="mr-2 h-4 w-4" />
+                Archive {selectedThreadIds.size}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleBulkDelete}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete {selectedThreadIds.size}
+              </Button>
+            </>
+          )}
           <Button 
             variant="outline" 
             onClick={handleRefresh}
@@ -562,6 +873,14 @@ const CommunicationInbox = () => {
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleMarkAllAsRead}
+            title="Mark all messages as read"
+          >
+            <CheckCheck className="mr-2 h-4 w-4" />
+            Mark All Read
           </Button>
           <Button onClick={() => setShowComposeModal(true)}>
             <Send className="mr-2 h-4 w-4" />
@@ -581,13 +900,13 @@ const CommunicationInbox = () => {
         <>
       <div className="hidden">Wrapper for loading state</div>
 
-      {/* 3-Column Layout */}
-      <div className="grid grid-cols-12 gap-4 h-[calc(100vh-200px)]">
+      {/* 3-Column Layout - Fixed height with internal scrolling */}
+      <div className="grid grid-cols-12 gap-4" style={{ height: 'calc(100vh - 240px)' }}>
         {/* Column 1: Channels (2 cols) */}
-        <Card className="col-span-2 flex flex-col">
-          <CardContent className="p-4 flex-1 overflow-hidden flex flex-col">
+        <Card className="col-span-2 flex flex-col overflow-hidden">
+          <CardContent className="p-4 flex flex-col h-full">
             <h3 className="font-semibold mb-4">Channels</h3>
-            <div className="space-y-1 flex-1 overflow-y-auto">
+            <div className="space-y-1 overflow-y-auto pr-2" style={{ maxHeight: 'calc(100% - 40px)' }}>
               <Button
                 variant={selectedChannel === 'all' ? 'default' : 'ghost'}
                 className="w-full justify-start"
@@ -661,11 +980,19 @@ const CommunicationInbox = () => {
         </Card>
 
         {/* Column 2: Threads (4 cols) */}
-        <Card className="col-span-4 flex flex-col">
-          <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
+        <Card className="col-span-4 flex flex-col overflow-hidden">
+          <CardContent className="p-0 flex flex-col h-full">
             {/* Search Header */}
-            <div className="p-4 border-b space-y-2">
-              <div className="flex gap-2">
+            <div className="p-4 border-b space-y-2 flex-shrink-0">
+              <div className="flex gap-2 items-center">
+                <Button
+                  size="sm"
+                  variant={bulkSelectMode ? 'default' : 'outline'}
+                  onClick={handleToggleBulkSelect}
+                  title="Toggle bulk selection mode"
+                >
+                  <CheckCheck className="h-4 w-4" />
+                </Button>
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -716,27 +1043,70 @@ const CommunicationInbox = () => {
               )}
             </div>
 
-            {/* Thread List */}
-            <div className="flex-1 overflow-y-auto">
-              {filteredThreads.map((thread: Thread) => {
-                const Icon = getChannelIcon(thread.type)
-                const isSelected = selectedThread?.id === thread.id
+            {/* Thread List - Scrollable area */}
+            <div className="overflow-y-auto flex-1 pr-2">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredThreads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                  <MessageSquare className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+                    Your inbox is empty. Start a conversation by composing a new message, or wait for incoming messages from your leads.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button onClick={() => setShowComposeModal(true)}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Compose Message
+                    </Button>
+                    <Button variant="outline" onClick={handleRefresh}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </Button>
+                  </div>
+                  <div className="mt-6 text-xs text-muted-foreground">
+                    <p>💡 Tip: Configure your Twilio settings to receive SMS messages</p>
+                  </div>
+                </div>
+              ) : (
+                filteredThreads.map((thread: Thread) => {
+                  const Icon = getChannelIcon(thread.type)
+                  const isSelected = selectedThread?.id === thread.id
 
-                return (
-                  <div
-                    key={thread.id}
-                    className={`p-4 border-b cursor-pointer transition-colors hover:bg-accent ${
-                      isSelected ? 'bg-accent' : ''
-                    } ${thread.unread > 0 ? 'bg-blue-50/50' : ''}`}
-                    onClick={() => handleSelectThread(thread)}
+                  return (
+                    <div
+                      key={thread.id}
+                      className={`p-4 border-b cursor-pointer transition-colors hover:bg-accent ${
+                        isSelected ? 'bg-accent' : ''
+                      } ${thread.unread > 0 ? 'bg-blue-50/50' : ''} ${
+                        selectedThreadIds.has(thread.id) ? 'bg-primary/10' : ''
+                      }`}
+                      onClick={() => bulkSelectMode ? handleToggleThreadSelect(thread.id) : handleSelectThread(thread)}
                   >
                     <div className="flex items-start gap-3">
+                      {bulkSelectMode && (
+                        <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedThreadIds.has(thread.id)}
+                            onChange={() => handleToggleThreadSelect(thread.id)}
+                            className="w-4 h-4 rounded border-gray-300"
+                          />
+                        </div>
+                      )}
                       <div className={`mt-1 ${getChannelColor(thread.type)}`}>
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="font-medium truncate">{thread.contact}</p>
+                          <div className="flex items-center gap-1 min-w-0">
+                            {thread.messages.some(m => m.pinned) && (
+                              <Pin className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                            )}
+                            <p className="font-medium truncate">{thread.contact}</p>
+                          </div>
                           <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                             {thread.timestamp}
                           </span>
@@ -759,27 +1129,31 @@ const CommunicationInbox = () => {
                         </div>
                       </div>
                       <div className="ml-2 flex flex-col gap-1">
-                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); toggleStarThread(thread.id) }}>
-                          <Star className="h-4 w-4" />
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); togglePinThread(thread.id) }} title="Pin to top">
+                          <Pin className={`h-4 w-4 ${thread.messages.some(m => m.pinned) ? 'fill-blue-500 text-blue-500' : ''}`} />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); snoozeThread(thread.id, 60) }}>
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); toggleStarThread(thread.id) }} title="Star">
+                          <Star className={`h-4 w-4 ${thread.messages.some(m => m.starred) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); snoozeThread(thread.id, 60) }} title="Snooze">
                           <Clock className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                   </div>
-                )
-              })}
+                  )
+                })
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Column 3: Conversation (6 cols) */}
-        <Card className="col-span-6 flex flex-col">
+        <Card className="col-span-6 flex flex-col overflow-hidden">
           {selectedThread ? (
             <>
               {/* Conversation Header */}
-              <div className="p-4 border-b flex items-center justify-between">
+              <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
                 <div>
                   <h3 className="font-semibold">{selectedThread.contact}</h3>
                   {selectedThread.subject && (
@@ -787,13 +1161,16 @@ const CommunicationInbox = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => selectedThread && toggleStarThread(selectedThread.id)}>
-                    <Star className="h-4 w-4" />
+                  <Button size="sm" variant="ghost" onClick={() => selectedThread && togglePinThread(selectedThread.id)} title="Pin to top">
+                    <Pin className={`h-4 w-4 ${selectedThread?.messages.some(m => m.pinned) ? 'fill-blue-500 text-blue-500' : ''}`} />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => selectedThread && archiveThread(selectedThread.id)}>
+                  <Button size="sm" variant="ghost" onClick={() => selectedThread && toggleStarThread(selectedThread.id)} title="Star">
+                    <Star className={`h-4 w-4 ${selectedThread?.messages.some(m => m.starred) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => selectedThread && archiveThread(selectedThread.id)} title="Archive thread">
                     <Archive className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => selectedThread && trashThread(selectedThread.id)}>
+                  <Button size="sm" variant="ghost" onClick={() => selectedThread && trashThread(selectedThread.id)} title="Move to trash">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                   <div className="relative">
@@ -809,7 +1186,10 @@ const CommunicationInbox = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="w-full justify-start"
-                                onClick={handleMarkRead}
+                                onClick={() => {
+                                  handleMarkRead()
+                                  setShowMoreMenu(false)
+                                }}
                               >
                                 <Mail className="mr-2 h-4 w-4" />
                                 Mark as Read
@@ -819,7 +1199,10 @@ const CommunicationInbox = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="w-full justify-start"
-                                onClick={handleMarkUnread}
+                                onClick={() => {
+                                  handleMarkUnread()
+                                  setShowMoreMenu(false)
+                                }}
                               >
                                 <Mail className="mr-2 h-4 w-4" />
                                 Mark as Unread
@@ -829,7 +1212,10 @@ const CommunicationInbox = () => {
                               variant="ghost"
                               size="sm"
                               className="w-full justify-start"
-                              onClick={handleForward}
+                              onClick={() => {
+                                handleForward()
+                                setShowMoreMenu(false)
+                              }}
                             >
                               <Send className="mr-2 h-4 w-4" />
                               Forward
@@ -838,7 +1224,10 @@ const CommunicationInbox = () => {
                               variant="ghost"
                               size="sm"
                               className="w-full justify-start"
-                              onClick={handlePrint}
+                              onClick={() => {
+                                handlePrint()
+                                setShowMoreMenu(false)
+                              }}
                             >
                               <FileText className="mr-2 h-4 w-4" />
                               Print
@@ -863,14 +1252,15 @@ const CommunicationInbox = () => {
                 </div>
               </div>
 
-              {/* Messages */}
-              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Messages - Scrollable area */}
+              <CardContent className="overflow-y-auto p-4 space-y-4 flex-1 pr-2">
                 {selectedThread.messages.map((message: Message, index: number) => {
-                  const isFromMe = message.from.includes('you@')
+                  // Check direction field first, fallback to from address check
+                  const isFromMe = message.direction === 'OUTBOUND' || message.from.includes('you@')
                   const Icon = getChannelIcon(message.type)
 
                   return (
-                    <div key={message.id} className={`flex ${isFromMe ? 'justify-end' : 'justify-start'}`}>
+                    <div key={message.id} className={`flex ${isFromMe ? 'justify-end' : 'justify-start'} mb-4`}>
                       <div className={`max-w-[70%] ${isFromMe ? 'order-2' : 'order-1'}`}>
                         {/* Message Header */}
                         <div className={`flex items-center gap-2 mb-1 ${isFromMe ? 'justify-end' : 'justify-start'}`}>
@@ -882,11 +1272,11 @@ const CommunicationInbox = () => {
                           <span className="text-xs text-muted-foreground">{message.timestamp}</span>
                         </div>
 
-                        {/* Message Bubble */}
-                        <div className={`rounded-lg p-3 ${
+                        {/* Message Bubble - iMessage style */}
+                        <div className={`rounded-2xl px-4 py-2 ${
                           isFromMe 
-                            ? 'bg-primary text-primary-foreground' 
-                            : 'bg-muted'
+                            ? 'bg-blue-500 text-white rounded-br-md' 
+                            : 'bg-gray-200 text-gray-900 rounded-bl-md'
                         }`}>
                           {message.subject && index === 0 && (
                             <p className="font-semibold mb-2">{message.subject}</p>
@@ -967,10 +1357,12 @@ const CommunicationInbox = () => {
                     </div>
                   )
                 })}
+                {/* Invisible div to scroll to (bottom of messages) */}
+                <div ref={messagesEndRef} />
               </CardContent>
 
-              {/* Reply Box */}
-              <div className="p-4 border-t">
+              {/* Reply Box - Fixed at bottom */}
+              <div className="p-4 border-t flex-shrink-0">
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Button
@@ -1003,6 +1395,36 @@ const CommunicationInbox = () => {
                                   onClick={() => insertTemplate(template.content)}
                                 >
                                   {template.name}
+                                </Button>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setShowQuickReplies(!showQuickReplies)}
+                        title="Quick replies - instant send"
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        Quick Reply
+                      </Button>
+                      {showQuickReplies && (
+                        <Card className="absolute bottom-full left-0 mb-2 w-56 z-10 shadow-lg">
+                          <CardContent className="p-2">
+                            <div className="space-y-1">
+                              {quickReplies.map(reply => (
+                                <Button
+                                  key={reply.id}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start text-left"
+                                  onClick={() => insertQuickReply(reply.text)}
+                                >
+                                  {reply.text}
                                 </Button>
                               ))}
                             </div>
@@ -1304,6 +1726,35 @@ const CommunicationInbox = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <label className="text-sm font-medium">Select Lead (Optional)</label>
+                  <select
+                    className="w-full p-2 border rounded-md"
+                    value={composeLeadId}
+                    onChange={(e) => {
+                      const leadId = e.target.value
+                      setComposeLeadId(leadId)
+                      if (leadId) {
+                        const lead = leads.find(l => l.id === leadId)
+                        if (lead) {
+                          if (composeType === 'email') {
+                            setComposeTo(lead.email)
+                          } else if (composeType === 'sms') {
+                            setComposeTo(lead.phone)
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <option value="">-- Select a lead or enter manually below --</option>
+                    {leads.map(lead => (
+                      <option key={lead.id} value={lead.id}>
+                        {lead.name} ({composeType === 'email' ? lead.email : lead.phone})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-sm font-medium">
                     {composeType === 'email' ? 'To (Email)' : composeType === 'sms' ? 'To (Phone)' : 'Contact'}
                   </label>
@@ -1312,6 +1763,9 @@ const CommunicationInbox = () => {
                     value={composeTo}
                     onChange={(e) => setComposeTo(e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {composeLeadId ? 'Auto-filled from selected lead. You can edit if needed.' : 'Or enter recipient manually'}
+                  </p>
                 </div>
 
                 {composeType === 'email' && (
@@ -1421,6 +1875,26 @@ const CommunicationInbox = () => {
       )}
         </>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Thread?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to move this conversation to trash? This action can be undone by restoring from the trash folder.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelTrashThread}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmTrashThread} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

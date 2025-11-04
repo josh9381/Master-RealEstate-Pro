@@ -28,9 +28,21 @@ export async function getEmailConfig(req: Request, res: Response): Promise<void>
   }
 
   // Decrypt sensitive fields before sending (but mask them for security)
+  let maskedApiKey = null;
+  try {
+    if (config.apiKey) {
+      const decrypted = decrypt(config.apiKey);
+      maskedApiKey = '••••••••' + (decrypted.slice(-4));
+    }
+  } catch (error) {
+    // If decryption fails, it might be plain text or corrupted
+    console.error('Failed to decrypt API key:', error);
+    maskedApiKey = config.apiKey ? '••••••••' : null;
+  }
+
   const safeConfig = {
     ...config,
-    apiKey: config.apiKey ? '••••••••' + (decrypt(config.apiKey).slice(-4)) : null,
+    apiKey: maskedApiKey,
     smtpPassword: config.smtpPassword ? '••••••••' : null
   };
 

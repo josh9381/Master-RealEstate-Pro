@@ -745,13 +745,38 @@ export const messagesApi = {
     return response.data
   },
 
-  markAsRead: async (id: string) => {
+  markAsRead: async (data: { messageIds: string[] }) => {
+    const response = await api.post('/messages/mark-read', data)
+    return response.data
+  },
+
+  markAsUnread: async (data: { messageIds: string[] }) => {
+    const response = await api.post('/messages/mark-unread', data)
+    return response.data
+  },
+
+  markAllAsRead: async () => {
+    const response = await api.post('/messages/mark-all-read')
+    return response.data
+  },
+
+  markSingleAsRead: async (id: string) => {
     const response = await api.patch(`/messages/${id}/read`)
+    return response.data
+  },
+
+  markSingleAsUnread: async (id: string) => {
+    const response = await api.patch(`/messages/${id}/unread`)
     return response.data
   },
 
   deleteMessage: async (id: string) => {
     const response = await api.delete(`/messages/${id}`)
+    return response.data
+  },
+
+  getStats: async (leadId?: string) => {
+    const response = await api.get('/messages/stats', { params: leadId ? { leadId } : {} })
     return response.data
   },
 }
@@ -948,6 +973,11 @@ export const settingsApi = {
 
   updateSMSConfig: async (data: any) => {
     const response = await api.put('/settings/sms', data)
+    return response.data.data
+  },
+
+  deleteSMSConfig: async () => {
+    const response = await api.delete('/settings/sms')
     return response.data.data
   },
 
