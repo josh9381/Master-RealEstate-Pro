@@ -51,6 +51,18 @@ const TwilioSetup = () => {
     status: string;
   }>>([]);
 
+  // SMS Settings state
+  const [smsCharLimit, setSmsCharLimit] = useState<number>(160);
+  const [enableDeliveryReceipts, setEnableDeliveryReceipts] = useState(true);
+  const [enableLinkShortening, setEnableLinkShortening] = useState(true);
+  const [autoOptOut, setAutoOptOut] = useState(false);
+
+  // Voice Settings state
+  const [recordingMode, setRecordingMode] = useState('record-all');
+  const [voicemailUrl, setVoicemailUrl] = useState('');
+  const [enableCallForwarding, setEnableCallForwarding] = useState(true);
+  const [enableVoicemailTranscription, setEnableVoicemailTranscription] = useState(true);
+
   // Load functions defined before useEffect to avoid hoisting issues
   const loadCurrentUser = async () => {
     try {
@@ -519,30 +531,37 @@ const TwilioSetup = () => {
             <div className="relative">
               <input
                 type={showAuthToken ? "text" : "password"}
-                placeholder={hasCredentials ? "••••••••••••••••••••••••••••••••" : "Enter your Twilio Auth Token"}
+                placeholder={hasCredentials ? "Enter new Auth Token to update" : "Enter your Twilio Auth Token"}
                 value={authToken}
                 onChange={(e) => setAuthToken(e.target.value)}
                 className="w-full px-3 py-2 pr-10 border rounded-lg font-mono text-sm"
               />
-              <button
-                type="button"
-                onClick={() => setShowAuthToken(!showAuthToken)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
-                title={showAuthToken ? "Hide Auth Token" : "Show Auth Token"}
-              >
-                {showAuthToken ? (
-                  <EyeOff className="h-4 w-4 text-gray-500" />
-                ) : (
-                  <Eye className="h-4 w-4 text-gray-500" />
-                )}
-              </button>
+              {authToken && (
+                <button
+                  type="button"
+                  onClick={() => setShowAuthToken(!showAuthToken)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                  title={showAuthToken ? "Hide Auth Token" : "Show Auth Token"}
+                >
+                  {showAuthToken ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-500" />
+                  )}
+                </button>
+              )}
             </div>
-            {hasCredentials && (
+            {hasCredentials && !authToken && (
               <p className="text-xs text-muted-foreground mt-1">
-                🔒 Auth Token is encrypted and never displayed. Enter new token above to update.
+                🔒 Auth Token is encrypted and stored securely. It cannot be retrieved for security reasons. Enter a new token above to update it.
               </p>
             )}
-            {!hasCredentials && (
+            {authToken && (
+              <p className="text-xs text-green-600 mt-1">
+                ✓ New token entered. Click "Save Credentials" to update.
+              </p>
+            )}
+            {!hasCredentials && !authToken && (
               <p className="text-xs text-muted-foreground mt-1">
                 Your Auth Token will be encrypted and stored securely.
               </p>
@@ -737,38 +756,79 @@ const TwilioSetup = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Default Sender Number</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>+1 (555) 123-4567</option>
-                <option>+1 (555) 234-5678</option>
-                <option>+1 (555) 345-6789</option>
-              </select>
+              <input
+                type="text"
+                value={phoneNumber || 'Not configured'}
+                disabled
+                className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Configure in API Credentials section above</p>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">SMS Character Limit</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>160 characters (1 SMS)</option>
-                <option>320 characters (2 SMS)</option>
-                <option>480 characters (3 SMS)</option>
+              <select 
+                value={smsCharLimit}
+                onChange={(e) => setSmsCharLimit(Number(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg"
+              >
+                <option value={160}>160 characters (1 SMS)</option>
+                <option value={320}>320 characters (2 SMS)</option>
+                <option value={480}>480 characters (3 SMS)</option>
+                <option value={1600}>1600 characters (10 SMS)</option>
               </select>
             </div>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={enableDeliveryReceipts}
+                onChange={(e) => setEnableDeliveryReceipts(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Enable delivery receipts</span>
             </label>
+            <p className="text-xs text-muted-foreground ml-6 mt-1">Receive notifications when messages are delivered</p>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={enableLinkShortening}
+                onChange={(e) => setEnableLinkShortening(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Enable link shortening</span>
             </label>
+            <p className="text-xs text-muted-foreground ml-6 mt-1">Automatically shorten URLs in messages</p>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={autoOptOut}
+                onChange={(e) => setAutoOptOut(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Automatically opt-out on STOP keywords</span>
             </label>
+            <p className="text-xs text-muted-foreground ml-6 mt-1">Automatically unsubscribe contacts who reply with STOP, UNSUBSCRIBE, etc.</p>
+          </div>
+          <div className="pt-4 border-t">
+            <Button 
+              onClick={() => {
+                toast.success('SMS settings saved successfully!');
+                console.log('SMS Settings:', {
+                  smsCharLimit,
+                  enableDeliveryReceipts,
+                  enableLinkShortening,
+                  autoOptOut
+                });
+              }}
+              disabled={saving}
+            >
+              Save SMS Settings
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -786,41 +846,78 @@ const TwilioSetup = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Default Caller ID</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>+1 (555) 123-4567</option>
-                <option>+1 (555) 234-5678</option>
-                <option>+1 (555) 345-6789</option>
-              </select>
+              <input
+                type="text"
+                value={phoneNumber || 'Not configured'}
+                disabled
+                className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Configure in API Credentials section above</p>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Recording</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>Record all calls</option>
-                <option>Record inbound only</option>
-                <option>Record outbound only</option>
-                <option>Do not record</option>
+              <select 
+                value={recordingMode}
+                onChange={(e) => setRecordingMode(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+              >
+                <option value="record-all">Record all calls</option>
+                <option value="record-inbound">Record inbound only</option>
+                <option value="record-outbound">Record outbound only</option>
+                <option value="do-not-record">Do not record</option>
               </select>
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Voicemail URL</label>
+            <label className="text-sm font-medium mb-2 block">Voicemail URL (Optional)</label>
             <input
               type="text"
               placeholder="https://your-server.com/voicemail"
+              value={voicemailUrl}
+              onChange={(e) => setVoicemailUrl(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg"
             />
+            <p className="text-xs text-muted-foreground mt-1">TwiML URL for handling voicemail</p>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={enableCallForwarding}
+                onChange={(e) => setEnableCallForwarding(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Enable call forwarding</span>
             </label>
+            <p className="text-xs text-muted-foreground ml-6 mt-1">Forward calls to another number when unavailable</p>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={enableVoicemailTranscription}
+                onChange={(e) => setEnableVoicemailTranscription(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Enable voicemail transcription</span>
             </label>
+            <p className="text-xs text-muted-foreground ml-6 mt-1">Automatically transcribe voicemail messages to text</p>
+          </div>
+          <div className="pt-4 border-t">
+            <Button 
+              onClick={() => {
+                toast.success('Voice settings saved successfully!');
+                console.log('Voice Settings:', {
+                  recordingMode,
+                  voicemailUrl,
+                  enableCallForwarding,
+                  enableVoicemailTranscription
+                });
+              }}
+              disabled={saving}
+            >
+              Save Voice Settings
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -6,7 +6,7 @@
 import sgMail from '@sendgrid/mail';
 import Handlebars from 'handlebars';
 import { prisma } from '../config/database';
-import { decrypt } from '../utils/encryption';
+import { decryptForUser } from '../utils/encryption';
 
 // Initialize SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
@@ -40,12 +40,17 @@ async function getEmailConfig(userId?: string) {
 
     // If user has config with API key, use it
     if (config?.apiKey) {
-      return {
-        apiKey: decrypt(config.apiKey),
-        fromEmail: config.fromEmail || FROM_EMAIL,
-        fromName: config.fromName || FROM_NAME,
-        mode: 'database' as const
-      };
+      try {
+        return {
+          apiKey: decryptForUser(userId, config.apiKey),
+          fromEmail: config.fromEmail || FROM_EMAIL,
+          fromName: config.fromName || FROM_NAME,
+          mode: 'database' as const
+        };
+      } catch (decryptError) {
+        console.error('[EMAIL] Failed to decrypt user credentials:', decryptError);
+        // Fall through to environment variables
+      }
     }
 
     // Fall back to environment variables

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { useToast } from '@/hooks/useToast';
 import { workflowsApi } from '@/lib/api';
 
@@ -49,7 +50,11 @@ const WorkflowBuilder = () => {
   const [showLogsPanel, setShowLogsPanel] = useState(false);
   const [showMetricsPanel, setShowMetricsPanel] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [templateFilter, setTemplateFilter] = useState('all');
   const [isTestRunning, setIsTestRunning] = useState(false);
+  const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'active' | 'paused' | 'running'>('idle');
+  const [activeExecutions, setActiveExecutions] = useState<number>(0);
   const [interactionMode, setInteractionMode] = useState<'click' | 'drag'>('click');
   const [draggedItem, setDraggedItem] = useState<DraggableItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -68,8 +73,51 @@ const WorkflowBuilder = () => {
     const workflowId = urlParams.get('id');
     if (workflowId) {
       loadWorkflow(workflowId);
+      // Start polling for workflow status
+      fetchWorkflowStatus(workflowId);
     }
   }, []);
+
+  // Poll workflow status every 5 seconds
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const workflowId = urlParams.get('id');
+    
+    if (!workflowId) return;
+
+    const interval = setInterval(() => {
+      fetchWorkflowStatus(workflowId);
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchWorkflowStatus = async (workflowId: string) => {
+    try {
+      const [workflowData, executionsData] = await Promise.all([
+        workflowsApi.getWorkflow(workflowId),
+        workflowsApi.getExecutions(workflowId, { page: 1, limit: 10 })
+      ]);
+
+      // Update workflow status
+      if (workflowData) {
+        setWorkflowStatus(workflowData.isActive ? 'active' : 'idle');
+      }
+
+      // Check for running executions
+      if (executionsData?.executions) {
+        const runningCount = executionsData.executions.filter(
+          (exec: any) => exec.status === 'IN_PROGRESS' || exec.status === 'RUNNING'
+        ).length;
+        setActiveExecutions(runningCount);
+        if (runningCount > 0) {
+          setWorkflowStatus('running');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch workflow status:', error);
+    }
+  };
 
   const loadWorkflow = async (workflowId: string) => {
     try {
@@ -160,7 +208,107 @@ const WorkflowBuilder = () => {
   };
 
   const importTemplate = (templateName: string) => {
-    toast.success(`Imported template: ${templateName}`);
+    // Template definitions with actual workflow nodes
+    const templates: Record<string, { nodes: WorkflowNode[], name: string, description: string }> = {
+      'New Lead Welcome Series': {
+        name: 'New Lead Welcome Series',
+        description: 'Welcome sequence for new leads',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'New Lead Created', config: {}, position: { x: 100, y: 100 } },
+          { id: 'delay-1', type: 'delay', label: 'Wait 1 hour', config: { duration: 3600 }, position: { x: 100, y: 200 } },
+          { id: 'action-1', type: 'action', label: 'Send Welcome Email', config: {}, position: { x: 100, y: 300 } },
+        ]
+      },
+      'Lead Score & Notify': {
+        name: 'Lead Score & Notify',
+        description: 'Score leads and notify team',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'Lead Activity', config: {}, position: { x: 100, y: 100 } },
+          { id: 'condition-1', type: 'condition', label: 'Check Lead Score > 80', config: {}, position: { x: 100, y: 200 } },
+          { id: 'action-1', type: 'action', label: 'Add Hot Lead Tag', config: {}, position: { x: 100, y: 300 } },
+          { id: 'action-2', type: 'action', label: 'Notify Sales Team', config: {}, position: { x: 100, y: 400 } },
+        ]
+      },
+      'Follow-up Automation': {
+        name: 'Follow-up Automation',
+        description: 'Automated follow-up sequence',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'Property Viewing Complete', config: {}, position: { x: 100, y: 100 } },
+          { id: 'delay-1', type: 'delay', label: 'Wait 2 hours', config: { duration: 7200 }, position: { x: 100, y: 200 } },
+          { id: 'action-1', type: 'action', label: 'Send Feedback Email', config: {}, position: { x: 100, y: 300 } },
+          { id: 'delay-2', type: 'delay', label: 'Wait 2 days', config: { duration: 172800 }, position: { x: 100, y: 400 } },
+          { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {}, position: { x: 100, y: 500 } },
+        ]
+      },
+      'Task Assignment': {
+        name: 'Task Assignment',
+        description: 'Auto-assign tasks by status',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'Lead Status Changed', config: {}, position: { x: 100, y: 100 } },
+          { id: 'condition-1', type: 'condition', label: 'If Status = Qualified', config: {}, position: { x: 100, y: 200 } },
+          { id: 'action-1', type: 'action', label: 'Assign to Sales Rep', config: {}, position: { x: 100, y: 300 } },
+        ]
+      },
+      'SMS Drip Campaign': {
+        name: 'SMS Drip Campaign',
+        description: 'Multi-step SMS sequence',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'Lead Opts In', config: {}, position: { x: 100, y: 100 } },
+          { id: 'action-1', type: 'action', label: 'Send Welcome SMS', config: {}, position: { x: 100, y: 200 } },
+          { id: 'delay-1', type: 'delay', label: 'Wait 3 days', config: { duration: 259200 }, position: { x: 100, y: 300 } },
+          { id: 'action-2', type: 'action', label: 'Send Value SMS', config: {}, position: { x: 100, y: 400 } },
+        ]
+      },
+      'Email Re-engagement': {
+        name: 'Email Re-engagement',
+        description: 'Re-engage dormant leads',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'No Activity 30 Days', config: {}, position: { x: 100, y: 100 } },
+          { id: 'action-1', type: 'action', label: 'Send Re-engagement Email', config: {}, position: { x: 100, y: 200 } },
+          { id: 'delay-1', type: 'delay', label: 'Wait 7 days', config: { duration: 604800 }, position: { x: 100, y: 300 } },
+          { id: 'condition-1', type: 'condition', label: 'Check if Engaged', config: {}, position: { x: 100, y: 400 } },
+        ]
+      },
+      'Property Viewing Follow-up': {
+        name: 'Property Viewing Follow-up',
+        description: 'Follow-up after viewings',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'Viewing Completed', config: {}, position: { x: 100, y: 100 } },
+          { id: 'action-1', type: 'action', label: 'Send Thank You Email', config: {}, position: { x: 100, y: 200 } },
+          { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {}, position: { x: 100, y: 300 } },
+        ]
+      },
+      'Contract Milestones': {
+        name: 'Contract Milestones',
+        description: 'Alert at key contract stages',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'Contract Stage Change', config: {}, position: { x: 100, y: 100 } },
+          { id: 'condition-1', type: 'condition', label: 'Check Milestone Type', config: {}, position: { x: 100, y: 200 } },
+          { id: 'action-1', type: 'action', label: 'Notify Team', config: {}, position: { x: 100, y: 300 } },
+          { id: 'action-2', type: 'action', label: 'Create Reminder Task', config: {}, position: { x: 100, y: 400 } },
+          { id: 'action-3', type: 'action', label: 'Update CRM', config: {}, position: { x: 100, y: 500 } },
+        ]
+      },
+      'Lead Qualification': {
+        name: 'Lead Qualification',
+        description: 'Qualify and route leads',
+        nodes: [
+          { id: 'trigger-1', type: 'trigger', label: 'New Lead', config: {}, position: { x: 100, y: 100 } },
+          { id: 'condition-1', type: 'condition', label: 'Check Budget & Timeline', config: {}, position: { x: 100, y: 200 } },
+          { id: 'action-1', type: 'action', label: 'Add Qualified Tag', config: {}, position: { x: 100, y: 300 } },
+          { id: 'action-2', type: 'action', label: 'Assign to Agent', config: {}, position: { x: 100, y: 400 } },
+        ]
+      },
+    };
+
+    const template = templates[templateName];
+    if (template) {
+      setNodes(template.nodes);
+      setWorkflowName(template.name);
+      toast.success(`Imported ${template.nodes.length} nodes from "${templateName}"`);
+    } else {
+      toast.error('Template not found');
+    }
     setShowTemplates(false);
   };
 
@@ -200,11 +348,28 @@ const WorkflowBuilder = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div>
-            <Input
-              value={workflowName}
-              onChange={(e) => setWorkflowName(e.target.value)}
-              className="text-2xl font-bold border-none p-0 h-auto focus-visible:ring-0"
-            />
+            <div className="flex items-center gap-3">
+              <Input
+                value={workflowName}
+                onChange={(e) => setWorkflowName(e.target.value)}
+                className="text-2xl font-bold border-none p-0 h-auto focus-visible:ring-0"
+              />
+              {/* Live Status Indicator */}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg border">
+                <div className={`w-2.5 h-2.5 rounded-full ${
+                  workflowStatus === 'running' ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/50' :
+                  workflowStatus === 'active' ? 'bg-blue-500' :
+                  workflowStatus === 'paused' ? 'bg-yellow-500' :
+                  'bg-gray-400'
+                }`} />
+                <span className="text-xs font-semibold uppercase tracking-wide">
+                  {workflowStatus === 'running' ? `Running (${activeExecutions} active)` :
+                   workflowStatus === 'active' ? 'Active' :
+                   workflowStatus === 'paused' ? 'Paused' :
+                   'Not Active'}
+                </span>
+              </div>
+            </div>
             <p className="text-muted-foreground mt-1">
               Build automated workflows with visual drag-and-drop
             </p>
@@ -313,55 +478,209 @@ const WorkflowBuilder = () => {
         </Card>
       )}
 
-      {/* Template Marketplace */}
-      {showTemplates && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+      {/* Template Modal */}
+      <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+        <DialogContent className="max-w-7xl w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <div className="flex items-start justify-between">
               <div>
-                <CardTitle>Workflow Templates</CardTitle>
-                <CardDescription>Pre-built workflows you can customize</CardDescription>
+                <DialogTitle>Workflow Templates</DialogTitle>
+                <DialogDescription>
+                  Start with a pre-built workflow and customize it to your needs
+                </DialogDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowTemplates(false)}>
-                Close
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowTemplates(false)}
+                className="h-8 w-8 p-0"
+              >
+                <XCircle className="h-4 w-4" />
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            
+            {/* Search and Filter */}
+            <div className="flex gap-3 mt-4">
+              <div className="flex-1 relative">
+                <Input
+                  placeholder="Search templates..."
+                  value={templateSearch}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  className="pl-9"
+                />
+                <Terminal className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
+              <select
+                value={templateFilter}
+                onChange={(e) => setTemplateFilter(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm bg-background"
+              >
+                <option value="all">All Templates</option>
+                <option value="email">Email</option>
+                <option value="sms">SMS</option>
+                <option value="task">Tasks</option>
+                <option value="lead">Lead Management</option>
+              </select>
+            </div>
+          </DialogHeader>
+          
+          <div className="overflow-y-auto flex-1 pr-2 -mr-2 mt-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-4">
               {[
-                { name: 'New Lead Welcome Series', desc: 'Automatically welcome and nurture new leads', icon: Mail, uses: 1243 },
-                { name: 'Lead Score & Notify', desc: 'Score leads and notify sales team', icon: TrendingUp, uses: 892 },
-                { name: 'Follow-up Automation', desc: 'Auto follow-up after property showing', icon: Calendar, uses: 756 },
-                { name: 'Task Assignment', desc: 'Auto-assign tasks based on lead status', icon: CheckCircle2, uses: 654 },
-                { name: 'SMS Drip Campaign', desc: 'Multi-step SMS nurture sequence', icon: MessageSquare, uses: 543 },
-                { name: 'Email Re-engagement', desc: 'Re-engage cold leads automatically', icon: Zap, uses: 421 },
-              ].map((template) => (
-                <Card key={template.name} className="hover:border-primary cursor-pointer">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <template.icon className="h-8 w-8 text-primary" />
-                      <Badge variant="secondary">{template.uses} uses</Badge>
+                { 
+                  name: 'New Lead Welcome Series', 
+                  desc: 'Automatically welcome and nurture new leads with personalized emails', 
+                  icon: Mail, 
+                  uses: 1243, 
+                  nodes: 3,
+                  category: 'email',
+                  workflow: '1. Trigger: New lead created → 2. Wait 1 hour → 3. Send welcome email'
+                },
+                { 
+                  name: 'Lead Score & Notify', 
+                  desc: 'Score leads based on activity and notify sales team when hot', 
+                  icon: TrendingUp, 
+                  uses: 892, 
+                  nodes: 4,
+                  category: 'lead',
+                  workflow: '1. Trigger: Lead activity → 2. Check score > 80 → 3. Add hot tag → 4. Notify team'
+                },
+                { 
+                  name: 'Follow-up Automation', 
+                  desc: 'Auto follow-up after property showing with feedback requests', 
+                  icon: Calendar, 
+                  uses: 756, 
+                  nodes: 5,
+                  category: 'email',
+                  workflow: '1. Viewing complete → 2. Wait 2 hours → 3. Feedback email → 4. Wait 2 days → 5. Create task'
+                },
+                { 
+                  name: 'Task Assignment', 
+                  desc: 'Auto-assign tasks to team members based on lead status', 
+                  icon: CheckCircle2, 
+                  uses: 654, 
+                  nodes: 3,
+                  category: 'task',
+                  workflow: '1. Lead status changed → 2. If qualified → 3. Assign to sales rep'
+                },
+                { 
+                  name: 'SMS Drip Campaign', 
+                  desc: 'Multi-step SMS nurture sequence with timing controls', 
+                  icon: MessageSquare, 
+                  uses: 543, 
+                  nodes: 4,
+                  category: 'sms',
+                  workflow: '1. Lead opts in → 2. Send welcome SMS → 3. Wait 3 days → 4. Send value SMS'
+                },
+                { 
+                  name: 'Email Re-engagement', 
+                  desc: 'Re-engage cold leads with strategic emails', 
+                  icon: Zap, 
+                  uses: 421, 
+                  nodes: 4,
+                  category: 'email',
+                  workflow: '1. No activity 30 days → 2. Re-engagement email → 3. Wait 7 days → 4. Check if engaged'
+                },
+                { 
+                  name: 'Property Viewing Follow-up', 
+                  desc: 'Automated follow-up after viewings with scheduling', 
+                  icon: Calendar, 
+                  uses: 389, 
+                  nodes: 3,
+                  category: 'task',
+                  workflow: '1. Viewing completed → 2. Thank you email → 3. Create follow-up task'
+                },
+                { 
+                  name: 'Contract Milestones', 
+                  desc: 'Alert team at key contract stages and deadlines', 
+                  icon: FileText, 
+                  uses: 312, 
+                  nodes: 5,
+                  category: 'task',
+                  workflow: '1. Contract stage change → 2. Check milestone → 3. Notify team → 4. Create reminder → 5. Update CRM'
+                },
+                { 
+                  name: 'Lead Qualification', 
+                  desc: 'Automatically qualify and route leads to right team', 
+                  icon: Filter, 
+                  uses: 276, 
+                  nodes: 4,
+                  category: 'lead',
+                  workflow: '1. New lead → 2. Check budget & timeline → 3. Add qualified tag → 4. Assign to agent'
+                },
+              ]
+                .filter(template => {
+                  const matchesSearch = templateSearch === '' || 
+                    template.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
+                    template.desc.toLowerCase().includes(templateSearch.toLowerCase());
+                  const matchesFilter = templateFilter === 'all' || template.category === templateFilter;
+                  return matchesSearch && matchesFilter;
+                })
+                .map((template) => (
+                <Card key={template.name} className="hover:border-primary hover:shadow-md transition-all group">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <template.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <Badge variant="secondary" className="text-xs">{template.uses} uses</Badge>
                     </div>
-                    <CardTitle className="text-base mt-2">{template.name}</CardTitle>
-                    <CardDescription className="text-xs">{template.desc}</CardDescription>
+                    <CardTitle className="text-sm leading-tight">{template.name}</CardTitle>
+                    <CardDescription className="text-xs mt-1 mb-2">{template.desc}</CardDescription>
+                    
+                    {/* Workflow Steps */}
+                    <div className="mt-2 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
+                      <div className="flex items-start gap-1">
+                        <ArrowRight className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-2">{template.workflow}</span>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground">{template.nodes} nodes</span>
+                      <Badge variant="outline" className="text-xs capitalize">{template.category}</Badge>
+                    </div>
                     <Button 
                       className="w-full" 
                       size="sm"
                       onClick={() => importTemplate(template.name)}
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Import Template
+                      <Download className="h-3 w-3 mr-1.5" />
+                      Import
                     </Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+            
+            {/* No Results */}
+            {[
+                { name: 'New Lead Welcome Series', desc: 'Automatically welcome and nurture new leads with personalized emails', icon: Mail, uses: 1243, nodes: 3, category: 'email', workflow: '' },
+                { name: 'Lead Score & Notify', desc: 'Score leads based on activity and notify sales team when hot', icon: TrendingUp, uses: 892, nodes: 4, category: 'lead', workflow: '' },
+                { name: 'Follow-up Automation', desc: 'Auto follow-up after property showing with feedback requests', icon: Calendar, uses: 756, nodes: 5, category: 'email', workflow: '' },
+                { name: 'Task Assignment', desc: 'Auto-assign tasks to team members based on lead status', icon: CheckCircle2, uses: 654, nodes: 3, category: 'task', workflow: '' },
+                { name: 'SMS Drip Campaign', desc: 'Multi-step SMS nurture sequence with timing controls', icon: MessageSquare, uses: 543, nodes: 4, category: 'sms', workflow: '' },
+                { name: 'Email Re-engagement', desc: 'Re-engage cold leads with strategic emails', icon: Zap, uses: 421, nodes: 4, category: 'email', workflow: '' },
+                { name: 'Property Viewing Follow-up', desc: 'Automated follow-up after viewings with scheduling', icon: Calendar, uses: 389, nodes: 3, category: 'task', workflow: '' },
+                { name: 'Contract Milestones', desc: 'Alert team at key contract stages and deadlines', icon: FileText, uses: 312, nodes: 5, category: 'task', workflow: '' },
+                { name: 'Lead Qualification', desc: 'Automatically qualify and route leads to right team', icon: Filter, uses: 276, nodes: 4, category: 'lead', workflow: '' },
+              ].filter(template => {
+                const matchesSearch = templateSearch === '' || 
+                  template.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
+                  template.desc.toLowerCase().includes(templateSearch.toLowerCase());
+                const matchesFilter = templateFilter === 'all' || template.category === templateFilter;
+                return matchesSearch && matchesFilter;
+              }).length === 0 && (
+                <div className="text-center py-12">
+                  <Terminal className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No templates found</h3>
+                  <p className="text-sm text-muted-foreground">Try adjusting your search or filter</p>
+                </div>
+              )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -477,15 +796,17 @@ const WorkflowBuilder = () => {
                   {nodes.map((node, index) => (
                     <div key={node.id} className="space-y-2">
                       <Card 
-                        className={`cursor-pointer transition-colors ${
-                          selectedNode?.id === node.id ? 'border-primary bg-primary/5' : ''
+                        className={`cursor-pointer transition-all ${
+                          selectedNode?.id === node.id ? 'border-primary bg-primary/5 shadow-md' : ''
+                        } ${
+                          workflowStatus === 'running' ? 'hover:shadow-lg' : ''
                         }`}
                         onClick={() => setSelectedNode(node)}
                       >
                         <CardHeader className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg ${
+                              <div className={`relative p-2 rounded-lg ${
                                 node.type === 'trigger' ? 'bg-blue-100 text-blue-600' :
                                 node.type === 'action' ? 'bg-green-100 text-green-600' :
                                 node.type === 'condition' ? 'bg-yellow-100 text-yellow-600' :
@@ -495,6 +816,10 @@ const WorkflowBuilder = () => {
                                 {node.type === 'action' && <Settings className="h-4 w-4" />}
                                 {node.type === 'condition' && <GitBranch className="h-4 w-4" />}
                                 {node.type === 'delay' && <Clock className="h-4 w-4" />}
+                                {/* Running indicator on node icon */}
+                                {workflowStatus === 'running' && (
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                                )}
                               </div>
                               <div>
                                 <p className="font-medium">{node.label}</p>
@@ -505,6 +830,12 @@ const WorkflowBuilder = () => {
                               <Badge variant="secondary" className="text-xs">
                                 Step {index + 1}
                               </Badge>
+                              {workflowStatus === 'running' && (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                                  <Activity className="h-3 w-3 mr-1" />
+                                  Live
+                                </Badge>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -520,8 +851,25 @@ const WorkflowBuilder = () => {
                         </CardHeader>
                       </Card>
                       {index < nodes.length - 1 && (
-                        <div className="flex justify-center">
-                          <ArrowRight className="h-6 w-6 text-muted-foreground rotate-90" />
+                        <div className="flex flex-col items-center py-2">
+                          {/* Enhanced Connection Line */}
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-0.5 h-4 bg-gradient-to-b from-primary/60 to-primary/20" />
+                            <div className="relative">
+                              <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
+                                <ArrowRight className="h-4 w-4 text-primary rotate-90" />
+                              </div>
+                              {/* Animated pulse for running workflows */}
+                              {workflowStatus === 'running' && (
+                                <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping" />
+                              )}
+                            </div>
+                            <div className="w-0.5 h-4 bg-gradient-to-b from-primary/20 to-primary/60" />
+                          </div>
+                          {/* Step connector label */}
+                          <span className="text-xs text-muted-foreground font-medium">
+                            Then
+                          </span>
                         </div>
                       )}
                     </div>

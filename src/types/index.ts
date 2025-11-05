@@ -71,6 +71,8 @@ export interface Campaign {
   tags?: string[]
   subject?: string | null
   previewText?: string
+  isArchived?: boolean
+  archivedAt?: string
   abTest?: {
     variant: 'A' | 'B'
     winner?: 'A' | 'B'

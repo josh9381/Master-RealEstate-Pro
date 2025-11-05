@@ -177,7 +177,18 @@ async function getTargetLeads(
 }
 
 /**
- * Send email campaign to leads
+ * Chunk array into smaller batches
+ */
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+/**
+ * Send email campaign to leads with batch processing
  */
 async function sendEmailCampaign(campaign: any, leads: any[]) {
   // Compile email template
@@ -231,17 +242,53 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
       };
     });
 
-  // Send bulk emails with user's API configuration
+  // Process in batches of 100
+  const BATCH_SIZE = 100;
+  const batches = chunkArray(emails, BATCH_SIZE);
   const userId = campaign.user?.id || campaign.userId;
-  const result = await sendBulkEmails(emails, campaign.id, userId);
+  
+  let totalSuccess = 0;
+  let totalFailed = 0;
 
-  console.log(`[CAMPAIGN] Email campaign sent using ${userId ? 'user config' : 'default config'}`);
+  console.log(`[CAMPAIGN] Processing ${emails.length} emails in ${batches.length} batches of ${BATCH_SIZE}`);
 
-  return result;
+  // Process batches in parallel (3 at a time to avoid overwhelming the email service)
+  const PARALLEL_BATCHES = 3;
+  for (let i = 0; i < batches.length; i += PARALLEL_BATCHES) {
+    const batchGroup = batches.slice(i, i + PARALLEL_BATCHES);
+    
+    const results = await Promise.allSettled(
+      batchGroup.map((batch, batchIndex) => {
+        const actualBatchNum = i + batchIndex + 1;
+        console.log(`[CAMPAIGN] Sending batch ${actualBatchNum}/${batches.length} (${batch.length} emails)`);
+        return sendBulkEmails(batch, campaign.id, userId);
+      })
+    );
+
+    // Aggregate results
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        totalSuccess += result.value.success;
+        totalFailed += result.value.failed;
+      } else {
+        console.error(`[CAMPAIGN] Batch failed:`, result.reason);
+        totalFailed += BATCH_SIZE; // Assume all failed in this batch
+      }
+    });
+
+    // Small delay between batch groups to prevent rate limiting
+    if (i + PARALLEL_BATCHES < batches.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  console.log(`[CAMPAIGN] Email campaign completed: ${totalSuccess} sent, ${totalFailed} failed`);
+
+  return { success: totalSuccess, failed: totalFailed };
 }
 
 /**
- * Send SMS campaign to leads
+ * Send SMS campaign to leads with batch processing
  */
 async function sendSMSCampaign(campaign: any, leads: any[]) {
   // Compile SMS template
@@ -289,13 +336,49 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
       };
     });
 
-  // Send bulk SMS with user's API configuration
+  // Process in batches of 100
+  const BATCH_SIZE = 100;
+  const batches = chunkArray(messages, BATCH_SIZE);
   const userId = campaign.user?.id || campaign.userId;
-  const result = await sendBulkSMS(messages, campaign.id, userId);
+  
+  let totalSuccess = 0;
+  let totalFailed = 0;
 
-  console.log(`[CAMPAIGN] SMS campaign sent using ${userId ? 'user config' : 'default config'}`);
+  console.log(`[CAMPAIGN] Processing ${messages.length} SMS in ${batches.length} batches of ${BATCH_SIZE}`);
 
-  return result;
+  // Process batches in parallel (3 at a time to avoid overwhelming the SMS service)
+  const PARALLEL_BATCHES = 3;
+  for (let i = 0; i < batches.length; i += PARALLEL_BATCHES) {
+    const batchGroup = batches.slice(i, i + PARALLEL_BATCHES);
+    
+    const results = await Promise.allSettled(
+      batchGroup.map((batch, batchIndex) => {
+        const actualBatchNum = i + batchIndex + 1;
+        console.log(`[CAMPAIGN] Sending batch ${actualBatchNum}/${batches.length} (${batch.length} SMS)`);
+        return sendBulkSMS(batch, campaign.id, userId);
+      })
+    );
+
+    // Aggregate results
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        totalSuccess += result.value.success;
+        totalFailed += result.value.failed;
+      } else {
+        console.error(`[CAMPAIGN] Batch failed:`, result.reason);
+        totalFailed += BATCH_SIZE; // Assume all failed in this batch
+      }
+    });
+
+    // Small delay between batch groups to prevent rate limiting
+    if (i + PARALLEL_BATCHES < batches.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  console.log(`[CAMPAIGN] SMS campaign completed: ${totalSuccess} sent, ${totalFailed} failed`);
+
+  return { success: totalSuccess, failed: totalFailed };
 }
 
 /**

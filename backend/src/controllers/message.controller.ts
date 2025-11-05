@@ -509,9 +509,18 @@ export const deleteMessage = async (req: Request, res: Response) => {
 
 // Get message statistics
 export const getMessageStats = async (req: Request, res: Response) => {
-  const { leadId } = req.query
+  const { leadId, type } = req.query
 
-  const where = leadId ? { leadId: leadId as string } : {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {}
+  
+  if (leadId) {
+    where.leadId = leadId as string
+  }
+  
+  if (type) {
+    where.type = type as string
+  }
 
   const [total, sent, delivered, failed, opened] = await Promise.all([
     prisma.message.count({ where }),
@@ -523,8 +532,10 @@ export const getMessageStats = async (req: Request, res: Response) => {
 
   const byType = await prisma.message.groupBy({
     by: ['type'],
-    where,
-    _count: true,
+    where: leadId ? { leadId: leadId as string } : {}, // Don't filter byType grouping by type param
+    _count: {
+      _all: true,
+    },
   })
 
   res.json({
@@ -535,9 +546,9 @@ export const getMessageStats = async (req: Request, res: Response) => {
       delivered,
       failed,
       opened,
-      byType: byType.map((item: { type: string; _count: number }) => ({
+      byType: byType.map((item) => ({
         type: item.type,
-        count: item._count,
+        count: item._count._all,
       })),
     }
   })

@@ -19,6 +19,9 @@ import {
   testWorkflow,
   getWorkflowExecutions,
   getWorkflowStats,
+  getWorkflowAnalytics,
+  triggerWorkflow,
+  triggerWorkflowsForLead,
 } from '../controllers/workflow.controller'
 
 const router = Router()
@@ -108,5 +111,26 @@ router.post(
  * @access  Private
  */
 router.get('/:id/executions', asyncHandler(getWorkflowExecutions))
+
+/**
+ * @route   GET /api/workflows/:id/analytics
+ * @desc    Get workflow analytics (success rate, daily stats, etc.)
+ * @access  Private
+ */
+router.get('/:id/analytics', asyncHandler(getWorkflowAnalytics))
+
+/**
+ * @route   POST /api/workflows/:id/trigger
+ * @desc    Manually trigger a workflow
+ * @access  Private
+ */
+router.post('/:id/trigger', asyncHandler(triggerWorkflow))
+
+/**
+ * @route   POST /api/workflows/trigger-for-lead
+ * @desc    Trigger workflows for lead events (internal use)
+ * @access  Private
+ */
+router.post('/trigger-for-lead', asyncHandler(triggerWorkflowsForLead))
 
 export default router

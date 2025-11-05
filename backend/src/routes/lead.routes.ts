@@ -20,6 +20,11 @@ import {
   bulkDeleteLeads,
   bulkUpdateLeads,
   getLeadStats,
+  countFilteredLeads,
+  recalculateLeadScore,
+  batchRecalculateScores,
+  recalculateAllScores,
+  getLeadsByScore,
 } from '../controllers/lead.controller';
 import {
   addTagsToLead,
@@ -49,6 +54,13 @@ router.use(authenticate);
  * @access  Private
  */
 router.get('/stats', asyncHandler(getLeadStats));
+
+/**
+ * @route   POST /api/leads/count-filtered
+ * @desc    Count leads matching advanced filters
+ * @access  Private
+ */
+router.post('/count-filtered', asyncHandler(countFilteredLeads));
 
 /**
  * @route   GET /api/leads
@@ -199,6 +211,47 @@ router.get(
     req.query.leadId = req.params.leadId;
     return getActivities(req, res);
   })
+);
+
+/**
+ * @route   POST /api/leads/:id/score
+ * @desc    Recalculate score for a single lead
+ * @access  Private
+ */
+router.post(
+  '/:id/score',
+  validateParams(leadIdParamSchema),
+  asyncHandler(recalculateLeadScore)
+);
+
+/**
+ * @route   POST /api/leads/scores/batch
+ * @desc    Batch recalculate scores for multiple leads
+ * @access  Private
+ */
+router.post(
+  '/scores/batch',
+  asyncHandler(batchRecalculateScores)
+);
+
+/**
+ * @route   POST /api/leads/scores/all
+ * @desc    Recalculate scores for all leads
+ * @access  Private
+ */
+router.post(
+  '/scores/all',
+  asyncHandler(recalculateAllScores)
+);
+
+/**
+ * @route   GET /api/leads/scores/:category
+ * @desc    Get leads by score category (HOT, WARM, COOL, COLD)
+ * @access  Private
+ */
+router.get(
+  '/scores/:category',
+  asyncHandler(getLeadsByScore)
 );
 
 export default router;

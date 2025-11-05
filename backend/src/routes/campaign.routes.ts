@@ -12,6 +12,23 @@ import {
   updateCampaignMetrics,
   pauseCampaign,
   sendCampaign,
+  sendCampaignNow,
+  rescheduleCampaign,
+  getCampaignPreview,
+  getCampaignTemplates,
+  getCampaignTemplate,
+  createCampaignFromTemplate,
+  duplicateCampaign,
+  archiveCampaign,
+  unarchiveCampaign,
+  getCampaignAnalytics,
+  trackOpen,
+  trackClick,
+  trackConversionEvent,
+  getLinkStats,
+  getTimeline,
+  compareCampaignsEndpoint,
+  getTopPerformers,
 } from '../controllers/campaign.controller';
 import {
   createCampaignSchema,
@@ -33,6 +50,27 @@ router.use(authenticate);
  * @access  Private
  */
 router.get('/stats', asyncHandler(getCampaignStats));
+
+/**
+ * @route   GET /api/campaigns/templates
+ * @desc    Get all campaign templates
+ * @access  Private
+ */
+router.get('/templates', asyncHandler(getCampaignTemplates));
+
+/**
+ * @route   GET /api/campaigns/templates/:templateId
+ * @desc    Get a single campaign template by ID
+ * @access  Private
+ */
+router.get('/templates/:templateId', asyncHandler(getCampaignTemplate));
+
+/**
+ * @route   POST /api/campaigns/from-template/:templateId
+ * @desc    Create a campaign from a template
+ * @access  Private
+ */
+router.post('/from-template/:templateId', asyncHandler(createCampaignFromTemplate));
 
 /**
  * @route   GET /api/campaigns
@@ -105,15 +143,14 @@ router.post(
 
 /**
  * @route   GET /api/campaigns/:id/preview
- * @desc    Preview campaign messages before sending
+ * @desc    Preview campaign before sending (recipient count, costs, sample messages)
  * @access  Private
- * @note    Temporarily disabled - function needs to be implemented
  */
-// router.get(
-//   '/:id/preview',
-//   validateParams(campaignIdSchema),
-//   asyncHandler(previewCampaignMessages)
-// );
+router.get(
+  '/:id/preview',
+  validateParams(campaignIdSchema),
+  asyncHandler(getCampaignPreview)
+);
 
 /**
  * @route   POST /api/campaigns/:id/send
@@ -124,6 +161,141 @@ router.post(
   '/:id/send',
   validateParams(campaignIdSchema),
   asyncHandler(sendCampaign)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/send-now
+ * @desc    Send a scheduled campaign immediately
+ * @access  Private
+ */
+router.post(
+  '/:id/send-now',
+  validateParams(campaignIdSchema),
+  asyncHandler(sendCampaignNow)
+);
+
+/**
+ * @route   PATCH /api/campaigns/:id/reschedule
+ * @desc    Reschedule a campaign to a new date/time
+ * @access  Private
+ */
+router.patch(
+  '/:id/reschedule',
+  validateParams(campaignIdSchema),
+  asyncHandler(rescheduleCampaign)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/duplicate
+ * @desc    Duplicate an existing campaign
+ * @access  Private
+ */
+router.post(
+  '/:id/duplicate',
+  validateParams(campaignIdSchema),
+  asyncHandler(duplicateCampaign)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/archive
+ * @desc    Archive a campaign
+ * @access  Private
+ */
+router.post(
+  '/:id/archive',
+  validateParams(campaignIdSchema),
+  asyncHandler(archiveCampaign)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/unarchive
+ * @desc    Unarchive a campaign
+ * @access  Private
+ */
+router.post(
+  '/:id/unarchive',
+  validateParams(campaignIdSchema),
+  asyncHandler(unarchiveCampaign)
+);
+
+/**
+ * @route   GET /api/campaigns/top-performers
+ * @desc    Get top performing campaigns
+ * @access  Private
+ */
+router.get('/top-performers', asyncHandler(getTopPerformers));
+
+/**
+ * @route   POST /api/campaigns/compare
+ * @desc    Compare multiple campaigns
+ * @access  Private
+ */
+router.post('/compare', asyncHandler(compareCampaignsEndpoint));
+
+/**
+ * @route   GET /api/campaigns/:id/analytics
+ * @desc    Get campaign analytics and metrics
+ * @access  Private
+ */
+router.get(
+  '/:id/analytics',
+  validateParams(campaignIdSchema),
+  asyncHandler(getCampaignAnalytics)
+);
+
+/**
+ * @route   GET /api/campaigns/:id/analytics/links
+ * @desc    Get link click statistics for a campaign
+ * @access  Private
+ */
+router.get(
+  '/:id/analytics/links',
+  validateParams(campaignIdSchema),
+  asyncHandler(getLinkStats)
+);
+
+/**
+ * @route   GET /api/campaigns/:id/analytics/timeline
+ * @desc    Get campaign time series data
+ * @access  Private
+ */
+router.get(
+  '/:id/analytics/timeline',
+  validateParams(campaignIdSchema),
+  asyncHandler(getTimeline)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/track/open
+ * @desc    Track email open event
+ * @access  Private
+ */
+router.post(
+  '/:id/track/open',
+  validateParams(campaignIdSchema),
+  asyncHandler(trackOpen)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/track/click
+ * @desc    Track email click event
+ * @access  Private
+ */
+router.post(
+  '/:id/track/click',
+  validateParams(campaignIdSchema),
+  asyncHandler(trackClick)
+);
+
+/**
+ * @route   POST /api/campaigns/:id/track/conversion
+ * @desc    Track conversion event
+ * @access  Private
+ */
+router.post(
+  '/:id/track/conversion',
+  validateParams(campaignIdSchema),
+  asyncHandler(trackConversionEvent)
 );
 
 /**

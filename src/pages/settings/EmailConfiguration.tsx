@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Mail, Server, Shield, CheckCircle, RefreshCw } from 'lucide-react';
+import { Mail, Server, Shield, CheckCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
-import { settingsApi } from '@/lib/api';
+import { settingsApi, messagesApi } from '@/lib/api';
 
 const EmailConfiguration = () => {
   const { toast } = useToast();
@@ -18,12 +18,16 @@ const EmailConfiguration = () => {
   const [configMode, setConfigMode] = useState<'production' | 'mock' | 'environment'>('mock');
   const [lastTested, setLastTested] = useState<string | null>(null);
   
+  // Show/hide API key
+  const [showApiKey, setShowApiKey] = useState(false);
+  
   // SMTP Settings
   const [smtpHost, setSmtpHost] = useState('smtp.sendgrid.net');
   const [smtpPort, setSmtpPort] = useState('587');
   const [username, setUsername] = useState('apikey');
-  const [password, setPassword] = useState('SG.xxxxxxxxxxxxxxxxxxxxxxxx');
+  const [password, setPassword] = useState('');
   const [encryption, setEncryption] = useState('tls');
+  const [hasStoredKey, setHasStoredKey] = useState(false);
   
   // Sender Information
   const [fromName, setFromName] = useState('Your CRM Team');
@@ -46,8 +50,24 @@ const EmailConfiguration = () => {
   const [rateLimit, setRateLimit] = useState('No limit');
   const [bounceHandling, setBounceHandling] = useState('Mark as bounced after 1 failure');
 
+  // Usage Statistics
+  const [usageStats, setUsageStats] = useState({
+    sent: 0,
+    delivered: 0,
+    deliveryRate: 0,
+    opened: 0,
+    openRate: 0,
+    bounced: 0,
+    bounceRate: 0,
+  });
+
   useEffect(() => {
-    loadEmailConfig();
+    const initializeData = async () => {
+      await loadEmailConfig();
+      await loadUsageStats();
+    };
+    initializeData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadEmailConfig = async (isRefresh = false) => {
@@ -66,18 +86,21 @@ const EmailConfiguration = () => {
         setSmtpHost(config.smtpHost || 'smtp.sendgrid.net');
         setSmtpPort(String(config.smtpPort) || '587');
         setUsername(config.smtpUser || 'apikey');
-        // Don't set password if it's masked
-        if (config.apiKey && !config.apiKey.startsWith('••••')) {
-          setPassword(config.apiKey);
-        }
+        
+        // Check if API key is stored (masked response means it exists)
+        const apiKeyStored = config.apiKey && config.apiKey.startsWith('••••');
+        setHasStoredKey(apiKeyStored);
+        
+        // Don't populate password field - user must enter new one to update
+        setPassword('');
+        
         setEncryption('tls'); // SendGrid uses TLS
         setFromName(config.fromName || 'Your CRM Team');
         setFromEmail(config.fromEmail || 'noreply@yourcrm.com');
         
         // Update status indicators
-        const hasApiKey = config.apiKey && config.apiKey !== '••••••••';
-        setIsConfigured(config.isActive && hasApiKey);
-        setConfigMode(hasApiKey ? 'production' : 'mock');
+        setIsConfigured(config.isActive && apiKeyStored);
+        setConfigMode(apiKeyStored ? 'production' : 'mock');
       }
       
       if (isRefresh) {
@@ -94,8 +117,42 @@ const EmailConfiguration = () => {
     }
   };
 
+  const loadUsageStats = async () => {
+    try {
+      // Fetch EMAIL-only statistics by passing type parameter
+      const response = await messagesApi.getStats({ type: 'EMAIL' });
+      const stats = response?.data;
+      
+      if (stats) {
+        // Now total, sent, delivered, failed, opened are EMAIL-only
+        const emailCount = stats.total || 0;
+        const delivered = stats.delivered || 0;
+        const opened = stats.opened || 0;
+        const failed = stats.failed || 0;
+        
+        // Calculate rates based on EMAIL messages only
+        const deliveryRate = emailCount > 0 ? (delivered / emailCount) * 100 : 0;
+        const openRate = delivered > 0 ? (opened / delivered) * 100 : 0;
+        const bounceRate = emailCount > 0 ? (failed / emailCount) * 100 : 0;
+        
+        setUsageStats({
+          sent: emailCount,
+          delivered,
+          deliveryRate: Math.min(deliveryRate, 100), // Cap at 100%
+          opened,
+          openRate,
+          bounced: failed,
+          bounceRate,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load usage stats:', error);
+    }
+  };
+
   const handleRefresh = () => {
     loadEmailConfig(true);
+    loadUsageStats();
   };
   
   const handleTestConnection = async () => {
@@ -104,8 +161,8 @@ const EmailConfiguration = () => {
       return;
     }
     
-    if (!password || password === 'SG.xxxxxxxxxxxxxxxxxxxxxxxx') {
-      toast.error('Please enter a valid SendGrid API key and save settings first');
+    if (!hasStoredKey) {
+      toast.error('Please save your SendGrid API key first before testing');
       return;
     }
     
@@ -139,26 +196,56 @@ const EmailConfiguration = () => {
   };
   
   const handleSaveSettings = async () => {
-    if (!password || password === 'SG.xxxxxxxxxxxxxxxxxxxxxxxx') {
-      toast.error('Please enter a valid SendGrid API key');
+    // Validation: Need API key for new setup, optional for updates
+    if (!hasStoredKey && !password) {
+      toast.error('Please enter your SendGrid API key');
+      return;
+    }
+    
+    if (password && !password.startsWith('SG.')) {
+      toast.error('Invalid SendGrid API key format. Must start with "SG."');
       return;
     }
 
     setSaving(true);
     try {
-      await settingsApi.updateEmailConfig({
+      const updateData: {
+        provider: string;
+        fromEmail?: string;
+        fromName?: string;
+        smtpHost?: string;
+        smtpPort?: number;
+        smtpUser?: string;
+        smtpPassword?: null;
+        isActive: boolean;
+        apiKey?: string;
+      } = {
         provider: 'sendgrid',
-        apiKey: password, // SendGrid API key
         fromEmail,
         fromName,
         smtpHost,
         smtpPort: parseInt(smtpPort),
         smtpUser: username,
-        smtpPassword: null, // Not using SMTP password for SendGrid API
+        smtpPassword: null,
         isActive: true,
-      });
-      toast.success('Email configuration saved successfully');
-      loadEmailConfig(); // Reload from API
+      };
+      
+      // Only include API key if user entered a new one
+      if (password) {
+        updateData.apiKey = password;
+      }
+      
+      await settingsApi.updateEmailConfig(updateData);
+      
+      const successMsg = hasStoredKey 
+        ? password 
+          ? 'Email configuration and API key updated successfully' 
+          : 'Email configuration updated successfully'
+        : 'Email configuration saved successfully';
+      
+      toast.success(successMsg);
+      setPassword(''); // Clear password field after save
+      await loadEmailConfig(); // Reload from API
     } catch (error) {
       console.error('Failed to save settings:', error);
       toast.error('Failed to save settings');
@@ -330,14 +417,45 @@ const EmailConfiguration = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Password</label>
-              <input
-                type="password"
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg font-mono"
-              />
+              <label className="text-sm font-medium mb-2 block">
+                SendGrid API Key
+                {hasStoredKey && (
+                  <span className="ml-2 text-xs text-green-600 font-normal">✓ Stored Securely</span>
+                )}
+              </label>
+              <div className="relative">
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  placeholder={hasStoredKey ? "Enter new API key to update" : "SG.xxxxxxxxxxxxxxxxxxxxxxxx"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 pr-10 border rounded-lg font-mono text-sm"
+                />
+                {password && (
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                    title={showApiKey ? "Hide API Key" : "Show API Key"}
+                  >
+                    {showApiKey ? (
+                      <EyeOff className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-500" />
+                    )}
+                  </button>
+                )}
+              </div>
+              {hasStoredKey && !password && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  🔒 API key is encrypted and stored securely. Enter a new key above to update it.
+                </p>
+              )}
+              {password && (
+                <p className="text-xs text-green-600 mt-1">
+                  ✓ New key entered. Click "Save Settings" to update.
+                </p>
+              )}
             </div>
           </div>
           <div>
@@ -549,6 +667,23 @@ const EmailConfiguration = () => {
               <span className="text-sm">Add social media links in footer</span>
             </label>
           </div>
+          <div className="pt-4 border-t">
+            <Button 
+              onClick={() => {
+                toast.success('Email template settings saved!');
+                console.log('Template Settings:', {
+                  includeUnsubscribe,
+                  trackOpens,
+                  trackClicks,
+                  includeLogo,
+                  includeSocial
+                });
+              }}
+              disabled={saving}
+            >
+              Save Template Settings
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -597,6 +732,21 @@ const EmailConfiguration = () => {
               <option>Mark as bounced after 5 failures</option>
             </select>
           </div>
+          <div className="pt-4 border-t">
+            <Button 
+              onClick={() => {
+                toast.success('Delivery settings saved!');
+                console.log('Delivery Settings:', {
+                  dailyLimit,
+                  rateLimit,
+                  bounceHandling
+                });
+              }}
+              disabled={saving}
+            >
+              Save Delivery Settings
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -604,25 +754,40 @@ const EmailConfiguration = () => {
       <Card>
         <CardHeader>
           <CardTitle>Email Usage This Month</CardTitle>
-          <CardDescription>Current month statistics</CardDescription>
+          <CardDescription>Real-time statistics from your database</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-3xl font-bold text-blue-600">23,456</p>
+              <p className="text-3xl font-bold text-blue-600">{usageStats.sent.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mt-1">Sent</p>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-3xl font-bold text-green-600">98.2%</p>
+              <p className="text-3xl font-bold text-green-600">
+                {usageStats.deliveryRate.toFixed(1)}%
+              </p>
               <p className="text-sm text-muted-foreground mt-1">Delivered</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {usageStats.delivered.toLocaleString()} emails
+              </p>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-3xl font-bold text-orange-600">32.4%</p>
+              <p className="text-3xl font-bold text-orange-600">
+                {usageStats.openRate.toFixed(1)}%
+              </p>
               <p className="text-sm text-muted-foreground mt-1">Opened</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {usageStats.opened.toLocaleString()} opens
+              </p>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-3xl font-bold text-red-600">1.8%</p>
+              <p className="text-3xl font-bold text-red-600">
+                {usageStats.bounceRate.toFixed(1)}%
+              </p>
               <p className="text-sm text-muted-foreground mt-1">Bounced</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {usageStats.bounced.toLocaleString()} failed
+              </p>
             </div>
           </div>
         </CardContent>

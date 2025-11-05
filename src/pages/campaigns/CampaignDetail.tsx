@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
-import { Edit, Pause, Trash2, X } from 'lucide-react'
+import { Edit, Pause, Trash2, X, Copy } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
 import { mockCampaigns } from '@/data/mockData'
@@ -13,10 +13,16 @@ import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts'
 
@@ -28,6 +34,45 @@ const performanceData = [
   { date: 'Jan 19', sent: 300, opened: 150, clicked: 45 },
   { date: 'Jan 20', sent: 250, opened: 125, clicked: 38 },
 ]
+
+// Conversion funnel data
+const funnelData = [
+  { stage: 'Sent', count: 1250, percentage: 100 },
+  { stage: 'Delivered', count: 1200, percentage: 96 },
+  { stage: 'Opened', count: 625, percentage: 50 },
+  { stage: 'Clicked', count: 187, percentage: 15 },
+  { stage: 'Converted', count: 56, percentage: 4.5 },
+]
+
+// Engagement by time of day
+const hourlyEngagementData = [
+  { hour: '12am', opens: 5, clicks: 2 },
+  { hour: '3am', opens: 2, clicks: 1 },
+  { hour: '6am', opens: 15, clicks: 5 },
+  { hour: '9am', opens: 85, clicks: 28 },
+  { hour: '12pm', opens: 120, clicks: 42 },
+  { hour: '3pm', opens: 95, clicks: 35 },
+  { hour: '6pm', opens: 110, clicks: 38 },
+  { hour: '9pm', opens: 75, clicks: 22 },
+]
+
+// Device breakdown
+const deviceData = [
+  { name: 'Desktop', value: 520, color: '#3b82f6' },
+  { name: 'Mobile', value: 680, color: '#10b981' },
+  { name: 'Tablet', value: 180, color: '#f59e0b' },
+]
+
+// Geographic distribution
+const geoData = [
+  { location: 'California', opens: 245, clicks: 78, conversions: 23 },
+  { location: 'Texas', opens: 198, clicks: 62, conversions: 18 },
+  { location: 'New York', opens: 187, clicks: 55, conversions: 15 },
+  { location: 'Florida', opens: 156, clicks: 48, conversions: 12 },
+  { location: 'Illinois', opens: 124, clicks: 38, conversions: 10 },
+]
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
 function CampaignDetail() {
   const { id } = useParams()
@@ -120,6 +165,22 @@ function CampaignDetail() {
     },
   })
 
+  // Duplicate campaign mutation
+  const duplicateCampaignMutation = useMutation({
+    mutationFn: () => campaignsApi.duplicateCampaign(id!, `${campaignData.name} (Copy)`),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign duplicated successfully')
+      // Navigate to the new campaign
+      if (response.data?.campaign?.id) {
+        navigate(`/campaigns/${response.data.campaign.id}`)
+      }
+    },
+    onError: () => {
+      toast.error('Failed to duplicate campaign')
+    },
+  })
+
   const handleStatusToggle = () => {
     const newStatus = campaignData.status === 'active' ? 'paused' : 'active'
     updateCampaignMutation.mutate({ status: newStatus })
@@ -204,6 +265,14 @@ function CampaignDetail() {
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => duplicateCampaignMutation.mutate()}
+            disabled={duplicateCampaignMutation.isPending}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Duplicate
+          </Button>
           <Button variant="outline" onClick={handleStatusToggle}>
             <Pause className="mr-2 h-4 w-4" />
             {campaign.status === 'active' ? 'Pause' : 'Resume'}
@@ -279,6 +348,187 @@ function CampaignDetail() {
               <Line type="monotone" dataKey="clicked" stroke="#f59e0b" name="Clicked" />
             </LineChart>
           </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Enhanced Performance Dashboard */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Conversion Funnel */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Conversion Funnel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {funnelData.map((stage, index) => (
+                <div key={stage.stage} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{stage.stage}</span>
+                    <span className="text-muted-foreground">
+                      {stage.count.toLocaleString()} ({stage.percentage}%)
+                    </span>
+                  </div>
+                  <div className="h-8 bg-muted rounded-lg overflow-hidden">
+                    <div
+                      className="h-full transition-all"
+                      style={{
+                        width: `${stage.percentage}%`,
+                        background: `linear-gradient(to right, ${COLORS[index]}, ${COLORS[index]}dd)`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Device Breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Device Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={deviceData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {deviceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="mt-4 space-y-2">
+              {deviceData.map((device) => (
+                <div key={device.name} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: device.color }}
+                    />
+                    <span>{device.name}</span>
+                  </div>
+                  <span className="font-medium">{device.value.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Engagement by Time of Day */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Engagement by Time of Day</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={hourlyEngagementData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="hour" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="opens" fill="#10b981" name="Opens" />
+                <Bar dataKey="clicks" fill="#3b82f6" name="Clicks" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Geographic Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Performing Locations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {geoData.map((location, index) => (
+                <div key={location.location} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        #{index + 1}
+                      </span>
+                      <span className="font-medium">{location.location}</span>
+                    </div>
+                    <div className="flex gap-4 text-sm">
+                      <span className="text-green-600">
+                        {location.opens} opens
+                      </span>
+                      <span className="text-blue-600">
+                        {location.clicks} clicks
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500"
+                        style={{
+                          width: `${(location.opens / Math.max(...geoData.map(g => g.opens))) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500"
+                        style={{
+                          width: `${(location.clicks / Math.max(...geoData.map(g => g.clicks))) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground text-right">
+                    {location.conversions} conversions
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Additional Performance Metrics */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Key Performance Indicators</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-muted-foreground">
+                Average Time to Open
+              </div>
+              <div className="text-2xl font-bold">4.2 hours</div>
+              <div className="text-xs text-green-600">↑ 15% faster than average</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-muted-foreground">
+                Best Performing Link
+              </div>
+              <div className="text-2xl font-bold">Property Gallery</div>
+              <div className="text-xs text-muted-foreground">187 clicks (15% CTR)</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-muted-foreground">
+                Revenue Generated
+              </div>
+              <div className="text-2xl font-bold">${campaign.revenue?.toLocaleString() || '0'}</div>
+              <div className="text-xs text-blue-600">
+                ROI: {campaign.roi ? `${campaign.roi.toFixed(1)}%` : 'N/A'}
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

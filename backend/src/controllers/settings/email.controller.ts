@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../config/database';
 import { UnauthorizedError } from '../../middleware/errorHandler';
-import { encrypt, decrypt } from '../../utils/encryption';
+import { encryptForUser, decryptForUser } from '../../utils/encryption';
 import { sendEmail } from '../../services/email.service';
 
 /**
@@ -31,7 +31,7 @@ export async function getEmailConfig(req: Request, res: Response): Promise<void>
   let maskedApiKey = null;
   try {
     if (config.apiKey) {
-      const decrypted = decrypt(config.apiKey);
+      const decrypted = decryptForUser(req.user.userId, config.apiKey);
       maskedApiKey = '••••••••' + (decrypted.slice(-4));
     }
   } catch (error) {
@@ -73,9 +73,9 @@ export async function updateEmailConfig(req: Request, res: Response): Promise<vo
     isActive
   } = req.body;
 
-  // Encrypt sensitive fields
-  const encryptedApiKey = apiKey ? encrypt(apiKey) : undefined;
-  const encryptedSmtpPassword = smtpPassword ? encrypt(smtpPassword) : undefined;
+  // Encrypt sensitive fields using per-user encryption
+  const encryptedApiKey = apiKey ? encryptForUser(req.user.userId, apiKey) : undefined;
+  const encryptedSmtpPassword = smtpPassword ? encryptForUser(req.user.userId, smtpPassword) : undefined;
 
   const config = await prisma.emailConfig.upsert({
     where: { userId: req.user.userId },

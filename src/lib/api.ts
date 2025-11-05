@@ -262,6 +262,11 @@ export const leadsApi = {
     const response = await api.post('/leads/bulk-delete', { leadIds })
     return response.data
   },
+
+  countFiltered: async (filters: Array<{ field: string; operator: string; value: string | number | string[] }>) => {
+    const response = await api.post('/leads/count-filtered', { filters })
+    return response.data
+  },
 }
 
 // ============================================================================
@@ -371,6 +376,15 @@ export interface CreateCampaignData {
   isABTest?: boolean
   abTestData?: Record<string, unknown>
   tagIds?: string[]
+  // Recurring campaign fields
+  isRecurring?: boolean
+  frequency?: 'daily' | 'weekly' | 'monthly'
+  recurringPattern?: {
+    daysOfWeek?: number[]
+    dayOfMonth?: number
+    time?: string
+  }
+  maxOccurrences?: number
 }
 
 export const campaignsApi = {
@@ -423,6 +437,47 @@ export const campaignsApi = {
 
   pauseCampaign: async (id: string) => {
     const response = await api.post(`/campaigns/${id}/pause`)
+    return response.data
+  },
+
+  sendCampaignNow: async (id: string) => {
+    const response = await api.post(`/campaigns/${id}/send-now`)
+    return response.data
+  },
+
+  rescheduleCampaign: async (id: string, startDate: string) => {
+    const response = await api.patch(`/campaigns/${id}/reschedule`, { startDate })
+    return response.data
+  },
+
+  // Template endpoints
+  getTemplates: async (params?: { category?: string; type?: string; recurring?: boolean }) => {
+    const response = await api.get('/campaigns/templates', { params })
+    return response.data
+  },
+
+  getTemplate: async (templateId: string) => {
+    const response = await api.get(`/campaigns/templates/${templateId}`)
+    return response.data
+  },
+
+  createFromTemplate: async (templateId: string, data: { name: string; startDate?: string; tagIds?: string[] }) => {
+    const response = await api.post(`/campaigns/from-template/${templateId}`, data)
+    return response.data
+  },
+
+  duplicateCampaign: async (id: string, name?: string) => {
+    const response = await api.post(`/campaigns/${id}/duplicate`, { name })
+    return response.data
+  },
+
+  archiveCampaign: async (id: string) => {
+    const response = await api.post(`/campaigns/${id}/archive`)
+    return response.data
+  },
+
+  unarchiveCampaign: async (id: string) => {
+    const response = await api.post(`/campaigns/${id}/unarchive`)
     return response.data
   },
 }
@@ -775,8 +830,8 @@ export const messagesApi = {
     return response.data
   },
 
-  getStats: async (leadId?: string) => {
-    const response = await api.get('/messages/stats', { params: leadId ? { leadId } : {} })
+  getStats: async (params?: { leadId?: string; type?: string }) => {
+    const response = await api.get('/messages/stats', { params: params || {} })
     return response.data
   },
 }

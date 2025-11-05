@@ -2,8 +2,11 @@ import express, { Express, Request, Response } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import dotenv from 'dotenv'
+import cron from 'node-cron'
 import prisma from './config/database'
 import { corsOptions } from './config/cors'
+import { checkAndExecuteScheduledCampaigns } from './services/campaign-scheduler.service'
+import { startWorkflowJobs, setupGracefulShutdown } from './jobs/workflowProcessor'
 import authRoutes from './routes/auth.routes'
 import leadRoutes from './routes/lead.routes'
 import tagRoutes from './routes/tag.routes'
@@ -23,6 +26,8 @@ import integrationRoutes from './routes/integration.routes'
 import teamRoutes from './routes/team.routes'
 import appointmentRoutes from './routes/appointment.routes'
 import webhookRoutes from './routes/webhook.routes'
+import unsubscribeRoutes from './routes/unsubscribe.routes'
+import deliverabilityRoutes from './routes/deliverability.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
@@ -146,6 +151,8 @@ app.use('/api/integrations', integrationRoutes)
 app.use('/api/teams', teamRoutes)
 app.use('/api/appointments', appointmentRoutes)
 app.use('/api/webhooks', webhookRoutes)
+app.use('/api/unsubscribe', unsubscribeRoutes)
+app.use('/api/deliverability', deliverabilityRoutes)
 
 // 404 handler
 app.use(notFoundHandler)
@@ -159,6 +166,22 @@ app.listen(PORT, () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`)
   console.log(`🔗 Health check: http://localhost:${PORT}/health`)
   console.log(`🌐 API: http://localhost:${PORT}/api`)
+  
+  // Initialize cron jobs
+  console.log(`⏰ Starting campaign scheduler...`)
+  
+  // Run every minute to check for scheduled campaigns
+  cron.schedule('* * * * *', async () => {
+    await checkAndExecuteScheduledCampaigns()
+  })
+  
+  console.log(`✅ Campaign scheduler active - checking every minute`)
+  
+  // Start workflow background jobs
+  console.log(`🔄 Starting workflow automation engine...`)
+  startWorkflowJobs()
+  setupGracefulShutdown()
+  console.log(`✅ Workflow automation engine active`)
 })
 
 export default app

@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
-import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles } from 'lucide-react'
+import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, leadsApi, CreateCampaignData } from '@/lib/api'
 import { useQuery } from '@tanstack/react-query'
 import { Lead } from '@/types'
+import { CampaignPreviewModal } from '@/components/campaigns/CampaignPreviewModal'
+import { DaysOfWeekPicker } from '@/components/ui/DaysOfWeekPicker'
+import { AdvancedAudienceFilters, AudienceFilter } from '@/components/campaigns/AdvancedAudienceFilters'
 
 const campaignTypes = [
   {
@@ -45,6 +48,12 @@ function CampaignCreate() {
   const [step, setStep] = useState(1)
   const [selectedType, setSelectedType] = useState('')
   
+  // Preview modal state
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewData, setPreviewData] = useState<any>(null)
+  const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null)
+  const [isSending, setIsSending] = useState(false)
+  
   // Fetch leads count for audience selection
   const { data: leadsData } = useQuery({
     queryKey: ['leads-count'],
@@ -73,7 +82,55 @@ function CampaignCreate() {
     budget: '',
     enableABTest: false,
     abTestVariant: '',
+    // Recurring campaign fields
+    isRecurring: false,
+    frequency: 'weekly' as 'daily' | 'weekly' | 'monthly',
+    daysOfWeek: [] as number[],
+    dayOfMonth: 1,
+    recurringEndType: 'never' as 'never' | 'date' | 'count',
+    recurringEndDate: '',
+    maxOccurrences: 10,
+    // Advanced audience filters
+    audienceFilters: [] as Array<{ field: string; operator: string; value: string | number | string[] }>,
   })
+  
+  // Track filtered lead count
+  const [filteredLeadCount, setFilteredLeadCount] = useState(totalLeads)
+
+  // Fetch filtered lead count when filters change (Todo #18: Dynamic Audience Size Calculation)
+  useEffect(() => {
+    const fetchFilteredCount = async () => {
+      if (formData.audience === 'custom' && formData.audienceFilters.length > 0) {
+        try {
+          const response = await leadsApi.countFiltered(formData.audienceFilters)
+          setFilteredLeadCount(response.data.count)
+        } catch (error) {
+          console.error('Failed to fetch filtered lead count:', error)
+          setFilteredLeadCount(0)
+        }
+      } else {
+        // Reset to appropriate count based on audience type
+        switch (formData.audience) {
+          case 'all':
+            setFilteredLeadCount(totalLeads)
+            break
+          case 'new':
+            setFilteredLeadCount(newLeads)
+            break
+          case 'warm':
+            setFilteredLeadCount(warmLeads)
+            break
+          case 'hot':
+            setFilteredLeadCount(hotLeads)
+            break
+          default:
+            setFilteredLeadCount(totalLeads)
+        }
+      }
+    }
+
+    fetchFilteredCount()
+  }, [formData.audience, formData.audienceFilters, totalLeads, newLeads, warmLeads, hotLeads])
 
   const createMutation = useMutation({
     mutationFn: campaignsApi.createCampaign,
@@ -96,7 +153,7 @@ function CampaignCreate() {
     setFormData(prev => ({ ...prev, ...updates }))
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name.trim()) {
       toast.error('Please enter a campaign name')
       return
@@ -107,30 +164,111 @@ function CampaignCreate() {
       return
     }
     
-    // Transform formData to match backend expectations
-    const campaignData: CreateCampaignData = {
-      name: formData.name,
-      type: selectedType.toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL', // Backend expects UPPERCASE
-      status: 'DRAFT', // Backend expects UPPERCASE
-      subject: formData.subject || undefined,
-      body: formData.content || undefined, // Backend uses 'body' not 'content'
-      startDate: formData.schedule === 'scheduled' && formData.scheduleDate 
-        ? `${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00Z` 
-        : undefined,
-      audience: formData.audience === 'custom' 
-        ? formData.customAudience.length 
-        : formData.audience === 'all' 
-        ? totalLeads 
-        : formData.audience === 'new'
-        ? newLeads
-        : formData.audience === 'warm'
-        ? warmLeads
-        : hotLeads,
-      budget: formData.budget ? parseFloat(formData.budget) : undefined,
-      isABTest: formData.enableABTest
+    try {
+      // Transform formData to match backend expectations
+      const campaignData: CreateCampaignData = {
+        name: formData.name,
+        type: selectedType.toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL',
+        status: 'DRAFT', // Create as DRAFT first
+        subject: formData.subject || undefined,
+        body: formData.content || undefined,
+        startDate: formData.schedule === 'scheduled' && formData.scheduleDate 
+          ? `${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00Z` 
+          : undefined,
+        audience: formData.audience === 'custom' 
+          ? formData.customAudience.length 
+          : formData.audience === 'all' 
+          ? totalLeads 
+          : formData.audience === 'new'
+          ? newLeads
+          : formData.audience === 'warm'
+          ? warmLeads
+          : hotLeads,
+        budget: formData.budget ? parseFloat(formData.budget) : undefined,
+        isABTest: formData.enableABTest,
+        // Recurring campaign fields
+        isRecurring: formData.isRecurring,
+        frequency: formData.isRecurring ? formData.frequency : undefined,
+        recurringPattern: formData.isRecurring ? {
+          ...(formData.frequency === 'weekly' && formData.daysOfWeek.length > 0 && {
+            daysOfWeek: formData.daysOfWeek
+          }),
+          ...(formData.frequency === 'monthly' && {
+            dayOfMonth: formData.dayOfMonth
+          }),
+          time: formData.scheduleTime || '09:00'
+        } : undefined,
+        endDate: formData.isRecurring && formData.recurringEndType === 'date' && formData.recurringEndDate
+          ? new Date(formData.recurringEndDate).toISOString()
+          : undefined,
+        maxOccurrences: formData.isRecurring && formData.recurringEndType === 'count'
+          ? formData.maxOccurrences
+          : undefined,
+      }
+      
+      // Create campaign as DRAFT
+      const response = await campaignsApi.createCampaign(campaignData)
+      const campaignId = response.data?.campaign?.id
+      
+      if (!campaignId) {
+        throw new Error('Failed to create campaign')
+      }
+      
+      setCreatedCampaignId(campaignId)
+      
+      // Fetch preview data
+      const previewResponse = await campaignsApi.previewCampaign(campaignId)
+      setPreviewData(previewResponse.data)
+      
+      // Show preview modal
+      setShowPreview(true)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create campaign preview')
+    }
+  }
+  
+  const handleConfirmSend = async () => {
+    if (!createdCampaignId) return
+    
+    try {
+      setIsSending(true)
+      
+      // Update campaign status to SCHEDULED or ACTIVE
+      const finalStatus = formData.schedule === 'scheduled' ? 'SCHEDULED' : 'ACTIVE'
+      await campaignsApi.updateCampaign(createdCampaignId, {
+        status: finalStatus
+      })
+      
+      // If immediate send, trigger the send
+      if (formData.schedule === 'immediate') {
+        await campaignsApi.sendCampaign(createdCampaignId)
+      }
+      
+      // Success!
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success(`Campaign "${formData.name}" ${formData.schedule === 'immediate' ? 'sent' : 'scheduled'} successfully!`)
+      navigate('/campaigns')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send campaign')
+    } finally {
+      setIsSending(false)
+      setShowPreview(false)
+    }
+  }
+  
+  const handleCancelPreview = async () => {
+    // Delete the draft campaign
+    if (createdCampaignId) {
+      try {
+        await campaignsApi.deleteCampaign(createdCampaignId)
+      } catch (error) {
+        console.error('Failed to delete draft campaign:', error)
+      }
     }
     
-    createMutation.mutate(campaignData)
+    setShowPreview(false)
+    setCreatedCampaignId(null)
+    setPreviewData(null)
   }
 
   return (
@@ -417,7 +555,45 @@ function CampaignCreate() {
                   </div>
                   <Badge>{hotLeads} leads</Badge>
                 </label>
+
+                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
+                  <input
+                    type="radio"
+                    name="audience"
+                    value="custom"
+                    checked={formData.audience === 'custom'}
+                    onChange={(e) => updateFormData({ audience: e.target.value as 'all' | 'new' | 'warm' | 'hot' | 'custom' })}
+                    className="h-4 w-4"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">Custom Audience</div>
+                    <div className="text-sm text-muted-foreground">
+                      Use advanced filters to target specific leads
+                    </div>
+                  </div>
+                  <Badge variant="outline">
+                    {formData.audienceFilters.length > 0 ? `${formData.audienceFilters.length} filters` : 'No filters'}
+                  </Badge>
+                </label>
               </div>
+
+              {/* Advanced Filters */}
+              {formData.audience === 'custom' && (
+                <div className="pt-4 border-t">
+                  <div className="mb-3">
+                    <div className="font-medium mb-1">Advanced Filters</div>
+                    <div className="text-sm text-muted-foreground">
+                      Combine multiple criteria to precisely target your audience
+                    </div>
+                  </div>
+                  <AdvancedAudienceFilters
+                    filters={formData.audienceFilters}
+                    onChange={(filters) => updateFormData({ audienceFilters: filters })}
+                    leadCount={filteredLeadCount}
+                    savedSegments={[]}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -470,23 +646,176 @@ function CampaignCreate() {
               </div>
 
               {formData.schedule === 'scheduled' && (
-                <div className="ml-10 grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Date</label>
-                    <Input
-                      type="date"
-                      value={formData.scheduleDate}
-                      onChange={(e) => updateFormData({ scheduleDate: e.target.value })}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
+                <div className="ml-10 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Date</label>
+                      <Input
+                        type="date"
+                        value={formData.scheduleDate}
+                        onChange={(e) => updateFormData({ scheduleDate: e.target.value })}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Time</label>
+                      <Input
+                        type="time"
+                        value={formData.scheduleTime}
+                        onChange={(e) => updateFormData({ scheduleTime: e.target.value })}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Time</label>
-                    <Input
-                      type="time"
-                      value={formData.scheduleTime}
-                      onChange={(e) => updateFormData({ scheduleTime: e.target.value })}
-                    />
+
+                  {/* Recurring Campaign Options */}
+                  <div className="space-y-3 pt-3 border-t">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isRecurring}
+                        onChange={(e) => updateFormData({ 
+                          isRecurring: e.target.checked,
+                          frequency: e.target.checked ? 'weekly' : undefined
+                        })}
+                        className="h-4 w-4"
+                      />
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4" />
+                        <span className="font-medium">Make this a recurring campaign</span>
+                      </div>
+                    </label>
+
+                    {formData.isRecurring && (
+                      <div className="ml-6 space-y-4">
+                        {/* Frequency Selection */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Repeat Frequency</label>
+                          <select
+                            value={formData.frequency}
+                            onChange={(e) => updateFormData({ 
+                              frequency: e.target.value as 'daily' | 'weekly' | 'monthly',
+                              daysOfWeek: e.target.value === 'weekly' ? [1] : [],
+                              dayOfMonth: e.target.value === 'monthly' ? 1 : undefined
+                            })}
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                          </select>
+                        </div>
+
+                        {/* Days of Week for Weekly */}
+                        {formData.frequency === 'weekly' && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Select Days</label>
+                            <DaysOfWeekPicker
+                              value={formData.daysOfWeek}
+                              onChange={(days) => updateFormData({ daysOfWeek: days })}
+                            />
+                          </div>
+                        )}
+
+                        {/* Day of Month for Monthly */}
+                        {formData.frequency === 'monthly' && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Day of Month</label>
+                            <select
+                              value={formData.dayOfMonth}
+                              onChange={(e) => updateFormData({ dayOfMonth: parseInt(e.target.value) })}
+                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                <option key={day} value={day}>
+                                  {day === 1 ? '1st' : day === 2 ? '2nd' : day === 3 ? '3rd' : `${day}th`} of every month
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* End Condition */}
+                        <div className="space-y-3">
+                          <label className="text-sm font-medium">End Condition</label>
+                          <div className="space-y-2">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="recurringEnd"
+                                value="never"
+                                checked={formData.recurringEndType === 'never'}
+                                onChange={() => updateFormData({ recurringEndType: 'never' })}
+                                className="h-4 w-4"
+                              />
+                              <span className="text-sm">Never end</span>
+                            </label>
+
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="recurringEnd"
+                                value="date"
+                                checked={formData.recurringEndType === 'date'}
+                                onChange={() => updateFormData({ recurringEndType: 'date' })}
+                                className="h-4 w-4"
+                              />
+                              <span className="text-sm">End on date</span>
+                            </label>
+
+                            {formData.recurringEndType === 'date' && (
+                              <Input
+                                type="date"
+                                value={formData.recurringEndDate}
+                                onChange={(e) => updateFormData({ recurringEndDate: e.target.value })}
+                                min={formData.scheduleDate || new Date().toISOString().split('T')[0]}
+                                className="ml-6 max-w-xs"
+                              />
+                            )}
+
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="recurringEnd"
+                                value="count"
+                                checked={formData.recurringEndType === 'count'}
+                                onChange={() => updateFormData({ recurringEndType: 'count' })}
+                                className="h-4 w-4"
+                              />
+                              <span className="text-sm">After number of occurrences</span>
+                            </label>
+
+                            {formData.recurringEndType === 'count' && (
+                              <Input
+                                type="number"
+                                min="1"
+                                value={formData.maxOccurrences}
+                                onChange={(e) => updateFormData({ maxOccurrences: parseInt(e.target.value) })}
+                                placeholder="Number of times to repeat"
+                                className="ml-6 max-w-xs"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Recurring Summary */}
+                        <div className="rounded-lg bg-muted p-3 text-sm">
+                          <div className="font-medium mb-1">Recurring Schedule Preview:</div>
+                          <div className="text-muted-foreground">
+                            {formData.frequency === 'daily' && 'Sends every day'}
+                            {formData.frequency === 'weekly' && formData.daysOfWeek.length > 0 && (
+                              <>Sends every {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                                .filter((_, i) => formData.daysOfWeek.includes(i))
+                                .join(', ')}</>
+                            )}
+                            {formData.frequency === 'monthly' && `Sends on day ${formData.dayOfMonth} of every month`}
+                            {' at '}{formData.scheduleTime || '9:00 AM'}
+                            {formData.recurringEndType === 'never' && ', continues indefinitely'}
+                            {formData.recurringEndType === 'date' && ` until ${formData.recurringEndDate}`}
+                            {formData.recurringEndType === 'count' && ` for ${formData.maxOccurrences} occurrences`}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -560,10 +889,21 @@ function CampaignCreate() {
               Back
             </Button>
             <Button onClick={handleCreate} disabled={!formData.content || createMutation.isPending}>
-              {createMutation.isPending ? 'Creating Campaign...' : 'Create Campaign'}
+              {createMutation.isPending ? 'Creating Campaign...' : 'Preview Campaign'}
             </Button>
           </div>
         </div>
+      )}
+      
+      {/* Campaign Preview Modal */}
+      {showPreview && previewData && (
+        <CampaignPreviewModal
+          isOpen={showPreview}
+          onClose={handleCancelPreview}
+          onConfirm={handleConfirmSend}
+          preview={previewData}
+          isLoading={isSending}
+        />
       )}
     </div>
   )

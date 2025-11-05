@@ -9,7 +9,7 @@ import {
   Plus, Mail, MessageSquare, Phone, MoreHorizontal, Search,
   TrendingUp, DollarSign, Users, Target, Calendar as CalendarIcon,
   LayoutGrid, Download, Share2, BarChart3, LayoutList, X, 
-  PlayCircle, Copy, Trash2, Edit
+  PlayCircle, Copy, Trash2, Edit, Archive, ArchiveRestore
 } from 'lucide-react'
 import { mockCampaigns } from '@/data/mockData'
 import { Campaign } from '@/types'
@@ -264,26 +264,59 @@ function CampaignsList() {
     setShowRowMenu(null)
   }
 
+  // Duplicate campaign mutation
+  const duplicateCampaignMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name?: string }) => 
+      campaignsApi.duplicateCampaign(id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign duplicated successfully')
+      setShowDuplicateModal(false)
+      setCampaignToDuplicate(null)
+      setShowRowMenu(null)
+    },
+    onError: () => {
+      toast.error('Failed to duplicate campaign')
+    },
+  })
+
+  // Archive campaign mutation
+  const archiveCampaignMutation = useMutation({
+    mutationFn: (id: string) => campaignsApi.archiveCampaign(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign archived successfully')
+      setShowRowMenu(null)
+    },
+    onError: () => {
+      toast.error('Failed to archive campaign')
+    },
+  })
+
+  // Unarchive campaign mutation
+  const unarchiveCampaignMutation = useMutation({
+    mutationFn: (id: string) => campaignsApi.unarchiveCampaign(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success('Campaign unarchived successfully')
+      setShowRowMenu(null)
+    },
+    onError: () => {
+      toast.error('Failed to unarchive campaign')
+    },
+  })
+
   const handleDuplicateCampaign = () => {
     if (!campaignToDuplicate) return
 
     const originalCampaign = campaigns.find(c => c.id === campaignToDuplicate)
     if (!originalCampaign) return
 
-    // Use API if we have real campaigns
-    if (campaignsResponse?.campaigns) {
-      createCampaignMutation.mutate({
-        name: `${originalCampaign.name} (Copy)`,
-        type: originalCampaign.type as 'email' | 'sms' | 'phone',
-        status: 'draft',
-        subject: originalCampaign.subject || undefined,
-      })
-    }
-
-    toast.success('Campaign duplicated successfully')
-    setShowDuplicateModal(false)
-    setCampaignToDuplicate(null)
-    setShowRowMenu(null)
+    // Use the proper duplicate API endpoint
+    duplicateCampaignMutation.mutate({
+      id: String(originalCampaign.id),
+      name: `${originalCampaign.name} (Copy)`,
+    })
   }
 
   const handleExportCSV = () => {
@@ -700,6 +733,27 @@ function CampaignsList() {
                           <Copy className="mr-2 h-4 w-4" />
                           Duplicate
                         </button>
+                        {campaign.isArchived ? (
+                          <button
+                            onClick={() => {
+                              unarchiveCampaignMutation.mutate(String(campaign.id))
+                            }}
+                            className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
+                          >
+                            <ArchiveRestore className="mr-2 h-4 w-4" />
+                            Unarchive
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              archiveCampaignMutation.mutate(String(campaign.id))
+                            }}
+                            className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
+                          >
+                            <Archive className="mr-2 h-4 w-4" />
+                            Archive
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setSelectedCampaigns([campaign.id as number])

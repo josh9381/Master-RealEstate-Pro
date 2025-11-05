@@ -6,7 +6,7 @@
 import twilio from 'twilio';
 import Handlebars from 'handlebars';
 import { prisma } from '../config/database';
-import { decrypt } from '../utils/encryption';
+import { decryptForUser } from '../utils/encryption';
 
 // Initialize Twilio
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
@@ -44,8 +44,8 @@ async function getSMSConfig(userId?: string) {
     // If user has config with credentials, use it
     if (config?.accountSid && config?.authToken) {
       try {
-        const accountSid = decrypt(config.accountSid);
-        const authToken = decrypt(config.authToken);
+        const accountSid = decryptForUser(userId, config.accountSid);
+        const authToken = decryptForUser(userId, config.authToken);
         const client = twilio(accountSid, authToken);
 
         console.log(`[SMS] Using user's Twilio credentials (userId: ${userId})`);

@@ -304,3 +304,60 @@ export const getWorkflowStats = async (req: Request, res: Response) => {
     }
   })
 }
+
+// Get workflow analytics (enhanced)
+export const getWorkflowAnalytics = async (req: Request, res: Response) => {
+  const { getWorkflowAnalytics: getWorkflowAnalyticsService } = await import('../services/workflow.service')
+  
+  const { id } = req.params
+  const { days } = req.query
+
+  const analytics = await getWorkflowAnalyticsService(
+    id,
+    days ? parseInt(days as string) : 30
+  )
+
+  res.json({
+    success: true,
+    data: analytics,
+  })
+}
+
+// Manual trigger workflow
+export const triggerWorkflow = async (req: Request, res: Response) => {
+  const { manualTriggerWorkflow } = await import('../services/workflow.service')
+  
+  const { id } = req.params
+  const { leadId } = req.body
+
+  const executionId = await manualTriggerWorkflow(id, leadId)
+
+  res.json({
+    success: true,
+    data: { executionId },
+    message: 'Workflow triggered successfully',
+  })
+}
+
+// Trigger workflows for lead event (internal use)
+export const triggerWorkflowsForLead = async (req: Request, res: Response) => {
+  const { triggerWorkflowsForLead: triggerWorkflowsForLeadService } = await import('../services/workflow.service')
+  
+  const { leadId, triggerType, metadata } = req.body
+
+  if (!leadId || !triggerType) {
+    throw new ValidationError('leadId and triggerType are required')
+  }
+
+  const results = await triggerWorkflowsForLeadService(
+    leadId,
+    triggerType as WorkflowTrigger,
+    metadata
+  )
+
+  res.json({
+    success: true,
+    data: results,
+    message: `Triggered ${results.length} workflow(s)`,
+  })
+}

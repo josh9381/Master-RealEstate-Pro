@@ -3,6 +3,7 @@ import { prisma } from '../config/database';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/errorHandler';
 import type { LeadStatus } from '@prisma/client';
 import { workflowTriggerService } from '../services/workflow-trigger.service';
+import { updateLeadScore, updateMultipleLeadScores, updateAllLeadScores, getScoreCategory, getLeadsByScoreCategory } from '../services/leadScoring.service';
 
 /**
  * Get all leads with filtering, pagination, and sorting
@@ -612,4 +613,257 @@ export async function getLeadStats(req: Request, res: Response): Promise<void> {
     success: true,
     data: { stats },
   });
+}
+
+/**
+ * Count leads matching advanced filters
+ * POST /api/leads/count-filtered
+ */
+export async function countFilteredLeads(req: Request, res: Response): Promise<void> {
+  const { filters } = req.body as { filters: Array<{ field: string; operator: string; value: any }> };
+
+  if (!filters || !Array.isArray(filters)) {
+    res.status(400).json({
+      success: false,
+      message: 'Filters array is required',
+    });
+    return;
+  }
+
+  // Build where clause from filters
+  const where: any = {};
+
+  filters.forEach((filter) => {
+    const { field, operator, value } = filter;
+
+    // Handle nested fields (e.g., customFields.industry)
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      
+      if (parent === 'customFields') {
+        if (!where[parent]) where[parent] = {};
+        
+        switch (operator) {
+          case 'equals':
+            where[parent].path = ['$', child];
+            where[parent].equals = value;
+            break;
+          case 'contains':
+            // For JSON fields, we need to use string_contains
+            where[parent].path = ['$', child];
+            where[parent].string_contains = value;
+            break;
+          case 'greaterThan':
+            where[parent].path = ['$', child];
+            where[parent].gt = value;
+            break;
+          case 'lessThan':
+            where[parent].path = ['$', child];
+            where[parent].lt = value;
+            break;
+        }
+      }
+    } else {
+      // Handle regular fields
+      switch (operator) {
+        case 'equals':
+          where[field] = value;
+          break;
+        case 'notEquals':
+          where[field] = { not: value };
+          break;
+        case 'contains':
+          where[field] = { contains: value };
+          break;
+        case 'startsWith':
+          where[field] = { startsWith: value };
+          break;
+        case 'endsWith':
+          where[field] = { endsWith: value };
+          break;
+        case 'greaterThan':
+          where[field] = { gt: Number(value) };
+          break;
+        case 'lessThan':
+          where[field] = { lt: Number(value) };
+          break;
+        case 'greaterThanOrEqual':
+          where[field] = { gte: Number(value) };
+          break;
+        case 'lessThanOrEqual':
+          where[field] = { lte: Number(value) };
+          break;
+        case 'before':
+          where[field] = { lt: new Date(value) };
+          break;
+        case 'after':
+          where[field] = { gt: new Date(value) };
+          break;
+        case 'lastNDays':
+          where[field] = {
+            gte: new Date(Date.now() - Number(value) * 24 * 60 * 60 * 1000),
+          };
+          break;
+        case 'includes':
+          // For tags array
+          if (field === 'tags') {
+            where.tags = {
+              some: {
+                name: { contains: value },
+              },
+            };
+          }
+          break;
+        case 'excludes':
+          // For tags array
+          if (field === 'tags') {
+            where.tags = {
+              none: {
+                name: { contains: value },
+              },
+            };
+          }
+          break;
+      }
+    }
+  });
+
+  try {
+    // Count leads matching the filters
+    const count = await prisma.lead.count({ where });
+
+    res.status(200).json({
+      success: true,
+      data: { count },
+    });
+  } catch (error: any) {
+    console.error('Error counting filtered leads:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to count filtered leads',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Recalculate score for a single lead
+ * POST /api/leads/:id/score
+ */
+export async function recalculateLeadScore(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    const score = await updateLeadScore(id);
+    const category = getScoreCategory(score);
+
+    res.status(200).json({
+      success: true,
+      data: { score, category },
+      message: 'Lead score updated successfully',
+    });
+  } catch (error: any) {
+    console.error('Error recalculating lead score:', error);
+    if (error.message.includes('not found')) {
+      res.status(404).json({
+        success: false,
+        message: 'Lead not found',
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to recalculate lead score',
+        error: error.message,
+      });
+    }
+  }
+}
+
+/**
+ * Batch recalculate scores for multiple leads
+ * POST /api/leads/scores/batch
+ */
+export async function batchRecalculateScores(req: Request, res: Response): Promise<void> {
+  const { leadIds } = req.body as { leadIds: string[] };
+
+  if (!Array.isArray(leadIds) || leadIds.length === 0) {
+    res.status(400).json({
+      success: false,
+      message: 'leadIds must be a non-empty array',
+    });
+    return;
+  }
+
+  try {
+    await updateMultipleLeadScores(leadIds);
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully updated scores for ${leadIds.length} leads`,
+    });
+  } catch (error: any) {
+    console.error('Error batch recalculating scores:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to batch recalculate scores',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Recalculate scores for all leads
+ * POST /api/leads/scores/all
+ */
+export async function recalculateAllScores(req: Request, res: Response): Promise<void> {
+  try {
+    const result = await updateAllLeadScores();
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: `Updated ${result.updated} leads, ${result.errors} errors`,
+    });
+  } catch (error: any) {
+    console.error('Error recalculating all scores:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to recalculate all scores',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Get leads by score category
+ * GET /api/leads/scores/:category
+ */
+export async function getLeadsByScore(req: Request, res: Response): Promise<void> {
+  const { category } = req.params;
+
+  const validCategories = ['HOT', 'WARM', 'COOL', 'COLD'];
+  if (!validCategories.includes(category.toUpperCase())) {
+    res.status(400).json({
+      success: false,
+      message: `Invalid category. Must be one of: ${validCategories.join(', ')}`,
+    });
+    return;
+  }
+
+  try {
+    const leads = await getLeadsByScoreCategory(category.toUpperCase() as 'HOT' | 'WARM' | 'COOL' | 'COLD');
+
+    res.status(200).json({
+      success: true,
+      data: leads,
+      count: leads.length,
+    });
+  } catch (error: any) {
+    console.error('Error getting leads by score category:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get leads by score category',
+      error: error.message,
+    });
+  }
 }

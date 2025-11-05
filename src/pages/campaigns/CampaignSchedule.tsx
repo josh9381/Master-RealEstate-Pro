@@ -22,6 +22,21 @@ const CampaignSchedule = () => {
     nextCampaign: '',
   });
 
+  // Reschedule modal state
+  const [rescheduleModal, setRescheduleModal] = useState<{
+    isOpen: boolean;
+    campaignId: string;
+    campaignName: string;
+    currentDate: string;
+  }>({
+    isOpen: false,
+    campaignId: '',
+    campaignName: '',
+    currentDate: '',
+  });
+  const [newScheduleDate, setNewScheduleDate] = useState('');
+  const [newScheduleTime, setNewScheduleTime] = useState('');
+
   useEffect(() => {
     loadCampaigns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -32,39 +47,42 @@ const CampaignSchedule = () => {
     try {
       // Fetch all campaigns
       const response = await campaignsApi.getCampaigns();
-      const campaigns = response.data || [];
+      const campaigns = response.data.campaigns || [];
 
-      // Filter scheduled campaigns (status: scheduled or paused)
+      // Filter scheduled campaigns (status: SCHEDULED or PAUSED - uppercase from backend)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const scheduled = campaigns.filter((c: any) => 
-        c.status === 'scheduled' || c.status === 'paused'
+        c.status === 'SCHEDULED' || c.status === 'PAUSED'
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ).map((c: any) => ({
         ...c,
-        type: c.type.charAt(0).toUpperCase() + c.type.slice(1),
-        scheduledDate: new Date(c.scheduledDate || c.createdAt).toLocaleDateString(),
-        scheduledTime: new Date(c.scheduledDate || c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        recipients: c.recipientCount || 0,
+        type: c.type, // Already uppercase from backend
+        scheduledDate: c.startDate ? new Date(c.startDate).toLocaleDateString() : new Date(c.createdAt).toLocaleDateString(),
+        scheduledTime: c.startDate ? new Date(c.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        recipients: c.audience || 0,
       }));
 
-      // Filter sent campaigns
+      // Filter completed campaigns
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sent = campaigns.filter((c: any) => 
-        c.status === 'sent' || c.status === 'completed'
+        c.status === 'COMPLETED' || c.status === 'ACTIVE'
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ).map((c: any) => ({
         ...c,
-        type: c.type.charAt(0).toUpperCase() + c.type.slice(1),
-        sentDate: new Date(c.sentAt || c.updatedAt).toLocaleDateString(),
-        sentTime: new Date(c.sentAt || c.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        recipients: c.recipientCount || 0,
-        opened: Math.floor((c.recipientCount || 0) * 0.36), // Mock open rate ~36%
-        clicked: Math.floor((c.recipientCount || 0) * 0.10), // Mock click rate ~10%
+        type: c.type,
+        sentDate: c.endDate ? new Date(c.endDate).toLocaleDateString() : new Date(c.updatedAt).toLocaleDateString(),
+        sentTime: c.endDate ? new Date(c.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(c.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        recipients: c.sent || 0,
+        opened: c.opened || 0,
+        clicked: c.clicked || 0,
       })).slice(0, 5);
 
-      // Mock recurring schedules (would need backend support for true recurring campaigns)
+      // Recurring campaigns (filter by name pattern for now)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const recurring = campaigns.filter((c: any) => c.name.toLowerCase().includes('weekly') || c.name.toLowerCase().includes('monthly')).slice(0, 3);
+      const recurring = campaigns.filter((c: any) => 
+        (c.name.toLowerCase().includes('weekly') || c.name.toLowerCase().includes('monthly')) && 
+        c.status === 'SCHEDULED'
+      ).slice(0, 3);
 
       setScheduledCampaigns(scheduled);
       setSentCampaigns(sent);
@@ -84,6 +102,107 @@ const CampaignSchedule = () => {
     } catch (error) {
       console.error('Error loading campaigns:', error);
       toast.error('Failed to load campaign schedule');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendNow = async (campaignId: string, campaignName: string) => {
+    if (!confirm(`Send "${campaignName}" immediately to all recipients?`)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const result = await campaignsApi.sendCampaignNow(campaignId);
+      
+      toast.success(`Campaign "${campaignName}" sent successfully! Sent to ${result.data.sent} recipients.`);
+      
+      // Reload campaigns to update UI
+      await loadCampaigns();
+    } catch (error: any) {
+      console.error('Error sending campaign:', error);
+      toast.error(error.response?.data?.message || 'Failed to send campaign');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelCampaign = async (campaignId: string, campaignName: string) => {
+    if (!confirm(`Cancel scheduled campaign "${campaignName}"?`)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await campaignsApi.updateCampaign(campaignId, { status: 'CANCELLED' });
+      
+      toast.success(`Campaign "${campaignName}" cancelled`);
+      
+      // Reload campaigns to update UI
+      await loadCampaigns();
+    } catch (error: any) {
+      console.error('Error cancelling campaign:', error);
+      toast.error(error.response?.data?.message || 'Failed to cancel campaign');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openRescheduleModal = (campaign: any) => {
+    const currentDate = campaign.startDate || campaign.createdAt;
+    const dateObj = new Date(currentDate);
+    
+    setRescheduleModal({
+      isOpen: true,
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      currentDate: dateObj.toLocaleString(),
+    });
+    
+    // Set initial values
+    setNewScheduleDate(dateObj.toISOString().split('T')[0]);
+    setNewScheduleTime(dateObj.toTimeString().slice(0, 5));
+  };
+
+  const closeRescheduleModal = () => {
+    setRescheduleModal({
+      isOpen: false,
+      campaignId: '',
+      campaignName: '',
+      currentDate: '',
+    });
+    setNewScheduleDate('');
+    setNewScheduleTime('');
+  };
+
+  const handleReschedule = async () => {
+    if (!newScheduleDate || !newScheduleTime) {
+      toast.error('Please select both date and time');
+      return;
+    }
+
+    const newStartDate = new Date(`${newScheduleDate}T${newScheduleTime}:00`);
+    
+    if (newStartDate <= new Date()) {
+      toast.error('Please select a future date and time');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await campaignsApi.rescheduleCampaign(
+        rescheduleModal.campaignId,
+        newStartDate.toISOString()
+      );
+      
+      toast.success(`Campaign "${rescheduleModal.campaignName}" rescheduled to ${newStartDate.toLocaleString()}`);
+      
+      closeRescheduleModal();
+      await loadCampaigns();
+    } catch (error: any) {
+      console.error('Error rescheduling campaign:', error);
+      toast.error(error.response?.data?.message || 'Failed to reschedule campaign');
     } finally {
       setIsLoading(false);
     }
@@ -185,16 +304,35 @@ const CampaignSchedule = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = `/campaigns/${campaign.id}/edit`}
+                  >
                     Edit
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => openRescheduleModal(campaign)}
+                    disabled={isLoading}
+                  >
                     Reschedule
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleSendNow(campaign.id, campaign.name)}
+                    disabled={isLoading}
+                  >
                     Send Now
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleCancelCampaign(campaign.id, campaign.name)}
+                    disabled={isLoading}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -349,6 +487,63 @@ const CampaignSchedule = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Reschedule Modal */}
+      {rescheduleModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Reschedule Campaign</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  <strong>Campaign:</strong> {rescheduleModal.campaignName}
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  <strong>Current schedule:</strong> {rescheduleModal.currentDate}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">New Date</label>
+                <input
+                  type="date"
+                  value={newScheduleDate}
+                  onChange={(e) => setNewScheduleDate(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">New Time</label>
+                <input
+                  type="time"
+                  value={newScheduleTime}
+                  onChange={(e) => setNewScheduleTime(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-2 mt-6">
+              <Button 
+                onClick={handleReschedule}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Rescheduling...' : 'Confirm Reschedule'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={closeRescheduleModal}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

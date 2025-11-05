@@ -13,6 +13,9 @@ import Register from './pages/auth/Register'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
 
+// Public pages
+import { UnsubscribePage } from './pages/unsubscribe/UnsubscribePage'
+
 // Leads
 import LeadsList from './pages/leads/LeadsList'
 import LeadDetail from './pages/leads/LeadDetail'
@@ -130,6 +133,9 @@ import NotFound from './pages/NotFound'
 function App() {
   return (
     <Routes>
+      {/* Public routes */}
+      <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
+
       {/* Auth routes */}
       <Route element={<AuthLayout />}>
         <Route path="/auth/login" element={<Login />} />
