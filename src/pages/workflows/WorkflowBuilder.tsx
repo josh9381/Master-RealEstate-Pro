@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+-import { useState, useEffect } from 'react';
 import { 
   Workflow, Play, Plus, TrendingUp, Save, TestTube2, Clock, 
   CheckCircle2, XCircle, Activity, Download, Upload, Trash2,
@@ -58,6 +58,14 @@ const WorkflowBuilder = () => {
   const [interactionMode, setInteractionMode] = useState<'click' | 'drag'>('click');
   const [draggedItem, setDraggedItem] = useState<DraggableItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  
+  // Canvas state for drag mode
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const [canvasZoom, setCanvasZoom] = useState(1);
+  const [isDraggingNode, setIsDraggingNode] = useState<string | null>(null);
+  const [dragNodeOffset, setDragNodeOffset] = useState({ x: 0, y: 0 });
+  const [isPanningCanvas, setIsPanningCanvas] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   // Mock execution logs
   const [executionLogs] = useState<ExecutionLog[]>([
@@ -145,7 +153,11 @@ const WorkflowBuilder = () => {
       type,
       label,
       config: {},
-      position: { x: 100, y: nodes.length * 120 + 100 }
+      // In click mode: vertical list positioning
+      // In drag mode: staggered canvas positioning
+      position: interactionMode === 'click' 
+        ? { x: 100, y: nodes.length * 120 + 100 }
+        : { x: 200 + (nodes.length % 3) * 250, y: 150 + Math.floor(nodes.length / 3) * 200 }
     };
     setNodes([...nodes, newNode]);
     toast.success(`Added ${label} to workflow`);
@@ -342,6 +354,98 @@ const WorkflowBuilder = () => {
     toast.info(`Switched to ${newMode} mode`);
   };
 
+  // Canvas node drag handlers (for dragging nodes on canvas in drag mode)
+  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    if (interactionMode !== 'drag') return;
+    
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    setIsDraggingNode(nodeId);
+    setDragNodeOffset({
+      x: e.clientX - node.position.x,
+      y: e.clientY - node.position.y
+    });
+    e.stopPropagation();
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (isDraggingNode) {
+      const newX = e.clientX - dragNodeOffset.x;
+      const newY = e.clientY - dragNodeOffset.y;
+      
+      setNodes(nodes.map(node => 
+        node.id === isDraggingNode
+          ? { ...node, position: { x: newX, y: newY } }
+          : node
+      ));
+    } else if (isPanningCanvas) {
+      const deltaX = e.clientX - panStart.x;
+      const deltaY = e.clientY - panStart.y;
+      setCanvasOffset({
+        x: canvasOffset.x + deltaX,
+        y: canvasOffset.y + deltaY
+      });
+      setPanStart({ x: e.clientX, y: e.clientY });
+    }
+  };
+
+  const handleCanvasMouseUp = () => {
+    setIsDraggingNode(null);
+    setIsPanningCanvas(false);
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (interactionMode === 'drag' && e.button === 0 && !isDraggingNode) {
+      setIsPanningCanvas(true);
+      setPanStart({ x: e.clientX, y: e.clientY });
+    }
+  };
+
+  // Component to render connection lines between nodes
+  const ConnectionLines = () => {
+    if (nodes.length < 2) return null;
+
+    return (
+      <svg 
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{ zIndex: 0 }}
+      >
+        {nodes.map((node, index) => {
+          if (index === 0) return null;
+          const prevNode = nodes[index - 1];
+          
+          // Calculate connection points
+          const startX = prevNode.position.x + 120; // Node width / 2
+          const startY = prevNode.position.y + 40; // Node height / 2
+          const endX = node.position.x + 120;
+          const endY = node.position.y + 40;
+          
+          // Calculate midpoint for curved line
+          const midY = (startY + endY) / 2;
+          
+          return (
+            <g key={`connection-${node.id}`}>
+              {/* Curved path */}
+              <path
+                d={`M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`}
+                stroke="#94a3b8"
+                strokeWidth="2"
+                fill="none"
+                className="transition-all"
+              />
+              {/* Arrow head */}
+              <polygon
+                points={`${endX},${endY} ${endX-6},${endY-6} ${endX+6},${endY-6}`}
+                fill="#94a3b8"
+              />
+            </g>
+          );
+        })}
+      </svg>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Actions */}
@@ -408,22 +512,27 @@ const WorkflowBuilder = () => {
         </div>
       </div>
 
-      {/* Performance Metrics Panel */}
-      {showMetricsPanel && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+      {/* Performance Metrics Modal */}
+      <Dialog open={showMetricsPanel} onOpenChange={setShowMetricsPanel}>
+        <DialogContent className="max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl w-full max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-start justify-between">
               <div>
-                <CardTitle>Performance Metrics</CardTitle>
-                <CardDescription>Workflow execution analytics</CardDescription>
+                <DialogTitle>Performance Metrics</DialogTitle>
+                <DialogDescription>Workflow execution analytics</DialogDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowMetricsPanel(false)}>
-                Close
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowMetricsPanel(false)}
+                className="h-8 w-8 p-0"
+              >
+                <XCircle className="h-4 w-4" />
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-4 mb-6">
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Total Executions</p>
                 <p className="text-2xl font-bold">1,463</p>
@@ -474,13 +583,13 @@ const WorkflowBuilder = () => {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Template Modal */}
       <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
-        <DialogContent className="max-w-7xl w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl w-full max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <div className="flex items-start justify-between">
               <div>
@@ -791,7 +900,8 @@ const WorkflowBuilder = () => {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : interactionMode === 'click' ? (
+                /* Click Mode: Vertical List */
                 <div className="space-y-4">
                   {nodes.map((node, index) => (
                     <div key={node.id} className="space-y-2">
@@ -872,6 +982,82 @@ const WorkflowBuilder = () => {
                           </span>
                         </div>
                       )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Drag Mode: 2D Canvas */
+                <div 
+                  className="relative w-full h-full min-h-[500px]"
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseUp={handleCanvasMouseUp}
+                  onMouseDown={handleCanvasMouseDown}
+                  onMouseLeave={handleCanvasMouseUp}
+                >
+                  {/* Connection Lines */}
+                  <ConnectionLines />
+                  
+                  {/* Draggable Nodes */}
+                  {nodes.map((node, index) => (
+                    <div
+                      key={node.id}
+                      className={`absolute cursor-move select-none ${
+                        isDraggingNode === node.id ? 'z-50 shadow-2xl scale-105' : 'z-10'
+                      }`}
+                      style={{
+                        left: `${node.position.x}px`,
+                        top: `${node.position.y}px`,
+                        transition: isDraggingNode === node.id ? 'none' : 'all 0.2s ease'
+                      }}
+                      onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                    >
+                      <Card 
+                        className={`w-[240px] transition-all ${
+                          selectedNode?.id === node.id ? 'border-primary bg-primary/5 shadow-md' : 'bg-white'
+                        } ${
+                          isDraggingNode === node.id ? 'shadow-2xl ring-2 ring-primary' : 'shadow-sm hover:shadow-md'
+                        }`}
+                        onClick={() => setSelectedNode(node)}
+                      >
+                        <CardHeader className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 flex-1">
+                              <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0" />
+                              <div className={`p-2 rounded-lg flex-shrink-0 ${
+                                node.type === 'trigger' ? 'bg-blue-100 text-blue-600' :
+                                node.type === 'action' ? 'bg-green-100 text-green-600' :
+                                node.type === 'condition' ? 'bg-yellow-100 text-yellow-600' :
+                                'bg-purple-100 text-purple-600'
+                              }`}>
+                                {node.type === 'trigger' && <Zap className="h-4 w-4" />}
+                                {node.type === 'action' && <Settings className="h-4 w-4" />}
+                                {node.type === 'condition' && <GitBranch className="h-4 w-4" />}
+                                {node.type === 'delay' && <Clock className="h-4 w-4" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">{node.label}</p>
+                                <p className="text-xs text-muted-foreground capitalize">{node.type}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Badge variant="secondary" className="text-xs">
+                                {index + 1}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeNode(node.id);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      </Card>
                     </div>
                   ))}
                 </div>
@@ -1076,27 +1262,30 @@ const WorkflowBuilder = () => {
         </div>
       </div>
 
-      {/* Execution Logs Viewer */}
-      {showLogsPanel && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+      {/* Execution Logs Modal */}
+      <Dialog open={showLogsPanel} onOpenChange={setShowLogsPanel}>
+        <DialogContent className="max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl w-full max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-start justify-between">
               <div>
-                <CardTitle>Execution Logs</CardTitle>
-                <CardDescription>Recent workflow execution history</CardDescription>
+                <DialogTitle>Execution Logs</DialogTitle>
+                <DialogDescription>Recent workflow execution history</DialogDescription>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowLogsPanel(false)}>
-                  Close
-                </Button>
-              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowLogsPanel(false)}
+                className="h-8 w-8 p-0"
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Button variant="outline" size="sm">
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
             <div className="space-y-3">
               {executionLogs.map((log) => (
                 <div key={log.id} className="p-4 border rounded-lg">
@@ -1120,9 +1309,9 @@ const WorkflowBuilder = () => {
               <Terminal className="h-4 w-4 mr-2" />
               View Full Debug Console
             </Button>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
