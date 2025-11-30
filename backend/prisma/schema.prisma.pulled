@@ -1,0 +1,656 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model APIKeyAudit {
+  id        String   @id
+  userId    String
+  provider  String
+  action    String
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([provider])
+  @@index([userId, createdAt])
+}
+
+model Activity {
+  id             String       @id
+  type           ActivityType
+  title          String
+  description    String?
+  leadId         String?
+  campaignId     String?
+  userId         String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organizationId String
+  campaign       Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organization   organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id])
+
+  @@index([campaignId])
+  @@index([createdAt])
+  @@index([leadId])
+  @@index([organizationId, createdAt])
+  @@index([organizationId])
+  @@index([type])
+  @@index([userId])
+}
+
+model Appointment {
+  id             String            @id
+  title          String
+  description    String?
+  startTime      DateTime
+  endTime        DateTime
+  location       String?
+  meetingUrl     String?
+  type           AppointmentType
+  status         AppointmentStatus @default(SCHEDULED)
+  userId         String
+  leadId         String?
+  attendees      Json?
+  reminderSent   Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime
+  organizationId String
+  lead           Lead?             @relation(fields: [leadId], references: [id])
+  organization   organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           user              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([organizationId])
+  @@index([organizationId, startTime])
+  @@index([startTime])
+  @@index([status])
+  @@index([type])
+  @@index([userId])
+}
+
+model BusinessSettings {
+  id            String   @id
+  userId        String   @unique
+  companyName   String?
+  address       String?
+  phone         String?
+  website       String?
+  logo          String?
+  billingEmail  String?
+  businessHours Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  user          user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id               String         @id
+  name             String
+  type             CampaignType
+  status           CampaignStatus @default(DRAFT)
+  subject          String?
+  body             String?
+  previewText      String?
+  startDate        DateTime?
+  endDate          DateTime?
+  budget           Float?
+  spent            Float?         @default(0)
+  audience         Int?
+  sent             Int            @default(0)
+  delivered        Int            @default(0)
+  opened           Int            @default(0)
+  clicked          Int            @default(0)
+  converted        Int            @default(0)
+  bounced          Int            @default(0)
+  unsubscribed     Int            @default(0)
+  revenue          Float?         @default(0)
+  roi              Float?
+  isABTest         Boolean        @default(false)
+  abTestData       Json?
+  createdById      String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime
+  frequency        String?
+  isRecurring      Boolean        @default(false)
+  lastSentAt       DateTime?
+  maxOccurrences   Int?
+  nextSendAt       DateTime?
+  occurrenceCount  Int            @default(0)
+  recurringPattern Json?
+  archivedAt       DateTime?
+  isArchived       Boolean        @default(false)
+  organizationId   String
+  activities         Activity[]
+  user             user           @relation(fields: [createdById], references: [id])
+  organization     organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tags              Tag[]
+
+  @@index([createdAt])
+  @@index([createdById])
+  @@index([createdById, status])
+  @@index([isRecurring, nextSendAt])
+  @@index([nextSendAt])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([startDate])
+  @@index([status])
+  @@index([status, startDate])
+  @@index([type])
+}
+
+model EmailConfig {
+  id           String   @id
+  userId       String   @unique
+  provider     String   @default("sendgrid")
+  apiKey       String?
+  fromEmail    String?
+  fromName     String?
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUser     String?
+  smtpPassword String?
+  isActive     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  user         user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailTemplate {
+  id             String       @id
+  name           String
+  subject        String
+  body           String
+  category       String?
+  isActive       Boolean      @default(true)
+  variables      Json?
+  usageCount     Int          @default(0)
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  organization   organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([isActive])
+  @@index([organizationId, category])
+  @@index([organizationId])
+}
+
+model Integration {
+  id          String    @id
+  userId      String
+  provider    String
+  isConnected Boolean   @default(false)
+  credentials Json?
+  config      Json?
+  lastSyncAt  DateTime?
+  syncStatus  String?
+  syncError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  user        user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([provider])
+  @@index([userId])
+}
+
+model Lead {
+  id                String        @id
+  email             String
+  phone             String?
+  company           String?
+  position          String?
+  status            LeadStatus    @default(NEW)
+  score             Int           @default(0)
+  source            String?
+  value             Float?
+  stage             String?
+  assignedToId      String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime
+  lastContactAt     DateTime?
+  customFields      Json?
+  firstName         String
+  lastName          String
+  emailOptIn        Boolean       @default(true)
+  emailOptOutAt     DateTime?
+  emailOptOutReason String?
+  unsubscribeToken  String?       @unique
+  organizationId    String
+  activities          Activity[]
+  appointments       Appointment[]
+  user              User?         @relation(fields: [assignedToId], references: [id])
+  organization      organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages           Message[]
+  notes              Note[]
+  tags               Tag[]
+
+  @@unique([organizationId, email])
+  @@index([assignedToId])
+  @@index([assignedToId, status])
+  @@index([createdAt])
+  @@index([organizationId, email])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([score])
+  @@index([source])
+  @@index([status])
+  @@index([status, score])
+}
+
+model Message {
+  id              String           @id
+  type            MessageType
+  direction       MessageDirection
+  subject         String?
+  body            String
+  fromAddress     String
+  toAddress       String
+  status          MessageStatus    @default(PENDING)
+  readAt          DateTime?
+  repliedAt       DateTime?
+  leadId          String?
+  threadId        String?
+  parentId        String?
+  externalId      String?
+  provider        String?
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+  sentAt          DateTime?
+  bounceReason    String?
+  bounceType      String?
+  bouncedAt       DateTime?
+  deliveredAt     DateTime?
+  lastRetryAt     DateTime?
+  maxRetries      Int              @default(3)
+  retryCount      Int              @default(0)
+  spamComplaintAt DateTime?
+  lead            Lead?            @relation(fields: [leadId], references: [id])
+
+  @@index([bounceType])
+  @@index([bouncedAt])
+  @@index([createdAt])
+  @@index([direction])
+  @@index([leadId])
+  @@index([leadId, status])
+  @@index([sentAt])
+  @@index([spamComplaintAt])
+  @@index([status])
+  @@index([threadId])
+  @@index([type])
+  @@index([type, sentAt])
+}
+
+model Note {
+  id        String   @id
+  content   String
+  leadId    String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  user      user     @relation(fields: [authorId], references: [id])
+  lead      lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([leadId])
+}
+
+model NotificationSettings {
+  id                 String   @id
+  userId             String   @unique
+  emailNotifications Boolean  @default(true)
+  pushNotifications  Boolean  @default(true)
+  smsNotifications   Boolean  @default(false)
+  channels           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime
+  user               user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Organization {
+  id               String           @id
+  name             String
+  slug             String           @unique
+  domain           String?          @unique
+  logo             String?
+  subscriptionTier SubscriptionTier @default(FREE)
+  subscriptionId   String?
+  trialEndsAt      DateTime?
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime
+  activities         Activity[]
+  appointments      Appointment[]
+  campaign         Campaign[]
+  emailTemplates    EmailTemplate[]
+  lead             Lead[]
+  smsTemplates      SMSTemplate[]
+  tags              Tag[]
+  user             User[]
+  workflows         Workflow[]
+
+  @@index([isActive])
+  @@index([slug])
+}
+
+model SMSConfig {
+  id          String   @id
+  userId      String   @unique
+  provider    String   @default("twilio")
+  accountSid  String?
+  authToken   String?
+  phoneNumber String?
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  user        user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SMSTemplate {
+  id             String       @id
+  name           String
+  body           String
+  category       String?
+  isActive       Boolean      @default(true)
+  variables      Json?
+  usageCount     Int          @default(0)
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  organization   organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([isActive])
+  @@index([organizationId, category])
+  @@index([organizationId])
+}
+
+model Tag {
+  id             String       @id
+  name           String
+  color          String?
+  createdAt      DateTime     @default(now())
+  organizationId String
+  organization   organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaign       Campaign[]
+  lead           Lead[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Task {
+  id           String       @id
+  title        String
+  description  String?
+  dueDate      DateTime?
+  priority     TaskPriority @default(MEDIUM)
+  status       TaskStatus   @default(PENDING)
+  assignedToId String?
+  leadId       String?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime
+  user         User?        @relation(fields: [assignedToId], references: [id])
+
+  @@index([assignedToId])
+  @@index([dueDate])
+  @@index([priority])
+  @@index([status])
+}
+
+model Team {
+  id               String           @id
+  name             String
+  slug             String           @unique
+  settings         Json?
+  subscriptionTier SubscriptionTier @default(FREE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime
+  teamMembers       TeamMember[]
+
+  @@index([slug])
+}
+
+model TeamMember {
+  id       String   @id
+  teamId   String
+  userId   String
+  role     TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+  Team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model User {
+  id                   String                @id
+  email                String
+  password             String
+  firstName            String
+  lastName             String
+  avatar               String?
+  role                 Role                  @default(USER)
+  isActive             Boolean               @default(true)
+  emailVerified        Boolean               @default(false)
+  timezone             String                @default("America/New_York")
+  language             String                @default("en")
+  lastLoginAt          DateTime?
+  lastLoginIp          String?
+  twoFactorEnabled     Boolean               @default(false)
+  twoFactorSecret      String?
+  subscriptionTier     SubscriptionTier      @default(FREE)
+  subscriptionId       String?
+  trialEndsAt          DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime
+  organizationId       String
+  APIKeyAudit          APIKeyAudit[]
+  activities             Activity[]
+  appointments          Appointment[]
+  BusinessSettings     BusinessSettings?
+  campaign             Campaign[]
+  EmailConfig          EmailConfig?
+  Integration          Integration[]
+  lead                 Lead[]
+  notes                 Note[]
+  NotificationSettings NotificationSettings?
+  SMSConfig            SMSConfig?
+  tasks                 Task[]
+  teamMembers           TeamMember[]
+  organization         organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, email])
+  @@index([email])
+  @@index([organizationId])
+  @@index([role])
+}
+
+model Workflow {
+  id                String              @id
+  name              String
+  description       String?
+  isActive          Boolean             @default(false)
+  triggerType       WorkflowTrigger
+  triggerData       Json?
+  actions           Json
+  executions        Int                 @default(0)
+  successRate       Float?
+  lastRunAt         DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  organizationId    String
+  organization      organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  WorkflowExecution WorkflowExecution[]
+
+  @@index([isActive])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([triggerType])
+}
+
+model WorkflowExecution {
+  id          String          @id
+  workflowId  String
+  status      ExecutionStatus
+  error       String?
+  leadId      String?
+  metadata    Json?
+  startedAt   DateTime        @default(now())
+  completedAt DateTime?
+  workflows    workflows        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([startedAt])
+  @@index([status])
+  @@index([workflowId])
+}
+
+enum ActivityType {
+  EMAIL_SENT
+  EMAIL_OPENED
+  EMAIL_CLICKED
+  SMS_SENT
+  SMS_DELIVERED
+  CALL_MADE
+  CALL_RECEIVED
+  MEETING_SCHEDULED
+  MEETING_COMPLETED
+  NOTE_ADDED
+  STATUS_CHANGED
+  STAGE_CHANGED
+  LEAD_CREATED
+  LEAD_ASSIGNED
+  CAMPAIGN_LAUNCHED
+  CAMPAIGN_COMPLETED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentType {
+  CALL
+  MEETING
+  DEMO
+  CONSULTATION
+  FOLLOW_UP
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignType {
+  EMAIL
+  SMS
+  PHONE
+  SOCIAL
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+  OPENED
+  CLICKED
+}
+
+enum MessageType {
+  EMAIL
+  SMS
+  CALL
+  SOCIAL
+  NEWSLETTER
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum WorkflowTrigger {
+  LEAD_CREATED
+  LEAD_STATUS_CHANGED
+  LEAD_ASSIGNED
+  CAMPAIGN_COMPLETED
+  EMAIL_OPENED
+  TIME_BASED
+  SCORE_THRESHOLD
+  TAG_ADDED
+  MANUAL
+}

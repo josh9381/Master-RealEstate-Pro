@@ -27,12 +27,15 @@ export async function getEmailTemplates(req: Request, res: Response): Promise<vo
     sortOrder = 'desc',
   } = query;
 
-  // Build where clause
+  // Build where clause with organizationId for multi-tenancy
   const where: {
+    organizationId: string;
     category?: string;
     isActive?: boolean;
     OR?: Array<{ name?: { contains: string }; subject?: { contains: string } }>;
-  } = {};
+  } = {
+    organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
+  };
 
   if (category) where.category = category;
   if (isActive !== undefined) where.isActive = isActive;
@@ -88,6 +91,11 @@ export async function getEmailTemplate(req: Request, res: Response): Promise<voi
   if (!template) {
     throw new NotFoundError('Email template not found');
   }
+  
+  // Verify template belongs to user's organization
+  if (template.organizationId !== req.user!.organizationId) {
+    throw new NotFoundError('Email template not found');  // Don't reveal it exists in another org
+  }
 
   res.json({
     success: true,
@@ -102,9 +110,12 @@ export async function getEmailTemplate(req: Request, res: Response): Promise<voi
 export async function createEmailTemplate(req: Request, res: Response): Promise<void> {
   const data = req.body;
 
-  // Check if template with same name exists
+  // Check if template with same name exists in this organization
   const existingTemplate = await prisma.emailTemplate.findFirst({
-    where: { name: data.name },
+    where: { 
+      name: data.name,
+      organizationId: req.user!.organizationId  // Check within same org
+    },
   });
 
   if (existingTemplate) {
@@ -119,6 +130,7 @@ export async function createEmailTemplate(req: Request, res: Response): Promise<
       category: data.category,
       isActive: data.isActive ?? true,
       variables: data.variables || {},
+      organizationId: req.user!.organizationId
     },
   });
 
@@ -137,7 +149,7 @@ export async function updateEmailTemplate(req: Request, res: Response): Promise<
   const { id } = req.params;
   const data = req.body;
 
-  // Check if template exists
+  // Check if template exists and belongs to user's organization
   const existingTemplate = await prisma.emailTemplate.findUnique({
     where: { id },
   });
@@ -145,13 +157,18 @@ export async function updateEmailTemplate(req: Request, res: Response): Promise<
   if (!existingTemplate) {
     throw new NotFoundError('Email template not found');
   }
+  
+  if (existingTemplate.organizationId !== req.user!.organizationId) {
+    throw new NotFoundError('Email template not found');  // Don't reveal it exists in another org
+  }
 
-  // Check if name is being changed and conflicts with another template
+  // Check if name is being changed and conflicts with another template in same org
   if (data.name && data.name !== existingTemplate.name) {
     const nameConflict = await prisma.emailTemplate.findFirst({
       where: { 
         name: data.name,
         id: { not: id },
+        organizationId: req.user!.organizationId  // Check within same org
       },
     });
 
@@ -232,6 +249,7 @@ export async function duplicateEmailTemplate(req: Request, res: Response): Promi
       category: originalTemplate.category,
       isActive: false, // New duplicates start as inactive
       variables: originalTemplate.variables || {},
+      organizationId: req.user!.organizationId
     },
   });
 

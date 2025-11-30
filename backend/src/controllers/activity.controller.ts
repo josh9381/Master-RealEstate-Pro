@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { prisma } from '../config/database'
 import { NotFoundError } from '../middleware/errorHandler'
 import { createActivitySchema, updateActivitySchema, getActivitiesSchema } from '../validators/activity.validator'
+import { getActivitiesFilter, getRoleFilterFromRequest } from '../utils/roleFilters'
 
 // Get all activities with filtering and pagination
 export const getActivities = async (req: Request, res: Response) => {
@@ -18,7 +19,9 @@ export const getActivities = async (req: Request, res: Response) => {
     limit = 50
   } = validated
 
-  const where: any = {}
+  // Build where clause with role-based filtering
+  const roleFilter = getRoleFilterFromRequest(req)
+  const where: any = getActivitiesFilter(roleFilter)
   
   if (type) where.type = type
   if (leadId) where.leadId = leadId
@@ -89,7 +92,9 @@ export const getActivities = async (req: Request, res: Response) => {
 export const getActivityStats = async (req: Request, res: Response) => {
   const { startDate, endDate } = req.query
 
-  const where: any = {}
+  const where: any = {
+    organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
+  }
   
   if (startDate || endDate) {
     where.createdAt = {}
@@ -218,7 +223,8 @@ export const createActivity = async (req: Request, res: Response) => {
       leadId: validated.leadId,
       campaignId: validated.campaignId,
       metadata: validated.metadata as any,
-      userId
+      userId,
+      organizationId: req.user!.organizationId
     },
     include: {
       user: {
@@ -338,15 +344,26 @@ export const getLeadActivities = async (req: Request, res: Response) => {
   const limitNum = Number(limit)
   const skip = (pageNum - 1) * limitNum
 
-  // Verify lead exists
-  const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+  // Verify lead exists and belongs to user's organization
+  const lead = await prisma.lead.findUnique({ 
+    where: { id: leadId },
+    select: { id: true, organizationId: true }
+  })
+  
   if (!lead) {
     throw new NotFoundError('Lead not found')
+  }
+  
+  if (lead.organizationId !== req.user!.organizationId) {
+    throw new NotFoundError('Lead not found')  // Don't reveal it exists in another org
   }
 
   const [activities, total] = await Promise.all([
     prisma.activity.findMany({
-      where: { leadId },
+      where: { 
+        leadId,
+        organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
+      },
       include: {
         user: {
           select: {
@@ -394,15 +411,26 @@ export const getCampaignActivities = async (req: Request, res: Response) => {
   const limitNum = Number(limit)
   const skip = (pageNum - 1) * limitNum
 
-  // Verify campaign exists
-  const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } })
+  // Verify campaign exists and belongs to user's organization
+  const campaign = await prisma.campaign.findUnique({ 
+    where: { id: campaignId },
+    select: { id: true, organizationId: true }
+  })
+  
   if (!campaign) {
     throw new NotFoundError('Campaign not found')
+  }
+  
+  if (campaign.organizationId !== req.user!.organizationId) {
+    throw new NotFoundError('Campaign not found')  // Don't reveal it exists in another org
   }
 
   const [activities, total] = await Promise.all([
     prisma.activity.findMany({
-      where: { campaignId },
+      where: { 
+        campaignId,
+        organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
+      },
       include: {
         user: {
           select: {

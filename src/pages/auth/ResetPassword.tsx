@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input';
 const ResetPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   const passwordRequirements = [
     { met: true, text: 'At least 8 characters' },

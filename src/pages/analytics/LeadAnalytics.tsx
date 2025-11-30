@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, Target, Calendar, Download, RefreshCw } from 'lucide-react';
+import { TrendingUp, Users, Target, Calendar, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -10,8 +10,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
@@ -80,7 +78,7 @@ const LeadAnalytics = () => {
   // Top performing leads
   const topPerformers = topLeads.length > 0
     ? topLeads.slice(0, 4).map((lead: any) => ({
-        name: lead.name,
+        name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown',
         leads: 1,
         converted: lead.status === 'WON' ? 1 : 0,
         rate: `${lead.score || 0}%`,
@@ -240,7 +238,7 @@ const LeadAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topPerformers.map((performer, index) => (
+              {topPerformers.map((performer: any, index: number) => (
                 <div key={performer.name} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-white text-sm font-bold">

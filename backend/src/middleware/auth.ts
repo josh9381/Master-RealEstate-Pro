@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt';
 
-// Extend Express Request type to include user
+// Extend Express Request type to include user with organizationId
 declare global {
   namespace Express {
     interface Request {
@@ -9,6 +9,7 @@ declare global {
         userId: string;
         email: string;
         role: string;
+        organizationId: string;  // Added for multi-tenancy
       };
     }
   }
@@ -46,11 +47,12 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     // Verify the token
     const payload = verifyAccessToken(token);
 
-    // Attach user info to request object
+    // Attach user info to request object (including organizationId for multi-tenancy)
     req.user = {
       userId: payload.userId,
       email: payload.email,
-      role: payload.role
+      role: payload.role,
+      organizationId: payload.organizationId
     };
 
     // Continue to next middleware/handler

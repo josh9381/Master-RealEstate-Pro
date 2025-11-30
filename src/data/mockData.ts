@@ -8,7 +8,8 @@ import { Lead } from '@/types'
 export const mockLeads: Lead[] = [
   {
     id: 1,
-    name: 'John Doe',
+    firstName: 'John',
+    lastName: 'Doe',
     email: 'john.doe@techcorp.com',
     phone: '+1 (555) 123-4567',
     company: 'Tech Corp',
@@ -31,7 +32,8 @@ export const mockLeads: Lead[] = [
   },
   {
     id: 2,
-    name: 'Jane Smith',
+    firstName: 'Jane',
+    lastName: 'Smith',
     email: 'jane.smith@enterpriseinc.com',
     phone: '+1 (555) 234-5678',
     company: 'Enterprise Inc',
@@ -54,7 +56,8 @@ export const mockLeads: Lead[] = [
   },
   {
     id: 3,
-    name: 'Bob Johnson',
+    firstName: 'Bob',
+    lastName: 'Johnson',
     email: 'bob.j@startupccompany.com',
     phone: '+1 (555) 345-6789',
     company: 'Startup Co',
@@ -78,7 +81,8 @@ export const mockLeads: Lead[] = [
   // Add 20 more leads...
   {
     id: 4,
-    name: 'Alice Brown',
+    firstName: 'Alice',
+    lastName: 'Brown',
     email: 'alice.brown@fortune500.com',
     phone: '+1 (555) 456-7890',
     company: 'Fortune 500 Co',
@@ -101,7 +105,8 @@ export const mockLeads: Lead[] = [
   },
   {
     id: 5,
-    name: 'Charlie Wilson',
+    firstName: 'Charlie',
+    lastName: 'Wilson',
     email: 'c.wilson@globaltech.com',
     phone: '+1 (555) 567-8901',
     company: 'Global Tech',
@@ -161,7 +166,8 @@ function generateAdditionalLeads(count: number): Lead[] {
     
     leads.push({
       id,
-      name: `${firstName} ${lastName}`,
+      firstName,
+      lastName,
       email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${company.toLowerCase().replace(/\s/g, '')}.com`,
       phone: `+1 (555) ${String(Math.floor(Math.random() * 900) + 100)}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
       company,
@@ -195,7 +201,7 @@ export const mockCampaigns: Campaign[] = [
     id: 1,
     name: 'Q4 Product Launch',
     type: 'email',
-    status: 'active',
+    status: 'ACTIVE',
     startDate: '2025-10-01',
     endDate: '2025-12-31',
     budget: 5000,
@@ -216,7 +222,7 @@ export const mockCampaigns: Campaign[] = [
     id: 2,
     name: 'Holiday Promotion',
     type: 'sms',
-    status: 'active',
+    status: 'ACTIVE',
     startDate: '2025-10-15',
     endDate: '2025-11-30',
     budget: 2000,
@@ -237,7 +243,7 @@ export const mockCampaigns: Campaign[] = [
     id: 3,
     name: 'Webinar Invitation',
     type: 'email',
-    status: 'scheduled',
+    status: 'SCHEDULED',
     startDate: '2025-10-25',
     endDate: '2025-10-25',
     budget: 1500,
@@ -258,7 +264,7 @@ export const mockCampaigns: Campaign[] = [
     id: 4,
     name: 'Social Media Blitz',
     type: 'social',
-    status: 'active',
+    status: 'ACTIVE',
     startDate: '2025-10-10',
     endDate: '2025-11-10',
     budget: 3000,
@@ -279,7 +285,7 @@ export const mockCampaigns: Campaign[] = [
     id: 5,
     name: 'Customer Re-engagement',
     type: 'email',
-    status: 'completed',
+    status: 'COMPLETED',
     startDate: '2025-09-01',
     endDate: '2025-09-30',
     budget: 1200,
@@ -301,7 +307,7 @@ export const mockCampaigns: Campaign[] = [
 
 function generateAdditionalCampaigns(count: number): Campaign[] {
   const types: Campaign['type'][] = ['email', 'sms', 'phone', 'social']
-  const statuses: Campaign['status'][] = ['active', 'scheduled', 'paused', 'completed', 'draft']
+  const statuses: Campaign['status'][] = ['ACTIVE', 'SCHEDULED', 'PAUSED', 'COMPLETED', 'DRAFT']
   const names = [
     'Newsletter',
     'Product Update',
@@ -340,12 +346,12 @@ function generateAdditionalCampaigns(count: number): Campaign[] {
     
     // Generate metrics
     const audience = Math.floor(Math.random() * 5000) + 500
-    const sent = status === 'scheduled' || status === 'draft' ? 0 : Math.floor(audience * (0.8 + Math.random() * 0.2))
-    const opens = status === 'scheduled' || status === 'draft' ? 0 : Math.floor(sent * (0.15 + Math.random() * 0.45))
+    const sent = status === 'SCHEDULED' || status === 'DRAFT' ? 0 : Math.floor(audience * (0.8 + Math.random() * 0.2))
+    const opens = status === 'SCHEDULED' || status === 'DRAFT' ? 0 : Math.floor(sent * (0.15 + Math.random() * 0.45))
     const clicks = Math.floor(opens * (0.1 + Math.random() * 0.4))
     const conversions = Math.floor(clicks * (0.05 + Math.random() * 0.25))
     const budget = Math.floor(Math.random() * 8000) + 1000
-    const spent = status === 'scheduled' || status === 'draft' ? 0 : Math.floor(budget * (status === 'completed' ? 1 : 0.3 + Math.random() * 0.6))
+    const spent = status === 'SCHEDULED' || status === 'DRAFT' ? 0 : Math.floor(budget * (status === 'COMPLETED' ? 1 : 0.3 + Math.random() * 0.6))
     const revenue = conversions * (200 + Math.floor(Math.random() * 800))
     const roi = spent > 0 ? `${Math.floor((revenue / spent) * 100)}%` : '0%'
     
@@ -358,7 +364,7 @@ function generateAdditionalCampaigns(count: number): Campaign[] {
       type,
       status,
       startDate,
-      endDate: status === 'completed' || status === 'active' ? endDate : undefined,
+      endDate: status === 'COMPLETED' || status === 'ACTIVE' ? endDate : undefined,
       budget,
       spent,
       audience,
@@ -371,7 +377,7 @@ function generateAdditionalCampaigns(count: number): Campaign[] {
       createdBy: creators[i % creators.length],
       tags: [
         type === 'email' ? 'Email Marketing' : type === 'sms' ? 'SMS' : type === 'phone' ? 'Cold Calling' : 'Social Media',
-        status === 'active' ? 'Active' : status === 'completed' ? 'Completed' : 'Upcoming'
+        status === 'ACTIVE' ? 'Active' : status === 'COMPLETED' ? 'Completed' : 'Upcoming'
       ],
       subject: type === 'email' ? `${name} - Don't Miss Out!` : null,
       previewText: type === 'email' || type === 'sms' ? `Special ${name.toLowerCase()} for you` : undefined,
@@ -504,7 +510,7 @@ export const mockTasks = [
     description: 'Product demonstration and Q&A session',
     dueDate: '2025-10-22T14:00:00Z',
     priority: 'medium',
-    status: 'scheduled',
+    status: 'SCHEDULED',
     assignedTo: 'Sarah Johnson',
     leadId: 3,
     leadName: 'Bob Johnson',
@@ -530,7 +536,7 @@ export const mockTasks = [
     description: 'Q4 performance review with sales team',
     dueDate: '2025-10-24T09:00:00Z',
     priority: 'low',
-    status: 'scheduled',
+    status: 'SCHEDULED',
     assignedTo: 'Sarah Johnson',
     leadId: null,
     leadName: null,
@@ -641,7 +647,7 @@ export const mockIntegrations = [
     description: 'Sync leads and contacts with Salesforce',
     icon: '☁️',
     connected: true,
-    status: 'active',
+    status: 'ACTIVE',
     lastSync: '2025-10-20T08:00:00Z',
     recordsSynced: 1234
   },
@@ -652,7 +658,7 @@ export const mockIntegrations = [
     description: 'Send and receive emails through Gmail',
     icon: '📧',
     connected: true,
-    status: 'active',
+    status: 'ACTIVE',
     lastSync: '2025-10-20T09:30:00Z',
     recordsSynced: 567
   },
@@ -663,7 +669,7 @@ export const mockIntegrations = [
     description: 'Get notifications in Slack channels',
     icon: '💬',
     connected: true,
-    status: 'active',
+    status: 'ACTIVE',
     lastSync: '2025-10-20T09:45:00Z',
     recordsSynced: 89
   },
@@ -685,7 +691,7 @@ export const mockIntegrations = [
     description: 'Process payments and track revenue',
     icon: '💳',
     connected: true,
-    status: 'active',
+    status: 'ACTIVE',
     lastSync: '2025-10-20T07:00:00Z',
     recordsSynced: 345
   }
@@ -734,7 +740,7 @@ export const mockWorkflows = [
     name: 'New Lead Assignment',
     description: 'Automatically assign new leads to sales reps based on territory',
     trigger: 'Lead Created',
-    status: 'active',
+    status: 'ACTIVE',
     executions: 456,
     successRate: 98.5,
     lastRun: '2025-10-20T09:15:00Z',
@@ -746,7 +752,7 @@ export const mockWorkflows = [
     name: 'Follow-up Reminder',
     description: 'Send reminder if lead hasn\'t been contacted in 3 days',
     trigger: 'Time-based',
-    status: 'active',
+    status: 'ACTIVE',
     executions: 234,
     successRate: 95.2,
     lastRun: '2025-10-20T06:00:00Z',
@@ -758,7 +764,7 @@ export const mockWorkflows = [
     name: 'Deal Won Celebration',
     description: 'Notify team and update records when deal is won',
     trigger: 'Deal Stage Changed',
-    status: 'active',
+    status: 'ACTIVE',
     executions: 89,
     successRate: 100,
     lastRun: '2025-10-19T15:30:00Z',

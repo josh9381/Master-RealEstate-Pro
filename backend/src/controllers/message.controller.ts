@@ -5,6 +5,7 @@ import { sendEmail as sendEmailService } from '../services/email.service'
 import { sendSMS as sendSMSService } from '../services/sms.service'
 import { templateService } from '../services/template.service'
 import crypto from 'crypto'
+import { getMessagesFilter, getRoleFilterFromRequest } from '../utils/roleFilters'
 
 type MessageType = 'EMAIL' | 'SMS' | 'CALL' | 'SOCIAL' | 'NEWSLETTER'
 type MessageDirection = 'INBOUND' | 'OUTBOUND'
@@ -14,33 +15,37 @@ type MessageStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'BOUNCED' | '
 export const getMessages = async (req: Request, res: Response) => {
   const { type, direction, status, leadId, search, page = 1, limit = 50 } = req.query
 
-  const where: Record<string, unknown> = {}
+  // Build where clause with role-based filtering
+  const roleFilter = getRoleFilterFromRequest(req)
+  const additionalWhere: Record<string, unknown> = {}
 
   if (type) {
-    where.type = type as MessageType
+    additionalWhere.type = type as MessageType
   }
 
   if (direction) {
-    where.direction = direction as MessageDirection
+    additionalWhere.direction = direction as MessageDirection
   }
 
   if (status) {
-    where.status = status as MessageStatus
+    additionalWhere.status = status as MessageStatus
   }
 
   if (leadId) {
-    where.leadId = leadId as string
+    additionalWhere.leadId = leadId as string
   }
 
   if (search) {
     const searchTerm = search as string
-    where.OR = [
+    additionalWhere.OR = [
       { subject: { contains: searchTerm, mode: ('insensitive' as const) } },
       { body: { contains: searchTerm, mode: ('insensitive' as const) } },
       { fromAddress: { contains: searchTerm, mode: ('insensitive' as const) } },
       { toAddress: { contains: searchTerm, mode: ('insensitive' as const) } },
     ]
   }
+
+  const where = getMessagesFilter(roleFilter, additionalWhere)
 
   const pageNum = Number(page)
   const limitNum = Number(limit)
@@ -276,6 +281,10 @@ export const sendEmail = async (req: Request, res: Response) => {
   // Generate threadId if not provided
   const messageThreadId = threadId || crypto.randomBytes(16).toString('hex')
 
+  if (!req.user?.organizationId) {
+    throw new ValidationError('Organization ID is required')
+  }
+
   // Use the email service with userId for config lookup
   const result = await sendEmailService({
     to,
@@ -285,6 +294,7 @@ export const sendEmail = async (req: Request, res: Response) => {
     trackOpens: true,
     trackClicks: true,
     userId: req.user?.userId, // Pass user ID to use their email credentials
+    organizationId: req.user.organizationId, // Pass organization ID for multi-tenancy
   })
 
   if (!result.success) {
@@ -377,12 +387,17 @@ export const sendSMS = async (req: Request, res: Response) => {
   // Generate threadId if not provided
   const messageThreadId = threadId || crypto.randomBytes(16).toString('hex')
 
+  if (!req.user?.organizationId) {
+    throw new ValidationError('Organization ID is required')
+  }
+
   // Use the SMS service with userId for config lookup
   const result = await sendSMSService({
     to,
     message: finalBody,
     leadId,
     userId: req.user?.userId, // Pass user ID to use their Twilio credentials
+    organizationId: req.user.organizationId, // Pass organization ID for multi-tenancy
   })
 
   if (!result.success) {
@@ -599,6 +614,10 @@ export const replyToMessage = async (req: Request, res: Response) => {
   const metadata = originalMessage.metadata as Record<string, unknown> || {}
   const threadId = (metadata.threadId as string) || crypto.randomBytes(16).toString('hex')
 
+  if (!req.user?.organizationId) {
+    throw new ValidationError('Organization ID is required')
+  }
+
   // Determine reply type and address based on original message
   const isEmail = originalMessage.type === 'EMAIL'
   
@@ -610,6 +629,7 @@ export const replyToMessage = async (req: Request, res: Response) => {
       leadId: originalMessage.leadId || undefined,
       trackOpens: true,
       trackClicks: true,
+      organizationId: req.user.organizationId,
     })
 
     if (!result.success) {
@@ -623,10 +643,15 @@ export const replyToMessage = async (req: Request, res: Response) => {
       message: 'Reply sent successfully',
     })
   } else {
+    if (!req.user?.organizationId) {
+      throw new ValidationError('Organization ID is required')
+    }
+
     const result = await sendSMSService({
       to: originalMessage.fromAddress,
       message: body,
       leadId: originalMessage.leadId || undefined,
+      organizationId: req.user.organizationId,
     })
 
     if (!result.success) {

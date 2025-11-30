@@ -75,7 +75,7 @@ const UpgradeWizard = () => {
       price: 299,
       priceAnnual: 2990,
       billing: 'per month',
-      description: 'For large organizations with advanced needs',
+      description: 'For large teams with advanced needs',
       features: [
         'Unlimited users',
         '5M API calls/month',

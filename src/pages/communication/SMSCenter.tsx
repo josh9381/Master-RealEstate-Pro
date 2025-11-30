@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast'
-import { messagesApi, templatesApi } from '@/lib/api'
+import { messagesApi } from '@/lib/api'
 
 const SMSCenter = () => {
   const [loading, setLoading] = useState(true)

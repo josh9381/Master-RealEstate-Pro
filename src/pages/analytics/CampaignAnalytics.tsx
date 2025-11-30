@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Mail, Send, Eye, MousePointer, Users, Calendar, RefreshCw, Download } from 'lucide-react';
+import { Send, Eye, MousePointer, Users, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import {
-  AreaChart,
-  Area,
   LineChart,
   Line,
   BarChart,
@@ -191,7 +189,7 @@ const CampaignAnalytics = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {campaigns.map((campaign) => {
+              {campaigns.map((campaign: any) => {
                 const openRate = ((campaign.opened / campaign.sent) * 100).toFixed(1);
                 const clickRate = ((campaign.clicked / campaign.sent) * 100).toFixed(1);
                 const convRate = ((campaign.converted / campaign.sent) * 100).toFixed(1);

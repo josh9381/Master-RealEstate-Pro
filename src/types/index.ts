@@ -1,5 +1,28 @@
 // Common types used across the application
 
+export interface UserPermissions {
+  canManageUsers: boolean
+  canManageOrg: boolean
+  canManageSystem: boolean
+  canManageFinance: boolean
+  canManageLeads: boolean
+  canManageCampaigns: boolean
+  canManageWorkflows: boolean
+  canManageIntegrations: boolean
+  canViewAllData: boolean
+  canExportData: boolean
+}
+
+export interface OrganizationInfo {
+  id: string
+  name: string
+  domain?: string
+  logo?: string
+  subscriptionTier: 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE'
+  trialEndsAt?: string
+  memberCount?: number
+}
+
 export interface User {
   id: string
   email: string
@@ -7,13 +30,17 @@ export interface User {
   lastName?: string
   name?: string
   avatar?: string
-  role: 'admin' | 'user' | 'manager' | 'USER' | 'ADMIN'
+  role: 'admin' | 'user' | 'manager' | 'USER' | 'ADMIN' | 'MANAGER'
+  organizationId: string
   createdAt: string
+  permissions?: UserPermissions
+  organization?: OrganizationInfo
 }
 
 export interface Lead {
   id: number
-  name: string
+  firstName: string
+  lastName: string
   email: string
   phone?: string
   company?: string
@@ -49,7 +76,7 @@ export interface Campaign {
   id: number | string
   name: string
   type: 'email' | 'sms' | 'phone' | 'social'
-  status: 'draft' | 'scheduled' | 'active' | 'paused' | 'completed'
+  status: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED'
   startDate: string
   endDate?: string
   budget?: number

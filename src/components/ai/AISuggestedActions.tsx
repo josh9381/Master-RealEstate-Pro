@@ -103,13 +103,13 @@ export function AISuggestedActions({ className }: AISuggestedActionsProps) {
       <CardContent>
         <div className="space-y-2">
           {activeSuggestions.slice(0, 3).map((suggestion) => (
-            <button
+            <div
               key={suggestion.id}
-              onClick={suggestion.onClick}
               className={cn(
-                "group relative w-full rounded-lg border-l-4 bg-muted/30 p-3 text-left transition-all hover:bg-muted/60 hover:shadow-md",
+                "group relative w-full rounded-lg border-l-4 bg-muted/30 p-3 transition-all hover:bg-muted/60 hover:shadow-md cursor-pointer",
                 getPriorityColor(suggestion.priority)
               )}
+              onClick={suggestion.onClick}
             >
               {/* Dismiss Button */}
               <button
@@ -157,7 +157,7 @@ export function AISuggestedActions({ className }: AISuggestedActionsProps) {
                   </div>
                 </div>
               </div>
-            </button>
+            </div>
           ))}
 
           {activeSuggestions.length > 3 && (

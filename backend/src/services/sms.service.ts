@@ -90,6 +90,7 @@ export interface SMSOptions {
   leadId?: string;
   campaignId?: string;
   userId?: string; // User ID to fetch custom config
+  organizationId: string; // Organization ID for multi-tenancy
   mediaUrl?: string[]; // For MMS
 }
 
@@ -103,7 +104,7 @@ export interface SMSResult {
  * Send an SMS via Twilio
  */
 export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
-  const { to, message, leadId, campaignId, userId, mediaUrl } = options;
+  const { to, message, leadId, campaignId, userId, organizationId, mediaUrl } = options;
 
   try {
     // Get SMS configuration (database or environment)
@@ -143,7 +144,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
     });
 
     // Create message record in database
-    await createMessageRecord({
+    const createdMessage = await createMessageRecord({
       type: 'SMS',
       direction: 'OUTBOUND',
       body: message,
@@ -152,6 +153,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
       status: twilioMessage.status === 'queued' || twilioMessage.status === 'sent' ? 'SENT' : 'PENDING',
       externalId: twilioMessage.sid,
       provider: 'twilio',
+      organizationId,
       leadId,
       metadata: {
         campaignId,
@@ -163,7 +165,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
 
     return {
       success: true,
-      messageId: twilioMessage.sid,
+      messageId: createdMessage?.id || twilioMessage.sid,
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -181,6 +183,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
       toAddress: to,
       status: 'FAILED',
       provider: 'twilio',
+      organizationId,
       leadId,
       metadata: {
         error: errorMessage,
@@ -235,6 +238,7 @@ export async function sendTemplateSMS(
     return await sendSMS({
       to,
       message,
+      organizationId: options?.organizationId || 'clz0000000000000000000000',
       ...options,
     });
   } catch (error: unknown) {
@@ -257,7 +261,8 @@ export async function sendBulkSMS(
     leadId?: string;
   }>,
   campaignId?: string,
-  userId?: string
+  userId?: string,
+  organizationId?: string
 ): Promise<{ success: number; failed: number }> {
   const results = {
     success: 0,
@@ -269,6 +274,7 @@ export async function sendBulkSMS(
       ...sms,
       campaignId,
       userId,
+      organizationId: organizationId || 'clz0000000000000000000000',
     });
 
     if (result.success) {
@@ -375,17 +381,25 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
 
     // Create activity for delivered SMS
     if (newStatus === 'DELIVERED' && message.leadId) {
-      await prisma.activity.create({
-        data: {
-          type: 'SMS_DELIVERED',
-          title: 'SMS Delivered',
-          description: `SMS delivered to lead`,
-          leadId: message.leadId,
-          userId: 'system',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          metadata: event as any,
-        },
+      const lead = await prisma.lead.findUnique({
+        where: { id: message.leadId },
+        select: { organizationId: true }
       });
+      
+      if (lead) {
+        await prisma.activity.create({
+          data: {
+            type: 'SMS_DELIVERED',
+            title: 'SMS Delivered',
+            description: `SMS delivered to lead`,
+            leadId: message.leadId,
+            userId: 'system',
+            organizationId: lead.organizationId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            metadata: event as any,
+          },
+        });
+      }
     }
 
     console.log('[SMS] Webhook processed:', { MessageSid, MessageStatus, newStatus });

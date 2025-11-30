@@ -7,7 +7,7 @@ import {
   TrendingUp,
   TrendingDown,
   Users,
-  DollarSign,
+  
   Target,
   Megaphone,
   Plus,
@@ -16,7 +16,7 @@ import {
   RefreshCw,
   Bell,
   Mail,
-  Phone,
+  
   Clock,
   CheckCircle2,
   AlertCircle,
@@ -562,7 +562,7 @@ function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivities.map((activity) => (
+              {recentActivities.map((activity: any) => (
                 <div key={activity.id} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0">
                   <div className="mt-1 p-2 rounded-full bg-primary/10">
                     <activity.icon className="h-4 w-4 text-primary" />
@@ -589,7 +589,7 @@ function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {upcomingTasks.map((task) => (
+              {upcomingTasks.map((task: any) => (
                 <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer">
                   <input type="checkbox" className="mt-1" />
                   <div className="flex-1">
@@ -641,7 +641,7 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {topCampaigns.map((campaign) => (
+                {topCampaigns.map((campaign: any) => (
                   <tr key={campaign.id} className="border-b last:border-0 hover:bg-accent/50">
                     <td className="py-4 text-sm font-medium">{campaign.name}</td>
                     <td className="py-4">

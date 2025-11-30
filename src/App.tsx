@@ -87,6 +87,8 @@ import Integrations from './pages/settings/Integrations'
 
 // Admin
 import AdminPanel from './pages/admin/AdminPanel'
+import TeamManagementPage from './pages/admin/TeamManagementPage'
+import SubscriptionPage from './pages/admin/Subscription'
 import UserManagementDetail from './pages/admin/UserManagementDetail'
 import SystemSettings from './pages/admin/SystemSettings'
 import FeatureFlags from './pages/admin/FeatureFlags'
@@ -233,6 +235,8 @@ function App() {
         
         {/* Admin */}
         <Route path="/admin" element={<PageErrorBoundary pageName="Admin Panel"><AdminPanel /></PageErrorBoundary>} />
+        <Route path="/admin/team" element={<PageErrorBoundary pageName="Team Management"><TeamManagementPage /></PageErrorBoundary>} />
+        <Route path="/admin/subscription" element={<PageErrorBoundary pageName="Subscription Management"><SubscriptionPage /></PageErrorBoundary>} />
         <Route path="/admin/users/:id" element={<PageErrorBoundary pageName="User Management"><UserManagementDetail /></PageErrorBoundary>} />
         <Route path="/admin/system" element={<PageErrorBoundary pageName="System Settings"><SystemSettings /></PageErrorBoundary>} />
         <Route path="/admin/features" element={<PageErrorBoundary pageName="Feature Flags"><FeatureFlags /></PageErrorBoundary>} />

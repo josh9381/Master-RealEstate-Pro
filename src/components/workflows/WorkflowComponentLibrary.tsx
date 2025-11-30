@@ -221,15 +221,37 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
   mode = 'click',
 }) => {
   const handleClick = (component: WorkflowComponent) => {
+    console.log('Component clicked:', component.label, 'Mode:', mode);
+    // Only trigger select in click mode, not in drag mode
     if (mode === 'click' && onComponentSelect) {
+      console.log('Calling onComponentSelect');
       onComponentSelect(component);
+    } else if (mode === 'drag') {
+      console.log('In drag mode - use drag & drop instead of clicking');
+    } else {
+      console.log('onComponentSelect is not defined');
     }
   };
 
   const handleDragStart = (e: React.DragEvent, component: WorkflowComponent) => {
-    if (mode === 'drag' && onComponentDragStart) {
-      e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('application/json', JSON.stringify(component));
+    if (mode !== 'drag') {
+      e.preventDefault();
+      return;
+    }
+    
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('application/json', JSON.stringify(component));
+    
+    // Create a custom drag image
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.opacity = '0.8';
+    document.body.appendChild(dragImage);
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px';
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+    
+    if (onComponentDragStart) {
       onComponentDragStart(component);
     }
   };
@@ -262,7 +284,10 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
                       ${mode === 'drag' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer hover:bg-accent'}
                     `}
                     draggable={mode === 'drag'}
-                    onClick={() => handleClick(component)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClick(component);
+                    }}
                     onDragStart={(e) => handleDragStart(e, component)}
                   >
                     <CardContent className="p-3">

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { User } from '@/types'
+import type { User, UserPermissions } from '@/types'
 import { authApi, type LoginData, type RegisterData } from '@/lib/api'
 
 interface AuthState {
@@ -20,6 +20,14 @@ interface AuthState {
   fetchCurrentUser: () => Promise<void>
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
+  
+  // Helper getters
+  isAdmin: () => boolean
+  isManager: () => boolean
+  isTeamMode: () => boolean
+  hasPermission: (permission: keyof UserPermissions) => boolean
+  getSubscriptionTier: () => 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE' | null
+  isTrialActive: () => boolean
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -111,14 +119,48 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null })
           const user = await authApi.getCurrentUser()
           set({ user, isAuthenticated: true })
-        } catch (error: any) {
-          const errorMessage = error.response?.data?.message || 'Failed to fetch user'
+        } catch (error: unknown) {
+          const err = error as { response?: { data?: { message?: string } } }
+          const errorMessage = err.response?.data?.message || 'Failed to fetch user'
           set({ error: errorMessage })
           get().clearAuth()
           throw error
         } finally {
           set({ isLoading: false })
         }
+      },
+      
+      // Helper getters
+      isAdmin: () => {
+        const state = get()
+        return state.user?.role === 'ADMIN' || state.user?.role === 'admin'
+      },
+      
+      isManager: () => {
+        const state = get()
+        return state.user?.role === 'MANAGER' || state.user?.role === 'manager'
+      },
+      
+      isTeamMode: () => {
+        const state = get()
+        return (state.user?.organization?.memberCount ?? 1) > 1
+      },
+      
+      hasPermission: (permission: keyof UserPermissions) => {
+        const state = get()
+        return state.user?.permissions?.[permission] ?? false
+      },
+      
+      getSubscriptionTier: () => {
+        const state = get()
+        return state.user?.organization?.subscriptionTier ?? null
+      },
+      
+      isTrialActive: () => {
+        const state = get()
+        const trialEndsAt = state.user?.organization?.trialEndsAt
+        if (!trialEndsAt) return false
+        return new Date(trialEndsAt) > new Date()
       },
     }),
     {

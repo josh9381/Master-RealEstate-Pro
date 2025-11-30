@@ -1,8 +1,7 @@
-import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { AlertTriangle, DollarSign, Users, Mail, MessageSquare, Phone, CheckCircle, XCircle } from 'lucide-react'
+import { AlertTriangle, DollarSign, Users, Mail, MessageSquare, Phone, CheckCircle } from 'lucide-react'
 
 interface SampleRecipient {
   id: string
@@ -40,19 +39,6 @@ interface CampaignPreviewModalProps {
   isLoading?: boolean
 }
 
-const getCampaignIcon = (type: string) => {
-  switch (type) {
-    case 'EMAIL':
-      return <Mail className="w-5 h-5" />
-    case 'SMS':
-      return <MessageSquare className="w-5 h-5" />
-    case 'PHONE':
-      return <Phone className="w-5 h-5" />
-    default:
-      return <Mail className="w-5 h-5" />
-  }
-}
-
 const getStatusBadgeVariant = (status: string): 'default' | 'success' | 'warning' | 'destructive' => {
   switch (status.toUpperCase()) {
     case 'NEW':
@@ -66,6 +52,22 @@ const getStatusBadgeVariant = (status: string): 'default' | 'success' | 'warning
       return 'destructive'
     default:
       return 'default'
+  }
+}
+
+// TODO: Future use - helper function for campaign type icons
+const _getCampaignIcon = (type: string) => {
+  switch (type.toUpperCase()) {
+    case 'EMAIL':
+      return Mail
+    case 'SMS':
+      return MessageSquare
+    case 'PHONE':
+      return Phone
+    case 'SOCIAL':
+      return Users
+    default:
+      return Mail
   }
 }
 
@@ -84,10 +86,11 @@ export function CampaignPreviewModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {getCampaignIcon(preview.campaignType)}
-            Campaign Preview: {preview.campaignName}
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle>
+              Campaign Preview: {preview.campaignName}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">

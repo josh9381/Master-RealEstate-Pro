@@ -11,6 +11,8 @@ import { campaignsApi, leadsApi, CreateCampaignData } from '@/lib/api'
 import { useQuery } from '@tanstack/react-query'
 import { Lead } from '@/types'
 import { CampaignPreviewModal } from '@/components/campaigns/CampaignPreviewModal'
+import { MessageEnhancerModal } from '@/components/ai/MessageEnhancerModal'
+import { ContentGeneratorWizard } from '@/components/ai/ContentGeneratorWizard'
 import { DaysOfWeekPicker } from '@/components/ui/DaysOfWeekPicker'
 import { AdvancedAudienceFilters, AudienceFilter } from '@/components/campaigns/AdvancedAudienceFilters'
 
@@ -53,6 +55,12 @@ function CampaignCreate() {
   const [previewData, setPreviewData] = useState<any>(null)
   const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
+  
+  // AI Message Enhancer state
+  const [showEnhancer, setShowEnhancer] = useState(false)
+  
+  // AI Content Generator state
+  const [showContentGenerator, setShowContentGenerator] = useState(false)
   
   // Fetch leads count for audience selection
   const { data: leadsData } = useQuery({
@@ -411,7 +419,32 @@ function CampaignCreate() {
               {selectedType === 'email' && (
                 <>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Email Body</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Email Body</label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowContentGenerator(true)}
+                          className="gap-2"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          Generate with AI
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowEnhancer(true)}
+                          disabled={!formData.content.trim()}
+                          className="gap-2"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Enhance
+                        </Button>
+                      </div>
+                    </div>
                     <textarea
                       className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       placeholder="Enter your email content here..."
@@ -905,6 +938,38 @@ function CampaignCreate() {
           isLoading={isSending}
         />
       )}
+      
+      {/* AI Message Enhancer Modal */}
+      <MessageEnhancerModal
+        isOpen={showEnhancer}
+        onClose={() => setShowEnhancer(false)}
+        originalText={formData.content}
+        onApply={(enhancedText) => updateFormData({ content: enhancedText })}
+      />
+      
+      {/* AI Content Generator Modal */}
+      <ContentGeneratorWizard
+        isOpen={showContentGenerator}
+        onClose={() => setShowContentGenerator(false)}
+        onApply={(generatedContent) => {
+          // Handle different content types
+          if (generatedContent.emails && generatedContent.emails.length > 0) {
+            // For email sequences, use the first email
+            const firstEmail = generatedContent.emails[0];
+            updateFormData({ 
+              subject: firstEmail.subject || formData.subject,
+              content: firstEmail.body || formData.content
+            });
+          } else if (generatedContent.message) {
+            // For SMS
+            updateFormData({ content: generatedContent.message });
+          } else if (generatedContent.description) {
+            // For property descriptions
+            updateFormData({ content: generatedContent.description });
+          }
+          setShowContentGenerator(false);
+        }}
+      />
     </div>
   )
 }

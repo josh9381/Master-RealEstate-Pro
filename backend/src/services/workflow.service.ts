@@ -57,6 +57,7 @@ export interface CreateWorkflowInput {
   triggerData?: WorkflowTriggerData;
   conditions?: WorkflowCondition[];
   actions: WorkflowAction[];
+  organizationId: string;
 }
 
 export interface UpdateWorkflowInput {
@@ -152,6 +153,7 @@ export async function createWorkflow(input: CreateWorkflowInput) {
         conditions: input.conditions || [],
         actions: input.actions,
       } as any,
+      organizationId: input.organizationId
     },
   });
 
@@ -456,7 +458,7 @@ export async function executeWorkflow(
 /**
  * Execute a single workflow action
  */
-async function executeAction(action: WorkflowAction, leadId?: string, metadata?: any) {
+async function executeAction(action: WorkflowAction, leadId?: string, metadata?: any, organizationId?: string) {
   switch (action.type) {
     case 'UPDATE_LEAD':
       if (!leadId) throw new Error('Lead ID required for UPDATE_LEAD action');
@@ -468,8 +470,22 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
 
     case 'ADD_TAG':
       if (!leadId) throw new Error('Lead ID required for ADD_TAG action');
+      
+      // Get lead's organizationId if not provided
+      let orgId = organizationId;
+      if (!orgId) {
+        const lead = await prisma.lead.findUnique({
+          where: { id: leadId },
+          select: { organizationId: true }
+        });
+        orgId = lead?.organizationId;
+      }
+      
+      if (!orgId) throw new Error('Organization ID not found');
+      
       const existingTag = await prisma.tag.findFirst({
         where: {
+          organizationId: orgId,
           name: action.config.tagName,
         },
       });
@@ -491,6 +507,7 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
               create: {
                 name: action.config.tagName,
                 color: action.config.tagColor || '#3B82F6',
+                organizationId: orgId
               },
             },
           },

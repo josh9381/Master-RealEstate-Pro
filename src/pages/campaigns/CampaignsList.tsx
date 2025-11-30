@@ -18,12 +18,13 @@ import { useToast } from '@/hooks/useToast'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
+import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
 
 function CampaignsList() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'scheduled' | 'paused' | 'completed'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'ACTIVE' | 'SCHEDULED' | 'PAUSED' | 'COMPLETED'>('all')
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'calendar'>('list')
   const [selectedCampaigns, setSelectedCampaigns] = useState<number[]>([])
   const [showComparison, setShowComparison] = useState(false)
@@ -39,7 +40,7 @@ function CampaignsList() {
 
   // Fetch campaigns from API
   const { data: campaignsResponse, isLoading } = useQuery({
-    queryKey: ['campaigns', searchQuery, activeTab],
+    queryKey: ['campaigns', searchQuery],
     queryFn: async () => {
       try {
         const params: { 
@@ -48,9 +49,10 @@ function CampaignsList() {
           type?: 'EMAIL' | 'SMS' | 'PHONE';
         } = {}
         if (searchQuery) params.search = searchQuery
-        if (activeTab !== 'all') {
-          params.status = activeTab.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED'
-        }
+        // Don't send status filter to API - we'll filter client-side for better UX
+        // if (activeTab !== 'all') {
+        //   params.status = activeTab.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED'
+        // }
         
         const response = await campaignsApi.getCampaigns(params)
         return response.data
@@ -75,7 +77,7 @@ function CampaignsList() {
   }, [campaignsResponse])
 
   // Create campaign mutation
-  const createCampaignMutation = useMutation({
+  const _createCampaignMutation = useMutation({
     mutationFn: (data: CreateCampaignData) => campaignsApi.createCampaign(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
@@ -111,19 +113,19 @@ function CampaignsList() {
     },
   })
 
-  // Pause campaign mutation (available for status actions)
+  // Pause campaign mutation - TODO: Wire to UI pause button
   const _pauseCampaignMutation = useMutation({
     mutationFn: (id: string) => campaignsApi.pauseCampaign(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-      toast.success('Campaign paused')
+      toast.success('Campaign paused successfully')
     },
     onError: () => {
       toast.error('Failed to pause campaign')
     },
   })
 
-  // Send campaign mutation (available for campaign launch)
+  // Send campaign mutation - TODO: Wire to UI send button
   const _sendCampaignMutation = useMutation({
     mutationFn: (id: string) => campaignsApi.sendCampaign(id),
     onSuccess: () => {
@@ -139,7 +141,7 @@ function CampaignsList() {
   const filteredCampaigns = useMemo(() => {
     const filtered = campaigns.filter(campaign => {
       const matchesSearch = campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesTab = activeTab === 'all' || campaign.status === activeTab
+      const matchesTab = activeTab === 'all' || campaign.status.toUpperCase() === activeTab.toUpperCase()
       return matchesSearch && matchesTab
     })
     return filtered
@@ -147,7 +149,7 @@ function CampaignsList() {
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const activeCampaigns = campaigns.filter(c => c.status === 'active')
+    const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE')
     const totalSent = campaigns.reduce((sum, c) => sum + (c.sent || 0), 0)
     const totalRevenue = campaigns.reduce((sum, c) => sum + (c.revenue || 0), 0)
     const totalSpent = campaigns.reduce((sum, c) => sum + (c.spent || 0), 0)
@@ -230,14 +232,14 @@ function CampaignsList() {
       selectedCampaigns.forEach(campaignId => {
         updateCampaignMutation.mutate({
           id: String(campaignId),
-          data: { status: newStatus }
+          data: { status: newStatus.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' }
         })
       })
     }
 
     toast.success(`Status updated for ${selectedCampaigns.length} campaign(s)`)
     setShowStatusModal(false)
-    setNewStatus('active')
+    setNewStatus('ACTIVE')
     setSelectedCampaigns([])
   }
 
@@ -386,17 +388,20 @@ function CampaignsList() {
             Create and manage your marketing campaigns
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <UsageBadge resource="campaigns" />
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Link to="/campaigns/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Campaign
-            </Button>
-          </Link>
+          <FeatureGate resource="campaigns">
+            <Link to="/campaigns/create">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Campaign
+              </Button>
+            </Link>
+          </FeatureGate>
         </div>
       </div>
 
@@ -600,23 +605,61 @@ function CampaignsList() {
 
       {/* Status Tabs */}
       <div className="flex gap-2 border-b">
-        {(['all', 'active', 'scheduled', 'paused', 'completed'] as const).map(tab => (
-          <button
-            key={tab}
-            className={`px-4 py-2 font-medium capitalize transition-colors ${
-              activeTab === tab
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-            <span className="ml-2 text-sm text-muted-foreground">
-              ({tab === 'all' ? mockCampaigns.length : mockCampaigns.filter(c => c.status === tab).length})
-            </span>
-          </button>
-        ))}
+        {(['all', 'ACTIVE', 'SCHEDULED', 'PAUSED', 'COMPLETED'] as const).map(tab => {
+          const count = tab === 'all' 
+            ? campaigns.length 
+            : campaigns.filter(c => c.status.toUpperCase() === tab).length
+          
+          return (
+            <button
+              key={tab}
+              className={`px-4 py-2 font-medium capitalize transition-colors ${
+                activeTab === tab
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab.toLowerCase()}
+              <span className="ml-2 text-sm text-muted-foreground">
+                ({count})
+              </span>
+            </button>
+          )
+        })}
       </div>
+
+      {/* Empty State */}
+      {filteredCampaigns.length === 0 && !isLoading && (
+        <Card className="py-12">
+          <CardContent className="flex flex-col items-center justify-center text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
+              <Target className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {campaigns.length === 0 ? 'No campaigns yet' : 'No campaigns found'}
+            </h3>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              {campaigns.length === 0 
+                ? 'Get started by creating your first campaign to reach your audience.'
+                : activeTab === 'all'
+                ? 'No campaigns match your search criteria. Try adjusting your filters.'
+                : `No ${activeTab.toLowerCase()} campaigns found. Try a different filter.`
+              }
+            </p>
+            {campaigns.length === 0 && (
+              <FeatureGate resource="campaigns">
+                <Link to="/campaigns/create">
+                  <Button size="lg">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Your First Campaign
+                  </Button>
+                </Link>
+              </FeatureGate>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Multi-Campaign Comparison */}
       {showComparison && selectedCampaigns.length > 1 && (
@@ -669,7 +712,7 @@ function CampaignsList() {
       )}
 
       {/* Campaign List View */}
-      {viewMode === 'list' && (
+      {viewMode === 'list' && filteredCampaigns.length > 0 && (
         <div className="grid gap-4">
           {filteredCampaigns.map((campaign) => (
             <Card key={campaign.id}>
@@ -834,7 +877,7 @@ function CampaignsList() {
       )}
 
       {/* Campaign Grid View */}
-      {viewMode === 'grid' && (
+      {viewMode === 'grid' && filteredCampaigns.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredCampaigns.map((campaign) => (
             <Card key={campaign.id} className="flex flex-col">
@@ -984,7 +1027,7 @@ function CampaignsList() {
       )}
 
       {/* Calendar View */}
-      {viewMode === 'calendar' && (
+      {viewMode === 'calendar' && filteredCampaigns.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Campaign Calendar</CardTitle>

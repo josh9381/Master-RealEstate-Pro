@@ -22,7 +22,8 @@ import { leadsApi } from '@/lib/api'
 
 interface Lead {
   id: number
-  name: string
+  firstName: string
+  lastName: string
   company: string
   score: number
   value?: string
@@ -58,7 +59,7 @@ function LeadsPipeline() {
     setIsLoading(true)
     try {
       const response = await leadsApi.getLeads({ limit: 100 })
-      const leads = response.data || []
+      const leads = response.data?.leads || []
       
       // Organize leads by status
       const statusMap: { [key: string]: Lead[] } = {
@@ -74,7 +75,8 @@ function LeadsPipeline() {
       leads.forEach((apiLead: any) => {
         const lead: Lead = {
           id: apiLead.id,
-          name: `${apiLead.firstName} ${apiLead.lastName}`,
+          firstName: apiLead.firstName,
+          lastName: apiLead.lastName,
           company: apiLead.company || 'No Company',
           score: apiLead.score || 0,
           value: apiLead.estimatedValue ? `$${apiLead.estimatedValue}` : undefined,
@@ -211,7 +213,7 @@ function LeadsPipeline() {
       })
     })
 
-    toast.success(`${lead.name} moved to ${pipelineStages.find((s: Stage) => s.id === toStageId)?.name}`)
+    toast.success(`${lead.firstName} ${lead.lastName} moved to ${pipelineStages.find((s: Stage) => s.id === toStageId)?.name}`)
     setDraggedLead(null)
   }
 
@@ -313,7 +315,7 @@ function LeadsPipeline() {
                             to={`/leads/${lead.id}`}
                             className="font-medium hover:text-primary transition-colors"
                           >
-                            {lead.name}
+                            {lead.firstName} {lead.lastName}
                           </Link>
                           <p className="text-sm text-muted-foreground">{lead.company}</p>
                         </div>
@@ -337,7 +339,7 @@ function LeadsPipeline() {
                           size="sm" 
                           variant="ghost" 
                           className="h-7 px-2 text-xs"
-                          onClick={() => handleQuickAction('✨ AI Email', lead.name)}
+                          onClick={() => handleQuickAction('✨ AI Email', `${lead.firstName} ${lead.lastName}`)}
                         >
                           <Mail className="mr-1 h-3 w-3" />
                           <Sparkles className="h-3 w-3" />
@@ -346,7 +348,7 @@ function LeadsPipeline() {
                           size="sm" 
                           variant="ghost" 
                           className="h-7 px-2 text-xs"
-                          onClick={() => handleQuickAction('SMS', lead.name)}
+                          onClick={() => handleQuickAction('SMS', `${lead.firstName} ${lead.lastName}`)}
                         >
                           <MessageSquare className="h-3 w-3" />
                         </Button>
@@ -354,7 +356,7 @@ function LeadsPipeline() {
                           size="sm" 
                           variant="ghost" 
                           className="h-7 px-2 text-xs"
-                          onClick={() => handleQuickAction('Call', lead.name)}
+                          onClick={() => handleQuickAction('Call', `${lead.firstName} ${lead.lastName}`)}
                         >
                           <Phone className="h-3 w-3" />
                         </Button>

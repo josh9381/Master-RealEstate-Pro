@@ -276,7 +276,12 @@ export async function inviteMember(req: Request, res: Response): Promise<void> {
 
   // Find user by email
   const invitedUser = await prisma.user.findUnique({
-    where: { email }
+    where: { 
+      organizationId_email: {
+        organizationId: req.user!.organizationId,
+        email
+      }
+    }
   });
 
   if (!invitedUser) {

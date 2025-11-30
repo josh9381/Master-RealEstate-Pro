@@ -162,7 +162,8 @@ export async function testEmail(req: Request, res: Response): Promise<void> {
     to: testRecipient || '',
     subject: testSubject,
     html: testMessage,
-    userId: req.user.userId // Pass userId for config lookup
+    userId: req.user.userId, // Pass userId for config lookup
+    organizationId: req.user.organizationId
   });
 
   if (!result.success) {

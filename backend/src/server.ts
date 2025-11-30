@@ -7,6 +7,8 @@ import prisma from './config/database'
 import { corsOptions } from './config/cors'
 import { checkAndExecuteScheduledCampaigns } from './services/campaign-scheduler.service'
 import { startWorkflowJobs, setupGracefulShutdown } from './jobs/workflowProcessor'
+import { updateAllLeadScores } from './services/leadScoring.service'
+import { getMLOptimizationService } from './services/ml-optimization.service'
 import authRoutes from './routes/auth.routes'
 import leadRoutes from './routes/lead.routes'
 import tagRoutes from './routes/tag.routes'
@@ -16,6 +18,8 @@ import taskRoutes from './routes/task.routes'
 import activityRoutes from './routes/activity.routes'
 import analyticsRoutes from './routes/analytics.routes'
 import aiRoutes from './routes/ai.routes'
+import intelligenceRoutes from './routes/intelligence.routes'
+import abtestRoutes from './routes/abtest.routes'
 import templateRoutes from './routes/template.routes'
 import emailTemplateRoutes from './routes/email-template.routes'
 import smsTemplateRoutes from './routes/sms-template.routes'
@@ -28,9 +32,15 @@ import appointmentRoutes from './routes/appointment.routes'
 import webhookRoutes from './routes/webhook.routes'
 import unsubscribeRoutes from './routes/unsubscribe.routes'
 import deliverabilityRoutes from './routes/deliverability.routes'
+import userRoutes from './routes/user.routes'
+import notificationRoutes from './routes/notification.routes'
+import adminRoutes from './routes/admin.routes'
+import subscriptionRoutes from './routes/subscription.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { generalLimiter } from './middleware/rateLimiter'
+import { authenticate } from './middleware/auth'
+import { requireAdminOrManager } from './middleware/admin'
 
 // Load environment variables
 dotenv.config()
@@ -111,6 +121,7 @@ app.get('/api', (req: Request, res: Response) => {
     endpoints: {
       health: '/health',
       auth: '/api/auth/*',
+      users: '/api/users/*',
       leads: '/api/leads/*',
       tags: '/api/tags/*',
       notes: '/api/notes/*',
@@ -141,6 +152,8 @@ app.use('/api/tasks', taskRoutes)
 app.use('/api/activities', activityRoutes)
 app.use('/api/analytics', analyticsRoutes)
 app.use('/api/ai', aiRoutes)
+app.use('/api/intelligence', intelligenceRoutes)
+app.use('/api/ab-tests', abtestRoutes)
 app.use('/api/templates', templateRoutes)
 app.use('/api/email-templates', emailTemplateRoutes)
 app.use('/api/sms-templates', smsTemplateRoutes)
@@ -153,6 +166,10 @@ app.use('/api/appointments', appointmentRoutes)
 app.use('/api/webhooks', webhookRoutes)
 app.use('/api/unsubscribe', unsubscribeRoutes)
 app.use('/api/deliverability', deliverabilityRoutes)
+app.use('/api/users', userRoutes)
+app.use('/api/notifications', notificationRoutes)
+app.use('/api/admin', authenticate, requireAdminOrManager, adminRoutes)
+app.use('/api/subscriptions', authenticate, subscriptionRoutes)
 
 // 404 handler
 app.use(notFoundHandler)
@@ -168,14 +185,60 @@ app.listen(PORT, () => {
   console.log(`🌐 API: http://localhost:${PORT}/api`)
   
   // Initialize cron jobs
-  console.log(`⏰ Starting campaign scheduler...`)
+  console.log(`⏰ Starting scheduled jobs...`)
   
   // Run every minute to check for scheduled campaigns
   cron.schedule('* * * * *', async () => {
     await checkAndExecuteScheduledCampaigns()
   })
-  
   console.log(`✅ Campaign scheduler active - checking every minute`)
+  
+  // Run daily at 2 AM to recalculate all lead scores
+  cron.schedule('0 2 * * *', async () => {
+    console.log(`🎯 Running daily lead score recalculation...`)
+    try {
+      const result = await updateAllLeadScores()
+      console.log(`✅ Lead scores updated: ${result.updated} leads, ${result.errors} errors`)
+    } catch (error) {
+      console.error(`❌ Failed to recalculate lead scores:`, error)
+    }
+  })
+  console.log(`✅ Lead scoring scheduler active - running daily at 2 AM`)
+  
+  // Run weekly on Sundays at 3 AM to optimize ML scoring weights
+  cron.schedule('0 3 * * 0', async () => {
+    console.log(`🤖 Running weekly ML optimization for all users...`)
+    try {
+      const mlService = getMLOptimizationService()
+      // Get all users with at least 20 conversions for optimization
+      const users = await prisma.user.findMany({
+        where: {
+          leads: {
+            some: {
+              status: { in: ['WON', 'LOST'] }
+            }
+          }
+        },
+        select: { id: true, firstName: true, lastName: true, organizationId: true }
+      })
+      
+      let optimizedCount = 0
+      for (const user of users) {
+        try {
+          console.log(`  Optimizing model for ${user.firstName} ${user.lastName}...`)
+          const result = await mlService.optimizeScoringWeights(user.id, user.organizationId)
+          console.log(`  ✅ ${user.firstName} ${user.lastName}: ${result.accuracy.toFixed(1)}% accuracy (${result.sampleSize} leads)`)
+          optimizedCount++
+        } catch (error) {
+          console.error(`  ❌ Failed to optimize for user ${user.id}:`, error)
+        }
+      }
+      console.log(`✅ ML optimization complete for ${optimizedCount}/${users.length} users`)
+    } catch (error) {
+      console.error(`❌ Failed to run ML optimization:`, error)
+    }
+  })
+  console.log(`✅ ML optimization scheduler active - running weekly on Sundays at 3 AM`)
   
   // Start workflow background jobs
   console.log(`🔄 Starting workflow automation engine...`)

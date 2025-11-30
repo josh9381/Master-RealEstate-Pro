@@ -36,6 +36,38 @@ router.get('/predictions/:leadId', aiController.getPredictions)
 router.post('/enhance-message', aiController.enhanceMessage)
 router.post('/suggest-actions', aiController.suggestActions)
 
+// AI Chatbot (OpenAI GPT-4)
+router.post('/chat', aiController.chatWithAI)
+router.get('/chat/history', aiController.getChatHistory)
+router.delete('/chat/history', aiController.clearChatHistory)
+
+// AI Usage Statistics
+router.get('/usage', aiController.getAIUsage)
+
+// Content Generation
+router.post('/generate/email-sequence', aiController.generateEmailSequence)
+router.post('/generate/sms', aiController.generateSMS)
+router.post('/generate/property-description', aiController.generatePropertyDescription)
+router.post('/generate/social-posts', aiController.generateSocialPosts)
+router.post('/generate/listing-presentation', aiController.generateListingPresentation)
+
+// AI Compose (Phase 1 & 2)
+router.post('/compose', aiController.composeMessage)
+router.post('/compose/variations', aiController.composeVariations)
+
+// AI Compose Phase 3 - Streaming
+router.post('/compose/stream', aiController.composeMessageStream)
+
+// Templates (Phase 3)
+router.get('/templates', aiController.getTemplates)
+router.post('/templates/generate', aiController.generateTemplateMessage)
+router.post('/templates/save', aiController.saveMessageAsTemplate)
+
+// User Preferences (Phase 3)
+router.get('/preferences', aiController.getPreferences)
+router.post('/preferences', aiController.savePreferences)
+router.post('/preferences/reset', aiController.resetPreferences)
+
 // Feature Importance
 router.get('/feature-importance', aiController.getFeatureImportance)
 

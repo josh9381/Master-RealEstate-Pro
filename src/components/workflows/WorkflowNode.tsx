@@ -12,6 +12,7 @@ export interface WorkflowNodeData {
   description?: string;
   icon?: string;
   config?: Record<string, unknown>;
+  position?: { x: number; y: number };
 }
 
 interface WorkflowNodeProps {
@@ -127,9 +128,6 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-medium text-sm truncate">{node.label}</h4>
-              <Badge className={`text-xs ${badgeColor}`}>
-                {node.type}
-              </Badge>
             </div>
             {node.description && (
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -137,12 +135,10 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               </p>
             )}
             {node.config && Object.keys(node.config).length > 0 && (
-              <div className="mt-2 flex gap-1 flex-wrap">
-                {Object.entries(node.config).slice(0, 3).map(([key, value]) => (
-                  <Badge key={key} variant="outline" className="text-xs">
-                    {key}: {String(value)}
-                  </Badge>
-                ))}
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground">
+                  ✓ Configured
+                </p>
               </div>
             )}
           </div>

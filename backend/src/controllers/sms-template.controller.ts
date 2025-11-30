@@ -36,12 +36,15 @@ export async function getSMSTemplates(req: Request, res: Response): Promise<void
     sortOrder = 'desc',
   } = query;
 
-  // Build where clause
+  // Build where clause with organizationId for multi-tenancy
   const where: {
+    organizationId: string;
     category?: string;
     isActive?: boolean;
     OR?: Array<{ name?: { contains: string }; body?: { contains: string } }>;
-  } = {};
+  } = {
+    organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
+  };
 
   if (category) where.category = category;
   if (isActive !== undefined) where.isActive = isActive;
@@ -145,6 +148,7 @@ export async function createSMSTemplate(req: Request, res: Response): Promise<vo
       category: data.category,
       isActive: data.isActive ?? true,
       variables: data.variables || {},
+      organizationId: req.user!.organizationId
     },
   });
 
@@ -276,6 +280,7 @@ export async function duplicateSMSTemplate(req: Request, res: Response): Promise
       category: originalTemplate.category,
       isActive: false, // New duplicates start as inactive
       variables: originalTemplate.variables || {},
+      organizationId: req.user!.organizationId
     },
   });
 

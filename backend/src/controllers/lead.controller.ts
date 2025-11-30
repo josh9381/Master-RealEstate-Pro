@@ -4,6 +4,7 @@ import { NotFoundError, ConflictError, ValidationError } from '../middleware/err
 import type { LeadStatus } from '@prisma/client';
 import { workflowTriggerService } from '../services/workflow-trigger.service';
 import { updateLeadScore, updateMultipleLeadScores, updateAllLeadScores, getScoreCategory, getLeadsByScoreCategory } from '../services/leadScoring.service';
+import { getLeadsFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
 
 /**
  * Get all leads with filtering, pagination, and sorting
@@ -41,36 +42,44 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
     maxValue,
   } = query;
 
-  // Build where clause
-  const where: any = {};
-
-  if (status) where.status = status as LeadStatus;
-  if (source) where.source = source;
-  if (assignedToId) where.assignedToId = assignedToId;
+  // Get role-based filter options
+  const roleFilter = getRoleFilterFromRequest(req);
+  
+  // Build additional filters
+  const additionalWhere: Record<string, unknown> = {};
+  
+  if (status) additionalWhere.status = status as LeadStatus;
+  if (source) additionalWhere.source = source;
+  if (assignedToId) additionalWhere.assignedToId = assignedToId;
   
   // Score filtering
   if (minScore !== undefined || maxScore !== undefined) {
-    where.score = {};
-    if (minScore !== undefined) where.score.gte = Number(minScore);
-    if (maxScore !== undefined) where.score.lte = Number(maxScore);
+    const scoreFilter: Record<string, number> = {};
+    if (minScore !== undefined) scoreFilter.gte = Number(minScore);
+    if (maxScore !== undefined) scoreFilter.lte = Number(maxScore);
+    additionalWhere.score = scoreFilter;
   }
   
   // Value filtering
   if (minValue !== undefined || maxValue !== undefined) {
-    where.value = {};
-    if (minValue !== undefined) where.value.gte = Number(minValue);
-    if (maxValue !== undefined) where.value.lte = Number(maxValue);
+    const valueFilter: Record<string, number> = {};
+    if (minValue !== undefined) valueFilter.gte = Number(minValue);
+    if (maxValue !== undefined) valueFilter.lte = Number(maxValue);
+    additionalWhere.value = valueFilter;
   }
 
-  // Search in name, email, company
-  // Note: SQLite doesn't support mode: 'insensitive', but SQLite is case-insensitive by default
+  // Search in firstName, lastName, email, company
   if (search) {
-    where.OR = [
-      { name: { contains: search as string } },
-      { email: { contains: search as string } },
-      { company: { contains: search as string } },
+    additionalWhere.OR = [
+      { firstName: { contains: search as string, mode: 'insensitive' } },
+      { lastName: { contains: search as string, mode: 'insensitive' } },
+      { email: { contains: search as string, mode: 'insensitive' } },
+      { company: { contains: search as string, mode: 'insensitive' } },
     ];
   }
+
+  // Apply role-based filtering (ADMIN sees all, USER sees only assigned)
+  const where = getLeadsFilter(roleFilter, additionalWhere);
 
   // Calculate pagination
   const skip = (Number(page) - 1) * Number(limit);
@@ -134,8 +143,11 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
 export async function getLead(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
-  const lead = await prisma.lead.findUnique({
-    where: { id },
+  const lead = await prisma.lead.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify lead belongs to user's org
+    },
     include: {
       assignedTo: {
         select: {
@@ -204,29 +216,36 @@ export async function getLead(req: Request, res: Response): Promise<void> {
 export async function createLead(req: Request, res: Response): Promise<void> {
   const { firstName, lastName, email, phone, company, position, status, source, value, stage, assignedToId, customFields } = req.body;
 
-  // Check if email already exists
-  const existingLead = await prisma.lead.findUnique({
-    where: { email },
+  // Check if email already exists within the organization (not globally)
+  const existingLead = await prisma.lead.findFirst({
+    where: { 
+      email,
+      organizationId: req.user!.organizationId  // Check within org only
+    },
   });
 
   if (existingLead) {
-    throw new ConflictError('A lead with this email already exists');
+    throw new ConflictError('A lead with this email already exists in your organization');
   }
 
-  // If assignedToId is provided, verify the user exists
+  // If assignedToId is provided, verify the user exists and belongs to same org
   if (assignedToId) {
-    const assignedUser = await prisma.user.findUnique({
-      where: { id: assignedToId },
+    const assignedUser = await prisma.user.findFirst({
+      where: { 
+        id: assignedToId,
+        organizationId: req.user!.organizationId  // Verify same org
+      },
     });
 
     if (!assignedUser) {
-      throw new ValidationError('Assigned user not found');
+      throw new ValidationError('Assigned user not found in your organization');
     }
   }
 
-  // Create the lead
+  // Create the lead with organizationId
   const lead = await prisma.lead.create({
     data: {
+      organizationId: req.user!.organizationId,  // CRITICAL: Set organization
       firstName,
       lastName,
       email,
@@ -257,6 +276,7 @@ export async function createLead(req: Request, res: Response): Promise<void> {
   try {
     await prisma.activity.create({
       data: {
+        organizationId: req.user!.organizationId,  // Set organization
         type: 'LEAD_CREATED',
         title: 'Lead created',
         description: `Lead "${firstName} ${lastName}" was created`,
@@ -300,41 +320,51 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
   const updates = req.body;
 
-  // Check if lead exists
-  const existingLead = await prisma.lead.findUnique({
-    where: { id },
+  // Check if lead exists and belongs to user's organization
+  const existingLead = await prisma.lead.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // Verify ownership
+    },
   });
 
   if (!existingLead) {
     throw new NotFoundError('Lead not found');
   }
 
-  // If updating email, check for conflicts
+  // If updating email, check for conflicts within organization
   if (updates.email && updates.email !== existingLead.email) {
-    const emailExists = await prisma.lead.findUnique({
-      where: { email: updates.email },
+    const emailExists = await prisma.lead.findFirst({
+      where: { 
+        email: updates.email,
+        organizationId: req.user!.organizationId  // Check within org
+      },
     });
 
     if (emailExists) {
-      throw new ConflictError('A lead with this email already exists');
+      throw new ConflictError('A lead with this email already exists in your organization');
     }
   }
 
-  // If updating assignedToId, verify user exists
+  // If updating assignedToId, verify user exists in same org
   if (updates.assignedToId) {
-    const assignedUser = await prisma.user.findUnique({
-      where: { id: updates.assignedToId },
+    const assignedUser = await prisma.user.findFirst({
+      where: { 
+        id: updates.assignedToId,
+        organizationId: req.user!.organizationId  // Same org
+      },
     });
 
     if (!assignedUser) {
-      throw new ValidationError('Assigned user not found');
+      throw new ValidationError('Assigned user not found in your organization');
     }
   }
 
-  // Update the lead
+  // Update the lead (organizationId cannot be changed)
+  const { organizationId, ...safeUpdates } = updates;
   const lead = await prisma.lead.update({
     where: { id },
-    data: updates,
+    data: safeUpdates,
     include: {
       assignedTo: {
         select: {
@@ -360,6 +390,7 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
 
   if (updates.status && updates.status !== existingLead.status) {
     activityData.push({
+      organizationId: req.user!.organizationId,  // Set organization
       type: 'STATUS_CHANGED',
       title: 'Lead status changed',
       description: `Status changed from ${existingLead.status} to ${updates.status}`,
@@ -374,6 +405,7 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
 
   if (updates.stage && updates.stage !== existingLead.stage) {
     activityData.push({
+      organizationId: req.user!.organizationId,  // Set organization
       type: 'STAGE_CHANGED',
       title: 'Lead stage changed',
       description: `Stage changed from ${existingLead.stage || 'none'} to ${updates.stage}`,
@@ -455,9 +487,12 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
 export async function deleteLead(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
-  // Check if lead exists
-  const lead = await prisma.lead.findUnique({
-    where: { id },
+  // Check if lead exists and belongs to user's organization
+  const lead = await prisma.lead.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // Verify ownership
+    },
   });
 
   if (!lead) {
@@ -482,11 +517,11 @@ export async function deleteLead(req: Request, res: Response): Promise<void> {
 export async function bulkDeleteLeads(req: Request, res: Response): Promise<void> {
   const { leadIds } = req.body;
 
+  // Only delete leads that belong to user's organization
   const result = await prisma.lead.deleteMany({
     where: {
-      id: {
-        in: leadIds,
-      },
+      id: { in: leadIds },
+      organizationId: req.user!.organizationId  // Safety check
     },
   });
 
@@ -527,6 +562,7 @@ export async function bulkUpdateLeads(req: Request, res: Response): Promise<void
         title,
         description,
         userId: req.user!.userId,
+        organizationId: req.user!.organizationId,
         metadata: {
           leadIds,
           updates,
@@ -552,7 +588,15 @@ export async function bulkUpdateLeads(req: Request, res: Response): Promise<void
 export async function getLeadStats(req: Request, res: Response): Promise<void> {
   const { assignedToId } = req.query;
 
-  const where: any = assignedToId ? { assignedToId: assignedToId as string } : {};
+  // Get role-based filter
+  const roleFilter = getRoleFilterFromRequest(req);
+  const additionalWhere: Record<string, unknown> = {};
+  
+  if (assignedToId) {
+    additionalWhere.assignedToId = assignedToId as string;
+  }
+  
+  const where = getLeadsFilter(roleFilter, additionalWhere);
 
   const [
     total,

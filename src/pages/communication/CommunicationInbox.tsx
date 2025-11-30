@@ -19,6 +19,7 @@ import {
   Sparkles,
   FileText,
   Settings,
+  X,
   Download,
   Filter,
   RefreshCw,
@@ -39,7 +40,8 @@ import {
   AlertDialogTitle
 } from '@/components/ui/Dialog'
 import { useToast } from '@/hooks/useToast'
-import { messagesApi, leadsApi } from '@/lib/api'
+import { messagesApi, leadsApi, aiApi } from '@/lib/api'
+import { AIComposer } from '@/components/ai/AIComposer'
 
 interface Message {
   id: number
@@ -83,6 +85,13 @@ interface Thread {
   type: 'email' | 'sms' | 'call'
   messages: Message[]
   subject?: string
+  lead?: {
+    id: number
+    firstName: string
+    lastName: string
+    phone?: string
+    email?: string
+  }
 }
 
 // Mock data removed - using real API data
@@ -119,8 +128,8 @@ const CommunicationInbox = () => {
   const [composeSubject, setComposeSubject] = useState('')
   const [composeBody, setComposeBody] = useState('')
   const [composeLeadId, setComposeLeadId] = useState<string>('')
-  const [leads, setLeads] = useState<Array<{id: string, name: string, phone: string, email: string}>>([])
-  const [loadingLeads, setLoadingLeads] = useState(false)
+  const [leads, setLeads] = useState<Array<{id: string, firstName: string, lastName: string, phone: string, email: string}>>([])
+  const [_loadingLeads, setLoadingLeads] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showAttachmentModal, setShowAttachmentModal] = useState(false)
@@ -129,6 +138,15 @@ const CommunicationInbox = () => {
   const [showQuickReplies, setShowQuickReplies] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [threadToDelete, setThreadToDelete] = useState<number | null>(null)
+  const [showAIComposer, setShowAIComposer] = useState(false)
+  const [showEnhanceMode, setShowEnhanceMode] = useState(false)
+  const [enhancedMessage, setEnhancedMessage] = useState('')
+  const [showBeforeAfter, setShowBeforeAfter] = useState(false)
+  const [showGenerateMode, setShowGenerateMode] = useState(false)
+  const [showReplaceWarning, setShowReplaceWarning] = useState(false)
+  const [enhanceTone, setEnhanceTone] = useState('professional')
+  const [enhancingMessage, setEnhancingMessage] = useState(false)
+  const [_emailSubject, _setEmailSubject] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
@@ -212,7 +230,8 @@ const CommunicationInbox = () => {
       const leadsData = response?.data?.leads || response?.leads || response || []
       const formattedLeads = leadsData.map((lead: any) => ({
         id: lead.id,
-        name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.email || lead.phone,
+        firstName: lead.firstName || '',
+        lastName: lead.lastName || '',
         phone: lead.phone || '',
         email: lead.email || ''
       }))
@@ -223,10 +242,11 @@ const CommunicationInbox = () => {
       const uniqueLeads = threads
         .filter(t => t.lead)
         .map(t => ({
-          id: t.lead.id,
-          name: `${t.lead.firstName} ${t.lead.lastName}`,
-          phone: t.lead.phone || '',
-          email: t.lead.email || ''
+          id: String(t.lead!.id),
+          firstName: t.lead!.firstName,
+          lastName: t.lead!.lastName,
+          phone: t.lead!.phone || '',
+          email: t.lead!.email || ''
         }))
       setLeads(uniqueLeads)
     } finally {
@@ -564,6 +584,7 @@ const CommunicationInbox = () => {
         status: 'sent'
       }
 
+      // Show reply immediately for better UX
       setThreads(prev => prev.map(t => t.id === selectedThread.id ? { ...t, messages: [...t.messages, newMessage], lastMessage: newMessage.body, timestamp: 'Just now' } : t))
       toast.success('Reply sent successfully')
       setReplyText('')
@@ -571,8 +592,10 @@ const CommunicationInbox = () => {
       // Scroll to bottom to show new message
       setTimeout(scrollToBottom, 100)
       
-      // Refresh messages to get updated data
-      await loadMessages(true)
+      // Refresh from backend to ensure persistence
+      setTimeout(async () => {
+        await loadMessages(true, true) // Refresh and preserve selection
+      }, 500)
     } catch (error) {
       console.error('Failed to send reply:', error)
       toast.error('Failed to send reply, please try again')
@@ -644,11 +667,75 @@ const CommunicationInbox = () => {
   }
 
   const handleAICompose = () => {
-    toast.success('AI composing response...')
-    // Simulate AI composing
-    setTimeout(() => {
-      setReplyText('Hi ' + selectedThread?.contact + ',\n\nThank you for your message. I\'d be happy to help with that. Let me know if you have any other questions!\n\nBest regards')
-    }, 500)
+    console.log('🤖 AI Compose clicked!', {
+      currentState: showAIComposer,
+      selectedThread: selectedThread?.id,
+      hasLead: !!selectedThread?.lead,
+      leadId: selectedThread?.lead?.id
+    })
+    setShowAIComposer(!showAIComposer)
+  }
+
+  const handleMessageGenerated = (message: string, subject?: string) => {
+    setReplyText(message)
+    if (subject) {
+      _setEmailSubject(subject)
+      // TODO: Add subject field to email composer UI
+    }
+    setShowAIComposer(false)
+    toast.success('AI-generated message has been added to your reply box')
+  }
+
+  const handleEnhance = async () => {
+    if (!replyText || replyText.length < 10) {
+      toast.error('Type a message first (at least 10 characters)')
+      return
+    }
+    
+    setEnhancingMessage(true)
+    setShowEnhanceMode(true)
+    
+    try {
+      const result = await aiApi.enhanceMessage({
+        message: replyText,
+        tone: enhanceTone
+      })
+      
+      setEnhancedMessage(result.data.enhanced)
+      setShowBeforeAfter(true)
+    } catch (error) {
+      console.error('Enhance error:', error)
+      toast.error('Failed to enhance message')
+      setShowEnhanceMode(false)
+    } finally {
+      setEnhancingMessage(false)
+    }
+  }
+
+  const applyEnhanced = () => {
+    setReplyText(enhancedMessage)
+    setShowBeforeAfter(false)
+    setShowEnhanceMode(false)
+    toast.success('Enhanced message applied!')
+  }
+
+  const cancelEnhance = () => {
+    setShowBeforeAfter(false)
+    setShowEnhanceMode(false)
+    setEnhancedMessage('')
+  }
+
+  const handleGenerateClick = () => {
+    if (replyText.length > 10) {
+      setShowReplaceWarning(true)
+    } else {
+      setShowAIComposer(true)
+    }
+  }
+
+  const confirmGenerate = () => {
+    setShowReplaceWarning(false)
+    setShowAIComposer(true)
   }
 
   const handleMarkAllAsRead = async () => {
@@ -757,73 +844,53 @@ const CommunicationInbox = () => {
         ? composeBody + signature 
         : composeBody
 
-      // Call API based on message type
+      // Call API based on message type - wait for response to get real IDs
+      let apiResponse: any = null
       if (composeType === 'email') {
-        await messagesApi.sendEmail({
+        apiResponse = await messagesApi.sendEmail({
           to: composeTo,
           subject: composeSubject,
           body: messageBody,
           leadId: composeLeadId || undefined
         })
       } else if (composeType === 'sms') {
-        await messagesApi.sendSMS({
+        apiResponse = await messagesApi.sendSMS({
           to: composeTo,
           body: messageBody,
           leadId: composeLeadId || undefined
         })
       } else if (composeType === 'call') {
-        await messagesApi.makeCall({
+        apiResponse = await messagesApi.makeCall({
           to: composeTo,
           notes: messageBody,
           leadId: composeLeadId || undefined
         })
       }
 
-      // Create new thread with the composed message
-      const newThreadId = Math.max(...threads.map(t => t.id)) + 1
-      const newMessageId = Date.now()
-
-      const newMessage: Message = {
-        id: newMessageId,
-        threadId: newThreadId,
-        type: composeType,
-        from: 'you@company.com',
-        to: composeTo,
-        contact: composeTo.split('@')[0] || composeTo,
-        subject: composeType === 'email' ? composeSubject : undefined,
-        body: messageBody,
-        timestamp: 'Just now',
-        date: new Date().toLocaleString(),
-        unread: false,
-        starred: false,
-        status: 'sent'
-      }
-
-      const newThread: Thread = {
-        id: newThreadId,
-        contact: composeTo.split('@')[0] || composeTo,
-        lastMessage: composeBody,
-        timestamp: 'Just now',
-        unread: 0,
-        type: composeType,
-        messages: [newMessage],
-        subject: composeType === 'email' ? composeSubject : undefined
-      }
-
-      setThreads(prev => [newThread, ...prev])
-      setSelectedThread(newThread)
+      toast.success('Message sent successfully')
+      
+      // Close modal and reset form
       setShowComposeModal(false)
       setComposeTo('')
       setComposeSubject('')
       setComposeBody('')
       setComposeLeadId('')
-      toast.success('Message sent successfully')
 
-      // Scroll to bottom to show new message
-      setTimeout(scrollToBottom, 100)
-
-      // Refresh messages to get updated data
-      await loadMessages(true)
+      // Reload messages from backend to show the new conversation
+      // This ensures we have the real message with proper ID and persistence
+      setTimeout(async () => {
+        await loadMessages(true, false)
+        
+        // If we got a threadId from the response, try to select that thread
+        if (apiResponse?.data?.threadId || apiResponse?.threadId) {
+          const threadId = apiResponse.data?.threadId || apiResponse.threadId
+          const newThread = threads.find(t => t.id === threadId)
+          if (newThread) {
+            setSelectedThread(newThread)
+            setTimeout(scrollToBottom, 100)
+          }
+        }
+      }, 500) // Short delay to allow backend to fully process
     } catch (error) {
       console.error('Failed to send message:', error)
       toast.error('Failed to send message, please try again')
@@ -1364,14 +1431,120 @@ const CommunicationInbox = () => {
               {/* Reply Box - Fixed at bottom */}
               <div className="p-4 border-t flex-shrink-0">
                 <div className="space-y-3">
+                  {/* Before/After Comparison Panel */}
+                  {showBeforeAfter && (
+                    <div className="border-t bg-gradient-to-b from-green-50 to-white p-4 space-y-3 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-green-600" />
+                            AI Enhanced Version
+                          </h4>
+                          <select
+                            value={enhanceTone}
+                            onChange={(e) => {
+                              setEnhanceTone(e.target.value)
+                              handleEnhance()
+                            }}
+                            className="px-3 py-1 text-sm border rounded-lg"
+                          >
+                            <option value="professional">Professional</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="casual">Casual</option>
+                            <option value="formal">Formal</option>
+                            <option value="enthusiastic">Enthusiastic</option>
+                            <option value="concise">Concise</option>
+                          </select>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleEnhance}
+                            disabled={enhancingMessage}
+                            className="gap-1"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            Regenerate
+                          </Button>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={cancelEnhance}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                            Your Draft
+                          </label>
+                          <div className="bg-gray-100 border rounded-lg p-3 text-sm min-h-[100px] whitespace-pre-wrap">
+                            {replyText}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="text-xs font-medium text-green-600 mb-1 block">
+                            ✨ Enhanced Version
+                          </label>
+                          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3 text-sm min-h-[100px] whitespace-pre-wrap">
+                            {enhancedMessage}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={cancelEnhance}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={applyEnhanced}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Use Enhanced Version
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Composer - Inline */}
+                  {showAIComposer && selectedThread ? (
+                    <AIComposer
+                      leadId={selectedThread.lead?.id?.toString() || selectedThread.id.toString()}
+                      conversationId={selectedThread.id.toString()}
+                      messageType={selectedChannel === 'sms' ? 'sms' : selectedChannel === 'call' ? 'call' : 'email'}
+                      onMessageGenerated={handleMessageGenerated}
+                      onClose={() => setShowAIComposer(false)}
+                    />
+                  ) : null}
+                  
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={handleAICompose}
+                      variant={replyText.length > 10 ? "outline" : "default"}
+                      onClick={handleGenerateClick}
+                      disabled={!selectedThread}
+                      title={!selectedThread ? "Select a conversation first" : replyText.length > 10 ? "This will replace your current text" : "Generate AI message from scratch"}
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
-                      AI Compose
+                      Generate AI Message
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={replyText.length > 10 ? "default" : "outline"}
+                      onClick={handleEnhance}
+                      disabled={!selectedThread || replyText.length < 10}
+                      title={replyText.length < 10 ? "Type your message first (10+ characters)" : "Enhance your message with AI"}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Enhance with AI
                     </Button>
                     <div className="relative">
                       <Button 
@@ -1748,7 +1921,7 @@ const CommunicationInbox = () => {
                     <option value="">-- Select a lead or enter manually below --</option>
                     {leads.map(lead => (
                       <option key={lead.id} value={lead.id}>
-                        {lead.name} ({composeType === 'email' ? lead.email : lead.phone})
+                        {lead.firstName} {lead.lastName} ({composeType === 'email' ? lead.email : lead.phone})
                       </option>
                     ))}
                   </select>
@@ -1891,6 +2064,26 @@ const CommunicationInbox = () => {
             </AlertDialogCancel>
             <AlertDialogAction onClick={confirmTrashThread} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Replace Draft Warning Modal */}
+      <AlertDialog open={showReplaceWarning} onOpenChange={setShowReplaceWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Replace Your Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have a draft message. Generating will replace your current text. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowReplaceWarning(false)}>
+              Keep Editing
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmGenerate}>
+              Generate Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw, Brain, Target, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { aiApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import intelligenceService, { type DashboardInsights, type ScoringModel } from '@/services/intelligenceService';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const IntelligenceInsights = () => {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
+  const [optimizing, setOptimizing] = useState(false)
   const [insights, setInsights] = useState<Array<{
     id: string | number;
     category: string;
@@ -20,6 +23,9 @@ const IntelligenceInsights = () => {
     confidence: number;
     created: string;
   }>>([])
+  const [dashboardInsights, setDashboardInsights] = useState<DashboardInsights | null>(null)
+  const [scoringModel, setScoringModel] = useState<ScoringModel | null>(null)
+  const [trendsData, setTrendsData] = useState<any>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,15 +37,40 @@ const IntelligenceInsights = () => {
   const loadInsights = async () => {
     setLoading(true)
     try {
-      const data = await aiApi.getInsights()
-      if (data?.insights) {
-        setInsights(data.insights)
+      // Load both old and new insights
+      const [oldInsights, newDashboard, model, trends] = await Promise.all([
+        aiApi.getInsights().catch(() => ({ insights: [] })),
+        intelligenceService.getDashboardInsights().catch(() => null),
+        intelligenceService.getScoringModel().catch(() => null),
+        intelligenceService.getAnalyticsTrends(30).catch(() => null),
+      ])
+      
+      if (oldInsights?.insights) {
+        setInsights(oldInsights.insights)
       }
+      
+      setDashboardInsights(newDashboard)
+      setScoringModel(model)
+      setTrendsData(trends)
     } catch (error) {
       const err = error as Error
       toast.error(err.message || 'Failed to load insights')
     } finally {
       setLoading(false)
+    }
+  }
+  
+  const handleOptimizeScoring = async () => {
+    setOptimizing(true)
+    try {
+      const result = await intelligenceService.optimizeScoring()
+      toast.success(`Scoring optimized! New accuracy: ${result.accuracy.toFixed(1)}%`)
+      await loadInsights() // Reload to get updated model
+    } catch (error) {
+      const err = error as Error
+      toast.error(err.message || 'Failed to optimize scoring')
+    } finally {
+      setOptimizing(false)
     }
   }
 
@@ -128,6 +159,145 @@ const IntelligenceInsights = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* ML Model Performance Card */}
+      {scoringModel && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-primary" />
+                  ML Scoring Model
+                </CardTitle>
+                <CardDescription>Machine learning model performance and optimization</CardDescription>
+              </div>
+              <Button onClick={handleOptimizeScoring} disabled={optimizing} variant="outline">
+                {optimizing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Target className="h-4 w-4 mr-2" />}
+                {optimizing ? 'Optimizing...' : 'Optimize Model'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Model Accuracy</p>
+                <div className="text-3xl font-bold text-primary">
+                  {scoringModel.accuracy ? `${scoringModel.accuracy.toFixed(1)}%` : 'Not trained'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {scoringModel.accuracy && scoringModel.accuracy >= 90 ? 'Excellent' : 
+                   scoringModel.accuracy && scoringModel.accuracy >= 80 ? 'Good' : 
+                   scoringModel.accuracy && scoringModel.accuracy >= 70 ? 'Fair' : 'Needs training'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Training Data</p>
+                <div className="text-3xl font-bold">{scoringModel.trainingDataCount}</div>
+                <p className="text-xs text-muted-foreground">Conversion outcomes</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Last Optimized</p>
+                <div className="text-sm font-medium">
+                  {scoringModel.lastTrainedAt 
+                    ? new Date(scoringModel.lastTrainedAt).toLocaleDateString()
+                    : 'Never'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {scoringModel.lastTrainedAt ? 'Auto-optimizes weekly' : 'Needs 20+ conversions'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Model Weights</p>
+                <div className="text-xs space-y-1">
+                  <div className="flex justify-between">
+                    <span>Score:</span>
+                    <span className="font-medium">{(scoringModel.factors.scoreWeight * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Activity:</span>
+                    <span className="font-medium">{(scoringModel.factors.activityWeight * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Recency:</span>
+                    <span className="font-medium">{(scoringModel.factors.recencyWeight * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Funnel Time:</span>
+                    <span className="font-medium">{(scoringModel.factors.funnelTimeWeight * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dashboard Insights - Top Opportunities */}
+      {dashboardInsights && dashboardInsights.topOpportunities.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-yellow-500" />
+              Top Opportunities
+            </CardTitle>
+            <CardDescription>Leads with highest conversion probability</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {dashboardInsights.topOpportunities.map((opp) => (
+                <div key={opp.leadId} className="flex items-center justify-between p-3 border rounded-lg hover:bg-secondary/50 transition-colors">
+                  <div>
+                    <p className="font-medium">{opp.leadName}</p>
+                    <p className="text-sm text-muted-foreground">Lead ID: {opp.leadId.slice(0, 8)}...</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="success" className="mb-1">
+                      {opp.probability}% probability
+                    </Badge>
+                    <p className="text-sm font-medium">${opp.value.toLocaleString()} est. value</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Conversion Trends Chart */}
+      {trendsData && trendsData.conversionTrend && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Conversion Probability Trends</CardTitle>
+            <CardDescription>Average conversion probability over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trendsData.conversionTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="avgProbability" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  name="Avg Probability (%)"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="conversions" 
+                  stroke="#10b981" 
+                  strokeWidth={2}
+                  name="Conversions"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card>

@@ -59,11 +59,12 @@ const LeadScoring = () => {
       })
       
       // Transform leads data for display
-      const scoredLeads = leadsResponse.leads?.map((lead: { id: string; name: string; email: string; company?: string; score?: number }) => {
+      const scoredLeads = leadsResponse.leads?.map((lead: { id: string; firstName?: string; lastName?: string; email: string; company?: string; score?: number }) => {
         const score = lead.score || 0
+        const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'
         return {
           id: lead.id,
-          name: lead.name,
+          name: fullName,
           email: lead.email,
           company: lead.company || 'N/A',
           score,

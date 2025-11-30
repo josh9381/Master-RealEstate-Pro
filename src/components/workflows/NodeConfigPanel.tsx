@@ -212,21 +212,60 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Label htmlFor="subject">Email Subject</Label>
             <Input
               id="subject"
-              placeholder="Enter email subject"
-              value={config.subject as string || ''}
-              onChange={(e) => updateConfig('subject', e.target.value)}
+              placeholder="e.g., Welcome [FirstName]!"
+              value={String(config.subject || '')
+                .replace(/\{\{lead\.firstName\}\}/gi, '[FirstName]')
+                .replace(/\{\{lead\.lastName\}\}/gi, '[LastName]')
+                .replace(/\{\{lead\.FirstName\}\}/gi, '[FirstName]')
+                .replace(/\{\{lead\.LastName\}\}/gi, '[LastName]')}
+              onChange={(e) => {
+                // Convert back to template syntax for storage
+                const value = e.target.value
+                  .replace(/\[FirstName\]/gi, '{{lead.firstName}}')
+                  .replace(/\[LastName\]/gi, '{{lead.lastName}}');
+                updateConfig('subject', value);
+              }}
             />
+            <p className="text-xs text-muted-foreground">
+              💡 Type [FirstName] or [LastName] to personalize the subject
+            </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="body">Email Body</Label>
+            <Label>Email Preview</Label>
+            <div className="w-full p-4 border rounded-md bg-white dark:bg-gray-900 min-h-[120px] text-sm">
+              {config.body ? (
+                <div 
+                  dangerouslySetInnerHTML={{ 
+                    __html: String(config.body)
+                      .replace(/\{\{lead\.firstName\}\}/gi, '[FirstName]')
+                      .replace(/\{\{lead\.lastName\}\}/gi, '[LastName]')
+                      .replace(/\{\{lead\.FirstName\}\}/gi, '[FirstName]')
+                      .replace(/\{\{lead\.LastName\}\}/gi, '[LastName]')
+                  }}
+                />
+              ) : (
+                <p className="text-muted-foreground italic">Your email message will appear here...</p>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This is how your email will look to leads
+            </p>
+          </div>
+          <details className="space-y-2">
+            <summary className="text-sm font-medium cursor-pointer hover:text-primary">
+              ✏️ Advanced: Edit HTML Source
+            </summary>
             <textarea
               id="body"
-              className="w-full p-2 border rounded-md min-h-[100px]"
-              placeholder="Enter email content..."
+              className="w-full p-2 border rounded-md min-h-[100px] font-mono text-xs bg-gray-50 dark:bg-gray-900"
+              placeholder="Enter email HTML content..."
               value={config.body as string || ''}
               onChange={(e) => updateConfig('body', e.target.value)}
             />
-          </div>
+            <p className="text-xs text-muted-foreground">
+              Use HTML tags and [FirstName], [LastName] for personalization
+            </p>
+          </details>
         </>
       );
     }
@@ -381,7 +420,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           <div>
             <CardTitle>Configure {node.label}</CardTitle>
             <CardDescription>
-              Set up the parameters for this {node.type}
+              Set up the details for this step
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>

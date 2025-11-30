@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/useToast';
 const DemoDataGenerator = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [_generating, setGenerating] = useState(false);
   const [leadsCount, setLeadsCount] = useState('100');
   const [campaignsCount, setCampaignsCount] = useState('10');
   const [activitiesCount, setActivitiesCount] = useState('500');

@@ -3,7 +3,6 @@ import { TestTube2, TrendingUp, Users, Mail, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import {
   BarChart,
@@ -15,14 +14,17 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import * as abtestService from '@/services/abtestService';
+import type { ABTest, ABTestResult, StatisticalAnalysis } from '@/services/abtestService';
 
 const ABTesting = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [activeTests, setActiveTests] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [completedTests, setCompletedTests] = useState<any[]>([]);
+  const [tests, setTests] = useState<ABTest[]>([]);
+  const [testResults, setTestResults] = useState<Record<string, {
+    results: { variantA: ABTestResult; variantB: ABTestResult };
+    analysis: StatisticalAnalysis;
+  }>>({});
   const [stats, setStats] = useState({
     activeTests: 0,
     completedTests: 0,
@@ -32,88 +34,60 @@ const ABTesting = () => {
 
   useEffect(() => {
     loadABTests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadABTests = async () => {
     setIsLoading(true);
     try {
-      const response = await campaignsApi.getCampaigns();
-      const campaigns = response.data || [];
+      const allTests = await abtestService.getABTests();
+      setTests(allTests);
 
-      // Simulate A/B test variants by pairing campaigns
-      // In a real implementation, campaigns would have variant metadata
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const active = campaigns
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .filter((c: any) => c.status === 'active' || c.status === 'running')
-        .slice(0, 2);
-      
-      if (active.length >= 2) {
-        const variantA = active[0];
-        const variantB = active[1];
-        
-        // Mock A/B test data from two campaigns
-        const sentA = variantA.recipientCount || 2500;
-        const sentB = variantB.recipientCount || 2500;
-        const openedA = Math.floor(sentA * 0.35);
-        const openedB = Math.floor(sentB * 0.41);
-        const clickedA = Math.floor(openedA * 0.25);
-        const clickedB = Math.floor(openedB * 0.28);
+      // Load results for active and completed tests
+      const resultsPromises = allTests
+        .filter(t => t.status === 'RUNNING' || t.status === 'COMPLETED')
+        .map(async (test) => {
+          try {
+            const results = await abtestService.getABTestResults(test.id);
+            return { testId: test.id, data: results };
+          } catch (error) {
+            console.error(`Error loading results for test ${test.id}:`, error);
+            return null;
+          }
+        });
 
-        const testData = {
-          id: variantA.id,
-          name: `A/B Test: ${variantA.name}`,
-          status: 'running',
-          created: new Date(variantA.createdAt).toLocaleDateString(),
-          variantA: {
-            name: `Variant A: "${variantA.name}"`,
-            sent: sentA,
-            opened: openedA,
-            clicked: clickedA,
-            openRate: (openedA / sentA * 100).toFixed(1),
-            clickRate: (clickedA / sentA * 100).toFixed(1),
-          },
-          variantB: {
-            name: `Variant B: "${variantB.name}"`,
-            sent: sentB,
-            opened: openedB,
-            clicked: clickedB,
-            openRate: (openedB / sentB * 100).toFixed(1),
-            clickRate: (clickedB / sentB * 100).toFixed(1),
-          },
-          winner: openedB > openedA ? 'B' : 'A',
-          confidence: 95,
-        };
-        setActiveTests([testData]);
-      } else {
-        setActiveTests([]);
-      }
-
-      // Mock completed tests from sent/completed campaigns
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const completed = campaigns
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .filter((c: any) => c.status === 'sent' || c.status === 'completed')
-        .slice(0, 5)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((c: any) => ({
-          id: c.id,
-          name: `Test: ${c.name}`,
-          completed: new Date(c.updatedAt).toLocaleDateString(),
-          winner: 'Variant B',
-          improvement: `+${Math.floor(Math.random() * 30 + 10)}% CTR`,
-        }));
-      setCompletedTests(completed);
+      const resultsData = await Promise.all(resultsPromises);
+      const resultsMap: Record<string, { results: { variantA: ABTestResult; variantB: ABTestResult }; analysis: StatisticalAnalysis }> = {};
+      resultsData.forEach((item) => {
+        if (item) {
+          resultsMap[item.testId] = item.data;
+        }
+      });
+      setTestResults(resultsMap);
 
       // Calculate stats
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalRecipients = campaigns.reduce((sum: number, c: any) => sum + (c.recipientCount || 0), 0);
+      const activeTests = allTests.filter(t => t.status === 'RUNNING').length;
+      const completedTests = allTests.filter(t => t.status === 'COMPLETED').length;
+      const totalParticipants = allTests.reduce((sum, t) => sum + t.participantCount, 0);
+
+      // Calculate average improvement from completed tests
+      const improvements = Object.values(resultsMap)
+        .map(r => {
+          const aRate = r.results.variantA.conversionRate;
+          const bRate = r.results.variantB.conversionRate;
+          return Math.abs(bRate - aRate);
+        })
+        .filter(imp => imp > 0);
+      
+      const avgImprovement = improvements.length > 0
+        ? improvements.reduce((sum, imp) => sum + imp, 0) / improvements.length
+        : 0;
+
       setStats({
-        activeTests: activeTests.length > 0 ? 1 : 0,
-        completedTests: completed.length,
-        avgImprovement: 18.5,
-        totalTested: totalRecipients,
+        activeTests,
+        completedTests,
+        avgImprovement: Math.round(avgImprovement * 10) / 10,
+        totalTested: totalParticipants,
       });
 
     } catch (error) {
@@ -123,6 +97,20 @@ const ABTesting = () => {
       setIsLoading(false);
     }
   };
+
+  const handleStopTest = async (testId: string) => {
+    try {
+      await abtestService.stopABTest(testId);
+      toast.success('Test stopped successfully');
+      loadABTests();
+    } catch (error) {
+      console.error('Error stopping test:', error);
+      toast.error('Failed to stop test');
+    }
+  };
+
+  const activeTests = tests.filter(t => t.status === 'RUNNING');
+  const completedTests = tests.filter(t => t.status === 'COMPLETED');
 
   return (
     <div className="space-y-6">
@@ -198,23 +186,41 @@ const ABTesting = () => {
         </Card>
       ) : (
         activeTests.map((test) => {
+          const results = testResults[test.id];
+          if (!results) {
+            return (
+              <Card key={test.id}>
+                <CardContent className="py-12">
+                  <p className="text-center text-muted-foreground">Loading test results...</p>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          const { variantA, variantB } = results.results;
+          const { analysis } = results;
+
           const performanceData = [
             {
               metric: 'Open Rate',
-              variantA: parseFloat(test.variantA.openRate),
-              variantB: parseFloat(test.variantB.openRate),
+              variantA: variantA.openRate,
+              variantB: variantB.openRate,
             },
             {
               metric: 'Click Rate',
-              variantA: parseFloat(test.variantA.clickRate),
-              variantB: parseFloat(test.variantB.clickRate),
+              variantA: variantA.clickRate,
+              variantB: variantB.clickRate,
             },
             {
               metric: 'Conversion',
-              variantA: parseFloat(test.variantA.clickRate) * 0.3,
-              variantB: parseFloat(test.variantB.clickRate) * 0.35,
+              variantA: variantA.conversionRate,
+              variantB: variantB.conversionRate,
             },
           ];
+
+          const winner = analysis.winner;
+          const variantASubject = test.variantA.subject || 'Variant A';
+          const variantBSubject = test.variantB.subject || 'Variant B';
 
           return (
             <Card key={test.id}>
@@ -222,11 +228,11 @@ const ABTesting = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>{test.name}</CardTitle>
-                    <CardDescription>Started {test.created}</CardDescription>
+                    <CardDescription>Started {new Date(test.createdAt).toLocaleDateString()}</CardDescription>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge variant="success">Running</Badge>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleStopTest(test.id)}>
                       Stop Test
                     </Button>
                   </div>
@@ -252,97 +258,121 @@ const ABTesting = () => {
             {/* Variant Details */}
             <div className="grid gap-6 md:grid-cols-2">
               {/* Variant A */}
-              <div className="p-4 border rounded-lg">
+              <div className={`p-4 border rounded-lg ${winner === 'A' ? 'border-2 border-green-500 bg-green-50' : ''}`}>
                 <div className="flex items-center justify-between mb-3">
-                  <Badge variant="secondary">Variant A</Badge>
+                  <Badge variant={winner === 'A' ? 'success' : 'secondary'}>
+                    Variant A {winner === 'A' ? '- Winner' : ''}
+                  </Badge>
                   <span className="text-sm text-muted-foreground">
-                    {test.variantA.sent.toLocaleString()} sent
+                    {variantA.participantCount.toLocaleString()} participants
                   </span>
                 </div>
-                <h4 className="font-medium mb-4">{test.variantA.name}</h4>
+                <h4 className="font-medium mb-4">{variantASubject}</h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Opens</span>
+                    <span className="text-sm text-muted-foreground">Open Rate</span>
                     <span className="font-medium">
-                      {test.variantA.opened.toLocaleString()} ({test.variantA.openRate}%)
+                      {variantA.openRate.toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div
-                      className="bg-blue-500 h-2 rounded-full"
-                      style={{ width: `${test.variantA.openRate}%` }}
+                      className={winner === 'A' ? 'bg-green-500 h-2 rounded-full' : 'bg-blue-500 h-2 rounded-full'}
+                      style={{ width: `${Math.min(variantA.openRate, 100)}%` }}
                     ></div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Clicks</span>
+                    <span className="text-sm text-muted-foreground">Click Rate</span>
                     <span className="font-medium">
-                      {test.variantA.clicked.toLocaleString()} ({test.variantA.clickRate}%)
+                      {variantA.clickRate.toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div
-                      className="bg-blue-500 h-2 rounded-full"
-                      style={{ width: `${test.variantA.clickRate * 10}%` }}
+                      className={winner === 'A' ? 'bg-green-500 h-2 rounded-full' : 'bg-blue-500 h-2 rounded-full'}
+                      style={{ width: `${Math.min(variantA.clickRate * 2, 100)}%` }}
                     ></div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Conversion Rate</span>
+                    <span className="font-medium">
+                      {variantA.conversionRate.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Variant B (Winner) */}
-              <div className="p-4 border-2 border-green-500 rounded-lg bg-green-50">
+              {/* Variant B */}
+              <div className={`p-4 border rounded-lg ${winner === 'B' ? 'border-2 border-green-500 bg-green-50' : ''}`}>
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="success">Variant B - Winner</Badge>
-                  </div>
+                  <Badge variant={winner === 'B' ? 'success' : 'secondary'}>
+                    Variant B {winner === 'B' ? '- Winner' : ''}
+                  </Badge>
                   <span className="text-sm text-muted-foreground">
-                    {test.variantB.sent.toLocaleString()} sent
+                    {variantB.participantCount.toLocaleString()} participants
                   </span>
                 </div>
-                <h4 className="font-medium mb-4">{test.variantB.name}</h4>
+                <h4 className="font-medium mb-4">{variantBSubject}</h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Opens</span>
+                    <span className="text-sm text-muted-foreground">Open Rate</span>
                     <span className="font-medium">
-                      {test.variantB.opened.toLocaleString()} ({test.variantB.openRate}%)
+                      {variantB.openRate.toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: `${test.variantB.openRate}%` }}
+                      className={winner === 'B' ? 'bg-green-500 h-2 rounded-full' : 'bg-blue-500 h-2 rounded-full'}
+                      style={{ width: `${Math.min(variantB.openRate, 100)}%` }}
                     ></div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Clicks</span>
+                    <span className="text-sm text-muted-foreground">Click Rate</span>
                     <span className="font-medium">
-                      {test.variantB.clicked.toLocaleString()} ({test.variantB.clickRate}%)
+                      {variantB.clickRate.toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: `${test.variantB.clickRate * 10}%` }}
+                      className={winner === 'B' ? 'bg-green-500 h-2 rounded-full' : 'bg-blue-500 h-2 rounded-full'}
+                      style={{ width: `${Math.min(variantB.clickRate * 2, 100)}%` }}
                     ></div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Conversion Rate</span>
+                    <span className="font-medium">
+                      {variantB.conversionRate.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Statistical Significance */}
-            <div className="p-4 bg-green-100 border border-green-300 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-green-900">
-                    Variant B is winning with {test.confidence}% confidence
-                  </p>
-                  <p className="text-sm text-green-700 mt-1">
-                    Variant B has +{test.variantB.openRate - test.variantA.openRate}% open rate
-                    and +{test.variantB.clickRate - test.variantA.clickRate}% click rate
-                  </p>
+            {analysis.isSignificant ? (
+              <div className="p-4 bg-green-100 border border-green-300 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-green-900">
+                      Variant {winner} is winning with {analysis.confidence.toFixed(1)}% confidence
+                    </p>
+                    <p className="text-sm text-green-700 mt-1">
+                      The difference is statistically significant (p-value: {analysis.pValue.toFixed(4)})
+                    </p>
+                  </div>
+                  <Button onClick={() => handleStopTest(test.id)}>Declare Winner</Button>
                 </div>
-                <Button>Declare Winner</Button>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
+                <p className="font-semibold text-yellow-900">
+                  Not enough data for statistical significance
+                </p>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Need at least 30 participants per variant. Current: A={variantA.participantCount}, B={variantB.participantCount}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
           );
@@ -360,28 +390,36 @@ const ABTesting = () => {
             {completedTests.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No completed tests</p>
             ) : (
-              completedTests.map((test) => (
-                <div
-                  key={test.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div>
-                    <h4 className="font-semibold">{test.name}</h4>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Completed {test.completed}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <Badge variant="success">{test.winner}</Badge>
-                      <p className="text-sm font-medium text-green-600 mt-1">{test.improvement}</p>
+              completedTests.map((test) => {
+                const results = testResults[test.id];
+                const winner = test.winnerId || 'N/A';
+                const improvement = results 
+                  ? Math.abs(results.results.variantB.conversionRate - results.results.variantA.conversionRate).toFixed(1)
+                  : '0';
+
+                return (
+                  <div
+                    key={test.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div>
+                      <h4 className="font-semibold">{test.name}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Completed {test.endDate ? new Date(test.endDate).toLocaleDateString() : 'N/A'}
+                      </p>
                     </div>
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <Badge variant="success">Variant {winner}</Badge>
+                        <p className="text-sm font-medium text-green-600 mt-1">+{improvement}% improvement</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => window.location.href = `/campaigns/ab-tests/${test.id}`}>
+                        View Details
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </CardContent>

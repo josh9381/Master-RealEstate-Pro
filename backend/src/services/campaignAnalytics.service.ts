@@ -148,7 +148,8 @@ export async function updateCampaignMetrics(campaignId: string): Promise<void> {
 export async function trackEmailOpen(
   campaignId: string,
   leadId: string,
-  messageId: string
+  messageId: string,
+  organizationId: string
 ): Promise<void> {
   // Create activity
   await prisma.activity.create({
@@ -158,6 +159,7 @@ export async function trackEmailOpen(
       description: 'Lead opened campaign email',
       campaignId,
       leadId,
+      organizationId,
       metadata: {
         messageId,
         timestamp: new Date().toISOString(),
@@ -197,7 +199,8 @@ export async function trackEmailClick(
   campaignId: string,
   leadId: string,
   messageId: string,
-  url: string
+  url: string,
+  organizationId: string
 ): Promise<void> {
   // Create activity
   await prisma.activity.create({
@@ -207,6 +210,7 @@ export async function trackEmailClick(
       description: `Lead clicked link: ${url}`,
       campaignId,
       leadId,
+      organizationId,
       metadata: {
         messageId,
         url,
@@ -259,6 +263,7 @@ export async function trackEmailClick(
 export async function trackConversion(
   campaignId: string,
   leadId: string,
+  organizationId: string,
   value?: number
 ): Promise<void> {
   // Create activity
@@ -269,6 +274,7 @@ export async function trackConversion(
       description: 'Lead converted from campaign',
       campaignId,
       leadId,
+      organizationId,
       metadata: {
         conversion: true,
         value,

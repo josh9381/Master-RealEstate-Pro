@@ -8,64 +8,72 @@ datasource db {
 }
 
 model Activity {
-  id          String       @id @default(cuid())
-  type        ActivityType
-  title       String
-  description String?
-  leadId      String?
-  campaignId  String?
-  userId      String?
-  metadata    Json?
-  createdAt   DateTime     @default(now())
-  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  user        User?        @relation(fields: [userId], references: [id])
+  id             String       @id @default(cuid())
+  type           ActivityType
+  title          String
+  description    String?
+  leadId         String?
+  campaignId     String?
+  userId         String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organizationId String
+  campaign       Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id])
 
   @@index([campaignId])
   @@index([createdAt])
   @@index([leadId])
   @@index([type])
   @@index([userId])
+  @@index([organizationId, createdAt])
+  @@index([organizationId])
 }
 
 model APIKeyAudit {
-  id         String   @id @default(cuid())
-  userId     String
-  provider   String   // 'twilio', 'sendgrid', etc.
-  action     String   // 'created', 'updated', 'accessed', 'deleted'
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String
+  action    String
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([provider])
 }
 
 model Appointment {
-  id           String            @id @default(cuid())
-  title        String
-  description  String?
-  startTime    DateTime
-  endTime      DateTime
-  location     String?
-  meetingUrl   String?
-  type         AppointmentType
-  status       AppointmentStatus @default(SCHEDULED)
-  userId       String
-  leadId       String?
-  attendees    Json?
-  reminderSent Boolean           @default(false)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime @updatedAt
-  lead         Lead?             @relation(fields: [leadId], references: [id])
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String            @id @default(cuid())
+  title          String
+  description    String?
+  startTime      DateTime
+  endTime        DateTime
+  location       String?
+  meetingUrl     String?
+  type           AppointmentType
+  status         AppointmentStatus @default(SCHEDULED)
+  userId         String
+  leadId         String?
+  attendees      Json?
+  reminderSent   Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime @updatedAt
+  organizationId String
+  lead           Lead?             @relation(fields: [leadId], references: [id])
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([startTime])
   @@index([status])
   @@index([type])
   @@index([userId])
+  @@index([organizationId])
+  @@index([organizationId, startTime])
 }
 
 model BusinessSettings {
@@ -107,26 +115,24 @@ model Campaign {
   roi              Float?
   isABTest         Boolean        @default(false)
   abTestData       Json?
-  
-  // Recurring campaign fields
-  isRecurring      Boolean        @default(false)
-  frequency        String?        // 'daily', 'weekly', 'monthly', 'custom'
-  recurringPattern Json?          // { daysOfWeek: [1,2,3,4,5], time: '09:00', dayOfMonth: 1 }
-  maxOccurrences   Int?           // Stop after X sends
-  occurrenceCount  Int            @default(0) // How many times sent
-  lastSentAt       DateTime?      // Track last execution
-  nextSendAt       DateTime?      // When next send is scheduled
-  
-  // Archive support
-  isArchived       Boolean        @default(false)
-  archivedAt       DateTime?
-  
   createdById      String
   createdAt        DateTime       @default(now())
   updatedAt        DateTime @updatedAt
+  frequency        String?
+  isRecurring      Boolean        @default(false)
+  lastSentAt       DateTime?
+  maxOccurrences   Int?
+  nextSendAt       DateTime?
+  occurrenceCount  Int            @default(0)
+  recurringPattern Json?
+  archivedAt       DateTime?
+  isArchived       Boolean        @default(false)
+  organizationId   String
+  ABTestResult     ABTestResult[]
   activities       Activity[]
   user             User           @relation(fields: [createdById], references: [id])
-  tags             Tag[]
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tags             Tag[]          @relation("CampaignToTag")
 
   @@index([createdAt])
   @@index([createdById])
@@ -137,6 +143,8 @@ model Campaign {
   @@index([status, startDate])
   @@index([nextSendAt])
   @@index([isRecurring, nextSendAt])
+  @@index([organizationId])
+  @@index([organizationId, status])
 }
 
 model EmailConfig {
@@ -157,20 +165,24 @@ model EmailConfig {
 }
 
 model EmailTemplate {
-  id         String    @id @default(cuid())
-  name       String
-  subject    String
-  body       String
-  category   String?
-  isActive   Boolean   @default(true)
-  variables  Json?
-  usageCount Int       @default(0)
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  subject        String
+  body           String
+  category       String?
+  isActive       Boolean      @default(true)
+  variables      Json?
+  usageCount     Int          @default(0)
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime @updatedAt
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([category])
   @@index([isActive])
+  @@index([organizationId, category])
+  @@index([organizationId])
 }
 
 model Integration {
@@ -193,37 +205,40 @@ model Integration {
 }
 
 model Lead {
-  id            String        @id @default(cuid())
-  firstName     String
-  lastName      String
-  email         String        @unique
-  phone         String?
-  company       String?
-  position      String?
-  status        LeadStatus    @default(NEW)
-  score         Int           @default(0)
-  source        String?
-  value         Float?
-  stage         String?
-  assignedToId  String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime @updatedAt
-  lastContactAt DateTime?
-  customFields  Json?
-  
-  // Email preferences
-  emailOptIn          Boolean   @default(true)
-  emailOptOutAt       DateTime?
-  emailOptOutReason   String?
-  unsubscribeToken    String?   @unique
-  
-  activities    Activity[]
-  appointments  Appointment[]
-  assignedTo    User?         @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
-  messages      Message[]
-  notes         Note[]
-  tags          Tag[]
+  id                String         @id @default(cuid())
+  email             String
+  phone             String?
+  company           String?
+  position          String?
+  status            LeadStatus     @default(NEW)
+  score             Int            @default(0)
+  source            String?
+  value             Float?
+  stage             String?
+  assignedToId      String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime @updatedAt
+  lastContactAt     DateTime?
+  customFields      Json?
+  firstName         String
+  lastName          String
+  emailOptIn        Boolean        @default(true)
+  emailOptOutAt     DateTime?
+  emailOptOutReason String?
+  unsubscribeToken  String?        @unique
+  organizationId    String
+  scoreUpdatedAt    DateTime?
+  ABTestResult      ABTestResult[]
+  activities        Activity[]
+  appointments      Appointment[]
+  Call              Call[]
+  assignedTo        User?          @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages          Message[]
+  notes             Note[]
+  tags              Tag[]          @relation("LeadToTag")
 
+  @@unique([organizationId, email])
   @@index([assignedToId])
   @@index([createdAt])
   @@index([score])
@@ -231,39 +246,41 @@ model Lead {
   @@index([status])
   @@index([status, score])
   @@index([assignedToId, status])
+  @@index([organizationId, email])
+  @@index([organizationId])
+  @@index([organizationId, status])
 }
 
 model Message {
-  id          String           @id @default(cuid())
-  type        MessageType
-  direction   MessageDirection
-  subject     String?
-  body        String
-  fromAddress String
-  toAddress   String
-  status      MessageStatus    @default(PENDING)
-  sentAt      DateTime?
-  readAt      DateTime?
-  repliedAt   DateTime?
-  leadId      String?
-  threadId    String?
-  parentId    String?
-  externalId  String?
-  provider    String?
-  metadata    Json?
-  createdAt   DateTime         @default(now())
-  
-  // Deliverability tracking
-  deliveredAt      DateTime?
-  bouncedAt        DateTime?
-  bounceType       String?         // 'hard', 'soft', 'complaint'
-  bounceReason     String?
-  spamComplaintAt  DateTime?
-  retryCount       Int              @default(0)
-  lastRetryAt      DateTime?
-  maxRetries       Int              @default(3)
-  
-  lead        Lead?            @relation(fields: [leadId], references: [id])
+  id              String           @id @default(cuid())
+  type            MessageType
+  direction       MessageDirection
+  subject         String?
+  body            String
+  fromAddress     String
+  toAddress       String
+  status          MessageStatus    @default(PENDING)
+  readAt          DateTime?
+  repliedAt       DateTime?
+  leadId          String?
+  threadId        String?
+  parentId        String?
+  externalId      String?
+  provider        String?
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+  sentAt          DateTime?
+  bounceReason    String?
+  bounceType      String?
+  bouncedAt       DateTime?
+  deliveredAt     DateTime?
+  lastRetryAt     DateTime?
+  maxRetries      Int              @default(3)
+  retryCount      Int              @default(0)
+  spamComplaintAt DateTime?
+  organizationId  String
+  lead            Lead?            @relation(fields: [leadId], references: [id])
+  organization Organization     @relation(fields: [organizationId], references: [id])
 
   @@index([createdAt])
   @@index([direction])
@@ -277,6 +294,7 @@ model Message {
   @@index([bouncedAt])
   @@index([bounceType])
   @@index([spamComplaintAt])
+  @@index([organizationId])
 }
 
 model Note {
@@ -319,28 +337,37 @@ model SMSConfig {
 }
 
 model SMSTemplate {
-  id         String    @id @default(cuid())
-  name       String
-  body       String
-  category   String?
-  isActive   Boolean   @default(true)
-  variables  Json?
-  usageCount Int       @default(0)
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  body           String
+  category       String?
+  isActive       Boolean      @default(true)
+  variables      Json?
+  usageCount     Int          @default(0)
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime @updatedAt
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([category])
   @@index([isActive])
+  @@index([organizationId, category])
+  @@index([organizationId])
 }
 
 model Tag {
-  id        String     @id @default(cuid())
-  name      String     @unique
-  color     String?
-  createdAt DateTime   @default(now())
-  campaigns Campaign[]
-  leads     Lead[]
+  id             String       @id @default(cuid())
+  name           String
+  color          String?
+  createdAt      DateTime     @default(now())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaigns      Campaign[]   @relation("CampaignToTag")
+  leads          Lead[]       @relation("LeadToTag")
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 model Task {
@@ -392,7 +419,7 @@ model TeamMember {
 
 model User {
   id                   String                @id @default(cuid())
-  email                String                @unique
+  email                String
   password             String
   firstName            String
   lastName             String
@@ -411,41 +438,54 @@ model User {
   trialEndsAt          DateTime?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime @updatedAt
-  activities           Activity[]
+  organizationId       String
+  ABTest               ABTest[]
   aPIKeyAudit          APIKeyAudit[]
+  activities           Activity[]
   appointments         Appointment[]
   businessSettings     BusinessSettings?
   campaigns            Campaign[]
+  ChatMessage          ChatMessage[]
   emailConfig          EmailConfig?
   integrations         Integration[]
-  leads                Lead[]             @relation("LeadAssignedTo")
-  notes                Note[]             @relation("NoteAuthor")
+  leads                Lead[]                @relation("LeadAssignedTo")
+  LeadScoringModel     LeadScoringModel?
+  notes                Note[]                @relation("NoteAuthor")
+  Notification         Notification[]
   notificationSettings NotificationSettings?
   smsConfig            SMSConfig?
-  tasks                Task[]             @relation("TaskAssignedTo")
+  tasks                Task[]                @relation("TaskAssignedTo")
   teamMembers          TeamMember[]
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  UserAIPreferences    UserAIPreferences?
 
+  @@unique([organizationId, email])
   @@index([email])
   @@index([role])
+  @@index([organizationId])
 }
 
 model Workflow {
-  id                String              @id @default(cuid())
-  name              String
-  description       String?
-  isActive          Boolean             @default(false)
-  triggerType       WorkflowTrigger
-  triggerData       Json?
-  actions           Json
-  executions        Int                 @default(0)
-  successRate       Float?
+  id                 String              @id @default(cuid())
+  name               String
+  description        String?
+  isActive           Boolean             @default(false)
+  triggerType        WorkflowTrigger
+  triggerData        Json?
+  actions            Json
+  executions         Int                 @default(0)
+  successRate        Float?
   lastRunAt          DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime @updatedAt
+  organizationId     String
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   workflowExecutions WorkflowExecution[]
 
   @@index([isActive])
   @@index([triggerType])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
 }
 
 model WorkflowExecution {
@@ -462,6 +502,263 @@ model WorkflowExecution {
   @@index([startedAt])
   @@index([status])
   @@index([workflowId])
+}
+
+model ABTest {
+  id               String         @id @default(cuid())
+  name             String
+  description      String?
+  type             ABTestType
+  organizationId   String
+  createdBy        String
+  variantA         Json
+  variantB         Json
+  status           ABTestStatus   @default(DRAFT)
+  startDate        DateTime?
+  endDate          DateTime?
+  participantCount Int            @default(0)
+  winnerId         String?
+  confidence       Float?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime @updatedAt
+  creator User           @relation(fields: [createdBy], references: [id])
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  results     ABTestResult[]
+
+  @@index([createdBy])
+  @@index([organizationId])
+  @@index([startDate])
+  @@index([status])
+}
+
+model ABTestResult {
+  id         String    @id @default(cuid())
+  testId     String
+  variant    String
+  leadId     String?
+  campaignId String?
+  converted  Boolean   @default(false)
+  openedAt   DateTime?
+  clickedAt  DateTime?
+  repliedAt  DateTime?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+  lead Lead?     @relation(fields: [leadId], references: [id])
+  abtest ABTest    @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([converted])
+  @@index([leadId])
+  @@index([testId])
+  @@index([variant])
+}
+
+model AIAssistant {
+  id              String       @id @default(cuid())
+  organizationId  String
+  vapiAssistantId String
+  name            String
+  businessName    String
+  greeting        String
+  voice           String
+  knowledgeBase   Json
+  phoneNumber     String?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Call            Call[]
+
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+}
+
+model Call {
+  id                String       @id @default(cuid())
+  organizationId    String
+  leadId            String?
+  assistantId       String?
+  vapiCallId        String       @unique
+  direction         String
+  phoneNumber       String
+  status            String
+  duration          Int?
+  cost              Float?
+  transcript        String?
+  recording         String?
+  sentiment         String?
+  appointmentBooked Boolean      @default(false)
+  metadata          Json?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime @updatedAt
+  aiassistant AIAssistant? @relation(fields: [assistantId], references: [id])
+  lead Lead?        @relation(fields: [leadId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([direction])
+  @@index([leadId])
+  @@index([organizationId, createdAt])
+  @@index([status])
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String
+  content        String
+  tokens         Int?
+  cost           Float?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId])
+  @@index([userId, createdAt])
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  subscriptionId  String
+  stripeInvoiceId String?       @unique
+  amount          Float
+  currency        String        @default("usd")
+  status          InvoiceStatus
+  invoiceDate     DateTime
+  dueDate         DateTime
+  paidAt          DateTime?
+  pdfUrl          String?
+  createdAt       DateTime      @default(now())
+  subscription Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([subscriptionId])
+}
+
+model LeadScoringModel {
+  id                String       @id @default(cuid())
+  factors           Json
+  accuracy          Float?
+  lastTrainedAt     DateTime?
+  trainingDataCount Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String       @unique
+  organizationId    String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model Notification {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  type           String
+  title          String
+  message        String
+  link           String?
+  read           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([organizationId])
+  @@index([read])
+  @@index([userId])
+}
+
+model Organization {
+  id                String              @id @default(cuid())
+  name              String
+  slug              String              @unique
+  domain            String?             @unique
+  logo              String?
+  subscriptionTier  SubscriptionTier    @default(FREE)
+  subscriptionId    String?
+  trialEndsAt       DateTime?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime @updatedAt
+  ABTest            ABTest[]
+  AIAssistant       AIAssistant[]
+  Activity          Activity[]
+  Appointment       Appointment[]
+  Call              Call[]
+  Campaign          Campaign[]
+  ChatMessage       ChatMessage[]
+  EmailTemplate     EmailTemplate[]
+  Lead              Lead[]
+  LeadScoringModel  LeadScoringModel[]
+  Message           Message[]
+  Notification      Notification[]
+  SMSTemplate       SMSTemplate[]
+  Subscription      Subscription?
+  Tag               Tag[]
+  users              User[]
+  UserAIPreferences UserAIPreferences[]
+  Workflow          Workflow[]
+
+  @@index([isActive])
+  @@index([slug])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  organizationId       String             @unique
+  tier                 SubscriptionTier
+  status               SubscriptionStatus
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  trialEndsAt          DateTime?
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime @updatedAt
+  Invoice              Invoice[]
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  UsageTracking        UsageTracking[]
+}
+
+model UsageTracking {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  month          String
+  aiMessages     Int          @default(0)
+  callMinutes    Float        @default(0)
+  enhancements   Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime @updatedAt
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, month])
+  @@index([month])
+}
+
+model UserAIPreferences {
+  id                   String       @id @default(cuid())
+  userId               String       @unique
+  chatbotTone          String       @default("professional")
+  autoSuggestActions   Boolean      @default(true)
+  enableProactive      Boolean      @default(true)
+  preferredContactTime String?
+  aiInsightsFrequency  String       @default("daily")
+  customInstructions   String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime @updatedAt
+  organizationId       String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 enum ActivityType {
@@ -599,4 +896,36 @@ enum WorkflowTrigger {
   SCORE_THRESHOLD
   TAG_ADDED
   MANUAL
+}
+
+enum ABTestStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum ABTestType {
+  EMAIL_SUBJECT
+  EMAIL_CONTENT
+  EMAIL_TIMING
+  SMS_CONTENT
+  LANDING_PAGE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
 }

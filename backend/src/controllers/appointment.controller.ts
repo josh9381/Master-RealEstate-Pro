@@ -28,6 +28,7 @@ export async function listAppointments(req: Request, res: Response): Promise<voi
 
   // Build where clause
   const where: any = {
+    organizationId: req.user.organizationId,  // CRITICAL: Filter by organization
     userId: req.user.userId,
   };
 
@@ -100,10 +101,13 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
     attendees,
   } = req.body;
 
-  // Verify lead exists if provided
+  // Verify lead exists if provided AND belongs to this organization
   if (leadId) {
-    const lead = await prisma.lead.findUnique({
-      where: { id: leadId },
+    const lead = await prisma.lead.findFirst({
+      where: { 
+        id: leadId,
+        organizationId: req.user.organizationId  // CRITICAL: Verify ownership
+      },
     });
 
     if (!lead) {
@@ -114,6 +118,7 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
   // Create appointment
   const appointment = await prisma.appointment.create({
     data: {
+      organizationId: req.user.organizationId,  // CRITICAL: Set organization
       title,
       description,
       type,
@@ -156,8 +161,11 @@ export async function getAppointment(req: Request, res: Response): Promise<void>
 
   const { id } = req.params;
 
-  const appointment = await prisma.appointment.findUnique({
-    where: { id },
+  const appointment = await prisma.appointment.findFirst({
+    where: { 
+      id,
+      organizationId: req.user.organizationId  // CRITICAL: Verify ownership
+    },
     include: {
       lead: {
         select: {
@@ -184,7 +192,7 @@ export async function getAppointment(req: Request, res: Response): Promise<void>
     throw new NotFoundError('Appointment not found');
   }
 
-  // Verify ownership
+  // Verify user ownership (still check user for permission)
   if (appointment.userId !== req.user.userId) {
     throw new UnauthorizedError('Not authorized to view this appointment');
   }
@@ -218,8 +226,11 @@ export async function updateAppointment(req: Request, res: Response): Promise<vo
   } = req.body;
 
   // Check appointment exists and user owns it
-  const existingAppointment = await prisma.appointment.findUnique({
-    where: { id },
+  const existingAppointment = await prisma.appointment.findFirst({
+    where: { 
+      id,
+      organizationId: req.user.organizationId  // CRITICAL: Verify ownership
+    },
   });
 
   if (!existingAppointment) {
@@ -230,10 +241,13 @@ export async function updateAppointment(req: Request, res: Response): Promise<vo
     throw new UnauthorizedError('Not authorized to update this appointment');
   }
 
-  // Verify lead if being updated
+  // Verify lead if being updated AND belongs to organization
   if (leadId) {
-    const lead = await prisma.lead.findUnique({
-      where: { id: leadId },
+    const lead = await prisma.lead.findFirst({
+      where: { 
+        id: leadId,
+        organizationId: req.user.organizationId  // CRITICAL: Verify ownership
+      },
     });
 
     if (!lead) {
@@ -288,8 +302,11 @@ export async function cancelAppointment(req: Request, res: Response): Promise<vo
   const { id } = req.params;
 
   // Check appointment exists and user owns it
-  const existingAppointment = await prisma.appointment.findUnique({
-    where: { id },
+  const existingAppointment = await prisma.appointment.findFirst({
+    where: { 
+      id,
+      organizationId: req.user.organizationId  // CRITICAL: Verify ownership
+    },
   });
 
   if (!existingAppointment) {

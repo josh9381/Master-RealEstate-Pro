@@ -3,12 +3,42 @@ import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { NotificationPanel } from './NotificationPanel'
+import { notificationsApi } from '@/lib/api'
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(7)
+  const [unreadCount, setUnreadCount] = useState(0)
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+
+  // Fetch unread count on mount and every 30 seconds
+  useEffect(() => {
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 30000) // Poll every 30 seconds
+    
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchUnreadCount = async () => {
+    try {
+      // Check if user is authenticated before making request
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setUnreadCount(0)
+        return
+      }
+      
+      const response = await notificationsApi.getUnreadCount()
+      setUnreadCount(response.data?.count || 0)
+    } catch (error: any) {
+      // Silently handle 401 errors (not logged in)
+      if (error?.response?.status === 401) {
+        setUnreadCount(0)
+      } else {
+        console.error('Failed to fetch unread count:', error)
+      }
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -33,6 +63,7 @@ export function NotificationBell() {
 
   const handleMarkAllRead = () => {
     setUnreadCount(0)
+    fetchUnreadCount()
   }
 
   return (

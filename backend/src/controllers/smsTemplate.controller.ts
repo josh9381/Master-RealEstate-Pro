@@ -68,6 +68,7 @@ export const createSMSTemplate = async (req: Request, res: Response) => {
       body,
       category,
       variables,
+      organizationId: req.user!.organizationId
     },
   })
 

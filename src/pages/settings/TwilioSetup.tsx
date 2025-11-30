@@ -23,7 +23,7 @@ const TwilioSetup = () => {
   const [showAuthToken, setShowAuthToken] = useState(false);
   
   // Status indicators
-  const [isConfigured, setIsConfigured] = useState(false);
+  const [_isConfigured, setIsConfigured] = useState(false);
   const [hasCredentials, setHasCredentials] = useState(false);
   const [configMode, setConfigMode] = useState<'production' | 'mock' | 'environment'>('mock');
   const [lastTested, setLastTested] = useState<string | null>(null);

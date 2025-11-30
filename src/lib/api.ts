@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios'
-import type { Lead, Campaign, Note, Activity, Analytics, User } from '@/types'
+import type { User } from '@/types'
 
 // Determine the API base URL
 const getApiBaseUrl = () => {
@@ -950,18 +950,35 @@ export const workflowsApi = {
     return response.data
   },
 
-  toggleWorkflow: async (id: string) => {
-    const response = await api.patch(`/workflows/${id}/toggle`)
+  toggleWorkflow: async (id: string, isActive: boolean) => {
+    const response = await api.patch(`/workflows/${id}/toggle`, { isActive })
     return response.data
   },
 
-  testWorkflow: async (id: string) => {
-    const response = await api.post(`/workflows/${id}/test`)
+  testWorkflow: async (id: string, testData?: any) => {
+    const response = await api.post(`/workflows/${id}/test`, { testData })
     return response.data
   },
 
   getExecutions: async (workflowId: string, params?: any) => {
     const response = await api.get(`/workflows/${workflowId}/executions`, { params })
+    return response.data
+  },
+
+  getStats: async () => {
+    const response = await api.get('/workflows/stats')
+    return response.data
+  },
+
+  getAnalytics: async (id: string, days?: number) => {
+    const response = await api.get(`/workflows/${id}/analytics`, { 
+      params: { days } 
+    })
+    return response.data
+  },
+
+  triggerWorkflow: async (id: string, leadId: string) => {
+    const response = await api.post(`/workflows/${id}/trigger`, { leadId })
     return response.data
   },
 }
@@ -1252,6 +1269,66 @@ export const appointmentsApi = {
 
   getUpcoming: async (params?: UpcomingQuery) => {
     const response = await api.get('/appointments/upcoming', { params })
+    return response.data
+  },
+}
+
+// ============================================================================
+// NOTIFICATIONS API
+// ============================================================================
+
+export interface Notification {
+  id: string
+  userId: string
+  organizationId: string
+  type: string
+  title: string
+  message: string
+  link?: string
+  read: boolean
+  createdAt: string
+}
+
+export interface NotificationsQuery {
+  page?: number
+  limit?: number
+  read?: boolean
+}
+
+export const notificationsApi = {
+  getNotifications: async (params?: NotificationsQuery) => {
+    const response = await api.get('/notifications', { params })
+    return response.data
+  },
+
+  getUnreadCount: async () => {
+    const response = await api.get('/notifications/unread-count')
+    return response.data
+  },
+
+  markAsRead: async (id: string) => {
+    const response = await api.patch(`/notifications/${id}/read`)
+    return response.data
+  },
+
+  markAllAsRead: async () => {
+    const response = await api.patch('/notifications/mark-all-read')
+    return response.data
+  },
+
+  deleteNotification: async (id: string) => {
+    const response = await api.delete(`/notifications/${id}`)
+    return response.data
+  },
+
+  createNotification: async (data: {
+    type: string
+    title: string
+    message: string
+    link?: string
+    userId?: string
+  }) => {
+    const response = await api.post('/notifications', data)
     return response.data
   },
 }

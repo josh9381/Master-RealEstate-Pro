@@ -20,6 +20,7 @@ interface ExecutionContext {
   leadId?: string
   eventData: Record<string, unknown>
   lead?: any
+  organizationId: string
 }
 
 export class WorkflowExecutorService {
@@ -34,7 +35,8 @@ export class WorkflowExecutorService {
   async executeWorkflow(
     workflowId: string,
     eventData: Record<string, unknown>,
-    leadId?: string
+    leadId?: string,
+    organizationId?: string
   ): Promise<WorkflowExecution> {
     console.log(`\n🔄 Executing workflow: ${workflowId}`)
     
@@ -42,11 +44,22 @@ export class WorkflowExecutorService {
       // Get the workflow
       const workflow = await prisma.workflow.findUnique({
         where: { id: workflowId },
+        select: {
+          id: true,
+          name: true,
+          organizationId: true,
+          actions: true,
+          triggerType: true,
+          triggerData: true
+        }
       })
 
       if (!workflow) {
         throw new Error(`Workflow ${workflowId} not found`)
       }
+
+      // Use organizationId from workflow if not provided
+      const orgId = organizationId || workflow.organizationId;
 
       // Get lead data if leadId provided
       let lead = null
@@ -82,6 +95,7 @@ export class WorkflowExecutorService {
         leadId,
         eventData,
         lead,
+        organizationId: workflow.organizationId
       }
 
       // Parse actions from workflow
@@ -212,6 +226,7 @@ export class WorkflowExecutorService {
           title: 'Workflow email sent',
           description: `Email sent via workflow: ${processedSubject || 'No subject'}`,
           leadId: context.leadId,
+          organizationId: context.organizationId,
           metadata: {
             workflowId: context.workflowId,
             executionId: context.executionId,
@@ -248,6 +263,7 @@ export class WorkflowExecutorService {
           title: 'Workflow SMS sent',
           description: `SMS sent via workflow: ${processedMessage?.substring(0, 50)}`,
           leadId: context.leadId,
+          organizationId: context.organizationId,
           metadata: {
             workflowId: context.workflowId,
             executionId: context.executionId,
@@ -329,6 +345,7 @@ export class WorkflowExecutorService {
         title: 'Status changed by workflow',
         description: `Lead status changed to ${status} by workflow`,
         leadId: context.leadId,
+        organizationId: context.organizationId,
         metadata: {
           workflowId: context.workflowId,
           executionId: context.executionId,
@@ -356,7 +373,12 @@ export class WorkflowExecutorService {
 
     // Find or create the tag
     let tag = await prisma.tag.findUnique({
-      where: { name: tagName as string },
+      where: { 
+        organizationId_name: {
+          organizationId: context.organizationId,
+          name: tagName as string
+        }
+      },
     })
 
     if (!tag) {
@@ -364,6 +386,7 @@ export class WorkflowExecutorService {
         data: {
           name: tagName as string,
           color: (tagColor as string) || 'blue',
+          organizationId: context.organizationId
         },
       })
     }

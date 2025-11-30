@@ -64,6 +64,7 @@ export const createEmailTemplate = async (req: Request, res: Response) => {
       body,
       category,
       variables,
+      organizationId: req.user!.organizationId
     },
   })
 

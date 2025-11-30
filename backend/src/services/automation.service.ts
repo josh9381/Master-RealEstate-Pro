@@ -38,6 +38,7 @@ export interface TriggerEvent {
   data: Record<string, unknown>;
   leadId?: string;
   userId?: string;
+  organizationId?: string;
 }
 
 /**
@@ -238,6 +239,7 @@ async function executeSendEmailAction(
       subject: subject as string,
       html: body as string,
       leadId: event.leadId,
+      organizationId: event.organizationId || 'clz0000000000000000000000',
     });
   }
 }
@@ -265,6 +267,7 @@ async function executeSendSMSAction(
       to: to as string,
       message: message as string,
       leadId: event.leadId,
+      organizationId: event.organizationId || 'clz0000000000000000000000',
     });
   }
 }
@@ -320,6 +323,7 @@ async function executeUpdateLeadStatusAction(
       description: `Lead status changed to ${status}`,
       leadId: event.leadId,
       userId: event.userId || 'system',
+      organizationId: event.organizationId!
     },
   });
 }

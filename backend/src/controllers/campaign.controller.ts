@@ -4,6 +4,7 @@ import { NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import type { CampaignStatus, CampaignType } from '@prisma/client';
 import { executeCampaign } from '../services/campaign-executor.service';
 import { getAllTemplates, getTemplateById } from '../data/campaign-templates';
+import { getCampaignsFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
 
 /**
  * Get all campaigns with filtering and pagination
@@ -23,8 +24,9 @@ export const getCampaigns = async (req: Request, res: Response) => {
     includeArchived = false,
   } = validatedQuery;
 
-  // Build where clause
-  const where: any = {};
+  // Build where clause with role-based filtering
+  const roleFilter = getRoleFilterFromRequest(req);
+  const where: any = getCampaignsFilter(roleFilter);
 
   if (status) where.status = status as CampaignStatus;
   if (type) where.type = type as CampaignType;
@@ -117,8 +119,12 @@ export const getCampaigns = async (req: Request, res: Response) => {
 export const getCampaign = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const campaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Verify campaign belongs to user's organization
+  const campaign = await prisma.campaign.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
     include: {
       user: {
         select: {
@@ -183,14 +189,16 @@ export const getCampaign = async (req: Request, res: Response) => {
 export const createCampaign = async (req: Request, res: Response) => {
   const { name, type, status, subject, body, previewText, startDate, endDate, budget, audience, isABTest, abTestData, tagIds } = req.body;
   const userId = req.user?.userId;
+  const organizationId = req.user?.organizationId;
 
-  if (!userId) {
+  if (!userId || !organizationId) {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Create the campaign
+  // Create the campaign with organizationId
   const campaign = await prisma.campaign.create({
     data: {
+      organizationId,  // CRITICAL: Set organization
       name,
       type,
       status: status || 'DRAFT',
@@ -244,9 +252,12 @@ export const updateCampaign = async (req: Request, res: Response) => {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Check if campaign exists
-  const existingCampaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Check if campaign exists AND belongs to this organization
+  const existingCampaign = await prisma.campaign.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
   });
 
   if (!existingCampaign) {
@@ -308,9 +319,12 @@ export const deleteCampaign = async (req: Request, res: Response) => {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Check if campaign exists
-  const campaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Check if campaign exists AND belongs to this organization
+  const campaign = await prisma.campaign.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
   });
 
   if (!campaign) {
@@ -981,16 +995,19 @@ export const createCampaignFromTemplate = async (req: Request, res: Response) =>
  */
 export const duplicateCampaign = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const userId = (req as any).user?.id;
+  const userId = req.user?.userId;
   const { name } = req.body; // Optional custom name
 
   if (!userId) {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Get original campaign
-  const originalCampaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Get original campaign AND verify ownership
+  const originalCampaign = await prisma.campaign.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
     include: {
       tags: true,
     },
@@ -1000,9 +1017,10 @@ export const duplicateCampaign = async (req: Request, res: Response) => {
     throw new NotFoundError('Campaign not found');
   }
 
-  // Create duplicate campaign
+  // Create duplicate campaign IN SAME ORGANIZATION
   const duplicatedCampaign = await prisma.campaign.create({
     data: {
+      organizationId: req.user!.organizationId,  // CRITICAL: Set organization
       name: name || `${originalCampaign.name} (Copy)`,
       type: originalCampaign.type,
       status: 'DRAFT', // Always start as draft
@@ -1053,8 +1071,11 @@ export const duplicateCampaign = async (req: Request, res: Response) => {
 export const archiveCampaign = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const campaign = await prisma.campaign.findUnique({
-    where: { id },
+  const campaign = await prisma.campaign.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
   });
 
   if (!campaign) {
@@ -1165,7 +1186,7 @@ export const trackOpen = async (req: Request, res: Response) => {
   const { trackEmailOpen } = await import('../services/campaignAnalytics.service');
 
   try {
-    await trackEmailOpen(id, leadId, messageId);
+    await trackEmailOpen(id, leadId, messageId, req.user!.organizationId);
 
     res.json({
       success: true,
@@ -1191,7 +1212,7 @@ export const trackClick = async (req: Request, res: Response) => {
   const { trackEmailClick } = await import('../services/campaignAnalytics.service');
 
   try {
-    await trackEmailClick(id, leadId, messageId, url);
+    await trackEmailClick(id, leadId, messageId, url, req.user!.organizationId);
 
     res.json({
       success: true,

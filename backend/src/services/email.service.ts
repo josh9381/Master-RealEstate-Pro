@@ -92,6 +92,7 @@ export interface EmailOptions {
   leadId?: string;
   campaignId?: string;
   userId?: string; // User ID to fetch custom config
+  organizationId: string; // Organization ID for multi-tenancy
   trackOpens?: boolean;
   trackClicks?: boolean;
 }
@@ -117,6 +118,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     leadId,
     campaignId,
     userId,
+    organizationId,
     trackOpens = true,
     trackClicks = true,
   } = options;
@@ -180,7 +182,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     });
 
     // Create message record in database
-    await createMessageRecord({
+    const createdMessage = await createMessageRecord({
       type: 'EMAIL',
       direction: 'OUTBOUND',
       subject,
@@ -190,6 +192,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
       status: 'SENT',
       externalId: response.headers['x-message-id'],
       provider: 'sendgrid',
+      organizationId,
       leadId,
       metadata: {
         trackOpens,
@@ -200,7 +203,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
 
     return {
       success: true,
-      messageId: response.headers['x-message-id'],
+      messageId: createdMessage?.id || response.headers['x-message-id'],
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -216,6 +219,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
       toAddress: Array.isArray(to) ? to.join(', ') : to,
       status: 'FAILED',
       provider: 'sendgrid',
+      organizationId,
       leadId,
       metadata: {
         error: errorMessage,
@@ -273,6 +277,7 @@ export async function sendTemplateEmail(
       to,
       subject,
       html,
+      organizationId: options?.organizationId || 'clz0000000000000000000000',
       ...options,
     });
   } catch (error: unknown) {
@@ -296,7 +301,8 @@ export async function sendBulkEmails(
     leadId?: string;
   }>,
   campaignId?: string,
-  userId?: string
+  userId?: string,
+  organizationId?: string
 ): Promise<{ success: number; failed: number }> {
   const results = {
     success: 0,
@@ -308,6 +314,7 @@ export async function sendBulkEmails(
       ...email,
       campaignId,
       userId,
+      organizationId: organizationId || 'clz0000000000000000000000',
       trackOpens: true,
       trackClicks: true,
     });
@@ -406,17 +413,25 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
 
         // Create activity for email open
         if (message.leadId) {
-          await prisma.activity.create({
-            data: {
-              type: 'EMAIL_OPENED',
-              title: 'Email Opened',
-              description: `Lead opened email: ${message.subject}`,
-              leadId: message.leadId,
-              userId: 'system',
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              metadata: event as any,
-            },
+          const lead = await prisma.lead.findUnique({
+            where: { id: message.leadId },
+            select: { organizationId: true }
           });
+          
+          if (lead) {
+            await prisma.activity.create({
+              data: {
+                type: 'EMAIL_OPENED',
+                title: 'Email Opened',
+                description: `Lead opened email: ${message.subject}`,
+                leadId: message.leadId,
+                userId: 'system',
+                organizationId: lead.organizationId,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                metadata: event as any,
+              },
+            });
+          }
         }
         break;
 
@@ -428,17 +443,25 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
 
         // Create activity for email click
         if (message.leadId) {
-          await prisma.activity.create({
-            data: {
-              type: 'EMAIL_CLICKED',
-              title: 'Email Link Clicked',
-              description: `Lead clicked link in email: ${message.subject}`,
-              leadId: message.leadId,
-              userId: 'system',
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              metadata: event as any,
-            },
+          const lead = await prisma.lead.findUnique({
+            where: { id: message.leadId },
+            select: { organizationId: true }
           });
+          
+          if (lead) {
+            await prisma.activity.create({
+              data: {
+                type: 'EMAIL_CLICKED',
+                title: 'Email Link Clicked',
+                description: `Lead clicked link in email: ${message.subject}`,
+                leadId: message.leadId,
+                userId: 'system',
+                organizationId: lead.organizationId,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                metadata: event as any,
+              },
+            });
+          }
         }
         break;
 

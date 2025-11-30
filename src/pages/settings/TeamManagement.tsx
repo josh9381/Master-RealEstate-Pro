@@ -131,7 +131,7 @@ const TeamManagement = () => {
 
     setSaving(true);
     try {
-      await teamsApi.inviteMember(1, { email: inviteEmail, role: inviteRole });
+      await teamsApi.inviteMember('1', { email: inviteEmail, role: inviteRole });
       
       const newMember = {
         id: teamMembers.length + 1,
@@ -158,7 +158,7 @@ const TeamManagement = () => {
 
   const resendInvite = async (email: string) => {
     try {
-      await teamsApi.inviteMember(1, { email, role: 'Sales Rep' });
+      await teamsApi.inviteMember('1', { email, role: 'Sales Rep' });
       toast.success(`Invitation resent to ${email}`);
     } catch (error) {
       console.error('Failed to resend invite:', error);
@@ -168,7 +168,7 @@ const TeamManagement = () => {
 
   const removeMember = async (id: number) => {
     try {
-      await teamsApi.removeMember(1, id);
+      await teamsApi.removeMember('1', String(id));
       setTeamMembers(teamMembers.filter(m => m.id !== id));
       toast.success('Team member removed');
     } catch (error) {

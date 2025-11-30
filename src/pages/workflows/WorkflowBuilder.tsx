@@ -1,10 +1,11 @@
--import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  Workflow, Play, Plus, TrendingUp, Save, TestTube2, Clock, 
-  CheckCircle2, XCircle, Activity, Download, Upload, Trash2,
-  Copy, Settings, Zap, Mail, MessageSquare, UserPlus, Tag,
+  Workflow, Play, Plus, TrendingUp, Save, TestTube2, 
+  CheckCircle2, XCircle, Activity, Download, Upload,
+  Copy, Zap, Mail, MessageSquare,
   Calendar, FileText, ChevronDown, ChevronRight,
-  ArrowRight, GitBranch, Filter, Terminal, GripVertical, MousePointer2, RefreshCw
+  ArrowRight, Filter, Terminal, GripVertical, MousePointer2, X,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,22 +14,10 @@ import { Input } from '@/components/ui/Input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { useToast } from '@/hooks/useToast';
 import { workflowsApi } from '@/lib/api';
-
-type NodeType = 'trigger' | 'action' | 'condition' | 'delay';
-
-interface WorkflowNode {
-  id: string;
-  type: NodeType;
-  label: string;
-  config: Record<string, unknown>;
-  position: { x: number; y: number };
-}
-
-interface DraggableItem {
-  type: NodeType;
-  label: string;
-  icon: typeof Zap;
-}
+import { WorkflowCanvas } from '@/components/workflows/WorkflowCanvas';
+import { WorkflowNodeData } from '@/components/workflows/WorkflowNode';
+import { WorkflowComponentLibrary, WorkflowComponent } from '@/components/workflows/WorkflowComponentLibrary';
+import { NodeConfigPanel } from '@/components/workflows/NodeConfigPanel';
 
 interface ExecutionLog {
   id: string;
@@ -40,12 +29,11 @@ interface ExecutionLog {
 
 const WorkflowBuilder = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
   const [workflowName, setWorkflowName] = useState('New Workflow');
-  const [nodes, setNodes] = useState<WorkflowNode[]>([]);
-  const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
-  const [showTriggerBuilder, setShowTriggerBuilder] = useState(false);
-  const [showActionLibrary, setShowActionLibrary] = useState(false);
+  const [nodes, setNodes] = useState<WorkflowNodeData[]>([]);
+  const [selectedNode, setSelectedNode] = useState<WorkflowNodeData | null>(null);
+  const [showComponentLibrary, setShowComponentLibrary] = useState(true);
+  const [showConfigPanel, setShowConfigPanel] = useState(false);
   const [showTestPanel, setShowTestPanel] = useState(false);
   const [showLogsPanel, setShowLogsPanel] = useState(false);
   const [showMetricsPanel, setShowMetricsPanel] = useState(false);
@@ -55,17 +43,9 @@ const WorkflowBuilder = () => {
   const [isTestRunning, setIsTestRunning] = useState(false);
   const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'active' | 'paused' | 'running'>('idle');
   const [activeExecutions, setActiveExecutions] = useState<number>(0);
-  const [interactionMode, setInteractionMode] = useState<'click' | 'drag'>('click');
-  const [draggedItem, setDraggedItem] = useState<DraggableItem | null>(null);
+  const [interactionMode, setInteractionMode] = useState<'click' | 'drag'>('drag');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  
-  // Canvas state for drag mode
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
-  const [canvasZoom, setCanvasZoom] = useState(1);
-  const [isDraggingNode, setIsDraggingNode] = useState<string | null>(null);
-  const [dragNodeOffset, setDragNodeOffset] = useState({ x: 0, y: 0 });
-  const [isPanningCanvas, setIsPanningCanvas] = useState(false);
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Mock execution logs
   const [executionLogs] = useState<ExecutionLog[]>([
@@ -129,46 +109,208 @@ const WorkflowBuilder = () => {
 
   const loadWorkflow = async (workflowId: string) => {
     try {
-      setLoading(true);
       const response = await workflowsApi.getWorkflow(workflowId);
       
-      if (response) {
-        setWorkflowName(response.name || 'Workflow');
-        // Load nodes from response if available
-        if (response.nodes) {
-          setNodes(response.nodes);
+      if (response?.data?.workflow) {
+        const workflow = response.data.workflow;
+        setWorkflowName(workflow.name || 'Workflow');
+        setWorkflowStatus(workflow.isActive ? 'active' : 'idle');
+        
+        // Reconstruct nodes from workflow data
+        const reconstructedNodes: WorkflowNodeData[] = [];
+        
+        // Add trigger node
+        if (workflow.triggerType) {
+          const triggerLabel = workflow.triggerType.replace(/_/g, ' ')
+            .toLowerCase()
+            .replace(/\b\w/g, (l: string) => l.toUpperCase());
+            
+          reconstructedNodes.push({
+            id: 'trigger-node',
+            type: 'trigger',
+            label: `Trigger: ${triggerLabel}`,
+            description: 'Workflow trigger',
+            config: {
+              triggerType: workflow.triggerType,
+              ...(workflow.triggerData || {})
+            },
+            position: { x: 400, y: 100 } // Set initial position
+          });
         }
+        
+        // Add action nodes with proper spacing
+        if (workflow.actions && Array.isArray(workflow.actions)) {
+          workflow.actions.forEach((action: any, index: number) => {
+            const actionType = action.type || 'action';
+            const actionLabel = actionType.replace(/_/g, ' ')
+              .toLowerCase()
+              .replace(/\b\w/g, (l: string) => l.toUpperCase());
+            
+            reconstructedNodes.push({
+              id: action.id || `action-${index}`,
+              type: 'action',
+              label: actionLabel,
+              description: action.description || '',
+              config: action.config || {},
+              position: { x: 400, y: 100 + ((index + 1) * 180) } // Space nodes 180px apart
+            });
+          });
+        }
+        
+        setNodes(reconstructedNodes);
+        toast.success(`Workflow loaded: ${workflow.name}`);
       }
     } catch (error) {
       console.error('Failed to load workflow:', error);
       toast.error('Failed to load workflow');
-    } finally {
-      setLoading(false);
     }
   };
 
-  const addNode = (type: NodeType, label: string) => {
-    const newNode: WorkflowNode = {
+  const addNodeFromComponent = (component: WorkflowComponent) => {
+    const newNode: WorkflowNodeData = {
       id: `node-${Date.now()}`,
-      type,
-      label,
-      config: {},
-      // In click mode: vertical list positioning
-      // In drag mode: staggered canvas positioning
-      position: interactionMode === 'click' 
-        ? { x: 100, y: nodes.length * 120 + 100 }
-        : { x: 200 + (nodes.length % 3) * 250, y: 150 + Math.floor(nodes.length / 3) * 200 }
+      type: component.type,
+      label: component.label,
+      description: component.description,
+      config: component.config || {}
     };
     setNodes([...nodes, newNode]);
-    toast.success(`Added ${label} to workflow`);
+    toast.success(`Added ${component.label} to workflow`);
   };
 
-  const removeNode = (nodeId: string) => {
+  const handleComponentSelect = (component: WorkflowComponent) => {
+    // Only add when in click mode - in drag mode, components should only be added via drag & drop
+    if (interactionMode === 'click') {
+      console.log('handleComponentSelect called with:', component.label);
+      addNodeFromComponent(component);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    
+    if (interactionMode === 'drag') {
+      try {
+        const data = e.dataTransfer.getData('application/json');
+        if (!data) {
+          toast.error('No component data found');
+          return;
+        }
+        const component = JSON.parse(data) as WorkflowComponent;
+        addNodeFromComponent(component);
+      } catch (error) {
+        console.error('Failed to parse dropped component:', error);
+        toast.error('Failed to add component');
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragging if we have valid data
+    if (e.dataTransfer.types.includes('application/json')) {
+      setIsDraggingOver(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleComponentDragStart = (component: WorkflowComponent) => {
+    // Optional: Add visual feedback when drag starts
+    console.log('Drag started:', component.label);
+  };
+
+  const handleNodeMove = (nodeId: string, position: { x: number; y: number }) => {
+    setNodes(nodes.map(n => 
+      n.id === nodeId ? { ...n, position } : n
+    ));
+  };
+
+  // Validate workflow for common issues
+  const validateWorkflow = () => {
+    const errors: string[] = [];
+    
+    // Check for triggers
+    const triggers = nodes.filter(n => n.type === 'trigger');
+    if (triggers.length === 0) {
+      errors.push('Workflow must have at least one trigger');
+    }
+    if (triggers.length > 1) {
+      errors.push('Workflow should only have one trigger');
+    }
+    
+    // Check for disconnected nodes (basic check)
+    if (nodes.length > 1 && !nodes[0] || nodes[0]?.type !== 'trigger') {
+      errors.push('Workflow should start with a trigger');
+    }
+    
+    // Check for actions without triggers
+    if (nodes.length > 0 && triggers.length === 0) {
+      errors.push('Cannot have actions without a trigger');
+    }
+    
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
+
+  // Auto-arrange nodes in a clean layout
+  const autoArrangeNodes = () => {
+    if (nodes.length === 0) return;
+    
+    const arrangedNodes = nodes.map((node, index) => {
+      // Simple vertical layout with spacing
+      const x = 400; // Center horizontally
+      const y = 100 + (index * 180); // Space nodes 180px apart
+      
+      return {
+        ...node,
+        position: { x, y }
+      };
+    });
+    
+    setNodes(arrangedNodes);
+    toast.success('Workflow auto-arranged!');
+  };
+
+  // Update validation whenever nodes change
+  useEffect(() => {
+    if (nodes.length > 0) {
+      validateWorkflow();
+    } else {
+      setValidationErrors([]);
+    }
+  }, [nodes]);
+
+  const handleNodeSelect = (node: WorkflowNodeData) => {
+    setSelectedNode(node);
+    setShowConfigPanel(true);
+  };
+
+  const handleNodeDelete = (nodeId: string) => {
     setNodes(nodes.filter(n => n.id !== nodeId));
     if (selectedNode?.id === nodeId) {
       setSelectedNode(null);
+      setShowConfigPanel(false);
     }
     toast.success('Node removed from workflow');
+  };
+
+  const handleNodeEdit = (node: WorkflowNodeData) => {
+    setSelectedNode(node);
+    setShowConfigPanel(true);
+  };
+
+  const handleConfigSave = (nodeId: string, config: Record<string, unknown>) => {
+    setNodes(nodes.map(n => 
+      n.id === nodeId ? { ...n, config } : n
+    ));
+    setShowConfigPanel(false);
+    toast.success('Node configuration saved');
   };
 
   const saveWorkflow = async () => {
@@ -221,94 +363,94 @@ const WorkflowBuilder = () => {
 
   const importTemplate = (templateName: string) => {
     // Template definitions with actual workflow nodes
-    const templates: Record<string, { nodes: WorkflowNode[], name: string, description: string }> = {
+    const templates: Record<string, { nodes: WorkflowNodeData[], name: string, description: string }> = {
       'New Lead Welcome Series': {
         name: 'New Lead Welcome Series',
         description: 'Welcome sequence for new leads',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'New Lead Created', config: {}, position: { x: 100, y: 100 } },
-          { id: 'delay-1', type: 'delay', label: 'Wait 1 hour', config: { duration: 3600 }, position: { x: 100, y: 200 } },
-          { id: 'action-1', type: 'action', label: 'Send Welcome Email', config: {}, position: { x: 100, y: 300 } },
+          { id: 'trigger-1', type: 'trigger', label: 'New Lead Created', config: {} },
+          { id: 'delay-1', type: 'delay', label: 'Wait 1 hour', config: { duration: 3600 } },
+          { id: 'action-1', type: 'action', label: 'Send Welcome Email', config: {} },
         ]
       },
       'Lead Score & Notify': {
         name: 'Lead Score & Notify',
         description: 'Score leads and notify team',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Lead Activity', config: {}, position: { x: 100, y: 100 } },
-          { id: 'condition-1', type: 'condition', label: 'Check Lead Score > 80', config: {}, position: { x: 100, y: 200 } },
-          { id: 'action-1', type: 'action', label: 'Add Hot Lead Tag', config: {}, position: { x: 100, y: 300 } },
-          { id: 'action-2', type: 'action', label: 'Notify Sales Team', config: {}, position: { x: 100, y: 400 } },
+          { id: 'trigger-1', type: 'trigger', label: 'Lead Activity', config: {} },
+          { id: 'condition-1', type: 'condition', label: 'Check Lead Score > 80', config: {} },
+          { id: 'action-1', type: 'action', label: 'Add Hot Lead Tag', config: {} },
+          { id: 'action-2', type: 'action', label: 'Notify Sales Team', config: {} },
         ]
       },
       'Follow-up Automation': {
         name: 'Follow-up Automation',
         description: 'Automated follow-up sequence',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Property Viewing Complete', config: {}, position: { x: 100, y: 100 } },
-          { id: 'delay-1', type: 'delay', label: 'Wait 2 hours', config: { duration: 7200 }, position: { x: 100, y: 200 } },
-          { id: 'action-1', type: 'action', label: 'Send Feedback Email', config: {}, position: { x: 100, y: 300 } },
-          { id: 'delay-2', type: 'delay', label: 'Wait 2 days', config: { duration: 172800 }, position: { x: 100, y: 400 } },
-          { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {}, position: { x: 100, y: 500 } },
+          { id: 'trigger-1', type: 'trigger', label: 'Property Viewing Complete', config: {} },
+          { id: 'delay-1', type: 'delay', label: 'Wait 2 hours', config: { duration: 7200 } },
+          { id: 'action-1', type: 'action', label: 'Send Feedback Email', config: {} },
+          { id: 'delay-2', type: 'delay', label: 'Wait 2 days', config: { duration: 172800 } },
+          { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {} },
         ]
       },
       'Task Assignment': {
         name: 'Task Assignment',
         description: 'Auto-assign tasks by status',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Lead Status Changed', config: {}, position: { x: 100, y: 100 } },
-          { id: 'condition-1', type: 'condition', label: 'If Status = Qualified', config: {}, position: { x: 100, y: 200 } },
-          { id: 'action-1', type: 'action', label: 'Assign to Sales Rep', config: {}, position: { x: 100, y: 300 } },
+          { id: 'trigger-1', type: 'trigger', label: 'Lead Status Changed', config: {} },
+          { id: 'condition-1', type: 'condition', label: 'If Status = Qualified', config: {} },
+          { id: 'action-1', type: 'action', label: 'Assign to Sales Rep', config: {} },
         ]
       },
       'SMS Drip Campaign': {
         name: 'SMS Drip Campaign',
         description: 'Multi-step SMS sequence',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Lead Opts In', config: {}, position: { x: 100, y: 100 } },
-          { id: 'action-1', type: 'action', label: 'Send Welcome SMS', config: {}, position: { x: 100, y: 200 } },
-          { id: 'delay-1', type: 'delay', label: 'Wait 3 days', config: { duration: 259200 }, position: { x: 100, y: 300 } },
-          { id: 'action-2', type: 'action', label: 'Send Value SMS', config: {}, position: { x: 100, y: 400 } },
+          { id: 'trigger-1', type: 'trigger', label: 'Lead Opts In', config: {} },
+          { id: 'action-1', type: 'action', label: 'Send Welcome SMS', config: {} },
+          { id: 'delay-1', type: 'delay', label: 'Wait 3 days', config: { duration: 259200 } },
+          { id: 'action-2', type: 'action', label: 'Send Value SMS', config: {} },
         ]
       },
       'Email Re-engagement': {
         name: 'Email Re-engagement',
         description: 'Re-engage dormant leads',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'No Activity 30 Days', config: {}, position: { x: 100, y: 100 } },
-          { id: 'action-1', type: 'action', label: 'Send Re-engagement Email', config: {}, position: { x: 100, y: 200 } },
-          { id: 'delay-1', type: 'delay', label: 'Wait 7 days', config: { duration: 604800 }, position: { x: 100, y: 300 } },
-          { id: 'condition-1', type: 'condition', label: 'Check if Engaged', config: {}, position: { x: 100, y: 400 } },
+          { id: 'trigger-1', type: 'trigger', label: 'No Activity 30 Days', config: {} },
+          { id: 'action-1', type: 'action', label: 'Send Re-engagement Email', config: {} },
+          { id: 'delay-1', type: 'delay', label: 'Wait 7 days', config: { duration: 604800 } },
+          { id: 'condition-1', type: 'condition', label: 'Check if Engaged', config: {} },
         ]
       },
       'Property Viewing Follow-up': {
         name: 'Property Viewing Follow-up',
         description: 'Follow-up after viewings',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Viewing Completed', config: {}, position: { x: 100, y: 100 } },
-          { id: 'action-1', type: 'action', label: 'Send Thank You Email', config: {}, position: { x: 100, y: 200 } },
-          { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {}, position: { x: 100, y: 300 } },
+          { id: 'trigger-1', type: 'trigger', label: 'Viewing Completed', config: {} },
+          { id: 'action-1', type: 'action', label: 'Send Thank You Email', config: {} },
+          { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {} },
         ]
       },
       'Contract Milestones': {
         name: 'Contract Milestones',
         description: 'Alert at key contract stages',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Contract Stage Change', config: {}, position: { x: 100, y: 100 } },
-          { id: 'condition-1', type: 'condition', label: 'Check Milestone Type', config: {}, position: { x: 100, y: 200 } },
-          { id: 'action-1', type: 'action', label: 'Notify Team', config: {}, position: { x: 100, y: 300 } },
-          { id: 'action-2', type: 'action', label: 'Create Reminder Task', config: {}, position: { x: 100, y: 400 } },
-          { id: 'action-3', type: 'action', label: 'Update CRM', config: {}, position: { x: 100, y: 500 } },
+          { id: 'trigger-1', type: 'trigger', label: 'Contract Stage Change', config: {} },
+          { id: 'condition-1', type: 'condition', label: 'Check Milestone Type', config: {} },
+          { id: 'action-1', type: 'action', label: 'Notify Team', config: {} },
+          { id: 'action-2', type: 'action', label: 'Create Reminder Task', config: {} },
+          { id: 'action-3', type: 'action', label: 'Update CRM', config: {} },
         ]
       },
       'Lead Qualification': {
         name: 'Lead Qualification',
         description: 'Qualify and route leads',
         nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'New Lead', config: {}, position: { x: 100, y: 100 } },
-          { id: 'condition-1', type: 'condition', label: 'Check Budget & Timeline', config: {}, position: { x: 100, y: 200 } },
-          { id: 'action-1', type: 'action', label: 'Add Qualified Tag', config: {}, position: { x: 100, y: 300 } },
-          { id: 'action-2', type: 'action', label: 'Assign to Agent', config: {}, position: { x: 100, y: 400 } },
+          { id: 'trigger-1', type: 'trigger', label: 'New Lead', config: {} },
+          { id: 'condition-1', type: 'condition', label: 'Check Budget & Timeline', config: {} },
+          { id: 'action-1', type: 'action', label: 'Add Qualified Tag', config: {} },
+          { id: 'action-2', type: 'action', label: 'Assign to Agent', config: {} },
         ]
       },
     };
@@ -322,128 +464,6 @@ const WorkflowBuilder = () => {
       toast.error('Template not found');
     }
     setShowTemplates(false);
-  };
-
-  // Drag and drop handlers
-  const handleDragStart = (item: DraggableItem) => {
-    setDraggedItem(item);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDraggingOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(false);
-    
-    if (draggedItem) {
-      addNode(draggedItem.type, draggedItem.label);
-      setDraggedItem(null);
-    }
-  };
-
-  const toggleInteractionMode = () => {
-    const newMode = interactionMode === 'click' ? 'drag' : 'click';
-    setInteractionMode(newMode);
-    toast.info(`Switched to ${newMode} mode`);
-  };
-
-  // Canvas node drag handlers (for dragging nodes on canvas in drag mode)
-  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    if (interactionMode !== 'drag') return;
-    
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
-
-    setIsDraggingNode(nodeId);
-    setDragNodeOffset({
-      x: e.clientX - node.position.x,
-      y: e.clientY - node.position.y
-    });
-    e.stopPropagation();
-  };
-
-  const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (isDraggingNode) {
-      const newX = e.clientX - dragNodeOffset.x;
-      const newY = e.clientY - dragNodeOffset.y;
-      
-      setNodes(nodes.map(node => 
-        node.id === isDraggingNode
-          ? { ...node, position: { x: newX, y: newY } }
-          : node
-      ));
-    } else if (isPanningCanvas) {
-      const deltaX = e.clientX - panStart.x;
-      const deltaY = e.clientY - panStart.y;
-      setCanvasOffset({
-        x: canvasOffset.x + deltaX,
-        y: canvasOffset.y + deltaY
-      });
-      setPanStart({ x: e.clientX, y: e.clientY });
-    }
-  };
-
-  const handleCanvasMouseUp = () => {
-    setIsDraggingNode(null);
-    setIsPanningCanvas(false);
-  };
-
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (interactionMode === 'drag' && e.button === 0 && !isDraggingNode) {
-      setIsPanningCanvas(true);
-      setPanStart({ x: e.clientX, y: e.clientY });
-    }
-  };
-
-  // Component to render connection lines between nodes
-  const ConnectionLines = () => {
-    if (nodes.length < 2) return null;
-
-    return (
-      <svg 
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 0 }}
-      >
-        {nodes.map((node, index) => {
-          if (index === 0) return null;
-          const prevNode = nodes[index - 1];
-          
-          // Calculate connection points
-          const startX = prevNode.position.x + 120; // Node width / 2
-          const startY = prevNode.position.y + 40; // Node height / 2
-          const endX = node.position.x + 120;
-          const endY = node.position.y + 40;
-          
-          // Calculate midpoint for curved line
-          const midY = (startY + endY) / 2;
-          
-          return (
-            <g key={`connection-${node.id}`}>
-              {/* Curved path */}
-              <path
-                d={`M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`}
-                stroke="#94a3b8"
-                strokeWidth="2"
-                fill="none"
-                className="transition-all"
-              />
-              {/* Arrow head */}
-              <polygon
-                points={`${endX},${endY} ${endX-6},${endY-6} ${endX+6},${endY-6}`}
-                fill="#94a3b8"
-              />
-            </g>
-          );
-        })}
-      </svg>
-    );
   };
 
   return (
@@ -480,23 +500,6 @@ const WorkflowBuilder = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant={interactionMode === 'drag' ? 'default' : 'outline'}
-            size="sm"
-            onClick={toggleInteractionMode}
-          >
-            {interactionMode === 'click' ? (
-              <>
-                <GripVertical className="h-4 w-4 mr-2" />
-                Enable Drag & Drop
-              </>
-            ) : (
-              <>
-                <MousePointer2 className="h-4 w-4 mr-2" />
-                Click Mode
-              </>
-            )}
-          </Button>
           <Button variant="outline" onClick={() => setShowTemplates(!showTemplates)}>
             <Upload className="h-4 w-4 mr-2" />
             Templates
@@ -512,27 +515,22 @@ const WorkflowBuilder = () => {
         </div>
       </div>
 
-      {/* Performance Metrics Modal */}
-      <Dialog open={showMetricsPanel} onOpenChange={setShowMetricsPanel}>
-        <DialogContent className="max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl w-full max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-start justify-between">
+      {/* Performance Metrics Panel */}
+      {showMetricsPanel && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <DialogTitle>Performance Metrics</DialogTitle>
-                <DialogDescription>Workflow execution analytics</DialogDescription>
+                <CardTitle>Performance Metrics</CardTitle>
+                <CardDescription>Workflow execution analytics</CardDescription>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowMetricsPanel(false)}
-                className="h-8 w-8 p-0"
-              >
-                <XCircle className="h-4 w-4" />
+              <Button variant="ghost" size="sm" onClick={() => setShowMetricsPanel(false)}>
+                Close
               </Button>
             </div>
-          </DialogHeader>
-          <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-4">
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-4 mb-6">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Total Executions</p>
                 <p className="text-2xl font-bold">1,463</p>
@@ -583,13 +581,13 @@ const WorkflowBuilder = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Template Modal */}
       <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
-        <DialogContent className="max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-7xl w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <div className="flex items-start justify-between">
               <div>
@@ -793,370 +791,265 @@ const WorkflowBuilder = () => {
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="cursor-pointer hover:border-primary" onClick={() => setShowMetricsPanel(!showMetricsPanel)}>
+        <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={() => setShowMetricsPanel(!showMetricsPanel)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Nodes in Workflow</CardTitle>
-            <Workflow className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <Workflow className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{nodes.length}</div>
-            <p className="text-xs text-muted-foreground">Click to view metrics</p>
+            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Click to view metrics</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Executions</CardTitle>
-            <Play className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <Play className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1,463</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
+              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">97.3%</div>
-            <p className="text-xs text-muted-foreground">1,423 successful</p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">1,423 successful</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-primary" onClick={() => setShowLogsPanel(!showLogsPanel)}>
+        <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={() => setShowLogsPanel(!showLogsPanel)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recent Runs</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <Activity className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{executionLogs.length}</div>
-            <p className="text-xs text-muted-foreground">Click to view logs</p>
+            <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Click to view logs</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Getting Started Guide - Show when no nodes */}
+      {nodes.length === 0 && (
+        <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-indigo-200 dark:border-indigo-800">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                <Workflow className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg mb-2">Let's build your workflow! 🚀</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Choose how you'd like to get started:
+                </p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <button
+                    onClick={() => setShowTemplates(true)}
+                    className="p-4 bg-white dark:bg-gray-800 rounded-lg border hover:border-primary transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Upload className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-sm">Use a Template</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Start with a pre-built workflow</p>
+                  </button>
+                  <button
+                    onClick={() => setShowComponentLibrary(true)}
+                    className="p-4 bg-white dark:bg-gray-800 rounded-lg border hover:border-primary transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Plus className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-sm">Build from Scratch</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Add components one by one</p>
+                  </button>
+                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-sm">Pro Tip</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Start with a trigger, then add actions</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Workflow Canvas & Panels */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Visual Workflow Canvas */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
+        <Card className="lg:col-span-2 hover:shadow-md transition-shadow">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Workflow Canvas</CardTitle>
-                <CardDescription>Visual node-based workflow builder</CardDescription>
+              <div className="flex-1">
+                <CardTitle className="flex items-center gap-2">
+                  <Workflow className="h-5 w-5" />
+                  Workflow Canvas
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {interactionMode === 'drag' ? '🎯 Drag & drop components from the sidebar' : '✨ Click components to add them'}
+                </CardDescription>
               </div>
               <div className="flex gap-2">
                 <Button 
-                  variant="outline" 
+                  variant={interactionMode === 'drag' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setShowTriggerBuilder(!showTriggerBuilder)}
+                  onClick={() => setInteractionMode('drag')}
+                  className={interactionMode === 'drag' ? 'bg-blue-600 hover:bg-blue-700 border-blue-600' : 'border-blue-300 text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950'}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Trigger
+                  <GripVertical className="h-4 w-4 mr-2" />
+                  Drag
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant={interactionMode === 'click' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setShowActionLibrary(!showActionLibrary)}
+                  onClick={() => setInteractionMode('click')}
+                  className={interactionMode === 'click' ? 'bg-green-600 hover:bg-green-700 border-green-600' : 'border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950'}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Action
+                  <MousePointer2 className="h-4 w-4 mr-2" />
+                  Click
                 </Button>
+                {interactionMode === 'drag' && nodes.length > 1 && (
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={autoArrangeNodes}
+                    title="Auto-arrange nodes in a clean layout"
+                    className="border-purple-300 text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950"
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    Auto-Arrange
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div 
-              className={`border-2 border-dashed rounded-lg min-h-[500px] bg-muted/20 p-4 relative overflow-auto transition-colors ${
-                isDraggingOver && interactionMode === 'drag' ? 'border-primary bg-primary/5' : ''
-              }`}
-              onDragOver={interactionMode === 'drag' ? handleDragOver : undefined}
-              onDragLeave={interactionMode === 'drag' ? handleDragLeave : undefined}
-              onDrop={interactionMode === 'drag' ? handleDrop : undefined}
-            >
-              {nodes.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <Workflow className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">Start Building Your Workflow</h3>
-                    <p className="text-muted-foreground mb-2">
-                      {interactionMode === 'drag' 
-                        ? 'Drag triggers and actions from the sidebar and drop them here'
-                        : 'Add triggers and actions to create your automation'
-                      }
-                    </p>
-                    <Badge variant="outline" className="mb-4">
-                      {interactionMode === 'drag' ? 'Drag & Drop Mode' : 'Click Mode'}
-                    </Badge>
-                    <div className="flex gap-2 justify-center">
-                      <Button onClick={() => setShowTriggerBuilder(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Trigger
-                      </Button>
-                      <Button variant="outline" onClick={() => setShowTemplates(true)}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Use Template
-                      </Button>
-                    </div>
+            {/* Validation Warnings */}
+            {validationErrors.length > 0 && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-yellow-900 mb-1">Workflow Validation Issues</h4>
+                    <ul className="text-xs text-yellow-800 space-y-1">
+                      {validationErrors.map((error, index) => (
+                        <li key={index}>• {error}</li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-              ) : interactionMode === 'click' ? (
-                /* Click Mode: Vertical List */
-                <div className="space-y-4">
-                  {nodes.map((node, index) => (
-                    <div key={node.id} className="space-y-2">
-                      <Card 
-                        className={`cursor-pointer transition-all ${
-                          selectedNode?.id === node.id ? 'border-primary bg-primary/5 shadow-md' : ''
-                        } ${
-                          workflowStatus === 'running' ? 'hover:shadow-lg' : ''
-                        }`}
-                        onClick={() => setSelectedNode(node)}
-                      >
-                        <CardHeader className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`relative p-2 rounded-lg ${
-                                node.type === 'trigger' ? 'bg-blue-100 text-blue-600' :
-                                node.type === 'action' ? 'bg-green-100 text-green-600' :
-                                node.type === 'condition' ? 'bg-yellow-100 text-yellow-600' :
-                                'bg-purple-100 text-purple-600'
-                              }`}>
-                                {node.type === 'trigger' && <Zap className="h-4 w-4" />}
-                                {node.type === 'action' && <Settings className="h-4 w-4" />}
-                                {node.type === 'condition' && <GitBranch className="h-4 w-4" />}
-                                {node.type === 'delay' && <Clock className="h-4 w-4" />}
-                                {/* Running indicator on node icon */}
-                                {workflowStatus === 'running' && (
-                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-medium">{node.label}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{node.type}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                Step {index + 1}
-                              </Badge>
-                              {workflowStatus === 'running' && (
-                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
-                                  <Activity className="h-3 w-3 mr-1" />
-                                  Live
-                                </Badge>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeNode(node.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                      {index < nodes.length - 1 && (
-                        <div className="flex flex-col items-center py-2">
-                          {/* Enhanced Connection Line */}
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="w-0.5 h-4 bg-gradient-to-b from-primary/60 to-primary/20" />
-                            <div className="relative">
-                              <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
-                                <ArrowRight className="h-4 w-4 text-primary rotate-90" />
-                              </div>
-                              {/* Animated pulse for running workflows */}
-                              {workflowStatus === 'running' && (
-                                <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping" />
-                              )}
-                            </div>
-                            <div className="w-0.5 h-4 bg-gradient-to-b from-primary/20 to-primary/60" />
-                          </div>
-                          {/* Step connector label */}
-                          <span className="text-xs text-muted-foreground font-medium">
-                            Then
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                /* Drag Mode: 2D Canvas */
-                <div 
-                  className="relative w-full h-full min-h-[500px]"
-                  onMouseMove={handleCanvasMouseMove}
-                  onMouseUp={handleCanvasMouseUp}
-                  onMouseDown={handleCanvasMouseDown}
-                  onMouseLeave={handleCanvasMouseUp}
-                >
-                  {/* Connection Lines */}
-                  <ConnectionLines />
-                  
-                  {/* Draggable Nodes */}
-                  {nodes.map((node, index) => (
-                    <div
-                      key={node.id}
-                      className={`absolute cursor-move select-none ${
-                        isDraggingNode === node.id ? 'z-50 shadow-2xl scale-105' : 'z-10'
-                      }`}
-                      style={{
-                        left: `${node.position.x}px`,
-                        top: `${node.position.y}px`,
-                        transition: isDraggingNode === node.id ? 'none' : 'all 0.2s ease'
-                      }}
-                      onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                    >
-                      <Card 
-                        className={`w-[240px] transition-all ${
-                          selectedNode?.id === node.id ? 'border-primary bg-primary/5 shadow-md' : 'bg-white'
-                        } ${
-                          isDraggingNode === node.id ? 'shadow-2xl ring-2 ring-primary' : 'shadow-sm hover:shadow-md'
-                        }`}
-                        onClick={() => setSelectedNode(node)}
-                      >
-                        <CardHeader className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 flex-1">
-                              <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0" />
-                              <div className={`p-2 rounded-lg flex-shrink-0 ${
-                                node.type === 'trigger' ? 'bg-blue-100 text-blue-600' :
-                                node.type === 'action' ? 'bg-green-100 text-green-600' :
-                                node.type === 'condition' ? 'bg-yellow-100 text-yellow-600' :
-                                'bg-purple-100 text-purple-600'
-                              }`}>
-                                {node.type === 'trigger' && <Zap className="h-4 w-4" />}
-                                {node.type === 'action' && <Settings className="h-4 w-4" />}
-                                {node.type === 'condition' && <GitBranch className="h-4 w-4" />}
-                                {node.type === 'delay' && <Clock className="h-4 w-4" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">{node.label}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{node.type}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <Badge variant="secondary" className="text-xs">
-                                {index + 1}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeNode(node.id);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+            <WorkflowCanvas
+              nodes={nodes}
+              selectedNodeId={selectedNode?.id}
+              onNodeSelect={handleNodeSelect}
+              onNodeDelete={handleNodeDelete}
+              onNodeEdit={handleNodeEdit}
+              onNodeMove={handleNodeMove}
+              isDraggingOver={isDraggingOver}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              mode={interactionMode}
+              onTemplateSelect={importTemplate}
+            />
           </CardContent>
         </Card>
 
-        {/* Right Sidebar - Node Config / Quick Actions */}
+        {/* Right Sidebar - Component Library & Config */}
         <div className="space-y-6">
-          {/* Trigger Builder Panel */}
-          {showTriggerBuilder && (
+          {/* Mode Toggle Info */}
+          <Card className={interactionMode === 'drag' ? 'bg-blue-50 border-blue-200 border-2' : 'bg-green-50 border-green-200 border-2'}>
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                {interactionMode === 'drag' ? (
+                  <GripVertical className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <MousePointer2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <h4 className={`text-sm font-semibold mb-1 ${interactionMode === 'drag' ? 'text-blue-900' : 'text-green-900'}`}>
+                    {interactionMode === 'drag' ? '🎯 Drag & Drop Mode Active' : '✨ Click Mode Active'}
+                  </h4>
+                  <p className={`text-xs leading-relaxed ${interactionMode === 'drag' ? 'text-blue-700' : 'text-green-700'}`}>
+                    {interactionMode === 'drag' 
+                      ? 'Drag components from below onto the canvas. You can also drag nodes to reposition them and click to configure.'
+                      : 'Simply click any component below to instantly add it to your workflow! The component library stays open for quick building.'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          {/* Node Configuration Panel */}
+          {showConfigPanel && selectedNode && (
+            <NodeConfigPanel
+              node={selectedNode}
+              onSave={handleConfigSave}
+              onClose={() => {
+                setShowConfigPanel(false);
+                setSelectedNode(null);
+              }}
+            />
+          )}
+
+          {/* Component Library */}
+          {showComponentLibrary && !showConfigPanel && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Add Trigger</CardTitle>
-                <CardDescription className="text-xs">
-                  {interactionMode === 'drag' ? 'Drag to canvas or click to add' : 'Click to add to workflow'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { label: 'New Lead Created', icon: UserPlus, type: 'trigger' as NodeType },
-                  { label: 'Lead Status Changed', icon: Tag, type: 'trigger' as NodeType },
-                  { label: 'Email Opened', icon: Mail, type: 'trigger' as NodeType },
-                  { label: 'Form Submitted', icon: FileText, type: 'trigger' as NodeType },
-                  { label: 'Time Schedule', icon: Calendar, type: 'trigger' as NodeType },
-                  { label: 'Score Threshold', icon: TrendingUp, type: 'trigger' as NodeType },
-                ].map((trigger) => (
-                  <div
-                    key={trigger.label}
-                    className={`p-3 border rounded-lg hover:bg-accent transition-colors ${
-                      interactionMode === 'drag' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-                    }`}
-                    draggable={interactionMode === 'drag'}
-                    onDragStart={() => handleDragStart({ type: trigger.type, label: trigger.label, icon: trigger.icon })}
-                    onClick={() => {
-                      if (interactionMode === 'click') {
-                        addNode('trigger', trigger.label);
-                        setShowTriggerBuilder(false);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      {interactionMode === 'drag' && <GripVertical className="h-4 w-4 text-muted-foreground" />}
-                      <trigger.icon className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">{trigger.label}</span>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Component Library</CardTitle>
+                    <CardDescription className="text-xs">
+                      {interactionMode === 'drag' ? 'Drag to add' : 'Click to add'}
+                    </CardDescription>
                   </div>
-                ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowComponentLibrary(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <WorkflowComponentLibrary
+                  onComponentSelect={handleComponentSelect}
+                  onComponentDragStart={handleComponentDragStart}
+                  mode={interactionMode}
+                />
               </CardContent>
             </Card>
           )}
 
-          {/* Action Library Panel */}
-          {showActionLibrary && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Add Action</CardTitle>
-                <CardDescription className="text-xs">
-                  {interactionMode === 'drag' ? 'Drag to canvas or click to add' : 'Click to add to workflow'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { label: 'Send Email', icon: Mail, type: 'action' as NodeType },
-                  { label: 'Send SMS', icon: MessageSquare, type: 'action' as NodeType },
-                  { label: 'Update Lead Status', icon: Tag, type: 'action' as NodeType },
-                  { label: 'Assign to Team', icon: UserPlus, type: 'action' as NodeType },
-                  { label: 'Create Task', icon: CheckCircle2, type: 'action' as NodeType },
-                  { label: 'Wait/Delay', icon: Clock, type: 'delay' as NodeType },
-                  { label: 'If/Then Condition', icon: GitBranch, type: 'condition' as NodeType },
-                  { label: 'Score Lead', icon: TrendingUp, type: 'action' as NodeType },
-                ].map((action) => (
-                  <div
-                    key={action.label}
-                    className={`p-3 border rounded-lg hover:bg-accent transition-colors ${
-                      interactionMode === 'drag' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-                    }`}
-                    draggable={interactionMode === 'drag'}
-                    onDragStart={() => handleDragStart({ type: action.type, label: action.label, icon: action.icon })}
-                    onClick={() => {
-                      if (interactionMode === 'click') {
-                        addNode(action.type, action.label);
-                        setShowActionLibrary(false);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      {interactionMode === 'drag' && <GripVertical className="h-4 w-4 text-muted-foreground" />}
-                      <action.icon className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">{action.label}</span>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+          {/* Show Component Library Toggle */}
+          {!showComponentLibrary && !showConfigPanel && (
+            <Button
+              onClick={() => setShowComponentLibrary(true)}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Show Component Library
+            </Button>
           )}
 
-          {/* Testing/Debugging Panel */}
+          {/* Quick Actions */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -1262,30 +1155,27 @@ const WorkflowBuilder = () => {
         </div>
       </div>
 
-      {/* Execution Logs Modal */}
-      <Dialog open={showLogsPanel} onOpenChange={setShowLogsPanel}>
-        <DialogContent className="max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl w-full max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-start justify-between">
+      {/* Execution Logs Viewer */}
+      {showLogsPanel && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <DialogTitle>Execution Logs</DialogTitle>
-                <DialogDescription>Recent workflow execution history</DialogDescription>
+                <CardTitle>Execution Logs</CardTitle>
+                <CardDescription>Recent workflow execution history</CardDescription>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowLogsPanel(false)}
-                className="h-8 w-8 p-0"
-              >
-                <XCircle className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowLogsPanel(false)}>
+                  Close
+                </Button>
+              </div>
             </div>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Button variant="outline" size="sm">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
               {executionLogs.map((log) => (
                 <div key={log.id} className="p-4 border rounded-lg">
@@ -1309,9 +1199,9 @@ const WorkflowBuilder = () => {
               <Terminal className="h-4 w-4 mr-2" />
               View Full Debug Console
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

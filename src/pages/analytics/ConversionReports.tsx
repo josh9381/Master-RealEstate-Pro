@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Activity, TrendingUp, Users, Target, BarChart2, RefreshCw } from 'lucide-react';
+import { Activity, TrendingUp, Users, Target, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { analyticsApi } from '@/lib/api';

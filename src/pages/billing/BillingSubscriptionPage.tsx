@@ -55,7 +55,7 @@ export default function BillingSubscriptionPage() {
       name: 'Enterprise',
       price: 299,
       interval: 'month',
-      description: 'For large organizations',
+      description: 'For large teams',
       features: [
         'Everything in Professional',
         'Custom integrations',

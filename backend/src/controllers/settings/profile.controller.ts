@@ -53,7 +53,12 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   // If email is being updated, check if it's already taken
   if (email && email !== req.user.email) {
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { 
+        organizationId_email: {
+          organizationId: req.user!.organizationId,
+          email
+        }
+      }
     });
 
     if (existingUser) {

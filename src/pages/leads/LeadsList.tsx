@@ -29,6 +29,7 @@ import {
   ArrowUp, ArrowDown, ChevronDown, ChevronRight, FileText, Phone, 
   MessageSquare, X, Send
 } from 'lucide-react'
+import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
 import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { ActiveFilterChips } from '@/components/filters/ActiveFilterChips'
@@ -38,6 +39,9 @@ import { Lead } from '@/types'
 import { mockLeads } from '@/data/mockData'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
+import { ScoreBadge } from '@/components/ai/ScoreBadge'
+import { getScoreCategory } from '@/utils/scoringUtils'
+import { PredictionBadge } from '@/components/ai/PredictionBadge'
 
 // Helper types for handling API data that might be objects
 interface TagObject {
@@ -79,6 +83,7 @@ function LeadsList() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
+  const [scoreFilter, setScoreFilter] = useState<'ALL' | 'HOT' | 'WARM' | 'COOL' | 'COLD'>('ALL')
   const { toast } = useToast()
 
   // New modals for bulk actions
@@ -280,11 +285,21 @@ function LeadsList() {
     
     // Client-side filtering for mock data
     let filtered = leads.filter((lead: Lead) => {
-      if (searchQuery && !lead.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
+      // Search query filter
+      if (searchQuery && !`${lead.firstName} ${lead.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) && 
           !lead.email.toLowerCase().includes(searchQuery.toLowerCase()) &&
           !(lead.company || '').toLowerCase().includes(searchQuery.toLowerCase())) {
         return false
       }
+      
+      // Score category filter
+      if (scoreFilter !== 'ALL') {
+        const leadCategory = getScoreCategory(lead.score || 0)
+        if (leadCategory !== scoreFilter) {
+          return false
+        }
+      }
+      
       return true
     })
 
@@ -306,7 +321,7 @@ function LeadsList() {
     }
 
     return filtered
-  }, [leads, searchQuery, sortField, sortDirection, leadsResponse])
+  }, [leads, searchQuery, sortField, sortDirection, scoreFilter, leadsResponse])
 
   // Paginate leads - server-side for API, client-side for mock
   const paginatedLeads = useMemo(() => {
@@ -517,7 +532,8 @@ function LeadsList() {
     if (editingLead) {
       // Filter out null values and convert to UpdateLeadData
       const updateData: UpdateLeadData = {
-        name: editingLead.name,
+        firstName: editingLead.firstName,
+        lastName: editingLead.lastName,
         email: editingLead.email,
         phone: editingLead.phone,
         company: editingLead.company,
@@ -540,7 +556,8 @@ function LeadsList() {
   const handleDuplicateLead = (lead: Lead) => {
     // Create a copy of the lead without the ID
     const createData: CreateLeadData = {
-      name: `${lead.name} (Copy)`,
+      firstName: lead.firstName,
+      lastName: `${lead.lastName} (Copy)`,
       email: lead.email,
       phone: lead.phone,
       company: lead.company,
@@ -578,7 +595,7 @@ function LeadsList() {
     const csvContent = [
       ['Name', 'Email', 'Company', 'Phone', 'Score', 'Status', 'Source', 'Assigned To', 'Tags'],
       ...data.map((lead: Lead) => [
-        lead.name,
+        `${lead.firstName} ${lead.lastName}`,
         lead.email,
         lead.company,
         lead.phone,
@@ -1084,14 +1101,25 @@ function LeadsList() {
               <div>
                 <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Full Name *</label>
-                    <Input
-                      value={editingLead.name}
-                      onChange={(e) => setEditingLead({...editingLead, name: e.target.value})}
-                      className="mt-1"
-                      placeholder="John Doe"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm font-medium">First Name *</label>
+                      <Input
+                        value={editingLead.firstName}
+                        onChange={(e) => setEditingLead({...editingLead, firstName: e.target.value})}
+                        className="mt-1"
+                        placeholder="John"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Last Name *</label>
+                      <Input
+                        value={editingLead.lastName}
+                        onChange={(e) => setEditingLead({...editingLead, lastName: e.target.value})}
+                        className="mt-1"
+                        placeholder="Doe"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Position/Title</label>
@@ -1382,12 +1410,17 @@ function LeadsList() {
             Manage and track all your leads in one place
           </p>
         </div>
-        <Link to="/leads/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Lead
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <UsageBadge resource="leads" />
+          <FeatureGate resource="leads">
+            <Link to="/leads/create">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Lead
+              </Button>
+            </Link>
+          </FeatureGate>
+        </div>
       </div>
 
       {/* Actions Bar */}
@@ -1403,6 +1436,17 @@ function LeadsList() {
             />
           </div>
           <div className="flex gap-2">
+            <select
+              value={scoreFilter}
+              onChange={(e) => setScoreFilter(e.target.value as any)}
+              className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+            >
+              <option value="ALL">All Scores</option>
+              <option value="HOT">🔥 Hot (80-100)</option>
+              <option value="WARM">🟡 Warm (50-79)</option>
+              <option value="COOL">❄️ Cool (25-49)</option>
+              <option value="COLD">⚫ Cold (0-24)</option>
+            </select>
             <Button variant="outline" onClick={() => setShowFilters(true)}>
               <Filter className="mr-2 h-4 w-4" />
               Filters
@@ -1538,16 +1582,28 @@ function LeadsList() {
                       to={`/leads/${lead.id}`}
                       className="font-medium hover:text-primary"
                     >
-                      {lead.name}
+                      {`${lead.firstName} ${lead.lastName}`}
                     </Link>
                   </TableCell>
                   <TableCell>{lead.company}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.email}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
                   <TableCell>
-                    <Badge variant={lead.score >= 80 ? 'success' : 'secondary'}>
-                      {lead.score}
-                    </Badge>
+                    <ScoreBadge score={lead.score || 0} size="sm" />
+                    {/* AI Prediction Badges - Mock data for now */}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {lead.score >= 70 && (
+                        <>
+                          <PredictionBadge type="probability" value={lead.score} size="sm" showIcon={false} />
+                          <PredictionBadge 
+                            type="value" 
+                            value={Math.round((lead.score / 100) * 20000)} 
+                            size="sm" 
+                            showIcon={false} 
+                          />
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(lead.status)}>
@@ -1808,7 +1864,7 @@ function LeadsList() {
               </div>
               
               <Link to={`/leads/${lead.id}`} className="block mb-3">
-                <h3 className="font-semibold text-lg hover:text-primary">{lead.name}</h3>
+                <h3 className="font-semibold text-lg hover:text-primary">{`${lead.firstName} ${lead.lastName}`}</h3>
                 <p className="text-sm text-muted-foreground">{lead.company}</p>
               </Link>
               
@@ -1824,9 +1880,21 @@ function LeadsList() {
               </div>
               
               <div className="flex items-center justify-between mb-3">
-                <Badge variant={lead.score >= 80 ? 'success' : 'secondary'}>
-                  Score: {lead.score}
-                </Badge>
+                <div className="flex flex-col gap-1">
+                  <ScoreBadge score={lead.score || 0} showValue />
+                  {/* AI Prediction Badges */}
+                  {lead.score >= 70 && (
+                    <div className="flex gap-1">
+                      <PredictionBadge type="probability" value={lead.score} size="sm" showIcon={false} />
+                      <PredictionBadge 
+                        type="value" 
+                        value={Math.round((lead.score / 100) * 20000)} 
+                        size="sm" 
+                        showIcon={false} 
+                      />
+                    </div>
+                  )}
+                </div>
                 <Badge variant={getStatusVariant(lead.status)} className="capitalize">
                   {lead.status}
                 </Badge>

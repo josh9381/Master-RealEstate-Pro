@@ -106,6 +106,7 @@ export async function sendAppointmentReminder(options: SendReminderOptions): Pro
             to: recipient,
             subject: `Appointment Reminder: ${appointment.title}`,
             html: emailBody,
+            organizationId: appointment.lead?.organizationId || appointment.organizationId || 'clz0000000000000000000000',
           });
         }
         result.email = true;
@@ -133,6 +134,7 @@ export async function sendAppointmentReminder(options: SendReminderOptions): Pro
           await sendSMS({
             to: phone,
             message: smsMessage,
+            organizationId: appointment.lead?.organizationId || appointment.organizationId || 'clz0000000000000000000000',
           });
         }
         result.sms = true;

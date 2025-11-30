@@ -41,10 +41,12 @@ export interface TokenPayload {
   userId: string;
   email: string;
   role: string;
+  organizationId: string;  // Added for multi-tenancy
 }
 
 export interface RefreshTokenPayload {
   userId: string;
+  organizationId: string;  // Added for multi-tenancy
 }
 
 /**
@@ -53,9 +55,10 @@ export interface RefreshTokenPayload {
 export function generateAccessToken(
   userId: string,
   email: string,
-  role: string
+  role: string,
+  organizationId: string
 ): string {
-  const payload: TokenPayload = { userId, email, role };
+  const payload: TokenPayload = { userId, email, role, organizationId };
 
   return jwt.sign(payload, ACCESS_TOKEN_SECRET as string, {
     expiresIn: ACCESS_TOKEN_EXPIRY,
@@ -67,8 +70,8 @@ export function generateAccessToken(
 /**
  * Generate a refresh token (long-lived, 7 days)
  */
-export function generateRefreshToken(userId: string): string {
-  const payload: RefreshTokenPayload = { userId };
+export function generateRefreshToken(userId: string, organizationId: string): string {
+  const payload: RefreshTokenPayload = { userId, organizationId };
 
   return jwt.sign(payload, REFRESH_TOKEN_SECRET as string, {
     expiresIn: REFRESH_TOKEN_EXPIRY,

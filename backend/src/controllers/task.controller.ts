@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { NotFoundError, ValidationError } from '../middleware/errorHandler';
 import type { TaskStatus, TaskPriority } from '@prisma/client';
+import { getTasksFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
 
 /**
  * Get all tasks with filtering and pagination
@@ -23,27 +24,30 @@ export const getTasks = async (req: Request, res: Response) => {
     sortOrder = 'asc',
   } = validatedQuery;
 
-  // Build where clause
-  const where: any = {};
+  // Build where clause with role-based filtering
+  const roleFilter = getRoleFilterFromRequest(req);
+  const additionalWhere: any = {};
 
-  if (status) where.status = status as TaskStatus;
-  if (priority) where.priority = priority as TaskPriority;
-  if (assignedToId) where.assignedToId = assignedToId as string;
-  if (leadId) where.leadId = leadId as string;
+  if (status) additionalWhere.status = status as TaskStatus;
+  if (priority) additionalWhere.priority = priority as TaskPriority;
+  if (assignedToId) additionalWhere.assignedToId = assignedToId as string;
+  if (leadId) additionalWhere.leadId = leadId as string;
 
   // Filter overdue tasks
   if (overdue === 'true') {
-    where.dueDate = { lt: new Date() };
-    where.status = { in: ['PENDING', 'IN_PROGRESS'] };
+    additionalWhere.dueDate = { lt: new Date() };
+    additionalWhere.status = { in: ['PENDING', 'IN_PROGRESS'] };
   }
 
   // Search in title and description
   if (search) {
-    where.OR = [
+    additionalWhere.OR = [
       { title: { contains: search as string } },
       { description: { contains: search as string } },
     ];
   }
+
+  const where: any = getTasksFilter(roleFilter, additionalWhere);
 
   // Calculate pagination
   const skip = (Number(page) - 1) * Number(limit);

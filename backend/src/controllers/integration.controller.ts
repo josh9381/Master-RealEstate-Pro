@@ -197,3 +197,33 @@ export async function syncIntegration(req: Request, res: Response): Promise<void
     message: `${provider} sync started (mock mode)`
   });
 }
+
+/**
+ * Get all integration statuses for admin dashboard
+ * GET /api/integrations/status
+ */
+export async function getAllIntegrationStatuses(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  // Get all integrations for the user's organization
+  // In a full implementation, you'd query by organizationId
+  // For now, we'll use userId
+  const integrations = await prisma.integration.findMany({
+    where: { userId: req.user.userId },
+    select: {
+      provider: true,
+      isConnected: true,
+      lastSyncAt: true,
+      syncStatus: true,
+      syncError: true,
+      updatedAt: true,
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    data: { integrations },
+  });
+}

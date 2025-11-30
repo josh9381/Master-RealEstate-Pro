@@ -7,7 +7,9 @@ import type { WorkflowTrigger } from '@prisma/client'
 export const getWorkflows = async (req: Request, res: Response) => {
   const { isActive, triggerType, search } = req.query
 
-  const where: Record<string, unknown> = {}
+  const where: Record<string, unknown> = {
+    organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
+  }
 
   if (isActive !== undefined) {
     where.isActive = isActive === 'true'
@@ -48,8 +50,11 @@ export const getWorkflows = async (req: Request, res: Response) => {
 export const getWorkflow = async (req: Request, res: Response) => {
   const { id } = req.params
 
-  const workflow = await prisma.workflow.findUnique({
-    where: { id },
+  const workflow = await prisma.workflow.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
     include: {
       workflowExecutions: {
         take: 20,
@@ -82,6 +87,7 @@ export const createWorkflow = async (req: Request, res: Response) => {
 
   const workflow = await prisma.workflow.create({
     data: {
+      organizationId: req.user!.organizationId,  // CRITICAL: Set organization
       name,
       description,
       triggerType,
@@ -102,8 +108,11 @@ export const updateWorkflow = async (req: Request, res: Response) => {
   const { id } = req.params
   const { name, description, triggerType, triggerData, actions, isActive } = req.body
 
-  const existingWorkflow = await prisma.workflow.findUnique({
-    where: { id },
+  const existingWorkflow = await prisma.workflow.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
   })
 
   if (!existingWorkflow) {
@@ -136,8 +145,11 @@ export const updateWorkflow = async (req: Request, res: Response) => {
 export const deleteWorkflow = async (req: Request, res: Response) => {
   const { id } = req.params
 
-  const existingWorkflow = await prisma.workflow.findUnique({
-    where: { id },
+  const existingWorkflow = await prisma.workflow.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
   })
 
   if (!existingWorkflow) {
@@ -164,8 +176,11 @@ export const toggleWorkflow = async (req: Request, res: Response) => {
   const { id } = req.params
   const { isActive } = req.body
 
-  const existingWorkflow = await prisma.workflow.findUnique({
-    where: { id },
+  const existingWorkflow = await prisma.workflow.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
   })
 
   if (!existingWorkflow) {

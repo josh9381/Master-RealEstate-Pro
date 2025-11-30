@@ -258,7 +258,8 @@ export async function testSMS(req: Request, res: Response): Promise<void> {
   const result = await sendSMS({
     to,
     message: testMessage,
-    userId: req.user.userId // Pass userId for config lookup
+    userId: req.user.userId, // Pass userId for config lookup
+    organizationId: req.user.organizationId
   });
 
   if (!result.success) {

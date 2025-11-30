@@ -8,6 +8,9 @@ import { NotFoundError, ConflictError, ValidationError } from '../middleware/err
  */
 export const getTags = async (req: Request, res: Response) => {
   const tags = await prisma.tag.findMany({
+    where: {
+      organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
+    },
     orderBy: {
       name: 'asc',
     },
@@ -37,8 +40,11 @@ export const getTags = async (req: Request, res: Response) => {
 export const getTag = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const tag = await prisma.tag.findUnique({
-    where: { id },
+  const tag = await prisma.tag.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
     include: {
       leads: {
         select: {
@@ -82,9 +88,12 @@ export const getTag = async (req: Request, res: Response) => {
 export const createTag = async (req: Request, res: Response) => {
   const { name, color } = req.body;
 
-  // Check if tag with same name already exists
-  const existingTag = await prisma.tag.findUnique({
-    where: { name },
+  // Check if tag with same name already exists IN THIS ORGANIZATION
+  const existingTag = await prisma.tag.findFirst({
+    where: { 
+      name,
+      organizationId: req.user!.organizationId
+    },
   });
 
   if (existingTag) {
@@ -93,6 +102,7 @@ export const createTag = async (req: Request, res: Response) => {
 
   const tag = await prisma.tag.create({
     data: {
+      organizationId: req.user!.organizationId,  // CRITICAL: Set organization
       name,
       color: color || null,
     },
@@ -113,19 +123,25 @@ export const updateTag = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, color } = req.body;
 
-  // Check if tag exists
-  const existingTag = await prisma.tag.findUnique({
-    where: { id },
+  // Check if tag exists AND belongs to this organization
+  const existingTag = await prisma.tag.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
   });
 
   if (!existingTag) {
     throw new NotFoundError( 'Tag not found');
   }
 
-  // If updating name, check for duplicates
+  // If updating name, check for duplicates IN THIS ORGANIZATION
   if (name && name !== existingTag.name) {
-    const duplicateTag = await prisma.tag.findUnique({
-      where: { name },
+    const duplicateTag = await prisma.tag.findFirst({
+      where: { 
+        name,
+        organizationId: req.user!.organizationId
+      },
     });
 
     if (duplicateTag) {
@@ -155,9 +171,12 @@ export const updateTag = async (req: Request, res: Response) => {
 export const deleteTag = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  // Check if tag exists
-  const tag = await prisma.tag.findUnique({
-    where: { id },
+  // Check if tag exists AND belongs to this organization
+  const tag = await prisma.tag.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
     include: {
       _count: {
         select: {
@@ -195,9 +214,12 @@ export const addTagsToLead = async (req: Request, res: Response) => {
   const { leadId } = req.params;
   const { tagIds } = req.body;
 
-  // Check if lead exists
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
+  // Check if lead exists AND belongs to this organization
+  const lead = await prisma.lead.findFirst({
+    where: { 
+      id: leadId,
+      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
+    },
     include: {
       tags: true,
     },
@@ -207,12 +229,13 @@ export const addTagsToLead = async (req: Request, res: Response) => {
     throw new NotFoundError( 'Lead not found');
   }
 
-  // Verify all tags exist
+  // Verify all tags exist IN THIS ORGANIZATION
   const tags = await prisma.tag.findMany({
     where: {
       id: {
         in: tagIds,
       },
+      organizationId: req.user!.organizationId  // CRITICAL: Only org's tags
     },
   });
 

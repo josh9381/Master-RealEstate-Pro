@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -15,85 +15,11 @@ import {
   Phone,
   Calendar,
   AlertCircle,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-
-interface Notification {
-  id: number
-  type: 'mention' | 'assignment' | 'update' | 'system' | 'email' | 'sms' | 'call' | 'meeting'
-  title: string
-  message: string
-  time: string
-  read: boolean
-  link?: string
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: 1,
-    type: 'mention',
-    title: 'Sarah mentioned you',
-    message: 'Sarah mentioned you in a comment on lead "Tech Corp"',
-    time: '5 min ago',
-    read: false,
-    link: '/leads/123'
-  },
-  {
-    id: 2,
-    type: 'assignment',
-    title: 'New lead assigned',
-    message: 'John assigned you to follow up with "Enterprise Solutions"',
-    time: '15 min ago',
-    read: false,
-    link: '/leads/124'
-  },
-  {
-    id: 3,
-    type: 'email',
-    title: 'Email received',
-    message: 'Michael Johnson replied to your email about the proposal',
-    time: '1 hour ago',
-    read: false,
-    link: '/communication'
-  },
-  {
-    id: 4,
-    type: 'update',
-    title: 'Lead status changed',
-    message: 'Lead "ABC Inc" moved from Qualified to Proposal',
-    time: '2 hours ago',
-    read: true,
-    link: '/leads/125'
-  },
-  {
-    id: 5,
-    type: 'meeting',
-    title: 'Upcoming meeting',
-    message: 'Meeting with "Global Tech" starts in 30 minutes',
-    time: '3 hours ago',
-    read: false,
-    link: '/calendar'
-  },
-  {
-    id: 6,
-    type: 'sms',
-    title: 'SMS received',
-    message: 'Lisa Chen: "Thanks for the follow-up call today!"',
-    time: '4 hours ago',
-    read: true,
-    link: '/communication'
-  },
-  {
-    id: 7,
-    type: 'system',
-    title: 'System update',
-    message: 'New AI features are now available in the platform',
-    time: '1 day ago',
-    read: true,
-    link: '/ai'
-  }
-]
+import { notificationsApi, type Notification } from '@/lib/api'
 
 interface NotificationPanelProps {
   onClose: () => void
@@ -101,12 +27,45 @@ interface NotificationPanelProps {
 }
 
 export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelProps) {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [activeFilter, setActiveFilter] = useState<'all' | 'mention' | 'assignment' | 'update'>('all')
+  const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const getNotificationIcon = (type: Notification['type']) => {
+  useEffect(() => {
+    loadNotifications()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const loadNotifications = async () => {
+    setIsLoading(true)
+    try {
+      const response = await notificationsApi.getNotifications({ limit: 50 })
+      setNotifications(response.data?.notifications || [])
+    } catch (error) {
+      console.error('Failed to load notifications:', error)
+      toast.error('Failed to load notifications')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+
+    if (minutes < 1) return 'Just now'
+    if (minutes < 60) return `${minutes} min ago`
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    return `${days} day${days > 1 ? 's' : ''} ago`
+  }
+
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'mention':
         return <AtSign className="h-4 w-4 text-blue-500" />
@@ -136,16 +95,27 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
 
   const unreadCount = notifications.filter((n: Notification) => !n.read).length
 
-  const handleMarkAsRead = (id: number) => {
-    setNotifications(notifications.map((n: Notification) =>
-      n.id === id ? { ...n, read: true } : n
-    ))
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationsApi.markAsRead(id)
+      setNotifications(notifications.map((n: Notification) =>
+        n.id === id ? { ...n, read: true } : n
+      ))
+    } catch (error) {
+      console.error('Failed to mark as read:', error)
+    }
   }
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map((n: Notification) => ({ ...n, read: true })))
-    onMarkAllRead()
-    toast.success('All notifications marked as read')
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationsApi.markAllAsRead()
+      setNotifications(notifications.map((n: Notification) => ({ ...n, read: true })))
+      onMarkAllRead()
+      toast.success('All notifications marked as read')
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
+      toast.error('Failed to mark all as read')
+    }
   }
 
   const handleNotificationClick = (notification: Notification) => {
@@ -156,10 +126,16 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
     }
   }
 
-  const handleDelete = (id: number, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setNotifications(notifications.filter((n: Notification) => n.id !== id))
-    toast.success('Notification removed')
+    try {
+      await notificationsApi.deleteNotification(id)
+      setNotifications(notifications.filter((n: Notification) => n.id !== id))
+      toast.success('Notification removed')
+    } catch (error) {
+      console.error('Failed to delete notification:', error)
+      toast.error('Failed to remove notification')
+    }
   }
 
   return (
@@ -224,7 +200,12 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
 
       {/* Notifications List */}
       <div className="flex-1 overflow-y-auto">
-        {filteredNotifications.length === 0 ? (
+        {isLoading ? (
+          <div className="p-8 text-center">
+            <RefreshCw className="h-8 w-8 mx-auto mb-2 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading notifications...</p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <AlertCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
             <p>No notifications</p>
@@ -260,7 +241,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <p className="text-xs text-muted-foreground">
-                        {notification.time}
+                        {formatTime(notification.createdAt)}
                       </p>
                       {!notification.read && (
                         <Badge variant="secondary" className="text-xs px-1.5 py-0">

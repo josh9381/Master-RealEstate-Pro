@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -15,11 +15,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/Dialog'
-import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X } from 'lucide-react'
+import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, Brain, TrendingUp, Target, Clock, AlertTriangle } from 'lucide-react'
 import { AIEmailComposer } from '@/components/ai/AIEmailComposer'
 import { AISMSComposer } from '@/components/ai/AISMSComposer'
 import { AISuggestedActions } from '@/components/ai/AISuggestedActions'
 import { ActivityTimeline } from '@/components/activity/ActivityTimeline'
+import { PredictionBadge } from '@/components/ai/PredictionBadge'
+import intelligenceService, { type LeadPrediction, type EngagementAnalysis, type NextActionSuggestion } from '@/services/intelligenceService'
 import { Lead } from '@/types'
 import { useToast } from '@/hooks/useToast'
 import { leadsApi, UpdateLeadData } from '@/lib/api'
@@ -36,6 +38,12 @@ function LeadDetail() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
+  
+  // AI Intelligence state
+  const [aiPrediction, setAiPrediction] = useState<LeadPrediction | null>(null)
+  const [aiEngagement, setAiEngagement] = useState<EngagementAnalysis | null>(null)
+  const [aiNextAction, setAiNextAction] = useState<NextActionSuggestion | null>(null)
+  const [loadingAI, setLoadingAI] = useState(false)
 
   // Fetch lead details from API
   const { data: leadResponse, isLoading } = useQuery({
@@ -86,6 +94,34 @@ function LeadDetail() {
   })
 
   const lead = leadResponse as Lead | undefined
+  
+  // Load AI intelligence data when lead is available
+  useEffect(() => {
+    const loadAIInsights = async () => {
+      if (!id) return
+      
+      setLoadingAI(true)
+      try {
+        const [prediction, engagement, nextAction] = await Promise.all([
+          intelligenceService.getLeadPrediction(id).catch(() => null),
+          intelligenceService.getEngagementAnalysis(id).catch(() => null),
+          intelligenceService.getNextAction(id).catch(() => null),
+        ])
+        
+        setAiPrediction(prediction)
+        setAiEngagement(engagement)
+        setAiNextAction(nextAction)
+      } catch (error) {
+        console.error('Error loading AI insights:', error)
+      } finally {
+        setLoadingAI(false)
+      }
+    }
+    
+    if (lead) {
+      loadAIInsights()
+    }
+  }, [id, lead])
 
   // Show loading state
   if (isLoading) {
@@ -128,7 +164,8 @@ function LeadDetail() {
     // Create a copy with all necessary fields
     setEditingLead({
       ...lead,
-      name: lead.name || '',
+      firstName: lead.firstName || '',
+      lastName: lead.lastName || '',
       email: lead.email || '',
       phone: lead.phone || '',
       company: lead.company || '',
@@ -144,7 +181,8 @@ function LeadDetail() {
   const handleSaveEdit = () => {
     if (editingLead && id) {
       const updateData: UpdateLeadData = {
-        name: editingLead.name,
+        firstName: editingLead.firstName,
+        lastName: editingLead.lastName,
         email: editingLead.email,
         phone: editingLead.phone,
         company: editingLead.company,
@@ -186,7 +224,7 @@ function LeadDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{lead?.name || 'Unknown Lead'}</h1>
+          <h1 className="text-3xl font-bold">{lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead'}</h1>
           <p className="mt-2 text-muted-foreground">
             {lead?.position || 'No position'} at {lead?.company || 'No company'}
           </p>
@@ -274,7 +312,7 @@ function LeadDetail() {
               <CardTitle>Activity Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              <ActivityTimeline leadName={lead.name} />
+              <ActivityTimeline leadName={`${lead.firstName} ${lead.lastName}`} />
             </CardContent>
           </Card>
 
@@ -317,6 +355,109 @@ function LeadDetail() {
                 <div className="text-4xl font-bold text-primary">{lead.score}</div>
                 <p className="mt-2 text-sm text-muted-foreground">High quality lead</p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* AI Insights Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" />
+                AI Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingAI ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                  <p className="text-sm text-muted-foreground mt-2">Analyzing lead...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Conversion Probability */}
+                  {aiPrediction && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Conversion Prediction
+                      </p>
+                      <PredictionBadge 
+                        type="probability" 
+                        value={aiPrediction.conversionProbability} 
+                        size="md"
+                      />
+                      <PredictionBadge 
+                        type="value" 
+                        value={aiPrediction.estimatedValue} 
+                        size="md"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Confidence: {aiPrediction.confidenceScore}%
+                      </p>
+                      {aiPrediction.predictedCloseDateDays > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Estimated close: {aiPrediction.predictedCloseDateDays} days
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Engagement Analysis */}
+                  {aiEngagement && (
+                    <div className="space-y-2 pt-3 border-t">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <Target className="h-4 w-4" />
+                        Engagement
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className="text-2xl font-bold">{aiEngagement.engagementScore}%</div>
+                        <Badge variant={
+                          aiEngagement.trend === 'increasing' ? 'success' :
+                          aiEngagement.trend === 'declining' ? 'destructive' : 'secondary'
+                        }>
+                          {aiEngagement.trend}
+                        </Badge>
+                      </div>
+                      <PredictionBadge 
+                        type="risk" 
+                        value={aiEngagement.churnRisk} 
+                        size="sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Last activity: {aiEngagement.lastActivityDays} days ago
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Next Best Action */}
+                  {aiNextAction && (
+                    <div className="space-y-2 pt-3 border-t">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Recommended Action
+                      </p>
+                      <Badge variant={
+                        aiNextAction.priority === 'critical' ? 'destructive' :
+                        aiNextAction.priority === 'high' ? 'warning' : 'secondary'
+                      }>
+                        {aiNextAction.priority} priority
+                      </Badge>
+                      <p className="text-sm font-medium">{aiNextAction.suggestedAction}</p>
+                      <p className="text-xs text-muted-foreground">{aiNextAction.reasoning}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Best time:</span> {aiNextAction.timing}
+                      </p>
+                    </div>
+                  )}
+
+                  {!aiPrediction && !aiEngagement && !aiNextAction && (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      Not enough data for AI insights yet
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -364,13 +505,13 @@ function LeadDetail() {
       <AIEmailComposer
         isOpen={showEmailComposer}
         onClose={() => setShowEmailComposer(false)}
-        leadName={lead?.name || ''}
+        leadName={lead ? `${lead.firstName} ${lead.lastName}` : ''}
         leadEmail={lead?.email || ''}
       />
       <AISMSComposer
         isOpen={showSMSComposer}
         onClose={() => setShowSMSComposer(false)}
-        leadName={lead?.name?.split(' ')[0] || lead?.name || ''}
+        leadName={lead?.firstName || ''}
         leadPhone={lead?.phone || ''}
       />
 
@@ -394,12 +535,31 @@ function LeadDetail() {
                 <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Full Name *</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-sm font-medium">First Name *</label>
+                        <Input
+                          value={editingLead?.firstName || ''}
+                          onChange={(e) => setEditingLead({...editingLead!, firstName: e.target.value})}
+                          className="mt-1"
+                          placeholder="John"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Last Name *</label>
+                        <Input
+                          value={editingLead?.lastName || ''}
+                          onChange={(e) => setEditingLead({...editingLead!, lastName: e.target.value})}
+                          className="mt-1"
+                          placeholder="Doe"
+                        />
+                      </div>
+                    </div>
                     <Input
-                      value={editingLead?.name || ''}
-                      onChange={(e) => setEditingLead({...editingLead!, name: e.target.value})}
-                      className="mt-1"
-                      placeholder="John Doe"
+                      value=""
+                      onChange={() => {}}
+                      className="mt-1 hidden"
+                      placeholder=""
                     />
                   </div>
                   <div>

@@ -26,6 +26,13 @@ router.post('/twilio/sms/:userId', async (req, res) => {
       where: { 
         userId,
         isActive: true
+      },
+      include: {
+        user: {
+          select: {
+            organizationId: true
+          }
+        }
       }
     });
     
@@ -52,6 +59,7 @@ router.post('/twilio/sms/:userId', async (req, res) => {
         toAddress: To,
         body: Body,
         leadId: lead?.id || null,
+        organizationId: lead?.organizationId || config.user?.organizationId || 'clz0000000000000000000000',
         threadId: MessageSid, // Use MessageSid as thread ID for grouping
         externalId: MessageSid,
         provider: 'twilio',

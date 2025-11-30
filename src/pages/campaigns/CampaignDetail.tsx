@@ -182,7 +182,7 @@ function CampaignDetail() {
   })
 
   const handleStatusToggle = () => {
-    const newStatus = campaignData.status === 'active' ? 'paused' : 'active'
+    const newStatus = campaignData.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
     updateCampaignMutation.mutate({ status: newStatus })
   }
 
@@ -194,10 +194,10 @@ function CampaignDetail() {
   const handleSaveEdit = () => {
     updateCampaignMutation.mutate({
       name: editForm.name,
-      type: editForm.type as 'email' | 'sms' | 'phone',
-      status: editForm.status as 'draft' | 'scheduled' | 'active' | 'paused' | 'completed',
+      type: editForm.type.toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE',
+      status: editForm.status.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED',
       subject: editForm.subject || undefined,
-      content: editForm.fullContent || undefined,
+      body: editForm.fullContent || undefined,
     })
     setShowEditModal(false)
   }

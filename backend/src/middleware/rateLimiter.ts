@@ -5,19 +5,19 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 /**
  * General API rate limiter
- * Development: 1000 requests per 15 minutes (very lenient)
+ * Development: 10000 requests per 15 minutes (very lenient for testing)
  * Production: 100 requests per 15 minutes
  */
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 1000 : 100,
+  max: isDevelopment ? 10000 : 100,
   message: {
     success: false,
     error: 'Too many requests, please try again later'
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  skip: () => process.env.NODE_ENV === 'test', // Only skip in tests
+  skip: () => process.env.NODE_ENV === 'test' || isDevelopment, // Skip in test and development
 });
 
 /**

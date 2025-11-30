@@ -7,6 +7,7 @@ import {
   connectIntegration,
   disconnectIntegration,
   getIntegrationStatus,
+  getAllIntegrationStatuses,
   syncIntegration
 } from '../controllers/integration.controller';
 import { connectIntegrationSchema } from '../validators/integration.validator';
@@ -22,6 +23,13 @@ router.use(authenticate);
  * @access  Private
  */
 router.get('/', asyncHandler(listIntegrations));
+
+/**
+ * @route   GET /api/integrations/status
+ * @desc    Get all integration statuses (for admin dashboard)
+ * @access  Private
+ */
+router.get('/status', asyncHandler(getAllIntegrationStatuses));
 
 /**
  * @route   POST /api/integrations/:provider/connect

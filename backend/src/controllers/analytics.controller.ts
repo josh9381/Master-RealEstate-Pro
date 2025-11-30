@@ -4,6 +4,7 @@ import { prisma } from '../config/database'
 // Get overall dashboard statistics
 export const getDashboardStats = async (req: Request, res: Response) => {
   const userId = req.user!.userId
+  const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
   const { startDate, endDate } = req.query
 
   // Build date filter
@@ -12,6 +13,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
   if (endDate) dateFilter.lte = new Date(endDate as string)
 
   const whereDate = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
+  const orgFilter = { organizationId }  // Filter by organization
+  const whereDateOrg = { ...whereDate, ...orgFilter }  // Combine filters
 
   // Fetch all statistics in parallel
   const [
@@ -37,21 +40,22 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     recentActivities
   ] = await Promise.all([
     // Leads
-    prisma.lead.count(),
-    prisma.lead.count({ where: whereDate }),
+    prisma.lead.count({ where: orgFilter }),
+    prisma.lead.count({ where: whereDateOrg }),
     prisma.lead.groupBy({
       by: ['status'],
+      where: orgFilter,
       _count: true
     }),
-    calculateLeadConversionRate(),
+    calculateLeadConversionRate(organizationId),
     
     // Campaigns
-    prisma.campaign.count(),
-    prisma.campaign.count({ where: { status: 'ACTIVE' } }),
-    calculateCampaignPerformance(),
+    prisma.campaign.count({ where: orgFilter }),
+    prisma.campaign.count({ where: { status: 'ACTIVE', organizationId } }),
+    calculateCampaignPerformance(organizationId),
     
     // Tasks
-    prisma.task.count(),
+    prisma.task.count(),  // Tasks don't have organizationId yet
     prisma.task.count({ where: { status: 'COMPLETED' } }),
     prisma.task.count({
       where: {
@@ -70,8 +74,9 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     }),
     
     // Activities
-    prisma.activity.count({ where: whereDate }),
+    prisma.activity.count({ where: whereDateOrg }),
     prisma.activity.findMany({
+      where: orgFilter,
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -144,13 +149,14 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
 // Get lead analytics
 export const getLeadAnalytics = async (req: Request, res: Response) => {
+  const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
   const { startDate, endDate, groupBy = 'status' } = req.query
 
   const dateFilter: any = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
   if (endDate) dateFilter.lte = new Date(endDate as string)
 
-  const whereDate = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
+  const whereDate = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter, organizationId } : { organizationId }
 
   const [
     totalLeads,
@@ -171,7 +177,7 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
       where: whereDate,
       _count: true
     }),
-    calculateLeadConversionRate(whereDate),
+    calculateLeadConversionRate(organizationId),
     prisma.lead.aggregate({
       where: whereDate,
       _avg: { score: true }
@@ -220,13 +226,14 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
 
 // Get campaign analytics
 export const getCampaignAnalytics = async (req: Request, res: Response) => {
+  const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
   const { startDate, endDate } = req.query
 
   const dateFilter: any = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
   if (endDate) dateFilter.lte = new Date(endDate as string)
 
-  const whereDate = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
+  const whereDate = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter, organizationId } : { organizationId }
 
   const [
     totalCampaigns,
@@ -246,7 +253,7 @@ export const getCampaignAnalytics = async (req: Request, res: Response) => {
       where: whereDate,
       _count: true
     }),
-    calculateCampaignPerformance(whereDate),
+    calculateCampaignPerformance(organizationId),
     prisma.campaign.findMany({
       where: whereDate,
       take: 10,
@@ -419,7 +426,8 @@ export const getActivityFeed = async (req: Request, res: Response) => {
 }
 
 // Helper: Calculate lead conversion rate
-async function calculateLeadConversionRate(where: any = {}) {
+async function calculateLeadConversionRate(organizationId: string) {
+  const where = { organizationId }
   const [totalLeads, convertedLeads] = await Promise.all([
     prisma.lead.count({ where }),
     prisma.lead.count({ where: { ...where, status: 'WON' } })
@@ -429,7 +437,8 @@ async function calculateLeadConversionRate(where: any = {}) {
 }
 
 // Helper: Calculate campaign performance
-async function calculateCampaignPerformance(where: any = {}) {
+async function calculateCampaignPerformance(organizationId: string) {
+  const where = { organizationId }
   const aggregate = await prisma.campaign.aggregate({
     where,
     _sum: {
