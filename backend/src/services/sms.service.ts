@@ -294,7 +294,7 @@ export async function sendBulkSMS(
  * Mock SMS sending (when Twilio not configured)
  */
 async function mockSMSSend(options: SMSOptions): Promise<SMSResult> {
-  const { to, message, leadId } = options;
+  const { to, message, leadId, organizationId } = options;
 
   console.log('[SMS] MOCK MODE - SMS not actually sent:');
   console.log('To:', to);
@@ -309,6 +309,7 @@ async function mockSMSSend(options: SMSOptions): Promise<SMSResult> {
     toAddress: to,
     status: 'DELIVERED', // Mock mode treats as immediately delivered
     provider: 'mock',
+    organizationId,
     leadId,
     metadata: {
       mockMode: true,

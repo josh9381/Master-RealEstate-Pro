@@ -15,16 +15,18 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/Dialog'
-import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, Brain, TrendingUp, Target, Clock, AlertTriangle } from 'lucide-react'
+import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, Brain, TrendingUp, Target, Clock, AlertTriangle, ArrowLeft, Save, Plus } from 'lucide-react'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { AIEmailComposer } from '@/components/ai/AIEmailComposer'
 import { AISMSComposer } from '@/components/ai/AISMSComposer'
 import { AISuggestedActions } from '@/components/ai/AISuggestedActions'
 import { ActivityTimeline } from '@/components/activity/ActivityTimeline'
 import { PredictionBadge } from '@/components/ai/PredictionBadge'
+import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import intelligenceService, { type LeadPrediction, type EngagementAnalysis, type NextActionSuggestion } from '@/services/intelligenceService'
 import { Lead } from '@/types'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi, UpdateLeadData } from '@/lib/api'
+import { leadsApi, notesApi, usersApi, UpdateLeadData } from '@/lib/api'
 import { mockLeads } from '@/data/mockData'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 
@@ -38,12 +40,48 @@ function LeadDetail() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
+  const [showAddNote, setShowAddNote] = useState(false)
+  const [newNoteText, setNewNoteText] = useState('')
   
   // AI Intelligence state
   const [aiPrediction, setAiPrediction] = useState<LeadPrediction | null>(null)
   const [aiEngagement, setAiEngagement] = useState<EngagementAnalysis | null>(null)
   const [aiNextAction, setAiNextAction] = useState<NextActionSuggestion | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
+
+  // Fetch notes from API
+  const { data: notes = [] } = useQuery({
+    queryKey: ['lead-notes', id],
+    queryFn: async () => {
+      try {
+        const response = await notesApi.getLeadNotes(id!)
+        const result = response.data?.notes || response.data
+        return Array.isArray(result) ? result : []
+      } catch {
+        return []
+      }
+    },
+    enabled: !!id,
+  })
+
+  // Fetch team members for assignedTo dropdown
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['team-members'],
+    queryFn: async () => {
+      try {
+        const response = await usersApi.getTeamMembers()
+        return response.data || []
+      } catch {
+        // Fallback to users list if team-members endpoint unavailable
+        try {
+          const response = await usersApi.getUsers({ limit: 50 })
+          return response.data?.users || response.data || []
+        } catch {
+          return []
+        }
+      }
+    },
+  })
 
   // Fetch lead details from API
   const { data: leadResponse, isLoading } = useQuery({
@@ -55,7 +93,6 @@ function LeadDetail() {
         return response.data?.lead || response.data
       } catch (error) {
         // If API fails, try to find lead in mock data (if enabled)
-        console.log('API fetch failed')
         if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
           const mockLead = mockLeads.find(lead => lead.id === Number(id))
           return mockLead || null
@@ -93,6 +130,40 @@ function LeadDetail() {
     },
   })
 
+  // Create note mutation
+  const createNoteMutation = useMutation({
+    mutationFn: (data: { leadId: string; content: string }) =>
+      notesApi.createNote(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-notes', id] })
+      toast.success('Note added successfully')
+      setNewNoteText('')
+      setShowAddNote(false)
+    },
+    onError: () => {
+      toast.error('Failed to add note')
+    },
+  })
+
+  const handleAddNote = () => {
+    if (!newNoteText.trim() || !id) return
+    createNoteMutation.mutate({ leadId: id, content: newNoteText.trim() })
+  }
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return 'Hot lead — high quality'
+    if (score >= 60) return 'Warm lead — good potential'
+    if (score >= 40) return 'Cool lead — needs nurturing'
+    return 'Cold lead — early stage'
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600'
+    if (score >= 60) return 'text-yellow-600'
+    if (score >= 40) return 'text-blue-600'
+    return 'text-gray-500'
+  }
+
   const lead = leadResponse as Lead | undefined
   
   // Load AI intelligence data when lead is available
@@ -127,6 +198,7 @@ function LeadDetail() {
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <LeadsSubNav />
         <div className="animate-pulse">
           <div className="h-10 bg-muted rounded w-1/3 mb-2" />
           <div className="h-6 bg-muted rounded w-1/4" />
@@ -136,6 +208,16 @@ function LeadDetail() {
             <div key={i} className="h-24 bg-muted rounded animate-pulse" />
           ))}
         </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="md:col-span-2 space-y-4">
+            <div className="h-48 bg-muted rounded animate-pulse" />
+            <div className="h-64 bg-muted rounded animate-pulse" />
+          </div>
+          <div className="space-y-4">
+            <div className="h-32 bg-muted rounded animate-pulse" />
+            <div className="h-48 bg-muted rounded animate-pulse" />
+          </div>
+        </div>
       </div>
     )
   }
@@ -143,18 +225,20 @@ function LeadDetail() {
   // Show error if lead not found
   if (!lead) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold mb-2">Lead not found</h2>
-        <p className="text-muted-foreground mb-4">The lead you're looking for doesn't exist.</p>
-        <Button onClick={() => navigate('/leads')}>Back to Leads</Button>
+      <div className="space-y-6">
+        <LeadsSubNav />
+        <div className="text-center py-12">
+          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-2xl font-bold mb-2">Lead not found</h2>
+          <p className="text-muted-foreground mb-4">The lead you're looking for doesn't exist or has been deleted.</p>
+          <Button onClick={() => navigate('/leads')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Leads
+          </Button>
+        </div>
       </div>
     )
   }
-
-  const notes = [
-    { id: 1, content: 'Very interested in our enterprise features. Mentioned they need better analytics.', author: 'Sarah', date: '2024-01-19' },
-    { id: 2, content: 'Budget approved. Ready to move forward with demo.', author: 'Mike', date: '2024-01-18' },
-  ]
 
   const handleEditLead = () => {
     if (!lead) {
@@ -170,7 +254,7 @@ function LeadDetail() {
       phone: lead.phone || '',
       company: lead.company || '',
       position: lead.position || '',
-      status: lead.status || 'NEW',
+      status: lead.status || 'new',
       source: lead.source || '',
       score: lead.score || 0,
       notes: lead.notes || ''
@@ -186,7 +270,7 @@ function LeadDetail() {
         email: editingLead.email,
         phone: editingLead.phone,
         company: editingLead.company,
-        status: editingLead.status,
+        status: editingLead.status?.toUpperCase() as Lead['status'],
         source: editingLead.source,
         score: editingLead.score,
         assignedToId: typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null 
@@ -221,13 +305,31 @@ function LeadDetail() {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <LeadsSubNav />
+
+      {/* Back button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate('/leads')}
+        className="mb-2"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Leads
+      </Button>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead'}</h1>
-          <p className="mt-2 text-muted-foreground">
-            {lead?.position || 'No position'} at {lead?.company || 'No company'}
-          </p>
+          {(lead?.position || lead?.company) && (
+            <p className="mt-2 text-muted-foreground">
+              {lead?.position && lead?.company
+                ? `${lead.position} at ${lead.company}`
+                : lead?.position || lead?.company}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleEditLead}>
@@ -253,10 +355,20 @@ function LeadDetail() {
           <span className="font-medium">SMS</span>
           <span className="text-xs opacity-75">✨ AI-powered</span>
         </Button>
-        <Button variant="outline" className="h-auto flex-col py-4">
+        <Button
+          variant="outline"
+          className="h-auto flex-col py-4"
+          onClick={() => {
+            if (lead?.phone) {
+              window.open(`tel:${lead.phone}`, '_self')
+            } else {
+              toast.error('No phone number available for this lead')
+            }
+          }}
+        >
           <Phone className="mb-2 h-6 w-6" />
           <span className="font-medium">Call</span>
-          <span className="text-xs opacity-75">Quick dial</span>
+          <span className="text-xs opacity-75">{lead?.phone ? 'Quick dial' : 'No phone'}</span>
         </Button>
       </div>
 
@@ -312,7 +424,7 @@ function LeadDetail() {
               <CardTitle>Activity Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              <ActivityTimeline leadName={`${lead.firstName} ${lead.lastName}`} />
+              <ActivityTimeline leadName={`${lead.firstName} ${lead.lastName}`} leadId={id} />
             </CardContent>
           </Card>
 
@@ -320,21 +432,74 @@ function LeadDetail() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Notes</CardTitle>
-                <Button size="sm">Add Note</Button>
+                <CardTitle>Notes ({notes.length})</CardTitle>
+                <Button size="sm" onClick={() => setShowAddNote(!showAddNote)}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Note
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {notes.map((note) => (
-                  <div key={note.id} className="rounded-lg border p-4">
-                    <p className="text-sm">{note.content}</p>
-                    <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{note.author}</span>
-                      <span>{note.date}</span>
+                {/* Add Note Form */}
+                {showAddNote && (
+                  <div className="rounded-lg border border-primary/50 p-4 bg-muted/30">
+                    <textarea
+                      className="w-full p-2 border rounded-md min-h-[80px] text-sm resize-none"
+                      placeholder="Write a note about this lead..."
+                      value={newNoteText}
+                      onChange={(e) => setNewNoteText(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2 mt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddNote(false)
+                          setNewNoteText('')
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleAddNote}
+                        disabled={!newNoteText.trim() || createNoteMutation.isPending}
+                      >
+                        <Save className="mr-1 h-4 w-4" />
+                        {createNoteMutation.isPending ? 'Saving...' : 'Save Note'}
+                      </Button>
                     </div>
                   </div>
-                ))}
+                )}
+
+                {notes.length === 0 && !showAddNote ? (
+                  <div className="text-center py-6">
+                    <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No notes yet.</p>
+                    <Button
+                      size="sm"
+                      variant="link"
+                      onClick={() => setShowAddNote(true)}
+                      className="mt-1"
+                    >
+                      Add your first note
+                    </Button>
+                  </div>
+                ) : (
+                  notes.map((note: any) => (
+                    <div key={note.id} className="rounded-lg border p-4 hover:bg-muted/30 transition-colors">
+                      <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{note.user?.firstName || note.author || 'You'}</span>
+                        <span>{note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-US', {
+                          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+                        }) : note.date}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -343,17 +508,46 @@ function LeadDetail() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* AI Suggested Actions */}
-          <AISuggestedActions />
+          <AISuggestedActions 
+            leadId={id}
+            onComposeEmail={() => setShowEmailComposer(true)}
+            onScheduleCall={() => {
+              if (lead?.phone) {
+                window.location.href = `tel:${lead.phone}`
+              } else {
+                toast.info('No phone number available for this lead')
+              }
+            }}
+            onBookDemo={() => {
+              toast.info('Demo scheduling — navigate to calendar to book a meeting')
+            }}
+          />
 
           {/* Lead Score */}
           <Card>
             <CardHeader>
-              <CardTitle>Lead Score</CardTitle>
+              <CardTitle className="flex items-center gap-1.5">
+                Lead Score
+                <HelpTooltip text="Lead Score (0–100) measures how likely a lead is to convert. It’s calculated from engagement (email opens, clicks), profile completeness, source quality, and activity recency. Score 80+ = Hot, 60–79 = Warm, 40–59 = Cool, below 40 = Cold. Improve it by adding more contact details, sending targeted campaigns, and logging interactions." />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-center">
-                <div className="text-4xl font-bold text-primary">{lead.score}</div>
-                <p className="mt-2 text-sm text-muted-foreground">High quality lead</p>
+                {/* Score Ring */}
+                <div className="relative inline-flex items-center justify-center">
+                  <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
+                    <circle
+                      cx="50" cy="50" r="40" fill="none" strokeWidth="8"
+                      strokeDasharray={`${(lead.score / 100) * 251.2} 251.2`}
+                      strokeLinecap="round"
+                      className={getScoreColor(lead.score)}
+                      stroke="currentColor"
+                    />
+                  </svg>
+                  <div className="absolute text-3xl font-bold">{lead.score}</div>
+                </div>
+                <p className={`mt-2 text-sm font-medium ${getScoreColor(lead.score)}`}>{getScoreLabel(lead.score)}</p>
               </div>
             </CardContent>
           </Card>
@@ -375,25 +569,31 @@ function LeadDetail() {
               ) : (
                 <>
                   {/* Conversion Probability */}
-                  {aiPrediction && (
+                  {aiPrediction && (aiPrediction.conversionProbability > 0 || aiPrediction.estimatedValue > 0) && (
                     <div className="space-y-2">
                       <p className="text-sm font-medium flex items-center gap-2">
                         <TrendingUp className="h-4 w-4" />
                         Conversion Prediction
                       </p>
-                      <PredictionBadge 
-                        type="probability" 
-                        value={aiPrediction.conversionProbability} 
-                        size="md"
-                      />
-                      <PredictionBadge 
-                        type="value" 
-                        value={aiPrediction.estimatedValue} 
-                        size="md"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Confidence: {aiPrediction.confidenceScore}%
-                      </p>
+                      {aiPrediction.conversionProbability > 0 && (
+                        <PredictionBadge 
+                          type="probability" 
+                          value={aiPrediction.conversionProbability} 
+                          size="md"
+                        />
+                      )}
+                      {aiPrediction.estimatedValue > 0 && (
+                        <PredictionBadge 
+                          type="value" 
+                          value={aiPrediction.estimatedValue} 
+                          size="md"
+                        />
+                      )}
+                      {aiPrediction.confidenceScore > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Confidence: {aiPrediction.confidenceScore}%
+                        </p>
+                      )}
                       {aiPrediction.predictedCloseDateDays > 0 && (
                         <p className="text-xs text-muted-foreground">
                           Estimated close: {aiPrediction.predictedCloseDateDays} days
@@ -403,7 +603,7 @@ function LeadDetail() {
                   )}
 
                   {/* Engagement Analysis */}
-                  {aiEngagement && (
+                  {aiEngagement && aiEngagement.engagementScore > 0 && (
                     <div className="space-y-2 pt-3 border-t">
                       <p className="text-sm font-medium flex items-center gap-2">
                         <Target className="h-4 w-4" />
@@ -411,46 +611,61 @@ function LeadDetail() {
                       </p>
                       <div className="flex items-center gap-2">
                         <div className="text-2xl font-bold">{aiEngagement.engagementScore}%</div>
-                        <Badge variant={
-                          aiEngagement.trend === 'increasing' ? 'success' :
-                          aiEngagement.trend === 'declining' ? 'destructive' : 'secondary'
-                        }>
-                          {aiEngagement.trend}
-                        </Badge>
+                        {aiEngagement.trend && (
+                          <Badge variant={
+                            aiEngagement.trend === 'increasing' ? 'success' :
+                            aiEngagement.trend === 'declining' ? 'destructive' : 'secondary'
+                          }>
+                            {aiEngagement.trend}
+                          </Badge>
+                        )}
                       </div>
-                      <PredictionBadge 
-                        type="risk" 
-                        value={aiEngagement.churnRisk} 
-                        size="sm"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Last activity: {aiEngagement.lastActivityDays} days ago
-                      </p>
+                      {aiEngagement.churnRisk && (
+                        <PredictionBadge 
+                          type="risk" 
+                          value={aiEngagement.churnRisk} 
+                          size="sm"
+                        />
+                      )}
+                      {aiEngagement.lastActivityDays > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Last activity: {aiEngagement.lastActivityDays} days ago
+                        </p>
+                      )}
                     </div>
                   )}
 
                   {/* Next Best Action */}
-                  {aiNextAction && (
+                  {aiNextAction && aiNextAction.suggestedAction && (
                     <div className="space-y-2 pt-3 border-t">
                       <p className="text-sm font-medium flex items-center gap-2">
                         <Clock className="h-4 w-4" />
                         Recommended Action
                       </p>
-                      <Badge variant={
-                        aiNextAction.priority === 'critical' ? 'destructive' :
-                        aiNextAction.priority === 'high' ? 'warning' : 'secondary'
-                      }>
-                        {aiNextAction.priority} priority
-                      </Badge>
+                      {aiNextAction.priority && (
+                        <Badge variant={
+                          aiNextAction.priority === 'critical' ? 'destructive' :
+                          aiNextAction.priority === 'high' ? 'warning' : 'secondary'
+                        }>
+                          {aiNextAction.priority} priority
+                        </Badge>
+                      )}
                       <p className="text-sm font-medium">{aiNextAction.suggestedAction}</p>
-                      <p className="text-xs text-muted-foreground">{aiNextAction.reasoning}</p>
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-medium">Best time:</span> {aiNextAction.timing}
-                      </p>
+                      {aiNextAction.reasoning && (
+                        <p className="text-xs text-muted-foreground">{aiNextAction.reasoning}</p>
+                      )}
+                      {aiNextAction.timing && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium">Best time:</span> {aiNextAction.timing}
+                        </p>
+                      )}
                     </div>
                   )}
 
-                  {!aiPrediction && !aiEngagement && !aiNextAction && (
+                  {/* Show message when no meaningful AI data */}
+                  {(!aiPrediction || (aiPrediction.conversionProbability === 0 && aiPrediction.estimatedValue === 0)) &&
+                   (!aiEngagement || aiEngagement.engagementScore === 0) &&
+                   (!aiNextAction || !aiNextAction.suggestedAction) && (
                     <div className="text-center py-4 text-sm text-muted-foreground">
                       <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       Not enough data for AI insights yet
@@ -469,7 +684,18 @@ function LeadDetail() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm font-medium">Status</p>
-                <Badge variant="success" className="mt-1">{lead?.status || 'NEW'}</Badge>
+                <Badge 
+                  variant={
+                    lead?.status === 'won' ? 'success' :
+                    lead?.status === 'lost' ? 'destructive' :
+                    lead?.status === 'qualified' ? 'success' :
+                    lead?.status === 'proposal' || lead?.status === 'negotiation' ? 'warning' :
+                    lead?.status === 'contacted' ? 'default' : 'secondary'
+                  } 
+                  className="mt-1 capitalize"
+                >
+                  {lead?.status || 'NEW'}
+                </Badge>
               </div>
               <div>
                 <p className="text-sm font-medium">Source</p>
@@ -496,6 +722,24 @@ function LeadDetail() {
                   )}
                 </div>
               </div>
+              {lead?.value != null && lead.value > 0 && (
+                <div>
+                  <p className="text-sm font-medium">Deal Value</p>
+                  <p className="mt-1 text-sm text-muted-foreground font-medium">
+                    ${lead.value.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {lead?.lastContact && (
+                <div>
+                  <p className="text-sm font-medium">Last Contact</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {new Date(lead.lastContact).toLocaleDateString('en-US', {
+                      month: 'short', day: 'numeric', year: 'numeric'
+                    })}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -507,12 +751,14 @@ function LeadDetail() {
         onClose={() => setShowEmailComposer(false)}
         leadName={lead ? `${lead.firstName} ${lead.lastName}` : ''}
         leadEmail={lead?.email || ''}
+        leadId={id}
       />
       <AISMSComposer
         isOpen={showSMSComposer}
         onClose={() => setShowSMSComposer(false)}
         leadName={lead?.firstName || ''}
         leadPhone={lead?.phone || ''}
+        leadId={id}
       />
 
       {/* Edit Lead Modal */}
@@ -555,12 +801,6 @@ function LeadDetail() {
                         />
                       </div>
                     </div>
-                    <Input
-                      value=""
-                      onChange={() => {}}
-                      className="mt-1 hidden"
-                      placeholder=""
-                    />
                   </div>
                   <div>
                     <label className="text-sm font-medium">Position/Title</label>
@@ -744,6 +984,8 @@ function LeadDetail() {
                       <option value="qualified">Qualified</option>
                       <option value="proposal">Proposal</option>
                       <option value="negotiation">Negotiation</option>
+                      <option value="won">Won</option>
+                      <option value="lost">Lost</option>
                     </select>
                   </div>
                   <div>
@@ -778,14 +1020,19 @@ function LeadDetail() {
                     <label className="text-sm font-medium">Assigned To</label>
                     <select 
                       className="w-full mt-1 p-2 border rounded-md"
-                      value={editingLead.assignedTo || ''}
+                      value={typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null ? (editingLead.assignedTo as any).id : editingLead.assignedTo || ''}
                       onChange={(e) => setEditingLead({...editingLead, assignedTo: e.target.value || null})}
                     >
                       <option value="">Unassigned</option>
-                      <option value="Sarah Johnson">Sarah Johnson</option>
-                      <option value="Mike Chen">Mike Chen</option>
-                      <option value="David Lee">David Lee</option>
-                      <option value="Emma Rodriguez">Emma Rodriguez</option>
+                      {teamMembers.length > 0 ? (
+                        teamMembers.map((member: any) => (
+                          <option key={member.id} value={member.id}>
+                            {member.firstName} {member.lastName}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No team members found</option>
+                      )}
                     </select>
                   </div>
                   <div>

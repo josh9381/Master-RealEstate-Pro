@@ -88,8 +88,11 @@ const GoogleIntegration = () => {
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
-      // Would save individual settings in real implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.updateIntegrationSettings('google', {
+        gmail: { enabled: gmailEnabled, syncEmails, trackEmails, createLeads },
+        calendar: { enabled: calendarEnabled, syncCalendar, autoCreateEvents },
+        contacts: { enabled: contactsEnabled, syncContacts, autoImport },
+      });
       toast.success('Google integration settings saved');
     } catch (error) {
       toast.error('Failed to save settings');

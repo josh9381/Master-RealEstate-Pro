@@ -20,64 +20,8 @@ interface Task {
   status: 'pending' | 'completed' | 'cancelled'
 }
 
-// Fallback tasks (outside component to avoid re-renders)
-const fallbackTasks: Task[] = [
-  {
-    id: 1,
-    title: 'Follow up with John Doe',
-    description: 'Send property brochure and schedule viewing',
-    priority: 'high',
-    dueDate: 'Today',
-    assignee: 'Sarah Johnson',
-    completed: false,
-    category: 'follow-up',
-    status: 'pending'
-  },
-  {
-    id: 2,
-    title: 'Prepare contract for ABC Corp',
-    description: 'Review terms and prepare final contract',
-    priority: 'high',
-    dueDate: 'Tomorrow',
-    assignee: 'Mike Davis',
-    completed: false,
-    category: 'contract',
-    status: 'pending'
-  },
-  {
-    id: 3,
-    title: 'Schedule property viewing',
-    description: 'Downtown office space - 3 potential clients',
-    priority: 'medium',
-    dueDate: 'Mar 25',
-    assignee: 'Emily Brown',
-    completed: false,
-    category: 'viewing',
-    status: 'pending'
-  },
-  {
-    id: 4,
-    title: 'Send monthly report',
-    description: 'Compile and send sales report to management',
-    priority: 'medium',
-    dueDate: 'Mar 30',
-    assignee: 'John Smith',
-    completed: false,
-    category: 'admin',
-    status: 'pending'
-  },
-  {
-    id: 5,
-    title: 'Update CRM data',
-    description: 'Import new leads from marketing campaign',
-    priority: 'low',
-    dueDate: 'Next Week',
-    assignee: 'Sarah Johnson',
-    completed: true,
-    category: 'admin',
-    status: 'completed'
-  },
-]
+// Empty fallback - no hardcoded tasks
+const fallbackTasks: Task[] = []
 
 export default function TasksPage() {
   const { toast } = useToast()
@@ -86,7 +30,7 @@ export default function TasksPage() {
   const [searchTerm, setSearchTerm] = useState('')
 
   // Fetch tasks from API
-  const { data: tasksResponse, isLoading } = useQuery({
+  const { data: tasksResponse } = useQuery({
     queryKey: ['tasks', filter],
     queryFn: async () => {
       try {
@@ -102,7 +46,6 @@ export default function TasksPage() {
         const response = await tasksApi.getTasks(params)
         return response.data
       } catch (error) {
-        console.log('API fetch failed, using fallback data')
         return null
       }
     },
@@ -120,7 +63,7 @@ export default function TasksPage() {
         description: task.description || '',
         priority: task.priority || 'medium',
         dueDate: task.dueDate || 'No date',
-        assignee: task.assignedTo || 'Unassigned',
+        assignee: task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : 'Unassigned',
         completed: task.status === 'completed',
         category: task.category || 'general',
         status: task.status
@@ -129,8 +72,8 @@ export default function TasksPage() {
     return fallbackTasks
   }, [tasksResponse])
 
-  // Create task mutation (available for new task feature)
-  const _createTaskMutation = useMutation({
+  // Create task mutation
+  const createTaskMutation = useMutation({
     mutationFn: (data: CreateTaskData) => tasksApi.createTask(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -141,21 +84,8 @@ export default function TasksPage() {
     },
   })
 
-  // Update task mutation (available for task editing)
-  const _updateTaskMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTaskData> }) =>
-      tasksApi.updateTask(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      toast.success('Task updated successfully')
-    },
-    onError: () => {
-      toast.error('Failed to update task')
-    },
-  })
-
-  // Delete task mutation (available for task deletion)
-  const _deleteTaskMutation = useMutation({
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
     mutationFn: (id: string) => tasksApi.deleteTask(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -178,10 +108,21 @@ export default function TasksPage() {
     },
   })
 
-  const _handleToggleComplete = (taskId: number | string) => {
-    // Only call API if we're using real data
-    if (tasksResponse?.tasks) {
-      completeTaskMutation.mutate(String(taskId))
+  const handleToggleComplete = (taskId: number | string) => {
+    completeTaskMutation.mutate(String(taskId))
+  }
+
+  const handleCreateTask = () => {
+    const title = prompt('Task title:')
+    if (!title) return
+    const description = prompt('Description (optional):') || ''
+    const priority = (prompt('Priority (low/medium/high):') || 'medium') as 'low' | 'medium' | 'high'
+    createTaskMutation.mutate({ title, description, priority })
+  }
+
+  const handleDeleteTask = (taskId: number | string) => {
+    if (confirm('Are you sure you want to delete this task?')) {
+      deleteTaskMutation.mutate(String(taskId))
     }
   }
 
@@ -211,9 +152,9 @@ export default function TasksPage() {
           <h1 className="text-3xl font-bold">Tasks</h1>
           <p className="text-muted-foreground">Manage your to-do list and assignments</p>
         </div>
-        <Button>
+        <Button onClick={handleCreateTask} disabled={createTaskMutation.isPending}>
           <Plus className="h-4 w-4 mr-2" />
-          New Task
+          {createTaskMutation.isPending ? 'Creating...' : 'New Task'}
         </Button>
       </div>
 
@@ -290,7 +231,7 @@ export default function TasksPage() {
         {filteredTasks.map((task) => (
           <Card key={task.id} className={`p-4 ${task.completed ? 'opacity-60' : ''}`}>
             <div className="flex items-start gap-4">
-              <button className="mt-1">
+              <button className="mt-1" onClick={() => handleToggleComplete(task.id)}>
                 {task.completed ? (
                   <CheckCircle2 className="h-5 w-5 text-primary" />
                 ) : (
@@ -321,6 +262,12 @@ export default function TasksPage() {
                     <span>{task.assignee}</span>
                   </div>
                   <Badge variant="outline">{task.category}</Badge>
+                  <button
+                    className="ml-auto text-xs text-destructive hover:underline"
+                    onClick={() => handleDeleteTask(task.id)}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             </div>
@@ -331,7 +278,10 @@ export default function TasksPage() {
           <Card className="p-12">
             <div className="text-center text-muted-foreground">
               <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No tasks found matching your filters</p>
+              <p className="text-lg font-medium mb-1">{tasks.length === 0 ? 'No tasks yet' : 'No tasks found matching your filters'}</p>
+              {tasks.length === 0 && (
+                <p className="text-sm">Create your first task to get started!</p>
+              )}
             </div>
           </Card>
         )}

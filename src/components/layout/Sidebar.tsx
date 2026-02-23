@@ -47,7 +47,7 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
-  const { user, logout, isAdmin, isManager, getSubscriptionTier } = useAuthStore()
+  const { user, logout, isAdmin: _isAdmin, isManager: _isManager, getSubscriptionTier } = useAuthStore()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   const handleLogout = async () => {

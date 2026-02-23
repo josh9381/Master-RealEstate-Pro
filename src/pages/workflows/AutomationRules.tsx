@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Zap, Plus, Clock, Target, CheckCircle, X, Edit2, Trash2, Pause, Play, Filter as FilterIcon, ArrowUpDown, Download, RefreshCw, Mail, Bell, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +11,7 @@ import { workflowsApi } from '@/lib/api';
 
 const AutomationRules = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -18,6 +20,8 @@ const AutomationRules = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'paused'>('all');
   const [newRuleName, setNewRuleName] = useState('');
   const [newRuleDescription, setNewRuleDescription] = useState('');
+  const [newRuleTrigger, setNewRuleTrigger] = useState('LEAD_CREATED');
+  const [newRuleAction, setNewRuleAction] = useState('SEND_EMAIL');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   
@@ -25,6 +29,8 @@ const AutomationRules = () => {
   const [selectedRules, setSelectedRules] = useState<number[]>([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkAction, setBulkAction] = useState<'activate' | 'pause' | 'delete'>('activate');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteRuleId, setDeleteRuleId] = useState<number | null>(null);
 
   // Stats state
   const [stats, setStats] = useState({
@@ -34,38 +40,7 @@ const AutomationRules = () => {
     timeSaved: 0
   });
 
-  const [automationRules, setAutomationRules] = useState([
-    {
-      id: 1,
-      name: 'Welcome New Leads',
-      description: 'Send welcome email when lead is created',
-      trigger: 'Lead Created',
-      actions: ['Send Email', 'Create Task'],
-      status: 'active' as const,
-      executions: 1234,
-      lastRun: '2 min ago',
-    },
-    {
-      id: 2,
-      name: 'Follow-up Qualified Leads',
-      description: 'Create task when lead status changes to qualified',
-      trigger: 'Status Changed',
-      actions: ['Create Task', 'Assign User'],
-      status: 'active' as const,
-      executions: 567,
-      lastRun: '15 min ago',
-    },
-    {
-      id: 3,
-      name: 'Inactive Lead Reminder',
-      description: 'Send reminder if no activity for 7 days',
-      trigger: 'Schedule',
-      actions: ['Send Notification'],
-      status: 'paused' as const,
-      executions: 89,
-      lastRun: '2 days ago',
-    },
-  ]);
+  const [automationRules, setAutomationRules] = useState<any[]>([]);
 
   useEffect(() => {
     loadRules();
@@ -109,8 +84,46 @@ const AutomationRules = () => {
         workflowsApi.getStats()
       ]);
       
-      if (workflowsResponse && Array.isArray(workflowsResponse)) {
-        setAutomationRules(workflowsResponse);
+      // API returns { success, data: { workflows: [...], total } }
+      const workflows = workflowsResponse?.data?.workflows || workflowsResponse?.workflows || (Array.isArray(workflowsResponse) ? workflowsResponse : []);
+      if (Array.isArray(workflows)) {
+        // Map backend shape to UI shape
+        const triggerLabels: Record<string, string> = {
+          'LEAD_CREATED': 'Lead Created',
+          'LEAD_STATUS_CHANGED': 'Status Changed',
+          'LEAD_ASSIGNED': 'Lead Assigned',
+          'CAMPAIGN_COMPLETED': 'Campaign Completed',
+          'EMAIL_OPENED': 'Email Opened',
+          'TIME_BASED': 'Schedule',
+          'SCORE_THRESHOLD': 'Score Threshold',
+          'TAG_ADDED': 'Tag Added',
+          'MANUAL': 'Manual',
+        };
+        const actionLabels: Record<string, string> = {
+          'SEND_EMAIL': 'Send Email',
+          'SEND_SMS': 'Send SMS',
+          'UPDATE_LEAD': 'Update Lead',
+          'ADD_TAG': 'Add Tag',
+          'REMOVE_TAG': 'Remove Tag',
+          'CREATE_TASK': 'Create Task',
+          'ASSIGN_LEAD': 'Assign Lead',
+          'UPDATE_SCORE': 'Update Score',
+        };
+        const mapped = workflows.map((w: any) => ({
+          id: w.id,
+          name: w.name,
+          description: w.description || '',
+          trigger: triggerLabels[w.triggerType] || w.triggerType || w.trigger || '',
+          actions: Array.isArray(w.actions)
+            ? w.actions.map((a: any) => typeof a === 'string' ? a : (actionLabels[a.type] || a.type || 'Action'))
+            : [],
+          status: w.isActive === true ? 'active' as const : w.isActive === false ? 'paused' as const : (w.status || 'paused'),
+          executions: w.workflowExecutions?.length || w.executions || 0,
+          lastRun: w.workflowExecutions?.[0]?.startedAt
+            ? new Date(w.workflowExecutions[0].startedAt).toLocaleDateString()
+            : (w.lastRun || 'Never'),
+        }));
+        setAutomationRules(mapped);
       }
 
       if (statsResponse?.data) {
@@ -158,10 +171,18 @@ const AutomationRules = () => {
   };
 
   const deleteRule = async (ruleId: number) => {
+    setDeleteRuleId(ruleId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteRule = async () => {
+    if (deleteRuleId === null) return;
     try {
-      await workflowsApi.deleteWorkflow(ruleId.toString());
-      setAutomationRules(automationRules.filter(rule => rule.id !== ruleId));
+      await workflowsApi.deleteWorkflow(deleteRuleId.toString());
+      setAutomationRules(automationRules.filter(rule => rule.id !== deleteRuleId));
       toast.success('Rule deleted successfully');
+      setShowDeleteConfirm(false);
+      setDeleteRuleId(null);
       await loadRules(true);
     } catch (error) {
       console.error('Failed to delete rule:', error);
@@ -230,7 +251,7 @@ const AutomationRules = () => {
 
   const editRule = (ruleId: number) => {
     // Navigate to workflow builder with the rule ID
-    window.location.href = `/workflows/builder?id=${ruleId}`;
+    navigate(`/workflows/builder?id=${ruleId}`);
   };
 
   const createRule = async () => {
@@ -240,19 +261,44 @@ const AutomationRules = () => {
     }
     
     try {
+      const triggerLabels: Record<string, string> = {
+        'LEAD_CREATED': 'Lead Created',
+        'LEAD_STATUS_CHANGED': 'Lead Status Changed',
+        'LEAD_ASSIGNED': 'Lead Assigned',
+        'CAMPAIGN_COMPLETED': 'Campaign Completed',
+        'EMAIL_OPENED': 'Email Opened',
+        'TIME_BASED': 'Time Based',
+        'SCORE_THRESHOLD': 'Score Threshold',
+        'TAG_ADDED': 'Tag Added',
+        'MANUAL': 'Manual',
+      };
+      const actionLabels: Record<string, string> = {
+        'SEND_EMAIL': 'Send Email',
+        'SEND_SMS': 'Send SMS',
+        'UPDATE_LEAD': 'Update Lead',
+        'ADD_TAG': 'Add Tag',
+        'REMOVE_TAG': 'Remove Tag',
+        'CREATE_TASK': 'Create Task',
+        'ASSIGN_LEAD': 'Assign Lead',
+        'UPDATE_SCORE': 'Update Score',
+      };
+      
       const newRuleData = {
         name: newRuleName,
         description: newRuleDescription || 'No description',
-        trigger: 'Lead Created',
-        actions: ['Send Email'],
-        status: 'active'
+        triggerType: newRuleTrigger,
+        actions: [{ type: newRuleAction, config: {} }],
+        isActive: true,
       };
       
       await workflowsApi.createWorkflow(newRuleData);
       
       const newRule = {
-        id: Math.max(...automationRules.map(r => r.id)) + 1,
-        ...newRuleData,
+        id: Math.max(...automationRules.map(r => r.id), 0) + 1,
+        name: newRuleName,
+        description: newRuleDescription || 'No description',
+        trigger: triggerLabels[newRuleTrigger] || newRuleTrigger,
+        actions: [actionLabels[newRuleAction] || newRuleAction],
         status: 'active' as const,
         executions: 0,
         lastRun: 'Never',
@@ -263,6 +309,8 @@ const AutomationRules = () => {
       setShowCreateModal(false);
       setNewRuleName('');
       setNewRuleDescription('');
+      setNewRuleTrigger('LEAD_CREATED');
+      setNewRuleAction('SEND_EMAIL');
       
       await loadRules(true);
     } catch (error) {
@@ -272,14 +320,43 @@ const AutomationRules = () => {
   };
 
   const applyTemplate = (templateName: string) => {
-    toast.success(`Applied template: ${templateName}`);
     setShowCreateModal(true);
     setNewRuleName(templateName);
+    // Set sensible defaults based on template name
+    if (templateName.toLowerCase().includes('welcome') || templateName.toLowerCase().includes('new lead')) {
+      setNewRuleTrigger('LEAD_CREATED');
+      setNewRuleAction('SEND_EMAIL');
+    } else if (templateName.toLowerCase().includes('follow')) {
+      setNewRuleTrigger('LEAD_STATUS_CHANGED');
+      setNewRuleAction('CREATE_TASK');
+    } else if (templateName.toLowerCase().includes('score') || templateName.toLowerCase().includes('hot')) {
+      setNewRuleTrigger('SCORE_THRESHOLD');
+      setNewRuleAction('SEND_EMAIL');
+    } else {
+      setNewRuleTrigger('LEAD_CREATED');
+      setNewRuleAction('SEND_EMAIL');
+    }
+    toast.success(`Applied template: ${templateName}`);
   };
 
   const handleSort = () => {
     const nextSort = sortBy === 'name' ? 'executions' : sortBy === 'executions' ? 'lastRun' : 'name';
     setSortBy(nextSort);
+    
+    const sorted = [...automationRules].sort((a, b) => {
+      if (nextSort === 'name') {
+        return a.name.localeCompare(b.name);
+      } else if (nextSort === 'executions') {
+        return (b.executions || 0) - (a.executions || 0);
+      } else {
+        // Sort by lastRun — 'Never' goes to end
+        if (a.lastRun === 'Never' && b.lastRun === 'Never') return 0;
+        if (a.lastRun === 'Never') return 1;
+        if (b.lastRun === 'Never') return -1;
+        return String(b.lastRun).localeCompare(String(a.lastRun));
+      }
+    });
+    setAutomationRules(sorted);
     toast.info(`Sorted by: ${nextSort}`);
   };
 
@@ -288,6 +365,28 @@ const AutomationRules = () => {
   };
 
   const exportRules = () => {
+    if (automationRules.length === 0) {
+      toast.error('No rules to export');
+      return;
+    }
+    const headers = ['Name', 'Description', 'Trigger', 'Actions', 'Status', 'Executions', 'Last Run'];
+    const rows = automationRules.map(rule => [
+      rule.name,
+      rule.description || '',
+      rule.trigger || '',
+      Array.isArray(rule.actions) ? rule.actions.join('; ') : '',
+      rule.status,
+      String(rule.executions || 0),
+      rule.lastRun || 'Never',
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `automation-rules-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
     toast.success('Rules exported to CSV');
   };
 
@@ -319,6 +418,8 @@ const AutomationRules = () => {
                     setShowCreateModal(false);
                     setNewRuleName('');
                     setNewRuleDescription('');
+                    setNewRuleTrigger('LEAD_CREATED');
+                    setNewRuleAction('SEND_EMAIL');
                   }}
                 >
                   <X className="h-4 w-4" />
@@ -342,6 +443,44 @@ const AutomationRules = () => {
                   placeholder="Enter description"
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Trigger</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  value={newRuleTrigger}
+                  onChange={(e) => setNewRuleTrigger(e.target.value)}
+                >
+                  <option value="LEAD_CREATED">Lead Created</option>
+                  <option value="LEAD_STATUS_CHANGED">Lead Status Changed</option>
+                  <option value="LEAD_ASSIGNED">Lead Assigned</option>
+                  <option value="CAMPAIGN_COMPLETED">Campaign Completed</option>
+                  <option value="EMAIL_OPENED">Email Opened</option>
+                  <option value="TIME_BASED">Time Based (Scheduled)</option>
+                  <option value="SCORE_THRESHOLD">Score Threshold</option>
+                  <option value="TAG_ADDED">Tag Added</option>
+                  <option value="MANUAL">Manual Trigger</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Action</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  value={newRuleAction}
+                  onChange={(e) => setNewRuleAction(e.target.value)}
+                >
+                  <option value="SEND_EMAIL">Send Email</option>
+                  <option value="SEND_SMS">Send SMS</option>
+                  <option value="UPDATE_LEAD">Update Lead Status</option>
+                  <option value="ADD_TAG">Add Tag</option>
+                  <option value="REMOVE_TAG">Remove Tag</option>
+                  <option value="CREATE_TASK">Create Task</option>
+                  <option value="ASSIGN_LEAD">Assign Lead</option>
+                  <option value="UPDATE_SCORE">Update Score</option>
+                </select>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                For advanced multi-step workflows with conditions, use the <a href="/workflows/builder" className="text-primary underline">Workflow Builder</a>.
+              </p>
               <div className="flex gap-2">
                 <Button className="flex-1" onClick={createRule}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -353,6 +492,8 @@ const AutomationRules = () => {
                     setShowCreateModal(false);
                     setNewRuleName('');
                     setNewRuleDescription('');
+                    setNewRuleTrigger('LEAD_CREATED');
+                    setNewRuleAction('SEND_EMAIL');
                   }}
                 >
                   Cancel
@@ -741,42 +882,42 @@ const AutomationRules = () => {
               {
                 name: 'Lead Nurturing',
                 description: 'Automatically nurture leads with email sequences',
-                uses: 234,
+                uses: 0,
                 icon: Mail,
                 color: 'blue'
               },
               {
                 name: 'Task Assignment',
                 description: 'Assign tasks based on lead status or activity',
-                uses: 189,
+                uses: 0,
                 icon: CheckCircle,
                 color: 'green'
               },
               {
                 name: 'Email Notifications',
                 description: 'Send alerts when specific events occur',
-                uses: 456,
+                uses: 0,
                 icon: Bell,
                 color: 'purple'
               },
               {
                 name: 'Lead Scoring',
                 description: 'Update lead scores based on engagement',
-                uses: 312,
+                uses: 0,
                 icon: TrendingUp,
                 color: 'orange'
               },
               {
                 name: 'Follow-up Reminders',
                 description: 'Create reminders for inactive leads',
-                uses: 178,
+                uses: 0,
                 icon: Clock,
                 color: 'pink'
               },
               {
                 name: 'Status Updates',
                 description: 'Auto-update status based on criteria',
-                uses: 267,
+                uses: 0,
                 icon: Target,
                 color: 'indigo'
               },
@@ -879,54 +1020,8 @@ const AutomationRules = () => {
           <CardDescription>Latest automation rule activity</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[
-              {
-                rule: 'Welcome New Leads',
-                lead: 'John Smith',
-                action: 'Sent welcome email',
-                time: '2 min ago',
-                status: 'success',
-              },
-              {
-                rule: 'Follow-up Qualified Leads',
-                lead: 'Sarah Johnson',
-                action: 'Created follow-up task',
-                time: '15 min ago',
-                status: 'success',
-              },
-              {
-                rule: 'Lead Scoring',
-                lead: 'Mike Wilson',
-                action: 'Updated score to 85',
-                time: '1 hour ago',
-                status: 'success',
-              },
-              {
-                rule: 'Email Notifications',
-                lead: 'Emily Brown',
-                action: 'Failed to send notification',
-                time: '2 hours ago',
-                status: 'failed',
-              },
-            ].map((execution, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      execution.status === 'success' ? 'bg-green-500' : 'bg-red-500'
-                    }`}
-                  />
-                  <div>
-                    <p className="text-sm font-medium">{execution.rule}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {execution.lead} • {execution.action}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs text-muted-foreground">{execution.time}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-center h-24 text-muted-foreground">
+            No execution data yet. Executions will appear here as your automation rules run.
           </div>
         </CardContent>
       </Card>
@@ -956,6 +1051,29 @@ const AutomationRules = () => {
               variant={bulkAction === 'delete' ? 'destructive' : 'default'}
             >
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Rule</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this rule? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowDeleteConfirm(false); setDeleteRuleId(null); }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmDeleteRule}
+              variant="destructive"
+            >
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

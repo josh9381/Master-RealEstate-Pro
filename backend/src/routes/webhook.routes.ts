@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { prisma } from '../config/database';
 import { decrypt } from '../utils/encryption';
+import {
+  trackEmailOpen,
+  trackEmailClick,
+} from '../services/campaignAnalytics.service';
+import { parseUserAgent } from '../utils/useragent';
+import { lookupGeo } from '../utils/geoip';
 
 const router = Router();
 
@@ -161,6 +167,9 @@ router.post('/twilio/status', async (req, res) => {
 /**
  * SendGrid Email Webhook - Receives email events (opens, clicks, bounces)
  * POST /api/webhooks/sendgrid
+ * 
+ * Phase 5.11: Now integrates with campaignAnalytics.service for 
+ * lead score updates and campaign counter increments.
  */
 router.post('/sendgrid', async (req, res) => {
   try {
@@ -169,13 +178,36 @@ router.post('/sendgrid', async (req, res) => {
     const events = Array.isArray(req.body) ? req.body : [req.body];
     
     for (const event of events) {
-      const { event: eventType, sg_message_id, email } = event;
+      const { event: eventType, sg_message_id, email, url } = event;
       
       if (!sg_message_id) continue;
+
+      // Phase 8.9: Parse device/geo info from SendGrid event data
+      // SendGrid includes useragent and ip in open/click events
+      const userAgent = event.useragent || event.user_agent || null;
+      const ip = event.ip || null;
+      let deviceInfo: { deviceType: string; browser: string; os: string } | null = null;
+      let geoInfo: { country: string; region: string; city: string } | null = null;
+
+      if (eventType === 'open' || eventType === 'click') {
+        if (userAgent) {
+          deviceInfo = parseUserAgent(userAgent);
+        }
+        if (ip) {
+          geoInfo = lookupGeo(ip);
+        }
+      }
       
       // Find message by externalId
       const message = await prisma.message.findFirst({
-        where: { externalId: sg_message_id }
+        where: { externalId: sg_message_id },
+        select: {
+          id: true,
+          leadId: true,
+          organizationId: true,
+          metadata: true,
+          status: true,
+        },
       });
       
       if (!message) {
@@ -183,7 +215,7 @@ router.post('/sendgrid', async (req, res) => {
         continue;
       }
       
-      // Update based on event type
+      // Update message status based on event type
       const updates: any = {};
       
       switch (eventType) {
@@ -193,11 +225,10 @@ router.post('/sendgrid', async (req, res) => {
           break;
         case 'open':
           updates.status = 'OPENED';
-          updates.openedAt = new Date();
+          updates.readAt = new Date();
           break;
         case 'click':
           updates.status = 'CLICKED';
-          updates.clickedAt = new Date();
           break;
         case 'bounce':
         case 'dropped':
@@ -206,6 +237,7 @@ router.post('/sendgrid', async (req, res) => {
           break;
         case 'spamreport':
           updates.status = 'FAILED';
+          updates.spamComplaintAt = new Date();
           break;
       }
       
@@ -216,6 +248,86 @@ router.post('/sendgrid', async (req, res) => {
         });
         
         console.log('[WEBHOOK] Email status updated:', { sg_message_id, eventType });
+      }
+
+      // Phase 5.11: Wire to campaign analytics tracking
+      // Check if this message is associated with a campaign via Activity records or metadata
+      const metadata = (message.metadata as Record<string, any>) || {};
+      const campaignId = metadata?.campaignId;
+
+      if (campaignId && message.leadId && message.organizationId) {
+        try {
+          switch (eventType) {
+            case 'open':
+              await trackEmailOpen(
+                campaignId,
+                message.leadId,
+                message.id,
+                message.organizationId
+              );
+              console.log('[WEBHOOK] Campaign open tracked:', { campaignId, leadId: message.leadId });
+              break;
+
+            case 'click':
+              await trackEmailClick(
+                campaignId,
+                message.leadId,
+                message.id,
+                url || '',
+                message.organizationId
+              );
+              console.log('[WEBHOOK] Campaign click tracked:', { campaignId, leadId: message.leadId });
+              break;
+          }
+        } catch (trackError) {
+          // Don't fail the webhook if campaign tracking fails
+          console.error('[WEBHOOK] Campaign analytics tracking error:', trackError);
+        }
+      } else if (campaignId) {
+        console.warn('[WEBHOOK] Missing leadId or orgId for campaign tracking:', {
+          campaignId,
+          leadId: message.leadId,
+          orgId: message.organizationId,
+        });
+      }
+
+      // Phase 8.9: Store device/geo data as Activity metadata
+      if ((eventType === 'open' || eventType === 'click') && message.organizationId) {
+        try {
+          await prisma.activity.create({
+            data: {
+              id: `act_webhook_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+              type: eventType === 'open' ? 'EMAIL_OPENED' : 'EMAIL_CLICKED',
+              title: eventType === 'open' ? 'Email Opened' : 'Email Link Clicked',
+              description: eventType === 'open'
+                ? `Email opened${deviceInfo ? ` on ${deviceInfo.deviceType}` : ''}${geoInfo && geoInfo.country !== 'Unknown' ? ` from ${geoInfo.country}` : ''}`
+                : `Email link clicked: ${url || 'unknown'}`,
+              organizationId: message.organizationId,
+              leadId: message.leadId || undefined,
+              metadata: {
+                messageId: message.id,
+                campaignId: campaignId || null,
+                eventType,
+                email: email || null,
+                url: url || null,
+                ...(deviceInfo && {
+                  deviceType: deviceInfo.deviceType,
+                  browser: deviceInfo.browser,
+                  os: deviceInfo.os,
+                }),
+                ...(geoInfo && {
+                  country: geoInfo.country,
+                  region: geoInfo.region,
+                  city: geoInfo.city,
+                }),
+                ...(ip && { ip }),
+              },
+            },
+          });
+        } catch (activityError) {
+          // Don't fail webhook if activity creation fails
+          console.error('[WEBHOOK] Activity creation error:', activityError);
+        }
       }
     }
     

@@ -1,7 +1,11 @@
+import dotenv from 'dotenv'
+
+// Load environment variables BEFORE any other imports that use process.env at module scope
+dotenv.config()
+
 import express, { Express, Request, Response } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
-import dotenv from 'dotenv'
 import cron from 'node-cron'
 import prisma from './config/database'
 import { corsOptions } from './config/cors'
@@ -20,7 +24,6 @@ import analyticsRoutes from './routes/analytics.routes'
 import aiRoutes from './routes/ai.routes'
 import intelligenceRoutes from './routes/intelligence.routes'
 import abtestRoutes from './routes/abtest.routes'
-import templateRoutes from './routes/template.routes'
 import emailTemplateRoutes from './routes/email-template.routes'
 import smsTemplateRoutes from './routes/sms-template.routes'
 import messageRoutes from './routes/message.routes'
@@ -36,14 +39,15 @@ import userRoutes from './routes/user.routes'
 import notificationRoutes from './routes/notification.routes'
 import adminRoutes from './routes/admin.routes'
 import subscriptionRoutes from './routes/subscription.routes'
+import billingRoutes from './routes/billing.routes'
+import segmentationRoutes from './routes/segmentation.routes'
+import exportRoutes from './routes/export.routes'
 import { requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
+import { sanitizeInput } from './middleware/sanitize'
 import { generalLimiter } from './middleware/rateLimiter'
 import { authenticate } from './middleware/auth'
 import { requireAdminOrManager } from './middleware/admin'
-
-// Load environment variables
-dotenv.config()
 
 // Initialize express app
 const app: Express = express()
@@ -80,8 +84,11 @@ app.use(helmet({
 }))
 
 // Middleware
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+// Input sanitization
+app.use(sanitizeInput)
 
 // Request logging
 app.use(requestLogger)
@@ -113,6 +120,24 @@ app.get('/health', async (req: Request, res: Response) => {
   }
 })
 
+// Service integration status — tells the frontend which APIs are in mock mode
+app.get('/api/system/integration-status', (req: Request, res: Response) => {
+  res.json({
+    email: {
+      configured: !!process.env.SENDGRID_API_KEY,
+      provider: process.env.SENDGRID_API_KEY ? 'sendgrid' : 'mock',
+    },
+    sms: {
+      configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+      provider: (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) ? 'twilio' : 'mock',
+    },
+    ai: {
+      configured: !!process.env.OPENAI_API_KEY,
+      provider: process.env.OPENAI_API_KEY ? 'openai' : 'none',
+    },
+  })
+})
+
 // API routes will go here
 app.get('/api', (req: Request, res: Response) => {
   res.json({
@@ -129,7 +154,6 @@ app.get('/api', (req: Request, res: Response) => {
       activities: '/api/activities/*',
       analytics: '/api/analytics/*',
       ai: '/api/ai/*',
-      templates: '/api/templates/*',
       emailTemplates: '/api/email-templates/*',
       smsTemplates: '/api/sms-templates/*',
       messages: '/api/messages/*',
@@ -154,7 +178,6 @@ app.use('/api/analytics', analyticsRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/intelligence', intelligenceRoutes)
 app.use('/api/ab-tests', abtestRoutes)
-app.use('/api/templates', templateRoutes)
 app.use('/api/email-templates', emailTemplateRoutes)
 app.use('/api/sms-templates', smsTemplateRoutes)
 app.use('/api/messages', messageRoutes)
@@ -170,6 +193,9 @@ app.use('/api/users', userRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/admin', authenticate, requireAdminOrManager, adminRoutes)
 app.use('/api/subscriptions', authenticate, subscriptionRoutes)
+app.use('/api/billing', billingRoutes)
+app.use('/api/segments', authenticate, segmentationRoutes)
+app.use('/api/export', authenticate, exportRoutes)
 
 // 404 handler
 app.use(notFoundHandler)

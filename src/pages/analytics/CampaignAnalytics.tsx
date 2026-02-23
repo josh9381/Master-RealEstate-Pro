@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Send, Eye, MousePointer, Users, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -25,21 +26,43 @@ import {
 } from '@/components/ui/Table';
 import { analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { exportToCSV, campaignExportColumns } from '@/lib/exportService';
+import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const CampaignAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [campaignData, setCampaignData] = useState<any>(null);
   const toast = useToast();
+  const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadCampaignAnalytics();
   }, []);
 
+  const handleDateChange = (range: DateRange) => {
+    dateRangeRef.current = range;
+    loadCampaignAnalytics();
+  };
+
   const loadCampaignAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await analyticsApi.getCampaignAnalytics().catch(() => ({ data: null }));
-      setCampaignData(response.data);
+      const [campaignResponse, monthlyResponse, hourlyResponse] = await Promise.all([
+        analyticsApi.getCampaignAnalytics(dateRangeRef.current).catch(() => ({ data: null })),
+        analyticsApi.getMonthlyPerformance({ months: 12 }).catch(() => ({ data: null })),
+        analyticsApi.getHourlyEngagement({ days: 90 }).catch(() => ({ data: null })),
+      ]);
+      
+      // Merge monthly and hourly data into the campaign data object
+      const mergedData = {
+        ...(campaignResponse.data || {}),
+        dailyStats: monthlyResponse.data || [],
+        hourlyStats: hourlyResponse.data?.hourly || [],
+      };
+      setCampaignData(mergedData);
     } catch (error) {
       console.error('Error loading campaign analytics:', error);
       toast.toast.warning('Error loading campaign analytics', 'Using fallback data');
@@ -61,27 +84,24 @@ const CampaignAnalytics = () => {
   const totalCampaigns = campaignData?.total || 0;
   const topCampaigns = campaignData?.topCampaigns || [];
 
-  // Mock performance data (would come from time-series endpoint)
-  const campaignPerformance = [
-    { date: '2024-01-01', sent: 1200, opened: 384, clicked: 96, converted: 24 },
-    { date: '2024-01-02', sent: 1350, opened: 432, clicked: 108, converted: 27 },
-    { date: '2024-01-03', sent: 1180, opened: 377, clicked: 94, converted: 23 },
-    { date: '2024-01-04', sent: 1420, opened: 454, clicked: 113, converted: 28 },
-    { date: '2024-01-05', sent: 1290, opened: 413, clicked: 103, converted: 26 },
-    { date: '2024-01-06', sent: 1540, opened: 493, clicked: 123, converted: 31 },
-  ];
+  // Campaign performance trend from API (monthly data)
+  const campaignPerformance = (campaignData?.dailyStats || []).map((d: any) => ({
+    date: d.month || d.date,
+    sent: d.sent || 0,
+    opened: d.opened || 0,
+    clicked: d.clicked || 0,
+    converted: d.converted || 0,
+  }));
+
+  // Hourly performance from API
+  const hourlyPerformance = (campaignData?.hourlyStats || []).map((h: any) => ({
+    hour: h.label || h.hour,
+    openRate: h.opens || h.openRate || 0,
+    clicks: h.clicks || 0,
+  }));
 
   // Use topCampaigns from API or fallback to empty array
   const campaigns = topCampaigns.length > 0 ? topCampaigns : [];
-
-  const hourlyPerformance = [
-    { hour: '00:00', openRate: 12 },
-    { hour: '04:00', openRate: 8 },
-    { hour: '08:00', openRate: 28 },
-    { hour: '12:00', openRate: 35 },
-    { hour: '16:00', openRate: 32 },
-    { hour: '20:00', openRate: 22 },
-  ];
 
   return (
     <div className="space-y-6">
@@ -92,12 +112,17 @@ const CampaignAnalytics = () => {
             Track and analyze your marketing campaign performance
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
+          <DateRangePicker onChange={handleDateChange} />
           <Button variant="outline" onClick={loadCampaignAnalytics}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button>Export Data</Button>
+          <Button onClick={() => {
+            if (campaigns.length > 0) {
+              exportToCSV(campaigns, campaignExportColumns, { filename: `campaign-analytics-${new Date().toISOString().split('T')[0]}` });
+            }
+          }}>Export Data</Button>
         </div>
       </div>
 
@@ -115,7 +140,10 @@ const CampaignAnalytics = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Open Rate
+              <HelpTooltip text="Percentage of delivered emails that were opened. Industry average is 20–25% for real estate. Improve by writing better subject lines and sending at optimal times." />
+            </CardTitle>
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -125,12 +153,15 @@ const CampaignAnalytics = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Click Rate
+              <HelpTooltip text="Percentage of opened emails where a link was clicked. A good click rate is 2–5%. Improve by adding clear calls-to-action and relevant content." />
+            </CardTitle>
             <MousePointer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{performance.clickRate || 0}%</div>
-            <p className="text-xs text-muted-foreground">+1.2% vs last period</p>
+            {/* Comparison hidden until real period-over-period data is available */}
           </CardContent>
         </Card>
         <Card>
@@ -139,11 +170,16 @@ const CampaignAnalytics = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.0%</div>
-            <p className="text-xs text-muted-foreground">+0.3% vs last period</p>
+            <div className="text-2xl font-bold">{performance.conversionRate || 0}%</div>
+            <p className="text-xs text-muted-foreground">From campaign data</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Page-level empty state when no campaigns exist */}
+      {totalCampaigns === 0 && (
+        <AnalyticsEmptyState variant="campaigns" />
+      )}
 
       {/* Performance Trend */}
       <Card>
@@ -152,6 +188,7 @@ const CampaignAnalytics = () => {
           <CardDescription>Sent, opened, clicked, and converted over time</CardDescription>
         </CardHeader>
         <CardContent>
+          {campaignPerformance.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={campaignPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -165,6 +202,11 @@ const CampaignAnalytics = () => {
               <Line type="monotone" dataKey="converted" stroke="#f59e0b" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+              No campaign performance data yet
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -175,6 +217,7 @@ const CampaignAnalytics = () => {
           <CardDescription>Performance metrics for all campaigns</CardDescription>
         </CardHeader>
         <CardContent>
+          {campaigns.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -190,29 +233,34 @@ const CampaignAnalytics = () => {
             </TableHeader>
             <TableBody>
               {campaigns.map((campaign: any) => {
-                const openRate = ((campaign.opened / campaign.sent) * 100).toFixed(1);
-                const clickRate = ((campaign.clicked / campaign.sent) * 100).toFixed(1);
-                const convRate = ((campaign.converted / campaign.sent) * 100).toFixed(1);
+                const openRate = campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : '0.0';
+                const clickRate = campaign.sent > 0 ? ((campaign.clicked / campaign.sent) * 100).toFixed(1) : '0.0';
+                const convRate = campaign.sent > 0 ? ((campaign.converted / campaign.sent) * 100).toFixed(1) : '0.0';
 
                 return (
-                  <TableRow key={campaign.id}>
+                  <TableRow key={campaign.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                     <TableCell className="font-medium">{campaign.name}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{campaign.type}</Badge>
                     </TableCell>
-                    <TableCell>{campaign.sent.toLocaleString()}</TableCell>
+                    <TableCell>{(campaign.sent || 0).toLocaleString()}</TableCell>
                     <TableCell>{openRate}%</TableCell>
                     <TableCell>{clickRate}%</TableCell>
                     <TableCell>{convRate}%</TableCell>
-                    <TableCell>${campaign.revenue.toLocaleString()}</TableCell>
+                    <TableCell>${(campaign.revenue || 0).toLocaleString()}</TableCell>
                     <TableCell>
-                      <Badge variant="success">{campaign.roi}%</Badge>
+                      <Badge variant="success">{campaign.roi || 0}%</Badge>
                     </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
+          ) : (
+            <div className="flex items-center justify-center h-24 text-muted-foreground">
+              No campaign data yet
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -224,6 +272,7 @@ const CampaignAnalytics = () => {
             <CardDescription>Open rates by time of day</CardDescription>
           </CardHeader>
           <CardContent>
+            {hourlyPerformance.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={hourlyPerformance}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -233,6 +282,11 @@ const CampaignAnalytics = () => {
                 <Bar dataKey="openRate" fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                No hourly data yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -244,23 +298,22 @@ const CampaignAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { subject: 'Limited Time: 50% Off Everything', openRate: 42.5, clickRate: 12.3 },
-                { subject: 'Your Exclusive Invitation Inside', openRate: 38.7, clickRate: 10.1 },
-                { subject: 'New Feature: You Asked, We Built It', openRate: 36.2, clickRate: 9.8 },
-                { subject: 'Last Chance - Sale Ends Tonight', openRate: 34.8, clickRate: 8.9 },
-              ].map((content, index) => (
-                <div key={index} className="space-y-2">
+              {topCampaigns.length > 0 ? topCampaigns.slice(0, 4).map((campaign: any, index: number) => (
+                <div key={index} className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium truncate">{content.subject}</p>
-                    <Badge variant="outline">{content.openRate}%</Badge>
+                    <p className="text-sm font-medium truncate">{campaign.name || campaign.subject || 'Campaign'}</p>
+                    <Badge variant="outline">{campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : 0}%</Badge>
                   </div>
                   <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                    <span>Open: {content.openRate}%</span>
-                    <span>Click: {content.clickRate}%</span>
+                    <span>Open: {campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : 0}%</span>
+                    <span>Click: {campaign.sent > 0 ? ((campaign.clicked / campaign.sent) * 100).toFixed(1) : 0}%</span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="flex items-center justify-center h-24 text-muted-foreground">
+                  No campaign content data yet
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

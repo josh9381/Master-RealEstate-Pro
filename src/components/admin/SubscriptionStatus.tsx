@@ -3,20 +3,29 @@ import { Crown, Users, Mail, Target, Workflow, TrendingUp, AlertTriangle } from 
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 
+interface UsageEntry {
+  current: number
+  limit: number | 'unlimited' | null
+  remaining?: number | 'unlimited'
+  percentage?: number
+  isAtLimit?: boolean
+}
+
 interface SubscriptionData {
-  currentPlan: {
-    tier: 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE'
-    name: string
-    price: number
+  subscription: {
+    tier: string
+    name?: string
+    price?: number
   }
   usage: {
-    users: { current: number; limit: number | null }
-    leads: { current: number; limit: number | null }
-    campaigns: { current: number; limit: number | null }
-    workflows: { current: number; limit: number | null }
-    emailsPerMonth: { current: number; limit: number | null }
-    smsPerMonth: { current: number; limit: number | null }
+    users: UsageEntry
+    leads: UsageEntry
+    campaigns: UsageEntry
+    workflows: UsageEntry
+    emailsPerMonth?: UsageEntry
+    smsPerMonth?: UsageEntry
   }
+  planFeatures?: Record<string, unknown>
   trialEndsAt?: string
 }
 
@@ -32,7 +41,7 @@ export function SubscriptionStatus() {
     queryKey: ['subscription-status'],
     queryFn: async () => {
       const response = await api.get('/subscriptions/current')
-      return response.data
+      return response.data?.data || response.data
     },
     refetchInterval: 60000, // Refresh every minute
   })
@@ -52,7 +61,7 @@ export function SubscriptionStatus() {
     )
   }
   
-  if (!data) return null
+  if (!data?.usage) return null
   
   const tierConfig = {
     FREE: { color: 'gray', icon: null },
@@ -63,30 +72,35 @@ export function SubscriptionStatus() {
   
   const config = tierConfig[tier || 'FREE']
   
+  const normalizeLimit = (limit: number | 'unlimited' | null | undefined): number | null => {
+    if (limit === 'unlimited' || limit === null || limit === undefined) return null
+    return limit
+  }
+  
   const usageItems = [
     { 
       label: 'Users', 
       icon: Users, 
-      current: data.usage.users.current, 
-      limit: data.usage.users.limit 
+      current: data.usage.users?.current ?? 0, 
+      limit: normalizeLimit(data.usage.users?.limit) 
     },
     { 
       label: 'Leads', 
       icon: Mail, 
-      current: data.usage.leads.current, 
-      limit: data.usage.leads.limit 
+      current: data.usage.leads?.current ?? 0, 
+      limit: normalizeLimit(data.usage.leads?.limit) 
     },
     { 
       label: 'Campaigns', 
       icon: Target, 
-      current: data.usage.campaigns.current, 
-      limit: data.usage.campaigns.limit 
+      current: data.usage.campaigns?.current ?? 0, 
+      limit: normalizeLimit(data.usage.campaigns?.limit) 
     },
     { 
       label: 'Workflows', 
       icon: Workflow, 
-      current: data.usage.workflows.current, 
-      limit: data.usage.workflows.limit 
+      current: data.usage.workflows?.current ?? 0, 
+      limit: normalizeLimit(data.usage.workflows?.limit) 
     },
   ]
   
@@ -120,9 +134,9 @@ export function SubscriptionStatus() {
           )}
         </div>
         
-        {data.currentPlan?.price && data.currentPlan.price > 0 && (
+        {data.subscription?.price && data.subscription.price > 0 && (
           <p className="mt-2 text-sm text-gray-600">
-            ${data.currentPlan.price}/month
+            ${data.subscription.price}/month
           </p>
         )}
       </div>

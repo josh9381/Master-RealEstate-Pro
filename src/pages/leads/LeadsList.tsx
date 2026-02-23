@@ -24,24 +24,24 @@ import {
   AlertDialogAction,
 } from '@/components/ui/Dialog'
 import { 
-  Plus, Search, Filter, Download, LayoutGrid, LayoutList, MoreHorizontal,
+  Search, Filter, Download, LayoutGrid, LayoutList, MoreHorizontal,
   Mail, Tag as TagIcon, TrendingUp, Users, Target, ArrowUpDown, 
   ArrowUp, ArrowDown, ChevronDown, ChevronRight, FileText, Phone, 
   MessageSquare, X, Send
 } from 'lucide-react'
-import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
 import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { ActiveFilterChips } from '@/components/filters/ActiveFilterChips'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi, CreateLeadData, UpdateLeadData, BulkUpdateData } from '@/lib/api'
+import { leadsApi, usersApi, notesApi, messagesApi, CreateLeadData, UpdateLeadData, BulkUpdateData } from '@/lib/api'
+import { exportToCSV, leadExportColumns } from '@/lib/exportService'
 import { Lead } from '@/types'
 import { mockLeads } from '@/data/mockData'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 import { ScoreBadge } from '@/components/ai/ScoreBadge'
 import { getScoreCategory } from '@/utils/scoringUtils'
-import { PredictionBadge } from '@/components/ai/PredictionBadge'
+import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 // Helper types for handling API data that might be objects
 interface TagObject {
@@ -126,15 +126,43 @@ function LeadsList() {
 
   // Edit lead state - declared earlier with other state (line 63)
 
+  // Fetch team members for assign/edit dropdowns
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['team-members'],
+    queryFn: async () => {
+      try {
+        const members = await usersApi.getTeamMembers()
+        return Array.isArray(members) ? members : []
+      } catch {
+        try {
+          const response = await usersApi.getUsers({ limit: 50 })
+          return response.data?.users || response.data || []
+        } catch {
+          return []
+        }
+      }
+    },
+  })
+
   // Fetch leads from API
   const { data: leadsResponse, isLoading } = useQuery({
     queryKey: ['leads', currentPage, pageSize, searchQuery, sortField, sortDirection, filters],
     queryFn: async () => {
       try {
+        // Map frontend sort fields to backend-accepted values
+        const sortFieldMap: Record<string, string> = {
+          name: 'firstName',
+          company: 'createdAt',
+          score: 'score',
+          status: 'createdAt',
+          source: 'createdAt',
+          createdAt: 'createdAt',
+          value: 'value',
+        }
         const params: Record<string, string | number> = {
           page: currentPage,
           limit: pageSize,
-          sortBy: sortField,
+          sortBy: sortFieldMap[sortField] || 'createdAt',
           sortOrder: sortDirection || 'desc',
         }
         
@@ -146,7 +174,6 @@ function LeadsList() {
         return response.data
       } catch (error) {
         // If API fails (e.g., not authenticated), return null to use mock data
-        console.log('API fetch failed, using mock data')
         return null
       }
     },
@@ -440,7 +467,7 @@ function LeadsList() {
     }
   }
 
-  const handleSendMassEmail = () => {
+  const handleSendMassEmail = async () => {
     // Validate
     const errors: {subject?: string; body?: string} = {}
     if (!emailSubject.trim()) errors.subject = 'Subject is required'
@@ -451,9 +478,19 @@ function LeadsList() {
       return
     }
 
-    // Simulate sending
     setIsSending(true)
-    setTimeout(() => {
+    try {
+      // Send email to each selected lead via API
+      const selectedLeadsData = leads.filter((l: Lead) => selectedLeads.includes(l.id))
+      const sendPromises = selectedLeadsData.map((lead: Lead) => 
+        messagesApi.sendEmail({
+          to: lead.email,
+          subject: emailSubject.replace('{{name}}', `${lead.firstName}`).replace('{{company}}', lead.company || ''),
+          body: emailBody.replace('{{name}}', `${lead.firstName}`).replace('{{company}}', lead.company || ''),
+          leadId: String(lead.id),
+        })
+      )
+      await Promise.allSettled(sendPromises)
       toast.success(`Email sent to ${selectedLeads.length} leads!`)
       setShowMassEmail(false)
       setEmailSubject('')
@@ -461,8 +498,12 @@ function LeadsList() {
       setSelectedTemplate('')
       setEmailErrors({})
       setSelectedLeads([])
+    } catch (error) {
+      console.error('Failed to send mass email:', error)
+      toast.error('Failed to send some emails. Please try again.')
+    } finally {
       setIsSending(false)
-    }, 1500)
+    }
   }
 
   const handleApplyTags = () => {
@@ -479,13 +520,27 @@ function LeadsList() {
     setSelectedTags([])
   }
 
-  const handleAddQuickNote = (leadId: number) => {
+  const handleAddQuickNote = async (leadId: number) => {
     if (quickNote && quickNote.text.trim()) {
-      setLeadNotes(prev => ({
-        ...prev,
-        [leadId]: [...(prev[leadId] || []), quickNote.text]
-      }))
-      toast.success('Note added successfully')
+      try {
+        await notesApi.createNote({
+          content: quickNote.text,
+          leadId: String(leadId),
+        })
+        // Also update local state for immediate UI feedback
+        setLeadNotes(prev => ({
+          ...prev,
+          [leadId]: [...(prev[leadId] || []), quickNote.text]
+        }))
+        toast.success('Note added successfully')
+      } catch {
+        // Fall back to local-only storage
+        setLeadNotes(prev => ({
+          ...prev,
+          [leadId]: [...(prev[leadId] || []), quickNote.text]
+        }))
+        toast.success('Note saved locally')
+      }
       setQuickNote(null)
     }
   }
@@ -498,7 +553,7 @@ function LeadsList() {
 
     bulkUpdateMutation.mutate({
       leadIds: selectedLeads.map(String),
-      updates: { status: newStatus as Lead['status'] }
+      updates: { status: newStatus.toUpperCase() as Lead['status'] }
     })
     setShowStatusModal(false)
     setNewStatus('')
@@ -537,10 +592,12 @@ function LeadsList() {
         email: editingLead.email,
         phone: editingLead.phone,
         company: editingLead.company,
-        status: editingLead.status,
+        status: editingLead.status?.toUpperCase() as Lead['status'],
         source: editingLead.source,
         score: editingLead.score,
-        assignedToId: editingLead.assignedTo || undefined,
+        assignedToId: typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null
+          ? String((editingLead.assignedTo as any).id || (editingLead.assignedTo as any)._id)
+          : editingLead.assignedTo || undefined,
         tags: editingLead.tags,
       }
       
@@ -563,7 +620,9 @@ function LeadsList() {
       company: lead.company,
       status: lead.status,
       source: lead.source,
-      assignedToId: lead.assignedTo || undefined,
+      assignedToId: typeof lead.assignedTo === 'object' && lead.assignedTo !== null
+        ? String((lead.assignedTo as any).id || (lead.assignedTo as any)._id)
+        : lead.assignedTo || undefined,
       tags: lead.tags,
     }
     createLeadMutation.mutate(createData)
@@ -591,29 +650,10 @@ function LeadsList() {
   const handleExportCSV = () => {
     const selectedLeadsData = leads.filter((l: Lead) => selectedLeads.includes(l.id))
     const data = selectedLeadsData.length > 0 ? selectedLeadsData : filteredAndSortedLeads
-    
-    const csvContent = [
-      ['Name', 'Email', 'Company', 'Phone', 'Score', 'Status', 'Source', 'Assigned To', 'Tags'],
-      ...data.map((lead: Lead) => [
-        `${lead.firstName} ${lead.lastName}`,
-        lead.email,
-        lead.company,
-        lead.phone,
-        lead.score.toString(),
-        lead.status,
-        lead.source,
-        lead.assignedTo || 'Unassigned',
-        (lead.tags || []).join('; ')
-      ])
-    ].map(row => row.join(',')).join('\n')
 
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
+    exportToCSV(data, leadExportColumns, {
+      filename: `leads-export-${new Date().toISOString().split('T')[0]}`,
+    })
 
     toast.success(`Exported ${data.length} leads to CSV`)
     setSelectedLeads([])
@@ -718,7 +758,7 @@ function LeadsList() {
               <p className="text-sm font-medium text-muted-foreground">Qualified Rate</p>
               <h3 className="mt-2 text-3xl font-bold">{leadStats.qualifiedRate}%</h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                <span className="text-green-600 font-medium">↑ 5%</span> from last month
+                {leadStats.qualified} of {leadStats.total} leads qualified
               </p>
             </div>
             <div className="rounded-full bg-green-100 p-3">
@@ -733,7 +773,7 @@ function LeadsList() {
               <p className="text-sm font-medium text-muted-foreground">Avg Lead Score</p>
               <h3 className="mt-2 text-3xl font-bold">{leadStats.avgScore}</h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                <span className="text-red-600 font-medium">↓ 2%</span> from last month
+                Across {leadStats.total} leads
               </p>
             </div>
             <div className="rounded-full bg-purple-100 p-3">
@@ -748,7 +788,7 @@ function LeadsList() {
               <p className="text-sm font-medium text-muted-foreground">Conversion Rate</p>
               <h3 className="mt-2 text-3xl font-bold">{leadStats.conversionRate}%</h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                <span className="text-green-600 font-medium">↑ 8%</span> from last month
+                {leadStats.converted} leads in pipeline
               </p>
             </div>
             <div className="rounded-full bg-orange-100 p-3">
@@ -997,6 +1037,8 @@ function LeadsList() {
                   <option value="qualified">Qualified</option>
                   <option value="proposal">Proposal</option>
                   <option value="negotiation">Negotiation</option>
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
                 </select>
               </div>
 
@@ -1033,10 +1075,15 @@ function LeadsList() {
                   onChange={(e) => setAssignToUser(e.target.value)}
                 >
                   <option value="">Select user...</option>
-                  <option value="Sarah Johnson">Sarah Johnson</option>
-                  <option value="Mike Chen">Mike Chen</option>
-                  <option value="David Lee">David Lee</option>
-                  <option value="Emma Rodriguez">Emma Rodriguez</option>
+                  {teamMembers.length > 0 ? (
+                    teamMembers.map((member: any) => (
+                      <option key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>No team members available</option>
+                  )}
                 </select>
               </div>
 
@@ -1303,6 +1350,8 @@ function LeadsList() {
                       <option value="qualified">Qualified</option>
                       <option value="proposal">Proposal</option>
                       <option value="negotiation">Negotiation</option>
+                      <option value="won">Won</option>
+                      <option value="lost">Lost</option>
                     </select>
                   </div>
                   <div>
@@ -1341,10 +1390,15 @@ function LeadsList() {
                       onChange={(e) => setEditingLead({...editingLead, assignedTo: e.target.value || null})}
                     >
                       <option value="">Unassigned</option>
-                      <option value="Sarah Johnson">Sarah Johnson</option>
-                      <option value="Mike Chen">Mike Chen</option>
-                      <option value="David Lee">David Lee</option>
-                      <option value="Emma Rodriguez">Emma Rodriguez</option>
+                      {teamMembers.length > 0 ? (
+                        teamMembers.map((member: any) => (
+                          <option key={member.id} value={member.id}>
+                            {member.firstName} {member.lastName}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No team members available</option>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -1402,6 +1456,9 @@ function LeadsList() {
         </div>
       )}
 
+      {/* Sub Navigation */}
+      <LeadsSubNav />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -1409,17 +1466,6 @@ function LeadsList() {
           <p className="mt-2 text-muted-foreground">
             Manage and track all your leads in one place
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <UsageBadge resource="leads" />
-          <FeatureGate resource="leads">
-            <Link to="/leads/create">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Lead
-              </Button>
-            </Link>
-          </FeatureGate>
         </div>
       </div>
 
@@ -1500,6 +1546,37 @@ function LeadsList() {
       />
 
       {/* Leads Table or Grid */}
+      {filteredAndSortedLeads.length === 0 ? (
+        <Card className="p-12 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+          <div className="flex flex-col items-center justify-center text-center max-w-lg mx-auto">
+            <div className="p-6 bg-primary/10 rounded-full mb-6">
+              <Users className="h-16 w-16 text-primary" />
+            </div>
+            <h3 className="text-2xl font-bold mb-3">No leads yet</h3>
+            <p className="text-muted-foreground mb-6 text-lg">
+              Import your contacts or add your first lead to get started tracking your sales pipeline.
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Link to="/leads/create">
+                <Button size="lg" className="shadow-lg">
+                  <Users className="h-5 w-5 mr-2" />
+                  Add Your First Lead
+                </Button>
+              </Link>
+              <Link to="/leads/import">
+                <Button variant="outline" size="lg">
+                  <Download className="h-5 w-5 mr-2" />
+                  Import from CSV
+                </Button>
+              </Link>
+            </div>
+            <p className="text-xs text-muted-foreground mt-6">
+              You can also import leads from other CRMs or add them via the API.
+            </p>
+          </div>
+        </Card>
+      ) : (
+      <>
       {viewMode === 'table' ? (
         <Card>
           <Table>
@@ -1590,20 +1667,6 @@ function LeadsList() {
                   <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
                   <TableCell>
                     <ScoreBadge score={lead.score || 0} size="sm" />
-                    {/* AI Prediction Badges - Mock data for now */}
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {lead.score >= 70 && (
-                        <>
-                          <PredictionBadge type="probability" value={lead.score} size="sm" showIcon={false} />
-                          <PredictionBadge 
-                            type="value" 
-                            value={Math.round((lead.score / 100) * 20000)} 
-                            size="sm" 
-                            showIcon={false} 
-                          />
-                        </>
-                      )}
-                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(lead.status)}>
@@ -1684,16 +1747,24 @@ function LeadsList() {
                               <Mail className="h-4 w-4" />
                               Send Email
                             </button>
-                            <button
-                              className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
-                              onClick={() => {
-                                toast.success('Call initiated')
-                                setShowRowMenu(null)
-                              }}
-                            >
-                              <Phone className="h-4 w-4" />
-                              Call
-                            </button>
+                            {lead.phone ? (
+                              <a
+                                href={`tel:${lead.phone}`}
+                                className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
+                                onClick={() => setShowRowMenu(null)}
+                              >
+                                <Phone className="h-4 w-4" />
+                                Call
+                              </a>
+                            ) : (
+                              <button
+                                className="w-full px-4 py-2 text-sm text-left text-muted-foreground cursor-not-allowed flex items-center gap-2"
+                                disabled
+                              >
+                                <Phone className="h-4 w-4" />
+                                No phone number
+                              </button>
+                            )}
                             <div className="border-t my-1"></div>
                             <button
                               className="w-full px-4 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
@@ -1836,16 +1907,24 @@ function LeadsList() {
                           <Mail className="h-4 w-4" />
                           Send Email
                         </button>
-                        <button
-                          className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
-                          onClick={() => {
-                            toast.success('Call initiated')
-                            setShowRowMenu(null)
-                          }}
-                        >
-                          <Phone className="h-4 w-4" />
-                          Call
-                        </button>
+                        {lead.phone ? (
+                          <a
+                            href={`tel:${lead.phone}`}
+                            className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
+                            onClick={() => setShowRowMenu(null)}
+                          >
+                            <Phone className="h-4 w-4" />
+                            Call
+                          </a>
+                        ) : (
+                          <button
+                            className="w-full px-4 py-2 text-sm text-left text-muted-foreground cursor-not-allowed flex items-center gap-2"
+                            disabled
+                          >
+                            <Phone className="h-4 w-4" />
+                            No phone number
+                          </button>
+                        )}
                         <div className="border-t my-1"></div>
                         <button
                           className="w-full px-4 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
@@ -1882,18 +1961,6 @@ function LeadsList() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex flex-col gap-1">
                   <ScoreBadge score={lead.score || 0} showValue />
-                  {/* AI Prediction Badges */}
-                  {lead.score >= 70 && (
-                    <div className="flex gap-1">
-                      <PredictionBadge type="probability" value={lead.score} size="sm" showIcon={false} />
-                      <PredictionBadge 
-                        type="value" 
-                        value={Math.round((lead.score / 100) * 20000)} 
-                        size="sm" 
-                        showIcon={false} 
-                      />
-                    </div>
-                  )}
                 </div>
                 <Badge variant={getStatusVariant(lead.status)} className="capitalize">
                   {lead.status}
@@ -2007,6 +2074,8 @@ function LeadsList() {
           </div>
         </div>
       </Card>
+      </>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

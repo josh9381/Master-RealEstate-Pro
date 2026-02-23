@@ -29,7 +29,7 @@ const resourceLabels: Record<string, string> = {
  */
 export function UpgradePrompt({ 
   resource, 
-  current, 
+  current: _current, 
   limit, 
   currentTier,
   variant = 'inline',

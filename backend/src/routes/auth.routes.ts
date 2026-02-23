@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, refresh, me } from '../controllers/auth.controller';
+import { register, login, refresh, me, forgotPassword, resetPassword, logout } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 import { validateBody } from '../middleware/validate';
 import { registerSchema, loginSchema, refreshSchema } from '../validators/auth.validator';
@@ -52,6 +52,38 @@ router.get(
   '/me',
   authenticate,
   asyncHandler(me)
+);
+
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Request password reset email
+ * @access  Public
+ */
+router.post(
+  '/forgot-password',
+  authLimiter,
+  asyncHandler(forgotPassword)
+);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password with token
+ * @access  Public
+ */
+router.post(
+  '/reset-password',
+  asyncHandler(resetPassword)
+);
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Logout user
+ * @access  Private (requires authentication)
+ */
+router.post(
+  '/logout',
+  authenticate,
+  asyncHandler(logout)
 );
 
 export default router;

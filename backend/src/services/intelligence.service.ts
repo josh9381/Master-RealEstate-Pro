@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../config/database';
+import { getOpenAIService } from './openai.service';
 
 // Types for intelligence predictions and insights
 export interface Prediction {
@@ -462,6 +461,308 @@ export class IntelligenceService {
     const adjustedValue = baseValue * (0.5 + (conversionProbability / 200));
     
     return Math.round(adjustedValue);
+  }
+
+  // ===================================
+  // Lead Scoring (migrated from ai.service.ts)
+  // ===================================
+
+  /**
+   * Calculate lead score based on various factors
+   * Uses AI when OpenAI is configured, falls back to rule-based scoring
+   */
+  async calculateLeadScore(leadId: string) {
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      include: {
+        notes: true,
+        activities: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+        tags: true,
+      }
+    });
+
+    if (!lead) {
+      throw new Error('Lead not found');
+    }
+
+    let aiScore = null;
+    const factors: Record<string, number> = {};
+
+    // Try AI scoring first if OpenAI is configured
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const openAI = getOpenAIService();
+        
+        const leadData = {
+          name: `${lead.firstName} ${lead.lastName}`,
+          email: lead.email,
+          phone: lead.phone || 'N/A',
+          status: lead.status,
+          source: lead.source || 'Unknown',
+          value: lead.value || 0,
+          currentScore: lead.score,
+          company: lead.company || 'N/A',
+          position: lead.position || 'N/A',
+          recentActivities: lead.activities.map(a => ({
+            type: a.type,
+            date: a.createdAt,
+          })),
+          tags: lead.tags.map(t => t.name),
+          notesCount: lead.notes?.length || 0,
+          createdAt: lead.createdAt,
+        };
+
+        aiScore = await openAI.analyzeLeadScore(leadData, lead.organizationId);
+        
+        // Update lead with AI score
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: {
+            score: aiScore,
+            scoreUpdatedAt: new Date(),
+          },
+        });
+
+        return {
+          leadId,
+          score: aiScore,
+          method: 'ai',
+          factors: {
+            aiAnalysis: aiScore,
+          },
+          timestamp: new Date(),
+        };
+      } catch (error) {
+        console.error('AI scoring failed, falling back to rule-based:', error);
+        // Fall through to rule-based scoring
+      }
+    }
+
+    // Fallback: Rule-based scoring algorithm
+    let score = 50; // Base score
+
+    // Email engagement
+    const emailEngagement = 10;
+    score += emailEngagement;
+    factors.emailEngagement = emailEngagement;
+
+    // Response time / Activity
+    const activityBonus = lead.activities && lead.activities.length > 0 ? 15 : 0;
+    score += activityBonus;
+    factors.responseTime = activityBonus;
+
+    // Budget/value
+    const budgetScore = (lead.status === 'QUALIFIED' || lead.status === 'NEGOTIATION') ? 20 : 0;
+    score += budgetScore;
+    factors.budget = budgetScore;
+
+    // Company size
+    const companySize = 10;
+    score += companySize;
+    factors.companySize = companySize;
+
+    // Lead source quality
+    const sourceQuality = 8;
+    score += sourceQuality;
+    factors.leadSource = sourceQuality;
+
+    // Engagement (notes count)
+    const engagementScore = lead.notes ? Math.min(lead.notes.length * 2, 10) : 0;
+    score += engagementScore;
+    factors.engagement = engagementScore;
+
+    // Activity recency
+    let recencyScore = 0;
+    if (lead.activities && lead.activities.length > 0) {
+      const lastActivity = lead.activities.sort((a, b) => 
+        b.createdAt.getTime() - a.createdAt.getTime()
+      )[0];
+      const daysSinceActivity = (Date.now() - lastActivity.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceActivity < 7) {
+        recencyScore = 5;
+        score += recencyScore;
+      }
+    }
+    factors.activityRecency = recencyScore;
+
+    // Cap at 100
+    score = Math.min(100, score);
+
+    // Update lead with rule-based score
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        score,
+        scoreUpdatedAt: new Date(),
+      },
+    });
+
+    return {
+      leadId,
+      score,
+      method: 'rule-based',
+      factors,
+      recommendation: score >= 80 ? 'high-priority' : score >= 60 ? 'medium-priority' : 'low-priority',
+      confidence: 0.87,
+      timestamp: new Date(),
+    };
+  }
+
+  // ===================================
+  // Data Quality (migrated from ai.service.ts)
+  // ===================================
+
+  /**
+   * Get data quality metrics from real database analysis
+   */
+  async getDataQuality() {
+    const leads = await prisma.lead.findMany({
+      select: {
+        email: true,
+        phone: true,
+        company: true,
+        status: true,
+        createdAt: true,
+      }
+    });
+
+    if (leads.length === 0) {
+      return [];
+    }
+
+    // Calculate completeness (fields filled)
+    const completeness = leads.reduce((acc, lead) => {
+      const fields = [lead.email, lead.phone, lead.company, lead.status];
+      const filled = fields.filter(f => f && f.trim() !== '').length;
+      return acc + (filled / fields.length);
+    }, 0) / leads.length * 100;
+
+    // Calculate timeliness (how recent are leads)
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const recentLeads = leads.filter(l => l.createdAt >= thirtyDaysAgo).length;
+    const timeliness = (recentLeads / leads.length) * 100;
+
+    return [
+      {
+        metric: 'Completeness',
+        score: Math.round(completeness),
+        status: completeness >= 90 ? 'excellent' : completeness >= 70 ? 'good' : 'warning'
+      },
+      {
+        metric: 'Timeliness',
+        score: Math.round(timeliness),
+        status: timeliness >= 80 ? 'excellent' : timeliness >= 60 ? 'good' : 'warning'
+      },
+    ];
+  }
+
+  // ===================================
+  // Message Enhancement (migrated from ai.service.ts)
+  // ===================================
+
+  /**
+   * Enhance a message using AI (OpenAI GPT-4 when configured)
+   */
+  async enhanceMessage(message: string, type?: string, tone?: string) {
+    try {
+      // Use real OpenAI service if API key is configured
+      if (process.env.OPENAI_API_KEY) {
+        const openAI = getOpenAIService();
+        const selectedTone = tone || 'professional';
+        const result = await openAI.enhanceMessage(message, selectedTone);
+        
+        return {
+          original: message,
+          enhanced: result.enhanced,
+          improvements: ['AI-enhanced message', `Optimized for ${selectedTone} tone`],
+          tone: selectedTone,
+          type: type || 'email',
+          tokens: result.tokens,
+          cost: result.cost
+        };
+      }
+      
+      // Fallback to basic implementation if no API key
+      const enhanced = message
+        .replace(/\bhi\b/gi, 'Hello')
+        .replace(/\bthanks\b/gi, 'Thank you')
+        .trim();
+
+      return {
+        original: message,
+        enhanced: enhanced + '\n\nBest regards,\nYour Real Estate Team',
+        improvements: ['Added professional greeting', 'Improved tone', 'Added signature'],
+        tone: tone || 'professional',
+        type: type || 'email'
+      };
+    } catch (error) {
+      console.error('Error enhancing message:', error);
+      return {
+        original: message,
+        enhanced: message,
+        improvements: ['Message unchanged due to error'],
+        tone: tone || 'professional',
+        type: type || 'email',
+        error: 'AI enhancement unavailable'
+      };
+    }
+  }
+
+  // ===================================
+  // Action Suggestions (migrated from ai.service.ts)
+  // ===================================
+
+  /**
+   * Suggest actions based on context
+   */
+  async suggestActions(context: { context?: string; leadId?: string; campaignId?: string }) {
+    const actions = [];
+
+    if (context.leadId) {
+      const lead = await prisma.lead.findUnique({
+        where: { id: context.leadId }
+      });
+
+      if (lead) {
+        if (lead.status === 'NEW') {
+          actions.push({
+            action: 'qualify-lead',
+            title: 'Qualify this lead',
+            description: 'Review and update lead status',
+            priority: 'high'
+          });
+        }
+
+        actions.push({
+          action: 'schedule-followup',
+          title: 'Schedule follow-up',
+          description: 'Set a reminder to follow up with this lead',
+          priority: 'medium'
+        });
+
+        actions.push({
+          action: 'send-email',
+          title: 'Send personalized email',
+          description: 'Engage with a tailored message',
+          priority: 'medium'
+        });
+      }
+    }
+
+    if (context.campaignId) {
+      actions.push({
+        action: 'optimize-campaign',
+        title: 'Optimize campaign',
+        description: 'Review performance and make improvements',
+        priority: 'high'
+      });
+    }
+
+    return actions;
   }
 }
 

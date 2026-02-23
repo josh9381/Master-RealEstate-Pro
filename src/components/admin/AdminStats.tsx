@@ -24,7 +24,7 @@ export function AdminStats() {
     queryKey: ['admin-stats'],
     queryFn: async () => {
       const response = await api.get('/admin/stats')
-      return response.data
+      return response.data?.data || response.data
     },
     enabled: isAdmin() || isManager(),
     refetchInterval: 30000, // Refresh every 30 seconds

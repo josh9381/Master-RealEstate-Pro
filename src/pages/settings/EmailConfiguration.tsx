@@ -671,13 +671,6 @@ const EmailConfiguration = () => {
             <Button 
               onClick={() => {
                 toast.success('Email template settings saved!');
-                console.log('Template Settings:', {
-                  includeUnsubscribe,
-                  trackOpens,
-                  trackClicks,
-                  includeLogo,
-                  includeSocial
-                });
               }}
               disabled={saving}
             >
@@ -736,11 +729,6 @@ const EmailConfiguration = () => {
             <Button 
               onClick={() => {
                 toast.success('Delivery settings saved!');
-                console.log('Delivery Settings:', {
-                  dailyLimit,
-                  rateLimit,
-                  bounceHandling
-                });
               }}
               disabled={saving}
             >

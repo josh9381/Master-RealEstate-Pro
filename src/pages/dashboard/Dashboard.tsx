@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -19,7 +19,6 @@ import {
   
   Clock,
   CheckCircle2,
-  AlertCircle,
   ArrowUpRight,
   ArrowRight,
   Filter
@@ -41,6 +40,8 @@ import {
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import { analyticsApi, campaignsApi, tasksApi } from '@/lib/api'
+import { GettingStarted } from '@/components/onboarding/GettingStarted'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
 
 // Types
 interface StatCard {
@@ -51,6 +52,7 @@ interface StatCard {
   icon: React.ElementType
   target: string
   progress: number
+  helpText?: string
 }
 
 function Dashboard() {
@@ -59,45 +61,68 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
+  // Convert dateRange string to startDate/endDate params
+  const dateParams = useMemo(() => {
+    const now = new Date()
+    const end = now.toISOString().split('T')[0]
+    let start: Date
+    switch (dateRange) {
+      case '7d':
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case '90d':
+        start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+        break
+      case '1y':
+        start = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+        break
+      case '30d':
+      default:
+        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        break
+    }
+    return { startDate: start.toISOString().split('T')[0], endDate: end }
+  }, [dateRange])
+
   // Fetch dashboard statistics from API
   const { data: dashboardData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard-stats', dateRange],
     queryFn: async () => {
-      const response = await analyticsApi.getDashboardStats()
+      const response = await analyticsApi.getDashboardStats(dateParams)
       return response.data
     },
   })
 
   // Fetch lead analytics for charts
-  const { data: leadAnalyticsData } = useQuery({
+  const { data: leadAnalyticsData, refetch: refetchLeads } = useQuery({
     queryKey: ['lead-analytics', dateRange],
     queryFn: async () => {
-      const response = await analyticsApi.getLeadAnalytics()
+      const response = await analyticsApi.getLeadAnalytics(dateParams)
       return response.data
     },
   })
 
   // Fetch campaign analytics for charts
-  const { data: campaignAnalyticsData } = useQuery({
+  const { data: campaignAnalyticsData, refetch: refetchCampaigns } = useQuery({
     queryKey: ['campaign-analytics', dateRange],
     queryFn: async () => {
-      const response = await analyticsApi.getCampaignAnalytics()
+      const response = await analyticsApi.getCampaignAnalytics(dateParams)
       return response.data
     },
   })
 
   // Fetch conversion funnel for charts
-  const { data: conversionFunnelData } = useQuery({
+  const { data: conversionFunnelData, refetch: refetchFunnel } = useQuery({
     queryKey: ['conversion-funnel', dateRange],
     queryFn: async () => {
-      const response = await analyticsApi.getConversionFunnel()
+      const response = await analyticsApi.getConversionFunnel(dateParams)
       return response.data
     },
   })
 
   // Fetch activity feed for recent activities
-  const { data: activityFeedData } = useQuery({
-    queryKey: ['activity-feed'],
+  const { data: activityFeedData, refetch: refetchActivity } = useQuery({
+    queryKey: ['activity-feed', dateRange],
     queryFn: async () => {
       const response = await analyticsApi.getActivityFeed({ limit: 6 })
       return response.data
@@ -105,8 +130,8 @@ function Dashboard() {
   })
 
   // Fetch recent tasks
-  const { data: tasksData } = useQuery({
-    queryKey: ['recent-tasks'],
+  const { data: tasksData, refetch: refetchTasks } = useQuery({
+    queryKey: ['recent-tasks', dateRange],
     queryFn: async () => {
       const response = await tasksApi.getTasks({ page: 1, limit: 5 })
       return response.data
@@ -114,12 +139,42 @@ function Dashboard() {
   })
 
   // Fetch top campaigns
-  const { data: topCampaignsData } = useQuery({
+  const { data: topCampaignsData, refetch: refetchTopCampaigns } = useQuery({
     queryKey: ['top-campaigns'],
     queryFn: async () => {
       const response = await campaignsApi.getCampaigns({ page: 1, limit: 3, sortBy: 'converted', sortOrder: 'desc' })
       return response.data
     },
+  })
+
+  // Fetch revenue timeline data (Phase 5)
+  const { data: revenueTimelineData, refetch: refetchRevenue } = useQuery({
+    queryKey: ['revenue-timeline'],
+    queryFn: async () => {
+      try {
+        const response = await analyticsApi.getRevenueTimeline({ months: 12 })
+        return response.data
+      } catch (error) {
+        console.warn('Revenue timeline not available:', error)
+        return null
+      }
+    },
+    retry: false,
+  })
+
+  // Fetch dashboard alerts (Phase 5)
+  const { data: alertsData, refetch: refetchAlerts } = useQuery({
+    queryKey: ['dashboard-alerts'],
+    queryFn: async () => {
+      try {
+        const response = await analyticsApi.getDashboardAlerts()
+        return response.data
+      } catch (error) {
+        console.warn('Dashboard alerts not available:', error)
+        return null
+      }
+    },
+    retry: false,
   })
 
   const isLoading = statsLoading
@@ -156,7 +211,7 @@ function Dashboard() {
   // Recent activities from API
   const recentActivities = activityFeedData?.activities?.slice(0, 6).map((activity: any) => ({
     id: activity.id,
-    type: activity.type.toLowerCase(),
+    type: (activity.type || 'note').toLowerCase(),
     action: activity.title,
     lead: activity.lead?.name || activity.description,
     time: new Date(activity.createdAt).toLocaleString(),
@@ -168,8 +223,8 @@ function Dashboard() {
     id: task.id,
     title: task.title,
     due: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date',
-    priority: task.priority.toLowerCase(),
-    status: task.status.toLowerCase()
+    priority: (task.priority || 'medium').toLowerCase(),
+    status: (task.status || 'pending').toLowerCase()
   })) || []
 
   // Top campaigns from API
@@ -183,8 +238,14 @@ function Dashboard() {
     roi: campaign.roi ? `${campaign.roi}%` : '0%'
   })) || []
 
-  // Revenue data - using empty array for now since we don't have time-series revenue data
-  const revenueData: any[] = []
+  // Revenue data from API
+  const revenueData = revenueTimelineData?.monthly
+    ? revenueTimelineData.monthly.map((m: any) => ({
+        month: m.month,
+        revenue: m.totalRevenue || 0,
+        leads: m.deals || 0,
+      }))
+    : []
 
   // Quick stats from API
   const quickStats = [
@@ -203,7 +264,8 @@ function Dashboard() {
       trend: 'up' as const,
       icon: Users,
       target: '3,000',
-      progress: Math.min(Math.round((dashboardData.overview?.totalLeads / 3000) * 100), 100) || 0
+      progress: Math.min(Math.round((dashboardData.overview?.totalLeads / 3000) * 100), 100) || 0,
+      helpText: 'Total number of leads in your CRM. Includes all statuses (new, contacted, qualified, won, lost).',
     },
     {
       name: 'Active Campaigns',
@@ -212,7 +274,8 @@ function Dashboard() {
       trend: 'up' as const,
       icon: Megaphone,
       target: '15',
-      progress: Math.min(Math.round((dashboardData.overview?.activeCampaigns / 15) * 100), 100) || 0
+      progress: Math.min(Math.round((dashboardData.overview?.activeCampaigns / 15) * 100), 100) || 0,
+      helpText: 'Campaigns currently running or scheduled to send. Completed and draft campaigns are not counted.',
     },
     {
       name: 'Conversion Rate',
@@ -221,7 +284,8 @@ function Dashboard() {
       trend: 'down' as const,
       icon: Target,
       target: '20%',
-      progress: Math.min(Math.round((dashboardData.leads?.conversionRate / 20) * 100), 100) || 0
+      progress: Math.min(Math.round((dashboardData.leads?.conversionRate / 20) * 100), 100) || 0,
+      helpText: 'Percentage of total leads that reached "Won" status. Calculated as (Won leads ÷ Total leads) × 100. Higher is better — aim for 15-25% in real estate.',
     },
     {
       name: 'Tasks Completed',
@@ -230,7 +294,8 @@ function Dashboard() {
       trend: 'up' as const,
       icon: CheckCircle2,
       target: '100%',
-      progress: dashboardData.tasks?.completionRate || 0
+      progress: dashboardData.tasks?.completionRate || 0,
+      helpText: 'Tasks marked as completed out of all assigned tasks. The percentage shows your completion rate for the selected time period.',
     },
   ] as StatCard[] : [
     {
@@ -271,11 +336,44 @@ function Dashboard() {
     },
   ] as StatCard[]
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true)
-    refetchStats()
-    setTimeout(() => setRefreshing(false), 1000)
-  }
+    try {
+      await Promise.all([
+        refetchStats(),
+        refetchLeads(),
+        refetchCampaigns(),
+        refetchFunnel(),
+        refetchActivity(),
+        refetchTasks(),
+        refetchTopCampaigns(),
+        refetchRevenue(),
+        refetchAlerts(),
+      ])
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error)
+    } finally {
+      setRefreshing(false)
+    }
+  }, [refetchStats, refetchLeads, refetchCampaigns, refetchFunnel, refetchActivity, refetchTasks, refetchTopCampaigns, refetchRevenue, refetchAlerts])
+
+  // Handle task completion toggle
+  const handleTaskComplete = useCallback(async (taskId: string, currentStatus: string) => {
+    try {
+      if (currentStatus === 'completed') {
+        // Mark as incomplete by updating status back to pending
+        await tasksApi.updateTask(taskId, { status: 'PENDING' } as any)
+      } else {
+        // Mark as complete
+        await tasksApi.completeTask(taskId)
+      }
+      // Refetch tasks and stats to reflect the change
+      refetchTasks()
+      refetchStats()
+    } catch (error) {
+      console.error('Error updating task:', error)
+    }
+  }, [refetchTasks, refetchStats])
 
   const handleExport = () => {
     // Mock export functionality
@@ -350,6 +448,13 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* Getting Started Wizard — shows when user has no data */}
+      <GettingStarted
+        totalLeads={dashboardData?.overview?.totalLeads || 0}
+        totalCampaigns={dashboardData?.overview?.totalCampaigns || dashboardData?.campaigns?.total || 0}
+        hasCampaignResults={!!(dashboardData?.campaigns?.totalSent > 0)}
+      />
+
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Button onClick={() => navigate('/leads/create')} className="h-auto py-4 flex-col gap-2">
@@ -375,8 +480,9 @@ function Dashboard() {
         {stats.map((stat) => (
           <Card key={stat.name} className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 {stat.name}
+                {stat.helpText && <HelpTooltip text={stat.helpText} />}
               </CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -464,10 +570,13 @@ function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Conversion Funnel</CardTitle>
+              <CardTitle className="flex items-center gap-1.5">
+                Conversion Funnel
+                <HelpTooltip text="Shows how leads progress through your sales stages: New → Contacted → Qualified → Proposal → Won. Each bar represents the number of leads at that stage. The overall rate shows what percentage of all leads eventually convert to 'Won'." />
+              </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">Lead progression</p>
             </div>
-            <Badge>19% Overall</Badge>
+            <Badge>{conversionFunnelData?.overallConversionRate ? `${conversionFunnelData.overallConversionRate}%` : '—'} Overall</Badge>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -591,7 +700,12 @@ function Dashboard() {
             <div className="space-y-3">
               {upcomingTasks.map((task: any) => (
                 <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer">
-                  <input type="checkbox" className="mt-1" />
+                  <input
+                    type="checkbox"
+                    className="mt-1 cursor-pointer"
+                    checked={task.status === 'completed'}
+                    onChange={() => handleTaskComplete(task.id, task.status)}
+                  />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{task.title}</p>
@@ -676,24 +790,53 @@ function Dashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/20">
-              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">3 leads haven't been contacted in over 7 days</p>
-                <p className="text-xs text-muted-foreground mt-1">These leads may become cold. Consider reaching out soon.</p>
-              </div>
-              <Button size="sm" variant="outline">Review</Button>
+          {alertsData?.alerts && alertsData.alerts.length > 0 ? (
+            <div className="space-y-3">
+              {alertsData.alerts.map((alert: any, index: number) => (
+                <div
+                  key={index}
+                  className={`flex items-start gap-3 rounded-lg border p-3 ${
+                    alert.type === 'urgent'
+                      ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'
+                      : alert.type === 'warning'
+                      ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950'
+                      : alert.type === 'success'
+                      ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+                      : 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
+                  }`}
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{alert.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{alert.description}</p>
+                  </div>
+                  {alert.category === 'leads' && (
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/leads')}>
+                      View <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  )}
+                  {alert.category === 'tasks' && (
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')}>
+                      View <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  )}
+                  {alert.category === 'campaigns' && (
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/campaigns')}>
+                      View <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  )}
+                  {alert.category === 'messages' && (
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/communication')}>
+                      View <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-              <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Q4 Product Launch campaign exceeded targets!</p>
-                <p className="text-xs text-muted-foreground mt-1">145 conversions vs. 100 goal. Great job!</p>
-              </div>
-              <Button size="sm" variant="outline">View Campaign</Button>
+          ) : (
+            <div className="flex items-center justify-center py-6 text-muted-foreground">
+              <p className="text-sm">No alerts yet. Alerts will appear here as your data grows.</p>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

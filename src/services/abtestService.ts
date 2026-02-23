@@ -20,6 +20,8 @@ export interface CreateABTestInput {
   type: 'EMAIL_SUBJECT' | 'EMAIL_CONTENT' | 'EMAIL_TIMING' | 'SMS_CONTENT' | 'LANDING_PAGE';
   variantA: ABTestVariant;
   variantB: ABTestVariant;
+  duration?: number;
+  confidenceLevel?: number;
 }
 
 export interface ABTestResult {

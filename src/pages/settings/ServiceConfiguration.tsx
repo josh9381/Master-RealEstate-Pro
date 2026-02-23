@@ -1,4 +1,4 @@
-import { Settings, Database, Zap, Bell, Shield, RefreshCw } from 'lucide-react';
+import { Settings, Database, Zap, Bell, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -9,8 +9,8 @@ import { settingsApi } from '@/lib/api';
 const ServiceConfiguration = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [, setRefreshing] = useState(false);
+  const [, setSaving] = useState(false);
   const [storageProvider, setStorageProvider] = useState('s3');
   const [accessKeyId, setAccessKeyId] = useState('');
   const [secretAccessKey, setSecretAccessKey] = useState('');
@@ -25,7 +25,15 @@ const ServiceConfiguration = () => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      // Service config would use settingsApi in production
+      const settings = await settingsApi.getBusinessSettings();
+      if (settings) {
+        const data = settings.data || settings;
+        if (data.storageProvider) setStorageProvider(data.storageProvider);
+        if (data.accessKeyId) setAccessKeyId(data.accessKeyId);
+        if (data.secretAccessKey) setSecretAccessKey(data.secretAccessKey);
+        if (data.bucketName) setBucketName(data.bucketName);
+        if (data.region) setRegion(data.region);
+      }
       if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -35,12 +43,16 @@ const ServiceConfiguration = () => {
     }
   };
 
-  const handleRefresh = () => loadSettings(true);
-
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.updateServiceConfig('storage', {
+        storageProvider,
+        accessKeyId,
+        secretAccessKey,
+        bucketName,
+        region,
+      });
       toast.success('Settings Saved', 'Service configuration has been updated successfully.');
     } catch (error) {
       toast.error('Error', 'Failed to save service configuration.');
@@ -52,14 +64,17 @@ const ServiceConfiguration = () => {
   const handleTestConnection = async (service: string) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await settingsApi.testServiceConnection(service.toLowerCase());
       toast.success('Connection Successful', `Successfully connected to ${service}.`);
     } catch (error) {
       toast.error('Connection Failed', `Unable to connect to ${service}.`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFeatureComingSoon = (feature: string) => {
+    toast.info(`${feature}`, 'Feature coming soon');
   };
 
   return (
@@ -243,8 +258,8 @@ const ServiceConfiguration = () => {
             />
           </div>
           <div className="flex items-center space-x-4">
-            <Button>Save Cache Settings</Button>
-            <Button variant="outline">Flush Cache</Button>
+            <Button onClick={() => handleFeatureComingSoon('Save Cache Settings')}>Save Cache Settings</Button>
+            <Button variant="outline" onClick={() => handleFeatureComingSoon('Flush Cache')}>Flush Cache</Button>
           </div>
         </CardContent>
       </Card>
@@ -294,7 +309,7 @@ const ServiceConfiguration = () => {
               />
             </div>
           </div>
-          <Button>Save Queue Settings</Button>
+          <Button onClick={() => handleFeatureComingSoon('Save Queue Settings')}>Save Queue Settings</Button>
         </CardContent>
       </Card>
 
@@ -349,8 +364,8 @@ const ServiceConfiguration = () => {
             />
           </div>
           <div className="flex items-center space-x-4">
-            <Button>Save Search Settings</Button>
-            <Button variant="outline">Reindex All Data</Button>
+            <Button onClick={() => handleFeatureComingSoon('Save Search Settings')}>Save Search Settings</Button>
+            <Button variant="outline" onClick={() => handleFeatureComingSoon('Reindex All Data')}>Reindex All Data</Button>
           </div>
         </CardContent>
       </Card>
@@ -403,7 +418,7 @@ const ServiceConfiguration = () => {
               <span className="text-sm">Anonymize IP addresses</span>
             </label>
           </div>
-          <Button>Save Analytics Settings</Button>
+          <Button onClick={() => handleFeatureComingSoon('Save Analytics Settings')}>Save Analytics Settings</Button>
         </CardContent>
       </Card>
 
@@ -448,7 +463,7 @@ const ServiceConfiguration = () => {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-          <Button>Save Monitoring Settings</Button>
+          <Button onClick={() => handleFeatureComingSoon('Save Monitoring Settings')}>Save Monitoring Settings</Button>
         </CardContent>
       </Card>
 

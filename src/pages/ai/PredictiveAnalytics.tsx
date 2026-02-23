@@ -37,150 +37,83 @@ const PredictiveAnalytics = () => {
   const loadPredictions = async () => {
     setIsLoading(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [performanceData] = await Promise.all([
-        aiApi.getModelPerformance(),
-      ]);
+      const performanceData = await aiApi.getModelPerformance();
 
-      // Generate predictions from model performance data
-      const predictionTypes = ['conversion', 'revenue', 'churn', 'quality', 'campaign'];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const transformedPredictions = predictionTypes.map((type: any, idx: number) => ({
-        id: idx + 1,
-        title: type === 'conversion' ? 'Conversion Rate' :
-               type === 'revenue' ? 'Revenue Growth' :
-               type === 'churn' ? 'Churn Risk' :
-               type === 'quality' ? 'Lead Quality' : 'Campaign Performance',
-        prediction: `${(Math.random() * 30 + 10).toFixed(1)}% ${type === 'churn' ? 'at risk' : 'predicted'}`,
-        confidence: Math.floor(Math.random() * 30 + 70),
-        impact: idx < 2 ? 'high' : idx < 4 ? 'medium' : 'low',
-        status: type === 'churn' ? 'warning' : 
-                idx < 3 ? 'positive' : 'neutral',
-        details: `Based on ${Math.floor(Math.random() * 5 + 3)} key factors including historical trends`,
-      }));
+      // Use real model performance data if available
+      const accuracy = performanceData?.accuracy ? Math.floor(performanceData.accuracy * 100) : 0;
 
-      setPredictions(transformedPredictions);
+      // If we got real performance data, build predictions from it
+      if (performanceData && (performanceData.accuracy || performanceData.models)) {
+        const models = performanceData.models || [];
+        const transformedPredictions = models.map((model: any, idx: number) => ({
+          id: idx + 1,
+          title: model.name || model.type || 'Model',
+          prediction: model.accuracy ? `${(model.accuracy * 100).toFixed(1)}% accuracy` : 'No data',
+          confidence: model.accuracy ? Math.floor(model.accuracy * 100) : 0,
+          impact: model.accuracy > 0.8 ? 'high' : model.accuracy > 0.6 ? 'medium' : 'low',
+          status: model.accuracy > 0.7 ? 'positive' : model.accuracy > 0.5 ? 'neutral' : 'warning',
+          details: `Based on ${model.dataPoints || 0} data points`,
+        }));
+        setPredictions(transformedPredictions);
 
-      // Calculate stats
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const avgConf = transformedPredictions.reduce((sum: number, p: any) => sum + p.confidence, 0) / 
-                      (transformedPredictions.length || 1);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const highImpact = transformedPredictions.filter((p: any) => p.impact === 'high').length;
+        const avgConf = transformedPredictions.length > 0
+          ? transformedPredictions.reduce((sum: number, p: any) => sum + p.confidence, 0) / transformedPredictions.length
+          : 0;
+        const highImpact = transformedPredictions.filter((p: any) => p.impact === 'high').length;
 
-      setStats({
-        activePredictions: transformedPredictions.length * 17, // Scale up for UI
-        avgConfidence: Math.floor(avgConf),
-        highImpactAlerts: highImpact,
-        accuracy: performanceData.accuracy ? Math.floor(performanceData.accuracy * 100) : 91,
-      });
+        setStats({
+          activePredictions: transformedPredictions.length,
+          avgConfidence: Math.floor(avgConf),
+          highImpactAlerts: highImpact,
+          accuracy,
+        });
+      } else {
+        // No model data available — show empty state
+        setPredictions([]);
+        setStats({
+          activePredictions: 0,
+          avgConfidence: 0,
+          highImpactAlerts: 0,
+          accuracy: 0,
+        });
+      }
 
-      // Generate revenue forecast using predictions
-      const months = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
-      const baseRevenue = 45000;
-      const revenueForecast = months.map((month, idx) => {
-        const isActual = idx < 6;
-        const growth = idx * 0.08; // 8% monthly growth
-        const actual = isActual ? baseRevenue * (1 + growth) + Math.random() * 5000 : null;
-        const predicted = !isActual ? baseRevenue * (1 + growth) + 10000 : null;
+      // Revenue forecast and conversion predictions derived from model data
+      if (performanceData && performanceData.models) {
+        const models = performanceData.models || [];
+        // Generate forecast points from model metrics
+        const forecastData = models.slice(0, 6).map((model: any, idx: number) => ({
+          month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][idx] || `M${idx + 1}`,
+          actual: model.dataPoints ? Math.round(model.dataPoints * (model.accuracy || 0.5) * 100) : 0,
+          predicted: model.dataPoints ? Math.round(model.dataPoints * (model.accuracy || 0.5) * 110) : 0,
+        }));
+        setRevenueForcast(forecastData);
         
-        return {
-          month,
-          actual: actual ? Math.floor(actual) : null,
-          predicted: predicted ? Math.floor(predicted) : null,
-          lower: predicted ? Math.floor(predicted * 0.94) : null,
-          upper: predicted ? Math.floor(predicted * 1.06) : null,
-        };
-      });
-      setRevenueForcast(revenueForecast);
-
-      // Generate conversion predictions
-      const weeks = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'];
-      const baseConversion = 12.5;
-      const conversions = weeks.map((week, idx) => ({
-        week,
-        conversion: Number((baseConversion + idx * 0.9).toFixed(1)),
-      }));
-      setConversionPredictions(conversions);
+        const convData = models.slice(0, 6).map((model: any, idx: number) => ({
+          month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][idx] || `M${idx + 1}`,
+          rate: model.accuracy ? Math.round(model.accuracy * 100) : 0,
+          predicted: model.accuracy ? Math.round(model.accuracy * 100 * 1.05) : 0,
+        }));
+        setConversionPredictions(convData);
+      } else {
+        setRevenueForcast([]);
+        setConversionPredictions([]);
+      }
 
     } catch (error) {
       console.error('Failed to load predictions:', error);
       toast.error('Failed to load predictions');
-      
-      // Fallback to mock data
-      setRevenueForcast([
-        { month: 'Nov', actual: 45000, predicted: null, lower: null, upper: null },
-        { month: 'Dec', actual: 52000, predicted: null, lower: null, upper: null },
-        { month: 'Jan', actual: 48000, predicted: null, lower: null, upper: null },
-        { month: 'Feb', actual: 61000, predicted: null, lower: null, upper: null },
-        { month: 'Mar', actual: 55000, predicted: null, lower: null, upper: null },
-        { month: 'Apr', actual: 67000, predicted: null, lower: null, upper: null },
-        { month: 'May', actual: null, predicted: 72000, lower: 68000, upper: 76000 },
-        { month: 'Jun', actual: null, predicted: 78000, lower: 73000, upper: 83000 },
-        { month: 'Jul', actual: null, predicted: 85000, lower: 79000, upper: 91000 },
-        { month: 'Aug', actual: null, predicted: 92000, lower: 85000, upper: 99000 },
-      ]);
-      setConversionPredictions([
-        { week: 'W1', conversion: 12.5 },
-        { week: 'W2', conversion: 14.2 },
-        { week: 'W3', conversion: 13.8 },
-        { week: 'W4', conversion: 15.6 },
-        { week: 'W5', conversion: 16.2 },
-        { week: 'W6', conversion: 17.8 },
-      ]);
-      setPredictions([
-        {
-          id: 1,
-          title: 'Revenue Growth',
-          prediction: '+23% next quarter',
-          confidence: 87,
-          impact: 'high',
-          status: 'positive',
-          details: 'Based on current pipeline and conversion rates',
-        },
-        {
-          id: 2,
-          title: 'Churn Risk',
-          prediction: '12 accounts at risk',
-          confidence: 92,
-          impact: 'high',
-          status: 'warning',
-          details: 'Engagement dropped significantly in past 30 days',
-        },
-        {
-          id: 3,
-          title: 'Campaign Performance',
-          prediction: 'Email campaign will outperform by 18%',
-          confidence: 78,
-          impact: 'medium',
-          status: 'positive',
-          details: 'Similar audience segments showed high engagement',
-        },
-        {
-          id: 4,
-          title: 'Lead Quality',
-          prediction: 'Expect 89 high-quality leads this month',
-          confidence: 84,
-          impact: 'high',
-          status: 'positive',
-          details: 'Seasonal trends and marketing activities aligned',
-        },
-        {
-          id: 5,
-          title: 'Resource Needs',
-          prediction: 'Need 2 more sales reps by Q3',
-          confidence: 73,
-          impact: 'medium',
-          status: 'neutral',
-          details: 'Pipeline growth exceeding current team capacity',
-        },
-      ]);
+
+      // On error, show empty state — no fake data
+      setPredictions([]);
       setStats({
-        activePredictions: 856,
-        avgConfidence: 83,
-        highImpactAlerts: 7,
-        accuracy: 91,
+        activePredictions: 0,
+        avgConfidence: 0,
+        highImpactAlerts: 0,
+        accuracy: 0,
       });
+      setRevenueForcast([]);
+      setConversionPredictions([]);
     } finally {
       setIsLoading(false);
     }
@@ -201,7 +134,7 @@ const PredictiveAnalytics = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">Configure Models</Button>
+          <Button variant="outline" disabled title="Model configuration coming soon">Configure Models</Button>
           <Button onClick={() => loadPredictions()} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             {isLoading ? 'Loading...' : 'Run Predictions'}
@@ -218,7 +151,7 @@ const PredictiveAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.activePredictions}</div>
-            <p className="text-xs text-muted-foreground">+124 this week</p>
+            <p className="text-xs text-muted-foreground">From model data</p>
           </CardContent>
         </Card>
         <Card>
@@ -262,6 +195,7 @@ const PredictiveAnalytics = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {revenueForcast.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
             <AreaChart data={revenueForcast}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -302,6 +236,11 @@ const PredictiveAnalytics = () => {
               />
             </AreaChart>
           </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+              No forecast data available yet. Revenue forecast requires historical data.
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -313,6 +252,7 @@ const PredictiveAnalytics = () => {
             <CardDescription>Predicted conversion rate for next 6 weeks</CardDescription>
           </CardHeader>
           <CardContent>
+            {conversionPredictions.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={conversionPredictions}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -328,16 +268,20 @@ const PredictiveAnalytics = () => {
                 />
               </LineChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                No conversion trend data available yet.
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {/* Key Predictions */}
         <Card>
           <CardHeader>
             <CardTitle>Key Predictions</CardTitle>
             <CardDescription>High-confidence predictions requiring action</CardDescription>
           </CardHeader>
           <CardContent>
+            {predictions.length > 0 ? (
             <div className="space-y-4 max-h-[250px] overflow-y-auto">
               {predictions.slice(0, 4).map((prediction) => (
                 <div key={prediction.id} className="flex items-start space-x-3 p-3 border rounded-lg">
@@ -369,11 +313,17 @@ const PredictiveAnalytics = () => {
                 </div>
               ))}
             </div>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                No predictions available yet. Run model training to generate predictions.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* All Predictions List */}
+      {predictions.length > 0 && (
       <Card>
         <CardHeader>
           <CardTitle>All Predictions</CardTitle>
@@ -422,7 +372,7 @@ const PredictiveAnalytics = () => {
                   >
                     {prediction.impact} impact
                   </Badge>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" disabled title="Prediction details coming soon">
                     Details
                   </Button>
                 </div>
@@ -431,6 +381,7 @@ const PredictiveAnalytics = () => {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 };

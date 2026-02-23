@@ -67,11 +67,8 @@ const TwilioSetup = () => {
   const loadCurrentUser = async () => {
     try {
       const response = await settingsApi.getProfile();
-      console.log('Profile response:', response);
-      
       // Handle different response structures
       const user = response?.data?.user || response?.data || response;
-      console.log('User data:', user);
       
       if (user?.id) {
         setUserId(user.id);
@@ -84,7 +81,6 @@ const TwilioSetup = () => {
         if (token) {
           try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            console.log('JWT payload:', payload);
             if (payload.userId) {
               setUserId(payload.userId);
             }
@@ -111,18 +107,9 @@ const TwilioSetup = () => {
       if (config) {
         // Show masked Account SID if it exists
         // Backend returns masked format (AC1234••••7890) or null
-        console.log('📥 Received config from backend:', {
-          accountSid: config.accountSid,
-          authToken: config.authToken,
-          hasCredentials: config.hasCredentials,
-          fullConfig: config
-        });
-        
         if (config.accountSid) {
-          console.log('✅ Setting accountSid to:', config.accountSid);
           setAccountSid(config.accountSid); // Full Account SID from backend
         } else {
-          console.log('⚠️ No accountSid in response');
           setAccountSid('');
         }
         
@@ -818,12 +805,6 @@ const TwilioSetup = () => {
             <Button 
               onClick={() => {
                 toast.success('SMS settings saved successfully!');
-                console.log('SMS Settings:', {
-                  smsCharLimit,
-                  enableDeliveryReceipts,
-                  enableLinkShortening,
-                  autoOptOut
-                });
               }}
               disabled={saving}
             >
@@ -907,12 +888,6 @@ const TwilioSetup = () => {
             <Button 
               onClick={() => {
                 toast.success('Voice settings saved successfully!');
-                console.log('Voice Settings:', {
-                  recordingMode,
-                  voicemailUrl,
-                  enableCallForwarding,
-                  enableVoicemailTranscription
-                });
               }}
               disabled={saving}
             >

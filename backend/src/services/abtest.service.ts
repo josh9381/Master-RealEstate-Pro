@@ -3,9 +3,8 @@
  * Handles test creation, variant assignment, result tracking, and statistical analysis
  */
 
-import { PrismaClient, ABTestType, ABTestStatus, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { ABTestType, ABTestStatus, Prisma } from '@prisma/client';
+import { prisma } from '../config/database';
 
 interface CreateTestInput {
   name: string;

@@ -1,5 +1,7 @@
 import { prisma } from '../config/database';
 import { WorkflowTrigger, ExecutionStatus } from '@prisma/client';
+import { sendEmail } from './email.service';
+import { sendSMS } from './sms.service';
 
 /**
  * Workflow Service
@@ -12,6 +14,53 @@ import { WorkflowTrigger, ExecutionStatus } from '@prisma/client';
  */
 
 // ===================================
+// Utility Helpers (migrated from workflow-executor.service.ts)
+// ===================================
+
+/**
+ * Replace template variables with actual values
+ * Supports: {{lead.name}}, {{lead.email}}, {{lead.firstName}}, etc.
+ */
+function replaceVariables(template: string | undefined, lead?: any, eventData?: any): string {
+  if (!template) return '';
+  let result = template;
+
+  // Replace lead variables
+  if (lead) {
+    result = result.replace(/\{\{lead\.(\w+)\}\}/g, (_match, field) => {
+      return lead[field] ?? _match;
+    });
+  }
+
+  // Replace event data variables
+  if (eventData) {
+    result = result.replace(/\{\{(\w+)\}\}/g, (_match, field) => {
+      const value = eventData[field];
+      return value !== undefined ? String(value) : _match;
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Parse due date string — supports relative dates like "+3 days", "+1 week"
+ */
+function parseDueDate(dueDateStr: string): Date {
+  const relativeMatch = dueDateStr.match(/^\+(\d+)\s*(day|days|week|weeks|hour|hours)$/i);
+  if (relativeMatch) {
+    const amount = parseInt(relativeMatch[1], 10);
+    const unit = relativeMatch[2].toLowerCase();
+    const date = new Date();
+    if (unit.startsWith('day')) date.setDate(date.getDate() + amount);
+    else if (unit.startsWith('week')) date.setDate(date.getDate() + amount * 7);
+    else if (unit.startsWith('hour')) date.setHours(date.getHours() + amount);
+    return date;
+  }
+  return new Date(dueDateStr);
+}
+
+// ===================================
 // Type Definitions
 // ===================================
 
@@ -22,7 +71,7 @@ export interface WorkflowCondition {
 }
 
 export interface WorkflowAction {
-  type: 'SEND_EMAIL' | 'SEND_SMS' | 'UPDATE_LEAD' | 'ADD_TAG' | 'REMOVE_TAG' | 'CREATE_TASK' | 'ASSIGN_LEAD' | 'ADD_TO_CAMPAIGN' | 'UPDATE_SCORE' | 'SEND_NOTIFICATION' | 'WEBHOOK';
+  type: 'SEND_EMAIL' | 'SEND_SMS' | 'UPDATE_LEAD' | 'ADD_TAG' | 'REMOVE_TAG' | 'CREATE_TASK' | 'ASSIGN_LEAD' | 'ADD_TO_CAMPAIGN' | 'UPDATE_SCORE' | 'SEND_NOTIFICATION' | 'WEBHOOK' | 'DELAY' | 'CONDITION';
   config: any;
 }
 
@@ -387,11 +436,13 @@ function getNestedValue(obj: any, path: string): any {
 
 /**
  * Execute a workflow
+ * @param dryRun - If true, validates actions without actually executing side effects
  */
 export async function executeWorkflow(
   workflowId: string,
   leadId?: string,
-  metadata?: any
+  metadata?: any,
+  dryRun: boolean = false
 ) {
   const workflow = await prisma.workflow.findUnique({
     where: { id: workflowId },
@@ -401,7 +452,7 @@ export async function executeWorkflow(
     throw new Error('Workflow not found');
   }
 
-  if (!workflow.isActive) {
+  if (!workflow.isActive && !dryRun) {
     throw new Error('Workflow is not active');
   }
 
@@ -416,13 +467,11 @@ export async function executeWorkflow(
   });
 
   try {
-    // Execute actions
+    // Execute actions (supports sequential execution with delay and condition branching)
     const actionsConfig = workflow.actions as any;
     const actions = actionsConfig.actions || [];
 
-    for (const action of actions) {
-      await executeAction(action, leadId, metadata);
-    }
+    await executeActionSequence(actions, leadId, metadata, undefined, dryRun, execution.id);
 
     // Update execution as successful
     await prisma.workflowExecution.update({
@@ -456,9 +505,174 @@ export async function executeWorkflow(
 }
 
 /**
- * Execute a single workflow action
+ * Execute a sequence of workflow actions, handling DELAY and CONDITION types
  */
-async function executeAction(action: WorkflowAction, leadId?: string, metadata?: any, organizationId?: string) {
+async function executeActionSequence(
+  actions: WorkflowAction[],
+  leadId?: string,
+  metadata?: any,
+  organizationId?: string,
+  dryRun: boolean = false,
+  executionId?: string
+): Promise<void> {
+  for (let i = 0; i < actions.length; i++) {
+    const action = actions[i];
+
+    if (action.type === 'DELAY') {
+      // Calculate delay duration in milliseconds
+      const delayMs = calculateDelayMs(action.config);
+      
+      if (dryRun) {
+        console.log(`[DRY RUN] Would delay for ${delayMs}ms`);
+        continue;
+      }
+      
+      console.log(`[Workflow] Scheduling remaining ${actions.length - i - 1} actions after ${delayMs}ms delay`);
+      
+      // Schedule remaining actions for later execution
+      const remainingActions = actions.slice(i + 1);
+      if (remainingActions.length > 0) {
+        scheduleDelayedActions(remainingActions, delayMs, leadId, metadata, organizationId, executionId);
+      }
+      return; // Stop current execution - remaining actions will run after delay
+    }
+
+    if (action.type === 'CONDITION') {
+      // Evaluate condition and branch
+      const conditionMet = await evaluateActionCondition(action.config, leadId);
+      
+      if (dryRun) {
+        console.log(`[DRY RUN] Condition evaluated: ${conditionMet}`);
+        continue;
+      }
+      
+      console.log(`[Workflow] Condition evaluated: ${conditionMet}`);
+      
+      if (conditionMet) {
+        // Execute "true" branch actions if defined
+        const trueBranch = action.config.trueBranch || [];
+        if (trueBranch.length > 0) {
+          await executeActionSequence(trueBranch, leadId, metadata, organizationId, dryRun, executionId);
+        }
+      } else {
+        // Execute "false" branch actions if defined
+        const falseBranch = action.config.falseBranch || [];
+        if (falseBranch.length > 0) {
+          await executeActionSequence(falseBranch, leadId, metadata, organizationId, dryRun, executionId);
+        }
+      }
+      continue;
+    }
+
+    await executeAction(action, leadId, metadata, organizationId, dryRun);
+  }
+}
+
+/**
+ * Calculate delay duration in milliseconds from config
+ */
+function calculateDelayMs(config: any): number {
+  const amount = parseInt(config.duration || config.amount || '1', 10);
+  const unit = (config.unit || 'hours').toLowerCase();
+  
+  switch (unit) {
+    case 'minutes': return amount * 60 * 1000;
+    case 'hours': return amount * 60 * 60 * 1000;
+    case 'days': return amount * 24 * 60 * 60 * 1000;
+    case 'weeks': return amount * 7 * 24 * 60 * 60 * 1000;
+    default: return amount * 60 * 60 * 1000; // Default to hours
+  }
+}
+
+/**
+ * Schedule delayed actions using setTimeout and persist to database for recovery
+ */
+function scheduleDelayedActions(
+  actions: WorkflowAction[],
+  delayMs: number,
+  leadId?: string,
+  metadata?: any,
+  organizationId?: string,
+  executionId?: string
+): void {
+  // Cap delay to prevent overflow (max ~24 days with setTimeout)
+  const cappedDelay = Math.min(delayMs, 2147483647);
+  
+  // Store the scheduled job info in the execution metadata for recovery
+  if (executionId) {
+    prisma.workflowExecution.update({
+      where: { id: executionId },
+      data: {
+        metadata: {
+          ...(metadata || {}),
+          scheduledActions: actions,
+          scheduledAt: new Date().toISOString(),
+          scheduledFor: new Date(Date.now() + cappedDelay).toISOString(),
+        } as any,
+      },
+    }).catch(err => console.error('[Workflow] Failed to save scheduled actions:', err));
+  }
+
+  setTimeout(async () => {
+    try {
+      console.log(`[Workflow] Executing ${actions.length} delayed actions`);
+      await executeActionSequence(actions, leadId, metadata, organizationId, false, executionId);
+    } catch (error) {
+      console.error('[Workflow] Failed to execute delayed actions:', error);
+    }
+  }, cappedDelay);
+}
+
+/**
+ * Evaluate a condition against lead data for conditional branching
+ */
+async function evaluateActionCondition(config: any, leadId?: string): Promise<boolean> {
+  if (!leadId) return false;
+
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    include: { tags: true },
+  });
+
+  if (!lead) return false;
+
+  const conditions = config.conditions || [];
+  
+  if (conditions.length === 0) {
+    // Simple field check
+    const field = config.field;
+    const operator = config.operator || 'equals';
+    const value = config.value;
+    return evaluateCondition({ field, operator, value }, lead);
+  }
+
+  // Multiple conditions with AND/OR logic
+  const matchType = config.matchType || 'all';
+  if (matchType === 'all') {
+    return conditions.every((c: WorkflowCondition) => evaluateCondition(c, lead));
+  } else {
+    return conditions.some((c: WorkflowCondition) => evaluateCondition(c, lead));
+  }
+}
+
+/**
+ * Execute a single workflow action
+ * @param dryRun - If true, validates the action config but does not execute side effects
+ */
+async function executeAction(action: WorkflowAction, leadId?: string, metadata?: any, organizationId?: string, dryRun: boolean = false) {
+  // In dry-run mode, validate action config then return without side effects
+  if (dryRun) {
+    const requiresLead: WorkflowAction['type'][] = ['UPDATE_LEAD', 'ADD_TAG', 'REMOVE_TAG', 'UPDATE_SCORE', 'CREATE_TASK', 'ASSIGN_LEAD', 'ADD_TO_CAMPAIGN', 'SEND_EMAIL', 'SEND_SMS'];
+    if (requiresLead.includes(action.type) && !leadId) {
+      console.log(`[DRY RUN] Action ${action.type} would require a lead ID`);
+    }
+    if (!action.config) {
+      throw new Error(`Action ${action.type} is missing config`);
+    }
+    console.log(`[DRY RUN] Validated action: ${action.type}`);
+    return;
+  }
+
   switch (action.type) {
     case 'UPDATE_LEAD':
       if (!leadId) throw new Error('Lead ID required for UPDATE_LEAD action');
@@ -552,14 +766,25 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
 
     case 'CREATE_TASK':
       if (!leadId) throw new Error('Lead ID required for CREATE_TASK action');
+      // Get organizationId from lead if not provided
+      let taskOrgId = organizationId;
+      if (!taskOrgId) {
+        const taskLead = await prisma.lead.findUnique({
+          where: { id: leadId },
+          select: { organizationId: true }
+        });
+        taskOrgId = taskLead?.organizationId;
+      }
+      if (!taskOrgId) throw new Error('Organization ID not found for task creation');
       await prisma.task.create({
         data: {
           title: action.config.title,
           description: action.config.description,
-          dueDate: action.config.dueDate ? new Date(action.config.dueDate) : undefined,
+          dueDate: action.config.dueDate ? parseDueDate(action.config.dueDate) : undefined,
           priority: action.config.priority || 'MEDIUM',
           leadId,
           assignedToId: action.config.assignedToId,
+          organizationId: taskOrgId,
         },
       });
       break;
@@ -583,16 +808,50 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
 
     case 'SEND_EMAIL':
       if (!leadId) throw new Error('Lead ID required for SEND_EMAIL action');
-      // This would integrate with email service
-      // For now, just log the action
-      console.log(`Sending email to lead ${leadId}:`, action.config);
+      // Fetch lead details for email sending
+      const emailLead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { email: true, firstName: true, lastName: true, organizationId: true, assignedToId: true }
+      });
+      if (!emailLead?.email) {
+        console.warn(`[Workflow] Lead ${leadId} has no email address, skipping SEND_EMAIL`);
+        break;
+      }
+      const emailOrgId = organizationId || emailLead.organizationId;
+      if (!emailOrgId) throw new Error('Organization ID not found for SEND_EMAIL action');
+      await sendEmail({
+        to: emailLead.email,
+        subject: replaceVariables(action.config.subject || 'Notification', emailLead, metadata),
+        html: replaceVariables(action.config.body || action.config.html || action.config.content || '', emailLead, metadata),
+        text: action.config.text ? replaceVariables(action.config.text, emailLead, metadata) : undefined,
+        leadId,
+        userId: emailLead.assignedToId || undefined,
+        organizationId: emailOrgId,
+      });
+      console.log(`[Workflow] Email sent to lead ${leadId} (${emailLead.email})`);
       break;
 
     case 'SEND_SMS':
       if (!leadId) throw new Error('Lead ID required for SEND_SMS action');
-      // This would integrate with SMS service
-      // For now, just log the action
-      console.log(`Sending SMS to lead ${leadId}:`, action.config);
+      // Fetch lead details for SMS sending
+      const smsLead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { phone: true, firstName: true, lastName: true, organizationId: true, assignedToId: true }
+      });
+      if (!smsLead?.phone) {
+        console.warn(`[Workflow] Lead ${leadId} has no phone number, skipping SEND_SMS`);
+        break;
+      }
+      const smsOrgId = organizationId || smsLead.organizationId;
+      if (!smsOrgId) throw new Error('Organization ID not found for SEND_SMS action');
+      await sendSMS({
+        to: smsLead.phone,
+        message: replaceVariables(action.config.message || action.config.body || action.config.content || '', smsLead, metadata),
+        leadId,
+        userId: smsLead.assignedToId || undefined,
+        organizationId: smsOrgId,
+      });
+      console.log(`[Workflow] SMS sent to lead ${leadId} (${smsLead.phone})`);
       break;
 
     case 'SEND_NOTIFICATION':

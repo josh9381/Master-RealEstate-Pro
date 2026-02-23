@@ -14,11 +14,12 @@ import {
   Sparkles,
   Eye,
   Plus,
-  Filter,
+
   RefreshCw
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi } from '@/lib/api'
+import { leadsApi, analyticsApi } from '@/lib/api'
+import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 interface Lead {
   id: number
@@ -46,7 +47,6 @@ interface Stage {
 function LeadsPipeline() {
   const [pipelineStages, setPipelineStages] = useState<Stage[]>([])
   const [draggedLead, setDraggedLead] = useState<{ lead: Lead; fromStage: string } | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -67,6 +67,7 @@ function LeadsPipeline() {
         contacted: [],
         qualified: [],
         proposal: [],
+        negotiation: [],
         won: [],
         lost: []
       }
@@ -93,6 +94,19 @@ function LeadsPipeline() {
         }
       })
 
+      // Fetch real time-in-stage metrics from backend
+      let stageMetrics: Record<string, number> = {}
+      try {
+        const metricsResponse = await analyticsApi.getPipelineMetrics()
+        if (metricsResponse?.data?.metrics) {
+          for (const m of metricsResponse.data.metrics) {
+            stageMetrics[m.stage.toLowerCase()] = m.avgDays
+          }
+        }
+      } catch {
+        // Pipeline metrics are optional — continue with zeros
+      }
+
       // Build pipeline stages
       const stages: Stage[] = [
         { 
@@ -100,8 +114,8 @@ function LeadsPipeline() {
           name: 'New', 
           count: statusMap.new.length, 
           color: 'bg-slate-500',
-          conversionRate: 45,
-          avgDays: 2,
+          conversionRate: statusMap.new.length > 0 ? Math.round((statusMap.contacted.length / statusMap.new.length) * 100) : 0,
+          avgDays: stageMetrics['new'] || 0,
           totalValue: calculateTotalValue(statusMap.new),
           leads: statusMap.new
         },
@@ -110,8 +124,8 @@ function LeadsPipeline() {
           name: 'Contacted', 
           count: statusMap.contacted.length,
           color: 'bg-blue-500',
-          conversionRate: 62,
-          avgDays: 5,
+          conversionRate: statusMap.contacted.length > 0 ? Math.round((statusMap.qualified.length / statusMap.contacted.length) * 100) : 0,
+          avgDays: stageMetrics['contacted'] || 0,
           totalValue: calculateTotalValue(statusMap.contacted),
           leads: statusMap.contacted
         },
@@ -120,8 +134,8 @@ function LeadsPipeline() {
           name: 'Qualified', 
           count: statusMap.qualified.length,
           color: 'bg-purple-500',
-          conversionRate: 78,
-          avgDays: 7,
+          conversionRate: statusMap.qualified.length > 0 ? Math.round((statusMap.proposal.length / statusMap.qualified.length) * 100) : 0,
+          avgDays: stageMetrics['qualified'] || 0,
           totalValue: calculateTotalValue(statusMap.qualified),
           leads: statusMap.qualified
         },
@@ -130,10 +144,20 @@ function LeadsPipeline() {
           name: 'Proposal', 
           count: statusMap.proposal.length,
           color: 'bg-orange-500',
-          conversionRate: 85,
-          avgDays: 12,
+          conversionRate: statusMap.proposal.length > 0 ? Math.round((statusMap.negotiation.length / statusMap.proposal.length) * 100) : 0,
+          avgDays: stageMetrics['proposal'] || 0,
           totalValue: calculateTotalValue(statusMap.proposal),
           leads: statusMap.proposal
+        },
+        { 
+          id: 'negotiation', 
+          name: 'Negotiation', 
+          count: statusMap.negotiation.length,
+          color: 'bg-yellow-500',
+          conversionRate: statusMap.negotiation.length > 0 ? Math.round((statusMap.won.length / statusMap.negotiation.length) * 100) : 0,
+          avgDays: stageMetrics['negotiation'] || 0,
+          totalValue: calculateTotalValue(statusMap.negotiation),
+          leads: statusMap.negotiation
         },
         { 
           id: 'won', 
@@ -141,9 +165,19 @@ function LeadsPipeline() {
           count: statusMap.won.length,
           color: 'bg-green-500',
           conversionRate: 100,
-          avgDays: 0,
+          avgDays: stageMetrics['won'] || 0,
           totalValue: calculateTotalValue(statusMap.won),
           leads: statusMap.won
+        },
+        { 
+          id: 'lost', 
+          name: 'Lost', 
+          count: statusMap.lost.length,
+          color: 'bg-gray-400',
+          conversionRate: 0,
+          avgDays: stageMetrics['lost'] || 0,
+          totalValue: calculateTotalValue(statusMap.lost),
+          leads: statusMap.lost
         },
       ]
 
@@ -178,7 +212,7 @@ function LeadsPipeline() {
     e.preventDefault()
   }
 
-  const handleDrop = (e: React.DragEvent, toStageId: string) => {
+  const handleDrop = async (e: React.DragEvent, toStageId: string) => {
     e.preventDefault()
     
     if (!draggedLead) return
@@ -190,7 +224,10 @@ function LeadsPipeline() {
       return
     }
 
-    // Update stages
+    // Save previous state for rollback
+    const previousStages = pipelineStages
+
+    // Optimistic local state update
     setPipelineStages((prev: Stage[]) => {
       return prev.map((stage: Stage) => {
         if (stage.id === fromStage) {
@@ -215,14 +252,35 @@ function LeadsPipeline() {
 
     toast.success(`${lead.firstName} ${lead.lastName} moved to ${pipelineStages.find((s: Stage) => s.id === toStageId)?.name}`)
     setDraggedLead(null)
+
+    // Persist to backend
+    try {
+      await leadsApi.updateLead(String(lead.id), { status: toStageId.toUpperCase() })
+    } catch (error) {
+      // Revert optimistic update on failure
+      console.error('Failed to update lead status:', error)
+      setPipelineStages(previousStages)
+      toast.error('Failed to save status change. Reverted.')
+    }
   }
 
-  const handleQuickAction = (action: string, leadName: string) => {
-    toast.success(`${action} sent to ${leadName}`)
+  const handleQuickAction = (action: string, lead: Lead) => {
+    if (action === 'Call' && lead.phone) {
+      window.location.href = `tel:${lead.phone}`
+    } else if (action === 'Call') {
+      toast.error('No phone number available')
+    } else if (action === 'Email' && lead.email) {
+      window.location.href = `mailto:${lead.email}`
+    } else {
+      toast.info(`Navigate to lead details to send ${action}`)
+    }
   }
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <LeadsSubNav />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -236,20 +294,17 @@ function LeadsPipeline() {
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <Button asChild>
-            <Link to="/leads/create">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Lead
-            </Link>
-          </Button>
         </div>
       </div>
 
-      {/* Pipeline Stages */}
+      {isLoading && pipelineStages.length === 0 ? (
+        <div className="animate-pulse space-y-4">
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
+            {[1,2,3,4,5,6].map(i => <div key={i} className="h-96 bg-muted rounded" />)}
+          </div>
+        </div>
+      ) : (
+
       <div className="flex space-x-4 overflow-x-auto pb-4">
         {pipelineStages.map((stage) => (
           <div 
@@ -339,7 +394,7 @@ function LeadsPipeline() {
                           size="sm" 
                           variant="ghost" 
                           className="h-7 px-2 text-xs"
-                          onClick={() => handleQuickAction('✨ AI Email', `${lead.firstName} ${lead.lastName}`)}
+                          onClick={() => lead.email ? (window.location.href = `mailto:${lead.email}`) : toast.error('No email available')}
                         >
                           <Mail className="mr-1 h-3 w-3" />
                           <Sparkles className="h-3 w-3" />
@@ -348,7 +403,7 @@ function LeadsPipeline() {
                           size="sm" 
                           variant="ghost" 
                           className="h-7 px-2 text-xs"
-                          onClick={() => handleQuickAction('SMS', `${lead.firstName} ${lead.lastName}`)}
+                          onClick={() => handleQuickAction('SMS', lead)}
                         >
                           <MessageSquare className="h-3 w-3" />
                         </Button>
@@ -356,7 +411,7 @@ function LeadsPipeline() {
                           size="sm" 
                           variant="ghost" 
                           className="h-7 px-2 text-xs"
-                          onClick={() => handleQuickAction('Call', `${lead.firstName} ${lead.lastName}`)}
+                          onClick={() => handleQuickAction('Call', lead)}
                         >
                           <Phone className="h-3 w-3" />
                         </Button>
@@ -399,6 +454,7 @@ function LeadsPipeline() {
           </div>
         ))}
       </div>
+      )}
     </div>
   )
 }

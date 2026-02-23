@@ -175,6 +175,7 @@ export const createTask = async (req: Request, res: Response) => {
       status: status || 'PENDING',
       assignedToId,
       leadId: leadId || null,
+      organizationId: req.user!.organizationId,
     },
     include: {
       assignedTo: {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { 
@@ -15,12 +16,14 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  MousePointerClick
+  MousePointerClick,
+  Loader2
 } from 'lucide-react'
+import { activitiesApi } from '@/lib/api'
 
 interface Activity {
-  id: number
-  type: 'email' | 'call' | 'sms' | 'note' | 'status' | 'meeting' | 'task'
+  id: number | string
+  type: 'email' | 'call' | 'sms' | 'note' | 'status' | 'meeting' | 'task' | 'status_change'
   title: string
   description: string
   date: string
@@ -39,112 +42,80 @@ interface Activity {
 
 interface ActivityTimelineProps {
   leadName?: string
+  leadId?: string
 }
 
-const mockActivities: Activity[] = [
-  {
-    id: 1,
-    type: 'email',
-    title: 'Email sent: Q4 Proposal Follow-up',
-    description: 'Sent proposal follow-up with pricing details',
-    date: 'Today',
-    timestamp: '10:30 AM',
-    author: 'You',
-    details: {
-      subject: 'Q4 Proposal - Special Pricing Inside',
-      emailOpened: true,
-      emailClicked: true,
-      attachments: 2
-    }
-  },
-  {
-    id: 2,
-    type: 'call',
-    title: 'Phone call completed',
-    description: 'Discussed implementation timeline and team requirements',
-    date: 'Today',
-    timestamp: '9:15 AM',
-    author: 'Sarah Johnson',
-    details: {
-      duration: '23 min',
-      outcome: 'Positive - Moving to proposal stage'
-    }
-  },
-  {
-    id: 3,
-    type: 'sms',
-    title: 'SMS sent',
-    description: 'Reminder about scheduled demo tomorrow',
-    date: 'Yesterday',
-    timestamp: '4:45 PM',
-    author: 'You',
-  },
-  {
-    id: 4,
-    type: 'meeting',
-    title: 'Demo meeting scheduled',
-    description: 'Product demo with decision makers',
-    date: 'Yesterday',
-    timestamp: '2:30 PM',
-    author: 'Mike Chen',
-    details: {
-      duration: '45 min',
-      tags: ['Demo', 'Enterprise']
-    }
-  },
-  {
-    id: 5,
-    type: 'note',
-    title: 'Note added',
-    description: 'Very interested in enterprise features. Budget approved for Q4.',
-    date: '2 days ago',
-    timestamp: '11:15 AM',
-    author: 'Sarah Johnson',
-  },
-  {
-    id: 6,
-    type: 'status',
-    title: 'Status changed',
-    description: 'Changed from "Contacted" to "Qualified"',
-    date: '3 days ago',
-    timestamp: '9:00 AM',
-    author: 'System',
-  },
-  {
-    id: 7,
-    type: 'email',
-    title: 'Email received: Re: Initial Inquiry',
-    description: 'Client expressed interest in enterprise plan',
-    date: '4 days ago',
-    timestamp: '3:20 PM',
-    author: 'John Doe',
-    details: {
-      subject: 'Re: Initial Inquiry - Enterprise Plan',
-      emailOpened: false,
-      emailClicked: false,
-    }
-  },
-]
+const mockActivities: Activity[] = []
 
-const activityConfig = {
+const activityConfig: Record<string, { icon: typeof Mail; color: string; bg: string }> = {
   email: { icon: Mail, color: 'text-blue-500', bg: 'bg-blue-500/10' },
   call: { icon: Phone, color: 'text-green-500', bg: 'bg-green-500/10' },
   sms: { icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-500/10' },
   note: { icon: FileText, color: 'text-orange-500', bg: 'bg-orange-500/10' },
   status: { icon: CheckCircle, color: 'text-slate-500', bg: 'bg-slate-500/10' },
+  status_change: { icon: CheckCircle, color: 'text-slate-500', bg: 'bg-slate-500/10' },
   meeting: { icon: Calendar, color: 'text-pink-500', bg: 'bg-pink-500/10' },
   task: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
 }
 
-export function ActivityTimeline({ leadName = 'this lead' }: ActivityTimelineProps) {
-  const [filter, setFilter] = useState<'all' | 'email' | 'call' | 'sms' | 'note'>('all')
-  const [expandedIds, setExpandedIds] = useState<number[]>([])
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 7) return `${diffDays} days ago`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+  return date.toLocaleDateString()
+}
 
-  const filteredActivities = mockActivities.filter(activity => 
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+function mapApiActivity(raw: Record<string, unknown>): Activity {
+  const type = (raw.type === 'status_change' ? 'status' : raw.type) as Activity['type']
+  const createdAt = (raw.createdAt || raw.created_at || raw.date || new Date().toISOString()) as string
+  return {
+    id: raw.id as string | number,
+    type: type || 'note',
+    title: (raw.title as string) || `${String(type || 'activity').charAt(0).toUpperCase() + String(type || 'activity').slice(1)} logged`,
+    description: (raw.description as string) || '',
+    date: formatRelativeDate(createdAt),
+    timestamp: formatTime(createdAt),
+    author: (raw.userName as string) || (raw.author as string) || undefined,
+    details: raw.metadata as Activity['details'] || undefined,
+  }
+}
+
+export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTimelineProps) {
+  const [filter, setFilter] = useState<'all' | 'email' | 'call' | 'sms' | 'note'>('all')
+  const [expandedIds, setExpandedIds] = useState<(number | string)[]>([])
+
+  // Fetch real activities from API when leadId is provided
+  const { data: apiActivities, isLoading } = useQuery({
+    queryKey: ['lead-activities', leadId],
+    queryFn: () => activitiesApi.getLeadActivities(leadId!),
+    enabled: !!leadId,
+  })
+
+  // Map API response to Activity type; show empty state for real leads with no activities
+  const activities: Activity[] = (() => {
+    if (leadId && apiActivities) {
+      const items = Array.isArray(apiActivities) ? apiActivities : apiActivities?.data || apiActivities?.activities || []
+      return items.length > 0 ? items.map(mapApiActivity) : []
+    }
+    // Only show mock data when no leadId is provided (standalone usage)
+    return leadId ? [] : mockActivities
+  })()
+
+  const filteredActivities = activities.filter(activity => 
     filter === 'all' || activity.type === filter
   )
 
-  const toggleExpanded = (id: number) => {
+  const toggleExpanded = (id: number | string) => {
     setExpandedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     )
@@ -152,6 +123,15 @@ export function ActivityTimeline({ leadName = 'this lead' }: ActivityTimelinePro
 
   const hasDetails = (activity: Activity) => {
     return activity.details && Object.keys(activity.details).length > 0
+  }
+
+  if (isLoading && leadId) {
+    return (
+      <div className="flex items-center justify-center py-8 text-sm text-muted-foreground gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading activities...
+      </div>
+    )
   }
 
   return (
@@ -209,8 +189,8 @@ export function ActivityTimeline({ leadName = 'this lead' }: ActivityTimelinePro
         <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
 
         {filteredActivities.map((activity, index) => {
-          const config = activityConfig[activity.type]
-          const Icon = config.icon
+              const config = activityConfig[activity.type] || activityConfig.note
+              const Icon = config.icon
           const isExpanded = expandedIds.includes(activity.id)
           const showExpandButton = hasDetails(activity)
 

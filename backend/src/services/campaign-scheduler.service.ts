@@ -154,6 +154,13 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
           `campaign: ${campaign.name} (ID: ${campaign.id})`
         );
         
+        // Set status to SENDING before execution to prevent duplicate sends
+        // if execution takes longer than the scheduler interval (1 minute)
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { status: 'SENDING' },
+        });
+
         // Execute the campaign
         const result = await executeCampaign({
           campaignId: campaign.id,

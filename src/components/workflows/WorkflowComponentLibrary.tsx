@@ -221,15 +221,13 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
   mode = 'click',
 }) => {
   const handleClick = (component: WorkflowComponent) => {
-    console.log('Component clicked:', component.label, 'Mode:', mode);
     // Only trigger select in click mode, not in drag mode
     if (mode === 'click' && onComponentSelect) {
-      console.log('Calling onComponentSelect');
       onComponentSelect(component);
     } else if (mode === 'drag') {
-      console.log('In drag mode - use drag & drop instead of clicking');
+      // In drag mode - use drag & drop instead of clicking
     } else {
-      console.log('onComponentSelect is not defined');
+      // onComponentSelect is not defined
     }
   };
 

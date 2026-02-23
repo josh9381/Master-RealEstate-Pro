@@ -54,7 +54,7 @@ export default function SubscriptionPage() {
     queryKey: ['available-plans'],
     queryFn: async () => {
       const response = await api.get('/subscriptions/plans')
-      return response.data
+      return response.data?.data || response.data
     },
     retry: 2,
   })

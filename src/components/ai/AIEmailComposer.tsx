@@ -1,81 +1,91 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Sparkles, Send, RefreshCw, Edit3, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { aiApi, messagesApi } from '@/lib/api'
+import { useToast } from '@/hooks/useToast'
+import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 
 interface AIEmailComposerProps {
   isOpen: boolean
   onClose: () => void
   leadName?: string
   leadEmail?: string
+  leadId?: string
   context?: string
 }
 
 export function AIEmailComposer({ 
   isOpen, 
   onClose, 
-  leadName = 'John Doe',
-  leadEmail = 'john@example.com',
+  leadName = '',
+  leadEmail = '',
+  leadId,
 }: AIEmailComposerProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [confidenceScore, setConfidenceScore] = useState<number | null>(null)
+  const { toast } = useToast()
   const [emailData, setEmailData] = useState({
     subject: `Following up on our conversation, ${leadName.split(' ')[0]}`,
-    body: `Hi ${leadName.split(' ')[0]},
-
-I wanted to follow up on our recent conversation about how our CRM platform can help streamline your sales process.
-
-Based on what you shared about your current challenges with lead tracking and follow-up management, I think our AI-powered lead scoring and automated workflow features would be particularly valuable for your team.
-
-I'd love to schedule a quick 15-minute demo to show you how other companies in your industry have increased their conversion rates by 35% on average.
-
-Are you available for a brief call this week? I have openings on:
-• Tuesday at 2:00 PM
-• Wednesday at 10:00 AM
-• Thursday at 3:30 PM
-
-Looking forward to hearing from you!
-
-Best regards,
-Sarah Johnson
-Senior Sales Consultant`,
+    body: '',
   })
 
-  const confidenceScore = 92
+  // Auto-generate email on open
+  useEffect(() => {
+    if (isOpen && !emailData.body) {
+      handleGenerate()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   if (!isOpen) return null
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true)
-    // Simulate AI generation
-    setTimeout(() => {
-      setEmailData({
-        subject: `Quick question about your sales process, ${leadName.split(' ')[0]}`,
-        body: `Hi ${leadName.split(' ')[0]},
-
-I hope this email finds you well! I noticed your company has been growing rapidly, and I wanted to reach out personally.
-
-Many companies at your stage struggle with managing leads efficiently across multiple channels. Our platform helps teams like yours:
-
-✓ Automatically score and prioritize leads
-✓ Never miss a follow-up with intelligent reminders
-✓ Track all communications in one unified inbox
-
-I'd love to show you a quick 10-minute demo. Would any of these times work for you?
-
-• Tuesday, 2:00 PM EST
-• Wednesday, 11:00 AM EST  
-• Friday, 3:00 PM EST
-
-Let me know what works best!
-
-Best,
-Sarah Johnson`,
+    try {
+      const result = await aiApi.composeEmail({
+        leadName,
+        leadEmail,
+        tone: 'professional',
+        purpose: 'follow-up',
+        context: `Following up with ${leadName}`,
       })
+      if (result.success && result.data) {
+        setEmailData({
+          subject: result.data.subject || `${leadName} - Follow Up`,
+          body: result.data.content || result.data.body || result.data.message || '',
+        })
+        setConfidenceScore(result.data.confidenceScore || result.data.confidence || null)
+      } else {
+        setEmailData({
+          subject: result.subject || `${leadName} - Follow Up`,
+          body: result.content || result.body || result.message || 'Failed to generate email content.',
+        })
+        setConfidenceScore(result.confidenceScore || result.confidence || null)
+      }
+    } catch (error) {
+      console.error('Failed to generate email:', error)
+      const aiMsg = getAIUnavailableMessage(error)
+      if (aiMsg) {
+        toast.error(aiMsg)
+        setEmailData(prev => ({
+          ...prev,
+          body: prev.body || 'AI is not configured. Please add your OpenAI API key in Settings.',
+        }))
+      } else {
+        toast.error('Failed to generate email. Please try again.')
+        setEmailData(prev => ({
+          ...prev,
+          body: prev.body || 'Failed to generate email. Please try again.',
+        }))
+      }
+    } finally {
       setIsGenerating(false)
-    }, 1500)
+    }
   }
 
   const handleCopy = () => {
@@ -84,10 +94,29 @@ Sarah Johnson`,
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const handleSend = () => {
-    // Simulate sending
-    alert(`Email would be sent to ${leadEmail}`)
-    onClose()
+  const handleSend = async () => {
+    if (!leadEmail) {
+      toast.error('No email address provided')
+      return
+    }
+    setIsSending(true)
+    try {
+      const result = await messagesApi.sendEmail({
+        to: leadEmail,
+        subject: emailData.subject,
+        body: emailData.body,
+        leadId,
+      })
+      if (result.success) {
+        toast.success(`Email sent to ${leadName || leadEmail}`)
+        onClose()
+      }
+    } catch (error) {
+      console.error('Failed to send email:', error)
+      toast.error('Failed to send email. Please try again.')
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
@@ -126,15 +155,17 @@ Sarah Johnson`,
           </div>
 
           {/* AI Confidence */}
-          <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium">AI Confidence Score</span>
+          {confidenceScore !== null && (
+            <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
+              <div className="flex items-center space-x-2">
+                <Sparkles className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-medium">AI Confidence Score</span>
+              </div>
+              <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                {confidenceScore}% Effective
+              </Badge>
             </div>
-            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-              {confidenceScore}% Effective
-            </Badge>
-          </div>
+          )}
 
           {/* Subject */}
           <div>
@@ -215,9 +246,9 @@ Sarah Johnson`,
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSend} className="bg-gradient-to-r from-purple-600 to-blue-600">
+            <Button onClick={handleSend} disabled={isSending} className="bg-gradient-to-r from-purple-600 to-blue-600">
               <Send className="mr-2 h-4 w-4" />
-              Send Email
+              {isSending ? 'Sending...' : 'Send Email'}
             </Button>
           </div>
         </div>

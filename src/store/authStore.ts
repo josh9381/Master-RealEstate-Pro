@@ -76,7 +76,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           set({ isLoading: true, error: null })
           const response = await authApi.login(data)
-          get().setAuth(response.data.user, response.data.tokens.accessToken, response.data.tokens.refreshToken)
+          const responseData = response.data || response
+          get().setAuth(responseData.user, responseData.tokens?.accessToken, responseData.tokens?.refreshToken)
         } catch (error: unknown) {
           const err = error as { response?: { data?: { message?: string } } }
           const errorMessage = err.response?.data?.message || 'Login failed'
@@ -91,7 +92,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           set({ isLoading: true, error: null })
           const response = await authApi.register(data)
-          get().setAuth(response.data.user, response.data.tokens.accessToken, response.data.tokens.refreshToken)
+          const responseData = response.data || response
+          get().setAuth(responseData.user, responseData.tokens?.accessToken, responseData.tokens?.refreshToken)
         } catch (error: unknown) {
           const err = error as { response?: { data?: { message?: string } } }
           const errorMessage = err.response?.data?.message || 'Registration failed'

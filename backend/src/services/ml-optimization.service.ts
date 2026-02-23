@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../config/database';
 import { getIntelligenceService } from './intelligence.service';
-
-const prisma = new PrismaClient();
 const intelligenceService = getIntelligenceService();
 
 /**

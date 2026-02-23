@@ -42,9 +42,14 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [zoom, setZoom] = useState(1);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
 
-  // Handle space bar for panning
+  // Handle space bar for panning (only when not typing in an input/textarea)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept space when user is typing in an input, textarea, or contenteditable
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
       if (e.code === 'Space' && !isSpacePressed) {
         e.preventDefault();
         setIsSpacePressed(true);
@@ -52,6 +57,10 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
       if (e.code === 'Space') {
         e.preventDefault();
         setIsSpacePressed(false);

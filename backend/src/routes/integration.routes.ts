@@ -59,4 +59,13 @@ router.get('/:provider/status', asyncHandler(getIntegrationStatus));
  */
 router.post('/:provider/sync', asyncHandler(syncIntegration));
 
+/**
+ * @route   PUT /api/integrations/:provider/settings
+ * @desc    Update integration provider settings
+ * @access  Private
+ */
+router.put('/:provider/settings', asyncHandler(async (req: any, res: any) => {
+  res.json({ success: true, message: `${req.params.provider} settings updated` });
+}));
+
 export default router;

@@ -20,19 +20,21 @@ export async function createTest(req: Request, res: Response) {
     const createdBy = req.user?.userId;
 
     if (!organizationId || !createdBy) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     if (!name || !type || !variantA || !variantB) {
       return res.status(400).json({
-        error: 'Missing required fields: name, type, variantA, variantB',
+        success: false,
+        message: 'Missing required fields: name, type, variantA, variantB',
       });
     }
 
     // Validate type
     if (!Object.values(ABTestType).includes(type)) {
       return res.status(400).json({
-        error: `Invalid test type. Must be one of: ${Object.values(ABTestType).join(', ')}`,
+        success: false,
+        message: `Invalid test type. Must be one of: ${Object.values(ABTestType).join(', ')}`,
       });
     }
 
@@ -46,10 +48,10 @@ export async function createTest(req: Request, res: Response) {
       variantB,
     });
 
-    res.status(201).json(test);
+    res.status(201).json({ success: true, data: test });
   } catch (error) {
     console.error('Error creating A/B test:', error);
-    res.status(500).json({ error: 'Failed to create A/B test' });
+    res.status(500).json({ success: false, message: 'Failed to create A/B test' });
   }
 }
 
@@ -62,15 +64,15 @@ export async function getTests(req: Request, res: Response) {
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     const tests = await abTestService.getTestsByOrganization(organizationId);
 
-    res.json(tests);
+    res.json({ success: true, data: tests });
   } catch (error) {
     console.error('Error fetching A/B tests:', error);
-    res.status(500).json({ error: 'Failed to fetch A/B tests' });
+    res.status(500).json({ success: false, message: 'Failed to fetch A/B tests' });
   }
 }
 
@@ -84,24 +86,24 @@ export async function getTest(req: Request, res: Response) {
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     const test = await abTestService.getTestById(id);
 
     if (!test) {
-      return res.status(404).json({ error: 'Test not found' });
+      return res.status(404).json({ success: false, message: 'Test not found' });
     }
 
     // Verify access
     if (test.organizationId !== organizationId) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    res.json(test);
+    res.json({ success: true, data: test });
   } catch (error) {
     console.error('Error fetching A/B test:', error);
-    res.status(500).json({ error: 'Failed to fetch A/B test' });
+    res.status(500).json({ success: false, message: 'Failed to fetch A/B test' });
   }
 }
 
@@ -115,25 +117,28 @@ export async function getTestResults(req: Request, res: Response) {
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     // Verify access
     const test = await abTestService.getTestById(id);
     if (!test || test.organizationId !== organizationId) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
     const results = await abTestService.getTestResults(id);
     const analysis = await abTestService.analyzeTest(id);
 
     res.json({
-      results,
-      analysis,
+      success: true,
+      data: {
+        results,
+        analysis,
+      },
     });
   } catch (error) {
     console.error('Error fetching test results:', error);
-    res.status(500).json({ error: 'Failed to fetch test results' });
+    res.status(500).json({ success: false, message: 'Failed to fetch test results' });
   }
 }
 
@@ -147,25 +152,25 @@ export async function startTest(req: Request, res: Response) {
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     // Verify access
     const test = await abTestService.getTestById(id);
     if (!test || test.organizationId !== organizationId) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
     if (test.status !== 'DRAFT') {
-      return res.status(400).json({ error: 'Can only start tests in DRAFT status' });
+      return res.status(400).json({ success: false, message: 'Can only start tests in DRAFT status' });
     }
 
     const updatedTest = await abTestService.startTest(id);
 
-    res.json(updatedTest);
+    res.json({ success: true, data: updatedTest });
   } catch (error) {
     console.error('Error starting A/B test:', error);
-    res.status(500).json({ error: 'Failed to start A/B test' });
+    res.status(500).json({ success: false, message: 'Failed to start A/B test' });
   }
 }
 
@@ -179,25 +184,25 @@ export async function pauseTest(req: Request, res: Response) {
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     // Verify access
     const test = await abTestService.getTestById(id);
     if (!test || test.organizationId !== organizationId) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
     if (test.status !== 'RUNNING') {
-      return res.status(400).json({ error: 'Can only pause running tests' });
+      return res.status(400).json({ success: false, message: 'Can only pause running tests' });
     }
 
     const updatedTest = await abTestService.pauseTest(id);
 
-    res.json(updatedTest);
+    res.json({ success: true, data: updatedTest });
   } catch (error) {
     console.error('Error pausing A/B test:', error);
-    res.status(500).json({ error: 'Failed to pause A/B test' });
+    res.status(500).json({ success: false, message: 'Failed to pause A/B test' });
   }
 }
 
@@ -211,25 +216,25 @@ export async function stopTest(req: Request, res: Response) {
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     // Verify access
     const test = await abTestService.getTestById(id);
     if (!test || test.organizationId !== organizationId) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
     if (test.status !== 'RUNNING' && test.status !== 'PAUSED') {
-      return res.status(400).json({ error: 'Can only stop running or paused tests' });
+      return res.status(400).json({ success: false, message: 'Can only stop running or paused tests' });
     }
 
     const updatedTest = await abTestService.stopTest(id);
 
-    res.json(updatedTest);
+    res.json({ success: true, data: updatedTest });
   } catch (error) {
     console.error('Error stopping A/B test:', error);
-    res.status(500).json({ error: 'Failed to stop A/B test' });
+    res.status(500).json({ success: false, message: 'Failed to stop A/B test' });
   }
 }
 
@@ -243,24 +248,24 @@ export async function deleteTest(req: Request, res: Response) {
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     // Verify access
     const test = await abTestService.getTestById(id);
     if (!test || test.organizationId !== organizationId) {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
     await abTestService.deleteTest(id);
 
-    res.json({ message: 'Test deleted successfully' });
+    res.json({ success: true, message: 'Test deleted successfully' });
   } catch (error: unknown) {
     console.error('Error deleting A/B test:', error);
     if (error instanceof Error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ success: false, message: error.message });
     } else {
-      res.status(500).json({ error: 'Failed to delete A/B test' });
+      res.status(500).json({ success: false, message: 'Failed to delete A/B test' });
     }
   }
 }
@@ -274,7 +279,7 @@ export async function recordInteraction(req: Request, res: Response) {
     const { resultId, type } = req.body;
 
     if (!resultId || !type) {
-      return res.status(400).json({ error: 'Missing resultId or type' });
+      return res.status(400).json({ success: false, message: 'Missing resultId or type' });
     }
 
     let result;
@@ -292,12 +297,12 @@ export async function recordInteraction(req: Request, res: Response) {
         result = await abTestService.recordConversion(resultId);
         break;
       default:
-        return res.status(400).json({ error: 'Invalid interaction type' });
+        return res.status(400).json({ success: false, message: 'Invalid interaction type' });
     }
 
-    res.json(result);
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('Error recording interaction:', error);
-    res.status(500).json({ error: 'Failed to record interaction' });
+    res.status(500).json({ success: false, message: 'Failed to record interaction' });
   }
 }

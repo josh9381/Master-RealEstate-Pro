@@ -8,28 +8,35 @@ import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 
+interface UsageEntry {
+  current: number
+  limit: number | 'unlimited' | null
+  remaining?: number | 'unlimited'
+  percentage?: number
+  isAtLimit?: boolean
+}
+
 interface SubscriptionData {
-  currentPlan: {
-    tier: string
-    name: string
-    price: number
-  }
   subscription: {
     tier: string
-    status: string
-    trialEndsAt?: string
-    currentPeriodEnd?: string | null
+    name?: string
+    price?: number
+    billingPeriod?: string
+    subscriptionId?: string | null
+    isInTrial?: boolean
+    trialEndsAt?: string | null
+    trialDaysRemaining?: number | null
+    features?: Record<string, unknown>
   }
   usage: {
-    users: { current: number; limit: number | null }
-    leads: { current: number; limit: number | null }
-    campaigns: { current: number; limit: number | null }
-    workflows: { current: number; limit: number | null }
-    emailsPerMonth: { current: number; limit: number | null }
-    smsPerMonth: { current: number; limit: number | null }
+    users: UsageEntry
+    leads: UsageEntry
+    campaigns: UsageEntry
+    workflows: UsageEntry
+    emailsPerMonth?: UsageEntry
+    smsPerMonth?: UsageEntry
   }
-  trialEndsAt?: string
-  nextBillingDate?: string
+  planFeatures?: Record<string, unknown>
 }
 
 const BillingPage = () => {
@@ -42,7 +49,7 @@ const BillingPage = () => {
     queryKey: ['subscription-status'],
     queryFn: async () => {
       const response = await api.get('/subscriptions/current')
-      return response.data
+      return response.data?.data || response.data
     },
   });
   
@@ -113,9 +120,15 @@ const BillingPage = () => {
   const tier = getSubscriptionTier();
   const isTrial = isTrialActive();
   
-  const getUsagePercentage = (current: number, limit: number | null) => {
-    if (!limit) return 0;
-    return (current / limit) * 100;
+  const normalizeLimit = (limit: number | 'unlimited' | null | undefined): number | null => {
+    if (limit === 'unlimited' || limit === null || limit === undefined) return null;
+    return typeof limit === 'number' ? limit : null;
+  };
+
+  const getUsagePercentage = (current: number, limit: number | 'unlimited' | null | undefined) => {
+    const numLimit = normalizeLimit(limit);
+    if (!numLimit) return 0;
+    return (current / numLimit) * 100;
   };
 
   return (
@@ -142,7 +155,7 @@ const BillingPage = () => {
               <div>
                 <h3 className="font-semibold text-lg">Trial Period Active</h3>
                 <p className="text-sm text-muted-foreground">
-                  Your trial ends on {subscriptionData?.trialEndsAt || 'N/A'}. Upgrade to continue using premium features.
+                  Your trial ends on {subscriptionData?.subscription?.trialEndsAt || 'N/A'}. Upgrade to continue using premium features.
                 </p>
               </div>
             </div>
@@ -182,19 +195,19 @@ const BillingPage = () => {
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-3xl font-bold">
-                      {subscriptionData.currentPlan?.name || 'Unknown Plan'}
+                      {subscriptionData.subscription?.name || 'Unknown Plan'}
                     </h3>
                     {(tier === 'PROFESSIONAL' || tier === 'ENTERPRISE') && (
                       <Crown className="w-7 h-7 text-amber-500" />
                     )}
                   </div>
                   <p className="text-lg font-semibold text-primary mb-1">
-                    ${subscriptionData.currentPlan?.price || 0}
+                    ${subscriptionData.subscription?.price || 0}
                     <span className="text-sm font-normal text-muted-foreground">/month</span>
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {(subscriptionData.currentPlan?.price || 0) > 0 ? (
-                      <>Next billing date: <span className="font-medium">{subscriptionData.nextBillingDate || 'N/A'}</span></>
+                    {(subscriptionData.subscription?.price || 0) > 0 ? (
+                      <>Next billing date: <span className="font-medium">N/A</span></>
                     ) : (
                       <>No billing required</>
                     )}
@@ -206,7 +219,7 @@ const BillingPage = () => {
                       <Button variant="outline" onClick={handleChangePlan}>
                         Change Plan
                       </Button>
-                      {(subscriptionData.currentPlan?.price || 0) > 0 && (
+                      {(subscriptionData.subscription?.price || 0) > 0 && (
                         <Button variant="ghost" className="text-red-600 hover:text-red-700" onClick={handleCancelSubscription}>
                           Cancel
                         </Button>
@@ -284,23 +297,23 @@ const BillingPage = () => {
                         {subscriptionData.usage?.users?.current || 0} / {subscriptionData.usage?.users?.limit || 'Unlimited'}
                       </span>
                     </div>
-                    {subscriptionData.usage?.users?.limit && (
+                    {normalizeLimit(subscriptionData.usage?.users?.limit) && (
                       <>
                         <div className="w-full bg-secondary rounded-full h-2">
                           <div 
                             className={`h-2 rounded-full ${
-                              getUsagePercentage(subscriptionData.usage.users.current || 0, subscriptionData.usage.users.limit) >= 90 
+                              getUsagePercentage(subscriptionData.usage?.users?.current || 0, subscriptionData.usage?.users?.limit) >= 90 
                                 ? 'bg-red-500' 
-                                : getUsagePercentage(subscriptionData.usage.users.current || 0, subscriptionData.usage.users.limit) >= 75
+                                : getUsagePercentage(subscriptionData.usage?.users?.current || 0, subscriptionData.usage?.users?.limit) >= 75
                                 ? 'bg-yellow-500'
                                 : 'bg-primary'
                             }`}
                             style={{ 
-                              width: `${Math.min(getUsagePercentage(subscriptionData.usage.users.current || 0, subscriptionData.usage.users.limit), 100)}%` 
+                              width: `${Math.min(getUsagePercentage(subscriptionData.usage?.users?.current || 0, subscriptionData.usage?.users?.limit), 100)}%` 
                             }} 
                           />
                         </div>
-                        {getUsagePercentage(subscriptionData.usage.users.current || 0, subscriptionData.usage.users.limit) >= 75 && (
+                        {getUsagePercentage(subscriptionData.usage?.users?.current || 0, subscriptionData.usage?.users?.limit) >= 75 && (
                           <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3" />
                             Approaching limit
@@ -318,7 +331,7 @@ const BillingPage = () => {
                         {(subscriptionData.usage?.leads?.current || 0).toLocaleString()} / {subscriptionData.usage?.leads?.limit?.toLocaleString() || 'Unlimited'}
                       </span>
                     </div>
-                    {subscriptionData.usage?.leads?.limit && (
+                    {normalizeLimit(subscriptionData.usage?.leads?.limit) && (
                       <div className="w-full bg-secondary rounded-full h-2">
                         <div 
                           className={`h-2 rounded-full ${
@@ -337,19 +350,19 @@ const BillingPage = () => {
                   </div>
                   
                   {/* Email Sends */}
-                  {subscriptionData.usage?.emailsPerMonth?.limit && (
+                  {normalizeLimit(subscriptionData.usage?.emailsPerMonth?.limit) && (
                     <div className="p-4 bg-slate-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold">Email Sends</span>
                         <span className="text-sm font-medium">
-                          {(subscriptionData.usage.emailsPerMonth.current || 0).toLocaleString()} / {subscriptionData.usage.emailsPerMonth.limit.toLocaleString()}
+                          {(subscriptionData.usage?.emailsPerMonth?.current || 0).toLocaleString()} / {normalizeLimit(subscriptionData.usage?.emailsPerMonth?.limit)?.toLocaleString() || 'Unlimited'}
                         </span>
                       </div>
                       <div className="w-full bg-secondary rounded-full h-2">
                         <div 
                           className="bg-primary h-2 rounded-full" 
                           style={{ 
-                            width: `${Math.min(getUsagePercentage(subscriptionData.usage.emailsPerMonth.current || 0, subscriptionData.usage.emailsPerMonth.limit), 100)}%` 
+                            width: `${Math.min(getUsagePercentage(subscriptionData.usage?.emailsPerMonth?.current || 0, subscriptionData.usage?.emailsPerMonth?.limit), 100)}%` 
                           }} 
                         />
                       </div>
@@ -357,19 +370,19 @@ const BillingPage = () => {
                   )}
                   
                   {/* SMS Sends */}
-                  {subscriptionData.usage?.smsPerMonth?.limit && (
+                  {normalizeLimit(subscriptionData.usage?.smsPerMonth?.limit) && (
                     <div className="p-4 bg-slate-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold">SMS Sends</span>
                         <span className="text-sm font-medium">
-                          {(subscriptionData.usage.smsPerMonth.current || 0).toLocaleString()} / {subscriptionData.usage.smsPerMonth.limit.toLocaleString()}
+                          {(subscriptionData.usage?.smsPerMonth?.current || 0).toLocaleString()} / {normalizeLimit(subscriptionData.usage?.smsPerMonth?.limit)?.toLocaleString() || 'Unlimited'}
                         </span>
                       </div>
                       <div className="w-full bg-secondary rounded-full h-2">
                         <div 
                           className="bg-primary h-2 rounded-full" 
                           style={{ 
-                            width: `${Math.min(getUsagePercentage(subscriptionData.usage.smsPerMonth.current || 0, subscriptionData.usage.smsPerMonth.limit), 100)}%` 
+                            width: `${Math.min(getUsagePercentage(subscriptionData.usage?.smsPerMonth?.current || 0, subscriptionData.usage?.smsPerMonth?.limit), 100)}%` 
                           }} 
                         />
                       </div>
@@ -378,10 +391,10 @@ const BillingPage = () => {
 
                   
                   {/* Upgrade CTA if approaching limits */}
-                  {tier !== 'ENTERPRISE' && (
+                  {tier !== 'ENTERPRISE' && subscriptionData.usage && (
                     <>
-                      {(getUsagePercentage(subscriptionData.usage.users.current, subscriptionData.usage.users.limit) >= 75 ||
-                        getUsagePercentage(subscriptionData.usage.leads.current, subscriptionData.usage.leads.limit) >= 75) && (
+                      {(getUsagePercentage(subscriptionData.usage.users?.current ?? 0, subscriptionData.usage.users?.limit) >= 75 ||
+                        getUsagePercentage(subscriptionData.usage.leads?.current ?? 0, subscriptionData.usage.leads?.limit) >= 75) && (
                         <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">

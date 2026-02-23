@@ -4,20 +4,25 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { useState, useEffect } from 'react';
-import { campaignsApi } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
+import { campaignsApi, CreateCampaignData } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 
 const SMSCampaigns = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [smsCampaigns, setSmsCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [smsMessage, setSmsMessage] = useState('');
+  const [smsRecipients, setSmsRecipients] = useState('');
   const [stats, setStats] = useState({
     total: 0,
-    deliveryRate: 99.4,
-    clickRate: 16.0,
+    deliveryRate: 0,
+    clickRate: 0,
     scheduled: 0
   });
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadCampaigns();
@@ -28,16 +33,22 @@ const SMSCampaigns = () => {
     setIsLoading(true);
     try {
       const response = await campaignsApi.getCampaigns({ type: 'SMS', limit: 50 });
-      const campaigns = response.data || [];
+      const campaigns = response.data?.campaigns || response.campaigns || [];
       
       setSmsCampaigns(campaigns);
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const scheduled = campaigns.filter((c: any) => c.status === 'scheduled').length;
+      const scheduled = campaigns.filter((c: any) => c.status === 'SCHEDULED').length;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalSent = campaigns.reduce((sum: number, c: any) => sum + (c.sent || c.recipientCount || 0), 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalDelivered = campaigns.reduce((sum: number, c: any) => sum + (c.delivered || c.sent || 0), 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalClicked = campaigns.reduce((sum: number, c: any) => sum + (c.clicks || c.clicked || 0), 0);
       setStats({
-        total: response.total || 0,
-        deliveryRate: 99.4, // Mock
-        clickRate: 16.0, // Mock
+        total: response.data?.pagination?.total || campaigns.length,
+        deliveryRate: totalSent > 0 ? parseFloat(((totalDelivered / totalSent) * 100).toFixed(1)) : 0,
+        clickRate: totalSent > 0 ? parseFloat(((totalClicked / totalSent) * 100).toFixed(1)) : 0,
         scheduled
       });
     } catch (error) {
@@ -50,6 +61,9 @@ const SMSCampaigns = () => {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <CampaignsSubNav />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">SMS Campaigns</h1>
@@ -60,7 +74,7 @@ const SMSCampaigns = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button onClick={() => navigate('/campaigns/create?type=sms')}>
             <MessageSquare className="h-4 w-4 mr-2" />
             Create SMS Campaign
           </Button>
@@ -86,7 +100,7 @@ const SMSCampaigns = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.deliveryRate}%</div>
-            <p className="text-xs text-muted-foreground">Average rate</p>
+            <p className="text-xs text-muted-foreground">{stats.total > 0 ? 'From your campaigns' : 'No data yet'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -96,7 +110,7 @@ const SMSCampaigns = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.clickRate}%</div>
-            <p className="text-xs text-muted-foreground">Average rate</p>
+            <p className="text-xs text-muted-foreground">{stats.total > 0 ? 'From your campaigns' : 'No data yet'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -121,7 +135,11 @@ const SMSCampaigns = () => {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Recipients</label>
-              <Input placeholder="Select contacts or enter phone numbers..." />
+              <Input
+                placeholder="Enter phone numbers separated by commas..."
+                value={smsRecipients}
+                onChange={(e) => setSmsRecipients(e.target.value)}
+              />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Message</label>
@@ -129,13 +147,72 @@ const SMSCampaigns = () => {
                 className="w-full min-h-[100px] p-3 border rounded-md"
                 placeholder="Type your message here..."
                 maxLength={160}
+                value={smsMessage}
+                onChange={(e) => setSmsMessage(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground mt-1">0 / 160 characters</p>
+              <p className="text-xs text-muted-foreground mt-1">{smsMessage.length} / 160 characters</p>
             </div>
             <div className="flex space-x-2">
-              <Button>Send Now</Button>
-              <Button variant="outline">Schedule</Button>
-              <Button variant="ghost">Save as Draft</Button>
+              <Button
+                disabled={!smsMessage.trim() || !smsRecipients.trim()}
+                onClick={async () => {
+                  try {
+                    const campaign = await campaignsApi.createCampaign({
+                      name: `Quick SMS - ${new Date().toLocaleDateString()}`,
+                      type: 'SMS',
+                      body: smsMessage,
+                      recipients: smsRecipients.split(',').map(r => r.trim()).filter(Boolean),
+                      status: 'ACTIVE',
+                    } as CreateCampaignData);
+                    if (campaign?.data?.campaign?.id) {
+                      await campaignsApi.sendCampaign(String(campaign.data.campaign.id));
+                    }
+                    toast.success('SMS campaign sent!');
+                    setSmsMessage('');
+                    loadCampaigns();
+                  } catch {
+                    toast.error('Failed to send SMS campaign');
+                  }
+                }}
+              >Send Now</Button>
+              <Button
+                variant="outline"
+                disabled={!smsMessage.trim()}
+                onClick={async () => {
+                  try {
+                    await campaignsApi.createCampaign({
+                      name: `Quick SMS - ${new Date().toLocaleDateString()}`,
+                      type: 'SMS',
+                      body: smsMessage,
+                      status: 'SCHEDULED',
+                    } as CreateCampaignData);
+                    toast.success('SMS campaign scheduled!');
+                    setSmsMessage('');
+                    loadCampaigns();
+                  } catch {
+                    toast.error('Failed to schedule SMS campaign');
+                  }
+                }}
+              >Schedule</Button>
+              <Button
+                variant="ghost"
+                disabled={!smsMessage.trim()}
+                onClick={async () => {
+                  try {
+                    await campaignsApi.createCampaign({
+                      name: `Quick SMS Draft - ${new Date().toLocaleDateString()}`,
+                      type: 'SMS',
+                      body: smsMessage,
+                      status: 'DRAFT',
+                    } as CreateCampaignData);
+                    toast.success('SMS draft saved!');
+                    setSmsMessage('');
+                    loadCampaigns();
+                  } catch {
+                    toast.error('Failed to save draft');
+                  }
+                }}
+              >Save as Draft</Button>
             </div>
           </div>
         </CardContent>
@@ -163,9 +240,9 @@ const SMSCampaigns = () => {
                       <h4 className="font-medium">{campaign.name}</h4>
                       <Badge
                         variant={
-                          campaign.status === 'sent'
+                          campaign.status?.toUpperCase() === 'COMPLETED' || campaign.status?.toUpperCase() === 'ACTIVE'
                             ? 'success'
-                            : campaign.status === 'scheduled'
+                            : campaign.status?.toUpperCase() === 'SCHEDULED'
                             ? 'warning'
                             : 'secondary'
                         }
@@ -173,22 +250,22 @@ const SMSCampaigns = () => {
                         {campaign.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">{campaign.message}</p>
+                    <p className="text-sm text-muted-foreground mb-2">{campaign.body || campaign.subject}</p>
                     <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                      <span>Date: {campaign.date}</span>
-                      {campaign.status === 'sent' ? (
+                      <span>Date: {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString() : 'N/A'}</span>
+                      {(campaign.status?.toUpperCase() === 'COMPLETED' || campaign.status?.toUpperCase() === 'ACTIVE') ? (
                         <>
                           <span>Sent: {campaign.sent}</span>
-                          <span>Delivered: {campaign.delivered}</span>
+                          <span>Delivered: {campaign.delivered || 0}</span>
                           <span>Clicked: {campaign.clicked}</span>
                         </>
                       ) : (
-                        <span>Recipients: {campaign.recipients}</span>
+                        <span>Recipients: {campaign.audience || 0}</span>
                       )}
                     </div>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                   View Details
                 </Button>
               </div>

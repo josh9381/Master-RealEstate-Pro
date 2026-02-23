@@ -15,7 +15,16 @@ NC='\033[0m' # No Color
 # Kill any existing processes on our ports (except Prisma Studio)
 echo -e "${YELLOW}🧹 Cleaning up existing processes...${NC}"
 pkill -f "dist/server.js" 2>/dev/null
+pkill -f "ts-node.*server" 2>/dev/null
 pkill -f "vite" 2>/dev/null
+# Force kill anything still on our ports to prevent zombie issues
+for port in 8000 3000; do
+    pids=$(lsof -t -i:$port 2>/dev/null)
+    if [ -n "$pids" ]; then
+        echo -e "${YELLOW}⚠️  Force killing zombie processes on port $port${NC}"
+        echo "$pids" | xargs kill -9 2>/dev/null
+    fi
+done
 sleep 2
 
 # Build Backend first

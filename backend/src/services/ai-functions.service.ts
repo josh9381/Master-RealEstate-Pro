@@ -1,8 +1,7 @@
-import { PrismaClient, Prisma, TaskPriority, LeadStatus } from '@prisma/client';
+import { Prisma, TaskPriority, LeadStatus } from '@prisma/client';
+import { prisma } from '../config/database';
 import { getOpenAIService } from './openai.service';
 import { getIntelligenceService } from './intelligence.service';
-
-const prisma = new PrismaClient();
 
 export const AI_FUNCTIONS = [
   {
@@ -1309,6 +1308,7 @@ export class AIFunctionsService {
           status: 'PENDING',
           leadId: args.leadId,
           assignedToId: userId,
+          organizationId,
         },
       });
 
@@ -1398,6 +1398,7 @@ export class AIFunctionsService {
           status: 'PENDING',
           leadId: args.leadId,
           assignedToId: userId,
+          organizationId,
         },
       });
 

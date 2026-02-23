@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Send, Calendar, Users, FileText, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -6,9 +7,12 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 
 const EmailCampaigns = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,17 +33,23 @@ const EmailCampaigns = () => {
     setIsLoading(true);
     try {
       const response = await campaignsApi.getCampaigns({ type: 'EMAIL', limit: 50 });
-      const emailCampaigns = response.data || [];
+      const emailCampaigns = response.data?.campaigns || response.campaigns || [];
       
       setCampaigns(emailCampaigns);
       
-      // Calculate stats
+      // Calculate stats from real data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const scheduled = emailCampaigns.filter((c: any) => c.status === 'scheduled').length;
+      const scheduled = emailCampaigns.filter((c: any) => c.status === 'SCHEDULED').length;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalSent = emailCampaigns.reduce((sum: number, c: any) => sum + (c.sent || c.recipientCount || 0), 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalOpened = emailCampaigns.reduce((sum: number, c: any) => sum + (c.opens || c.opened || 0), 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalClicked = emailCampaigns.reduce((sum: number, c: any) => sum + (c.clicks || c.clicked || 0), 0);
       setStats({
-        total: response.total || 0,
-        openRate: 32.0, // Mock - no endpoint for this
-        clickRate: 8.0, // Mock - no endpoint for this
+        total: response.data?.pagination?.total || emailCampaigns.length,
+        openRate: totalSent > 0 ? parseFloat(((totalOpened / totalSent) * 100).toFixed(1)) : 0,
+        clickRate: totalSent > 0 ? parseFloat(((totalClicked / totalSent) * 100).toFixed(1)) : 0,
         scheduled
       });
     } catch (error) {
@@ -52,6 +62,9 @@ const EmailCampaigns = () => {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <CampaignsSubNav />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Email Campaigns</h1>
@@ -62,7 +75,7 @@ const EmailCampaigns = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button onClick={() => navigate('/campaigns/create?type=email')}>
             <Send className="h-4 w-4 mr-2" />
             Create Email Campaign
           </Button>
@@ -88,7 +101,7 @@ const EmailCampaigns = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.openRate}%</div>
-            <p className="text-xs text-muted-foreground">Industry average</p>
+            <p className="text-xs text-muted-foreground">{stats.total > 0 ? 'From your campaigns' : 'No data yet'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -98,7 +111,7 @@ const EmailCampaigns = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.clickRate}%</div>
-            <p className="text-xs text-muted-foreground">Industry average</p>
+            <p className="text-xs text-muted-foreground">{stats.total > 0 ? 'From your campaigns' : 'No data yet'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -108,7 +121,7 @@ const EmailCampaigns = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.scheduled}</div>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
+            <p className="text-xs text-muted-foreground">Upcoming scheduled</p>
           </CardContent>
         </Card>
       </div>
@@ -147,12 +160,32 @@ const EmailCampaigns = () => {
                 Drafts
               </Button>
             </div>
-            <Input placeholder="Search campaigns..." className="w-64" />
+            <Input
+              placeholder="Search campaigns..."
+              className="w-64"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {campaigns.map((campaign) => (
+            {campaigns
+              .filter((campaign) => {
+                if (activeTab === 'all') return true;
+                const status = (campaign.status || '').toUpperCase();
+                if (activeTab === 'sent') return status === 'COMPLETED' || status === 'ACTIVE';
+                if (activeTab === 'scheduled') return status === 'SCHEDULED';
+                if (activeTab === 'draft') return status === 'DRAFT';
+                return true;
+              })
+              .filter((campaign) => {
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase();
+                return (campaign.name || '').toLowerCase().includes(q) ||
+                       (campaign.subject || '').toLowerCase().includes(q);
+              })
+              .map((campaign) => (
               <div
                 key={campaign.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer"
@@ -166,9 +199,9 @@ const EmailCampaigns = () => {
                       <h4 className="font-medium">{campaign.name}</h4>
                       <Badge
                         variant={
-                          campaign.status === 'sent'
+                          campaign.status?.toUpperCase() === 'COMPLETED' || campaign.status?.toUpperCase() === 'ACTIVE'
                             ? 'success'
-                            : campaign.status === 'scheduled'
+                            : campaign.status?.toUpperCase() === 'SCHEDULED'
                             ? 'warning'
                             : 'secondary'
                         }
@@ -178,23 +211,23 @@ const EmailCampaigns = () => {
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">{campaign.subject}</p>
                     <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                      <span>Date: {campaign.date}</span>
-                      {campaign.status === 'sent' && (
+                      <span>Date: {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString() : 'N/A'}</span>
+                      {(campaign.status?.toUpperCase() === 'COMPLETED' || campaign.status?.toUpperCase() === 'ACTIVE') && (
                         <>
                           <span>Sent: {campaign.sent}</span>
                           <span>Opened: {campaign.opened}</span>
                           <span>Clicked: {campaign.clicked}</span>
                         </>
                       )}
-                      {campaign.status !== 'sent' && <span>Recipients: {campaign.recipients}</span>}
+                      {campaign.status?.toUpperCase() !== 'COMPLETED' && campaign.status?.toUpperCase() !== 'ACTIVE' && <span>Recipients: {campaign.audience || 0}</span>}
                     </div>
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                     View
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}>
                     Edit
                   </Button>
                 </div>

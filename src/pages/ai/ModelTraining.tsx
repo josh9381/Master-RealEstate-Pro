@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, Activity, Settings, Play, Pause, AlertCircle, RefreshCw } from 'lucide-react';
+import { Brain, Activity, Settings, Play, Pause, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -50,16 +50,24 @@ const ModelTraining = () => {
     }
   }
 
-  const trainingMetrics = [
-    { epoch: 1, trainLoss: 0.89, valLoss: 0.92, accuracy: 72.3 },
-    { epoch: 5, trainLoss: 0.54, valLoss: 0.58, accuracy: 84.2 },
-    { epoch: 10, trainLoss: 0.32, valLoss: 0.38, accuracy: 89.7 },
-    { epoch: 15, trainLoss: 0.21, valLoss: 0.29, accuracy: 92.1 },
-    { epoch: 20, trainLoss: 0.15, valLoss: 0.24, accuracy: 94.2 },
-  ];
+  // Training metrics will be populated from real training runs
+  const trainingMetrics: Array<{ epoch: number; trainLoss: number; valLoss: number; accuracy: number }> = [];
 
   return (
     <div className="space-y-6">
+      {/* Coming Soon Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-semibold text-amber-800">Coming Soon — Custom Model Training</h3>
+          <p className="text-sm text-amber-700 mt-1">
+            Custom model training requires dedicated ML infrastructure which is not yet available.
+            AI features like Lead Scoring and Content Generation use pre-trained models and work today.
+          </p>
+        </div>
+        <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Model Training</h1>
@@ -68,7 +76,7 @@ const ModelTraining = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">
+          <Button variant="outline" disabled title="Training configuration coming soon">
             <Settings className="h-4 w-4 mr-2" />
             Training Config
           </Button>
@@ -180,15 +188,15 @@ const ModelTraining = () => {
                   <TableCell>
                     <div className="flex space-x-2">
                       {model.status === 'training' ? (
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" disabled title="Pause training coming soon">
                           <Pause className="h-4 w-4" />
                         </Button>
                       ) : (
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" disabled title="Start training coming soon">
                           <Play className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" disabled title="Model details coming soon">
                         View
                       </Button>
                     </div>
@@ -205,48 +213,10 @@ const ModelTraining = () => {
         <Card>
           <CardHeader>
             <CardTitle>Current Training Job</CardTitle>
-            <CardDescription>Churn Prediction Model - Epoch 15/20</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Progress</span>
-                  <span className="text-sm text-muted-foreground">75%</span>
-                </div>
-                <div className="w-full bg-secondary rounded-full h-2">
-                  <div className="bg-primary h-2 rounded-full" style={{ width: '75%' }} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Train Loss</p>
-                  <p className="text-2xl font-bold">0.21</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Val Loss</p>
-                  <p className="text-2xl font-bold">0.29</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Accuracy</p>
-                  <p className="text-2xl font-bold">92.1%</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Time Elapsed</p>
-                  <p className="text-2xl font-bold">23m</p>
-                </div>
-              </div>
-
-              <div className="flex space-x-2 pt-4">
-                <Button variant="destructive" size="sm" className="flex-1">
-                  <Pause className="h-4 w-4 mr-2" />
-                  Pause Training
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  View Logs
-                </Button>
-              </div>
+            <div className="flex items-center justify-center h-32 text-muted-foreground">
+              No training jobs running. Start a training job from the models table above.
             </div>
           </CardContent>
         </Card>
@@ -289,27 +259,7 @@ const ModelTraining = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex items-start space-x-3 p-3 border rounded-lg bg-yellow-50">
-              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-yellow-900">Model Needs Retraining</h4>
-                <p className="text-sm text-yellow-700 mt-1">
-                  "Conversion Predictor" hasn't been trained in 2 months. Accuracy may have degraded.
-                </p>
-                <Button variant="outline" size="sm" className="mt-2">
-                  Retrain Now
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3 p-3 border rounded-lg bg-blue-50">
-              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-blue-900">More Training Data Available</h4>
-                <p className="text-sm text-blue-700 mt-1">
-                  +2,400 new data points collected since last training. Consider retraining for better accuracy.
-                </p>
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">No training alerts. Alerts will appear when models need attention.</p>
           </div>
         </CardContent>
       </Card>

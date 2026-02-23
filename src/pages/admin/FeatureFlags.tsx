@@ -1,68 +1,107 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Flag, Plus, Edit, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 
+interface FeatureFlag {
+  id: number;
+  name: string;
+  key: string;
+  description: string;
+  enabled: boolean;
+  environment: string;
+  rollout: number;
+}
+
+const FEATURE_FLAGS_STORAGE_KEY = 'crm_feature_flags';
+
+const DEFAULT_FEATURES: FeatureFlag[] = [
+  {
+    id: 1,
+    name: 'AI Lead Scoring',
+    key: 'ai_lead_scoring',
+    description: 'Enable AI-powered lead scoring and predictions',
+    enabled: true,
+    environment: 'production',
+    rollout: 100,
+  },
+  {
+    id: 2,
+    name: 'Advanced Analytics',
+    key: 'advanced_analytics',
+    description: 'Show advanced analytics dashboard and reports',
+    enabled: true,
+    environment: 'production',
+    rollout: 100,
+  },
+  {
+    id: 3,
+    name: 'New Campaign Builder',
+    key: 'new_campaign_builder',
+    description: 'Use redesigned campaign builder interface',
+    enabled: true,
+    environment: 'beta',
+    rollout: 50,
+  },
+  {
+    id: 4,
+    name: 'Social Media Integration',
+    key: 'social_media_integration',
+    description: 'Connect and post to social media platforms',
+    enabled: false,
+    environment: 'development',
+    rollout: 10,
+  },
+  {
+    id: 5,
+    name: 'Video Calling',
+    key: 'video_calling',
+    description: 'Enable in-app video calling feature',
+    enabled: false,
+    environment: 'development',
+    rollout: 0,
+  },
+  {
+    id: 6,
+    name: 'Mobile App API v2',
+    key: 'mobile_api_v2',
+    description: 'Use new mobile API endpoints',
+    enabled: true,
+    environment: 'production',
+    rollout: 75,
+  },
+];
+
+const loadFeatureFlags = (): FeatureFlag[] => {
+  try {
+    const stored = localStorage.getItem(FEATURE_FLAGS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored) as FeatureFlag[];
+    }
+  } catch (e) {
+    console.error('Failed to load feature flags from localStorage:', e);
+  }
+  return DEFAULT_FEATURES;
+};
+
+const saveFeatureFlags = (flags: FeatureFlag[]) => {
+  try {
+    localStorage.setItem(FEATURE_FLAGS_STORAGE_KEY, JSON.stringify(flags));
+  } catch (e) {
+    console.error('Failed to save feature flags to localStorage:', e);
+  }
+};
+
 const FeatureFlags = () => {
   const { toast } = useToast();
-  const [features, setFeatures] = useState([
-    {
-      id: 1,
-      name: 'AI Lead Scoring',
-      key: 'ai_lead_scoring',
-      description: 'Enable AI-powered lead scoring and predictions',
-      enabled: true,
-      environment: 'production',
-      rollout: 100,
-    },
-    {
-      id: 2,
-      name: 'Advanced Analytics',
-      key: 'advanced_analytics',
-      description: 'Show advanced analytics dashboard and reports',
-      enabled: true,
-      environment: 'production',
-      rollout: 100,
-    },
-    {
-      id: 3,
-      name: 'New Campaign Builder',
-      key: 'new_campaign_builder',
-      description: 'Use redesigned campaign builder interface',
-      enabled: true,
-      environment: 'beta',
-      rollout: 50,
-    },
-    {
-      id: 4,
-      name: 'Social Media Integration',
-      key: 'social_media_integration',
-      description: 'Connect and post to social media platforms',
-      enabled: false,
-      environment: 'development',
-      rollout: 10,
-    },
-    {
-      id: 5,
-      name: 'Video Calling',
-      key: 'video_calling',
-      description: 'Enable in-app video calling feature',
-      enabled: false,
-      environment: 'development',
-      rollout: 0,
-    },
-    {
-      id: 6,
-      name: 'Mobile App API v2',
-      key: 'mobile_api_v2',
-      description: 'Use new mobile API endpoints',
-      enabled: true,
-      environment: 'production',
-      rollout: 75,
-    },
-  ]);
+  const [features, setFeatures] = useState<FeatureFlag[]>(loadFeatureFlags);
+
+  // Persist to localStorage whenever features change
+  useEffect(() => {
+    saveFeatureFlags(features);
+  }, [features]);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingFeature, setEditingFeature] = useState<number | null>(null);

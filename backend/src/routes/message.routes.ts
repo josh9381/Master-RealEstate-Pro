@@ -27,6 +27,9 @@ import {
   markMessagesAsRead,
   markMessagesAsUnread,
   markAllAsRead,
+  starMessage,
+  archiveMessage,
+  snoozeMessage,
 } from '../controllers/message.controller'
 
 const router = Router()
@@ -165,5 +168,26 @@ router.post(
   '/mark-all-read',
   asyncHandler(markAllAsRead)
 )
+
+/**
+ * @route   PATCH /api/messages/:id/star
+ * @desc    Star/unstar a message
+ * @access  Private
+ */
+router.patch('/:id/star', asyncHandler(starMessage))
+
+/**
+ * @route   PATCH /api/messages/:id/archive
+ * @desc    Archive/unarchive a message
+ * @access  Private
+ */
+router.patch('/:id/archive', asyncHandler(archiveMessage))
+
+/**
+ * @route   PATCH /api/messages/:id/snooze
+ * @desc    Snooze/unsnooze a message
+ * @access  Private
+ */
+router.patch('/:id/snooze', asyncHandler(snoozeMessage))
 
 export default router

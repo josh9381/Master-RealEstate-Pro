@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, Mail, MousePointer, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BarChart3, TrendingUp, Users, Mail, MousePointer, RefreshCw, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 import {
   LineChart,
   Line,
@@ -16,8 +18,16 @@ import {
   Legend,
 } from 'recharts';
 
+const TYPE_DISPLAY: Record<string, string> = {
+  EMAIL: 'Email',
+  SMS: 'SMS',
+  PHONE: 'Phone',
+  SOCIAL: 'Social',
+};
+
 const CampaignReports = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -40,22 +50,22 @@ const CampaignReports = () => {
     setIsLoading(true);
     try {
       const response = await campaignsApi.getCampaigns();
-      const allCampaigns = response.data || [];
+      const allCampaigns = response.data?.campaigns || response.campaigns || [];
 
-      // Transform campaigns to include calculated metrics
+      // Transform campaigns to include calculated metrics from real data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const enrichedCampaigns = allCampaigns.map((c: any) => {
-        const sent = c.recipientCount || 0;
-        const delivered = Math.floor(sent * 0.991); // Mock 99.1% delivery
-        const opened = Math.floor(delivered * 0.32); // Mock 32% open rate
-        const clicked = Math.floor(opened * 0.25); // Mock 25% click-through rate
-        const bounced = sent - delivered;
-        const unsubscribed = Math.floor(sent * 0.002); // Mock 0.2% unsub rate
-        const revenue = c.type === 'email' ? Math.floor(Math.random() * 50000) : Math.floor(Math.random() * 30000);
+        const sent = c.recipientCount || c.sent || 0;
+        const delivered = c.delivered || 0;
+        const opened = c.opens || c.opened || 0;
+        const clicked = c.clicks || c.clicked || 0;
+        const bounced = c.bounced || 0;
+        const unsubscribed = c.unsubscribed || 0;
+        const revenue = c.revenue || 0;
 
         return {
           ...c,
-          type: c.type.charAt(0).toUpperCase() + c.type.slice(1),
+          type: TYPE_DISPLAY[(c.type || '').toUpperCase()] || c.type || 'Unknown',
           sent,
           delivered,
           opened,
@@ -88,15 +98,18 @@ const CampaignReports = () => {
         revenue: totalRevenue,
       });
 
-      // Generate performance trend data (mock time-series from campaigns)
+      // Generate performance trend data sorted by campaign creation date
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const trend = enrichedCampaigns.slice(0, 5).map((c: any) => ({
-        date: new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        sent: c.sent,
-        delivered: c.delivered,
-        opened: c.opened,
-        clicked: c.clicked,
-      }));
+      const trend = [...enrichedCampaigns]
+        .filter((c: any) => c.sent > 0)
+        .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .map((c: any) => ({
+          date: new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          sent: c.sent,
+          delivered: c.delivered,
+          opened: c.opened,
+          clicked: c.clicked,
+        }));
       setPerformanceData(trend);
 
     } catch (error) {
@@ -109,6 +122,9 @@ const CampaignReports = () => {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <CampaignsSubNav />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Campaign Reports</h1>
@@ -121,8 +137,22 @@ const CampaignReports = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline">Export Report</Button>
-          <Button variant="outline">Schedule Report</Button>
+          <Button variant="outline" onClick={() => {
+            // Export all campaign data as CSV
+            if (campaigns.length === 0) { toast.error('No data to export'); return; }
+            const headers = ['Name','Type','Sent','Delivered','Opened','Clicked','Bounced','Unsubscribed','Revenue'];
+            const rows = campaigns.map(c => [c.name, c.type, c.sent, c.delivered, c.opened, c.clicked, c.bounced, c.unsubscribed, c.revenue].join(','));
+            const csv = [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `campaign-reports-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click(); URL.revokeObjectURL(url);
+            toast.success('Report exported successfully');
+          }}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </Button>
         </div>
       </div>
 
@@ -180,6 +210,18 @@ const CampaignReports = () => {
         </Card>
       </div>
 
+      {stats.totalSent === 0 && !isLoading && (
+        <Card className="py-8">
+          <CardContent className="flex flex-col items-center justify-center text-center">
+            <Mail className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No campaign data yet</h3>
+            <p className="text-muted-foreground max-w-md">
+              Send your first campaign to see performance metrics, delivery rates, and engagement analytics here.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Performance Trends */}
       <Card>
         <CardHeader>
@@ -223,7 +265,7 @@ const CampaignReports = () => {
                       <Badge variant="secondary">{campaign.type}</Badge>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                     View Full Report
                   </Button>
                 </div>
@@ -240,7 +282,7 @@ const CampaignReports = () => {
                     <p className="text-sm text-muted-foreground mb-1">Delivered</p>
                     <p className="text-2xl font-bold">{campaign.delivered.toLocaleString()}</p>
                     <p className="text-xs text-green-600">
-                      {((campaign.delivered / campaign.sent) * 100).toFixed(1)}%
+                      {campaign.sent > 0 ? ((campaign.delivered / campaign.sent) * 100).toFixed(1) : '0.0'}%
                     </p>
                   </div>
 
@@ -249,7 +291,7 @@ const CampaignReports = () => {
                     <p className="text-sm text-muted-foreground mb-1">Opened</p>
                     <p className="text-2xl font-bold">{campaign.opened.toLocaleString()}</p>
                     <p className="text-xs text-blue-600">
-                      {((campaign.opened / campaign.delivered) * 100).toFixed(1)}%
+                      {campaign.delivered > 0 ? ((campaign.opened / campaign.delivered) * 100).toFixed(1) : '0.0'}%
                     </p>
                   </div>
 
@@ -258,7 +300,7 @@ const CampaignReports = () => {
                     <p className="text-sm text-muted-foreground mb-1">Clicked</p>
                     <p className="text-2xl font-bold">{campaign.clicked.toLocaleString()}</p>
                     <p className="text-xs text-purple-600">
-                      {((campaign.clicked / campaign.opened) * 100).toFixed(1)}%
+                      {campaign.opened > 0 ? ((campaign.clicked / campaign.opened) * 100).toFixed(1) : '0.0'}%
                     </p>
                   </div>
                 </div>
@@ -269,7 +311,7 @@ const CampaignReports = () => {
                     <p className="text-sm text-muted-foreground mb-1">Bounced</p>
                     <p className="text-lg font-semibold">{campaign.bounced}</p>
                     <p className="text-xs text-red-600">
-                      {((campaign.bounced / campaign.sent) * 100).toFixed(1)}%
+                      {campaign.sent > 0 ? ((campaign.bounced / campaign.sent) * 100).toFixed(1) : '0.0'}%
                     </p>
                   </div>
 
@@ -278,7 +320,7 @@ const CampaignReports = () => {
                     <p className="text-sm text-muted-foreground mb-1">Unsubscribed</p>
                     <p className="text-lg font-semibold">{campaign.unsubscribed}</p>
                     <p className="text-xs text-muted-foreground">
-                      {((campaign.unsubscribed / campaign.sent) * 100).toFixed(2)}%
+                      {campaign.sent > 0 ? ((campaign.unsubscribed / campaign.sent) * 100).toFixed(2) : '0.00'}%
                     </p>
                   </div>
 
@@ -289,7 +331,7 @@ const CampaignReports = () => {
                       ${campaign.revenue.toLocaleString()}
                     </p>
                     <p className="text-xs text-green-600">
-                      ROI: {campaign.revenue > 0 ? '+2,450%' : 'N/A'}
+                      ROI: {(campaign.spent || 0) > 0 && campaign.revenue > 0 ? `${((campaign.revenue / campaign.spent) * 100).toFixed(0)}%` : campaign.revenue > 0 ? 'Positive' : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -312,7 +354,7 @@ const CampaignReports = () => {
               const totalDelivered = campaigns.reduce((sum, c) => sum + c.delivered, 0);
               const totalOpened = campaigns.reduce((sum, c) => sum + c.opened, 0);
               const totalClicked = campaigns.reduce((sum, c) => sum + c.clicked, 0);
-              const totalConverted = Math.floor(totalClicked * 0.12); // Mock 12% conversion
+              const totalConverted = campaigns.reduce((sum, c) => sum + (c.converted || c.conversions || 0), 0);
 
               return [
                 { 
@@ -379,7 +421,7 @@ const CampaignReports = () => {
           <CardContent>
             <div className="space-y-3">
               {campaigns
-                .sort((a, b) => (b.opened / b.delivered) - (a.opened / a.delivered))
+                .sort((a, b) => (b.delivered > 0 ? b.opened / b.delivered : 0) - (a.delivered > 0 ? a.opened / a.delivered : 0))
                 .slice(0, 3)
                 .map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
@@ -409,7 +451,7 @@ const CampaignReports = () => {
           <CardContent>
             <div className="space-y-3">
               {campaigns
-                .sort((a, b) => (b.clicked / b.opened) - (a.clicked / a.opened))
+                .sort((a, b) => (b.opened > 0 ? b.clicked / b.opened : 0) - (a.opened > 0 ? a.clicked / a.opened : 0))
                 .slice(0, 3)
                 .map((item, index) => (
                   <div key={index} className="flex items-center justify-between">

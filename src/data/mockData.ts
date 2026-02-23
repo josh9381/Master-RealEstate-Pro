@@ -198,9 +198,9 @@ import { Campaign } from '@/types'
 
 export const mockCampaigns: Campaign[] = [
   {
-    id: 1,
+    id: '1',
     name: 'Q4 Product Launch',
-    type: 'email',
+    type: 'EMAIL',
     status: 'ACTIVE',
     startDate: '2025-10-01',
     endDate: '2025-12-31',
@@ -208,9 +208,9 @@ export const mockCampaigns: Campaign[] = [
     spent: 3200,
     audience: 2340,
     sent: 2340,
-    opens: 1240,
-    clicks: 680,
-    conversions: 145,
+    opened: 1240,
+    clicked: 680,
+    converted: 145,
     revenue: 52000,
     roi: '340%',
     createdBy: 'Sarah Johnson',
@@ -219,9 +219,9 @@ export const mockCampaigns: Campaign[] = [
     previewText: 'Transform your workflow with our latest innovation'
   },
   {
-    id: 2,
+    id: '2',
     name: 'Holiday Promotion',
-    type: 'sms',
+    type: 'SMS',
     status: 'ACTIVE',
     startDate: '2025-10-15',
     endDate: '2025-11-30',
@@ -229,9 +229,9 @@ export const mockCampaigns: Campaign[] = [
     spent: 890,
     audience: 1890,
     sent: 1890,
-    opens: 1890,
-    clicks: 920,
-    conversions: 198,
+    opened: 1890,
+    clicked: 920,
+    converted: 198,
     revenue: 39600,
     roi: '420%',
     createdBy: 'Mike Chen',
@@ -240,9 +240,9 @@ export const mockCampaigns: Campaign[] = [
     previewText: '🎉 Special offer: 30% off all plans!'
   },
   {
-    id: 3,
+    id: '3',
     name: 'Webinar Invitation',
-    type: 'email',
+    type: 'EMAIL',
     status: 'SCHEDULED',
     startDate: '2025-10-25',
     endDate: '2025-10-25',
@@ -250,9 +250,9 @@ export const mockCampaigns: Campaign[] = [
     spent: 0,
     audience: 3200,
     sent: 0,
-    opens: 0,
-    clicks: 0,
-    conversions: 0,
+    opened: 0,
+    clicked: 0,
+    converted: 0,
     revenue: 0,
     roi: '0%',
     createdBy: 'David Lee',
@@ -261,9 +261,9 @@ export const mockCampaigns: Campaign[] = [
     previewText: 'Learn from industry experts on Oct 25th'
   },
   {
-    id: 4,
+    id: '4',
     name: 'Social Media Blitz',
-    type: 'social',
+    type: 'SOCIAL',
     status: 'ACTIVE',
     startDate: '2025-10-10',
     endDate: '2025-11-10',
@@ -271,9 +271,9 @@ export const mockCampaigns: Campaign[] = [
     spent: 1800,
     audience: 25000,
     sent: 42,
-    opens: 2100,
-    clicks: 680,
-    conversions: 92,
+    opened: 2100,
+    clicked: 680,
+    converted: 92,
     revenue: 27600,
     roi: '280%',
     createdBy: 'Sarah Johnson',
@@ -282,9 +282,9 @@ export const mockCampaigns: Campaign[] = [
     previewText: 'Engaging content across LinkedIn, Twitter, and Facebook'
   },
   {
-    id: 5,
+    id: '5',
     name: 'Customer Re-engagement',
-    type: 'email',
+    type: 'EMAIL',
     status: 'COMPLETED',
     startDate: '2025-09-01',
     endDate: '2025-09-30',
@@ -292,9 +292,9 @@ export const mockCampaigns: Campaign[] = [
     spent: 1200,
     audience: 1560,
     sent: 1560,
-    opens: 820,
-    clicks: 340,
-    conversions: 67,
+    opened: 820,
+    clicked: 340,
+    converted: 67,
     revenue: 20100,
     roi: '310%',
     createdBy: 'Mike Chen',
@@ -306,7 +306,7 @@ export const mockCampaigns: Campaign[] = [
 ]
 
 function generateAdditionalCampaigns(count: number): Campaign[] {
-  const types: Campaign['type'][] = ['email', 'sms', 'phone', 'social']
+  const types: Campaign['type'][] = ['EMAIL', 'SMS', 'PHONE', 'SOCIAL']
   const statuses: Campaign['status'][] = ['ACTIVE', 'SCHEDULED', 'PAUSED', 'COMPLETED', 'DRAFT']
   const names = [
     'Newsletter',
@@ -356,10 +356,10 @@ function generateAdditionalCampaigns(count: number): Campaign[] {
     const roi = spent > 0 ? `${Math.floor((revenue / spent) * 100)}%` : '0%'
     
     // A/B test data for some campaigns
-    const hasABTest = i % 5 === 0 && type === 'email'
+    const hasABTest = i % 5 === 0 && type === 'EMAIL'
     
     campaigns.push({
-      id: i + 6,
+      id: String(i + 6),
       name: `${name} - ${month}`,
       type,
       status,
@@ -369,18 +369,18 @@ function generateAdditionalCampaigns(count: number): Campaign[] {
       spent,
       audience,
       sent,
-      opens,
-      clicks,
-      conversions,
+      opened: opens,
+      clicked: clicks,
+      converted: conversions,
       revenue,
       roi,
       createdBy: creators[i % creators.length],
       tags: [
-        type === 'email' ? 'Email Marketing' : type === 'sms' ? 'SMS' : type === 'phone' ? 'Cold Calling' : 'Social Media',
+        type === 'EMAIL' ? 'Email Marketing' : type === 'SMS' ? 'SMS' : type === 'PHONE' ? 'Cold Calling' : 'Social Media',
         status === 'ACTIVE' ? 'Active' : status === 'COMPLETED' ? 'Completed' : 'Upcoming'
       ],
-      subject: type === 'email' ? `${name} - Don't Miss Out!` : null,
-      previewText: type === 'email' || type === 'sms' ? `Special ${name.toLowerCase()} for you` : undefined,
+      subject: type === 'EMAIL' ? `${name} - Don't Miss Out!` : null,
+      previewText: type === 'EMAIL' || type === 'SMS' ? `Special ${name.toLowerCase()} for you` : undefined,
       abTest: hasABTest ? {
         variant: 'A',
         winner: Math.random() > 0.5 ? 'A' : 'B',

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Target, TrendingUp, AlertCircle, Settings, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,8 +17,14 @@ import {
 
 const LeadScoring = () => {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [modelStatus] = useState('active');
   const [loading, setLoading] = useState(true)
+  const [scoringStats, setScoringStats] = useState({
+    accuracy: 0,
+    leadsScored: 0,
+    highQuality: 0,
+  })
   const [recentScores, setRecentScores] = useState<Array<{
     id: string | number;
     name: string;
@@ -59,7 +66,7 @@ const LeadScoring = () => {
       })
       
       // Transform leads data for display
-      const scoredLeads = leadsResponse.leads?.map((lead: { id: string; firstName?: string; lastName?: string; email: string; company?: string; score?: number }) => {
+      const scoredLeads = leadsResponse.data?.leads?.map((lead: { id: string; firstName?: string; lastName?: string; email: string; company?: string; score?: number }) => {
         const score = lead.score || 0
         const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'
         return {
@@ -69,10 +76,29 @@ const LeadScoring = () => {
           company: lead.company || 'N/A',
           score,
           grade: getScoreGrade(score),
-          confidence: Math.min(95, score + Math.floor(Math.random() * 10)),
+          confidence: score, // Use the score itself as confidence indicator
           trend: score >= 80 ? 'up' : score >= 60 ? 'stable' : 'down'
         }
       }) || []
+      const totalLeads = leadsResponse.data?.total || scoredLeads.length
+      
+      // Compute real stats from data
+      const highQualityCount = scoredLeads.filter((l: any) => l.score >= 80).length
+      setScoringStats({
+        accuracy: 0, // Will be populated when model performance API returns data
+        leadsScored: totalLeads,
+        highQuality: highQualityCount,
+      })
+      
+      // Try to get model accuracy from AI API
+      try {
+        const perfData = await aiApi.getModelPerformance()
+        if (perfData?.accuracy) {
+          setScoringStats(prev => ({ ...prev, accuracy: Math.floor(perfData.accuracy * 100) }))
+        }
+      } catch {
+        // Model performance not available
+      }
       
       setRecentScores(scoredLeads)
       
@@ -89,7 +115,6 @@ const LeadScoring = () => {
         }
       } catch (err) {
         // Keep default factors if API fails
-        console.log('Using default score factors')
       }
     } catch (error) {
       const err = error as Error
@@ -138,7 +163,7 @@ const LeadScoring = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">
+          <Button variant="outline" disabled title="Model configuration coming soon">
             <Settings className="h-4 w-4 mr-2" />
             Configure Model
           </Button>
@@ -160,7 +185,7 @@ const LeadScoring = () => {
             <Badge variant={modelStatus === 'active' ? 'success' : 'warning'}>
               {modelStatus === 'active' ? 'Active' : 'Training'}
             </Badge>
-            <p className="text-xs text-muted-foreground mt-2">Last trained: 2 days ago</p>
+            <p className="text-xs text-muted-foreground mt-2">Scoring model</p>
           </CardContent>
         </Card>
         <Card>
@@ -169,8 +194,8 @@ const LeadScoring = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">94.2%</div>
-            <p className="text-xs text-muted-foreground">+1.5% from last month</p>
+            <div className="text-2xl font-bold">{scoringStats.accuracy > 0 ? `${scoringStats.accuracy}%` : '—'}</div>
+            <p className="text-xs text-muted-foreground">{scoringStats.accuracy > 0 ? 'From model data' : 'Not yet calculated'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -179,8 +204,8 @@ const LeadScoring = () => {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,247</div>
-            <p className="text-xs text-muted-foreground">+128 today</p>
+            <div className="text-2xl font-bold">{scoringStats.leadsScored.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Total leads</p>
           </CardContent>
         </Card>
         <Card>
@@ -189,7 +214,7 @@ const LeadScoring = () => {
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">342</div>
+            <div className="text-2xl font-bold">{scoringStats.highQuality}</div>
             <p className="text-xs text-muted-foreground">Score ≥ 80</p>
           </CardContent>
         </Card>
@@ -271,7 +296,7 @@ const LeadScoring = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/leads/${lead.id}`)}>
                         View Details
                       </Button>
                     </TableCell>
@@ -291,42 +316,34 @@ const LeadScoring = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">A Grade (80-100)</span>
-                <span className="text-sm text-muted-foreground">342 leads (27%)</span>
-              </div>
-              <div className="w-full bg-secondary rounded-full h-3">
-                <div className="bg-green-500 h-3 rounded-full" style={{ width: '27%' }} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">B Grade (60-79)</span>
-                <span className="text-sm text-muted-foreground">498 leads (40%)</span>
-              </div>
-              <div className="w-full bg-secondary rounded-full h-3">
-                <div className="bg-blue-500 h-3 rounded-full" style={{ width: '40%' }} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">C Grade (40-59)</span>
-                <span className="text-sm text-muted-foreground">287 leads (23%)</span>
-              </div>
-              <div className="w-full bg-secondary rounded-full h-3">
-                <div className="bg-yellow-500 h-3 rounded-full" style={{ width: '23%' }} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">D Grade (0-39)</span>
-                <span className="text-sm text-muted-foreground">120 leads (10%)</span>
-              </div>
-              <div className="w-full bg-secondary rounded-full h-3">
-                <div className="bg-red-500 h-3 rounded-full" style={{ width: '10%' }} />
-              </div>
-            </div>
+            {(() => {
+              const total = recentScores.length
+              if (total === 0) {
+                return <p className="text-sm text-muted-foreground">No scored leads yet.</p>
+              }
+              const aCount = recentScores.filter(l => l.score >= 80).length
+              const bCount = recentScores.filter(l => l.score >= 60 && l.score < 80).length
+              const cCount = recentScores.filter(l => l.score >= 40 && l.score < 60).length
+              const dCount = recentScores.filter(l => l.score < 40).length
+              const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0
+              const grades = [
+                { label: 'A Grade (80-100)', count: aCount, color: 'bg-green-500' },
+                { label: 'B Grade (60-79)', count: bCount, color: 'bg-blue-500' },
+                { label: 'C Grade (40-59)', count: cCount, color: 'bg-yellow-500' },
+                { label: 'D Grade (0-39)', count: dCount, color: 'bg-red-500' },
+              ]
+              return grades.map(g => (
+                <div key={g.label} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{g.label}</span>
+                    <span className="text-sm text-muted-foreground">{g.count} leads ({pct(g.count)}%)</span>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-3">
+                    <div className={`${g.color} h-3 rounded-full`} style={{ width: `${pct(g.count)}%` }} />
+                  </div>
+                </div>
+              ))
+            })()}
           </div>
         </CardContent>
       </Card>

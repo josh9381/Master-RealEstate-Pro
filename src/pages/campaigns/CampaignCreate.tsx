@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
-import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles, RefreshCw } from 'lucide-react'
+import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles, RefreshCw, Save, ChevronRight } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-import { campaignsApi, leadsApi, CreateCampaignData } from '@/lib/api'
+import { campaignsApi, leadsApi, templatesApi, CreateCampaignData } from '@/lib/api'
 import { useQuery } from '@tanstack/react-query'
-import { Lead } from '@/types'
 import { CampaignPreviewModal } from '@/components/campaigns/CampaignPreviewModal'
 import { MessageEnhancerModal } from '@/components/ai/MessageEnhancerModal'
 import { ContentGeneratorWizard } from '@/components/ai/ContentGeneratorWizard'
 import { DaysOfWeekPicker } from '@/components/ui/DaysOfWeekPicker'
-import { AdvancedAudienceFilters, AudienceFilter } from '@/components/campaigns/AdvancedAudienceFilters'
+import { AdvancedAudienceFilters } from '@/components/campaigns/AdvancedAudienceFilters'
+import { MockModeBanner } from '@/components/shared/MockModeBanner'
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 
 const campaignTypes = [
   {
@@ -22,33 +23,69 @@ const campaignTypes = [
     title: 'Email Campaign',
     description: 'Send targeted emails to your leads',
     icon: Mail,
+    comingSoon: false,
   },
   {
     type: 'sms',
     title: 'SMS Campaign',
     description: 'Send text messages to your contacts',
     icon: MessageSquare,
+    comingSoon: false,
   },
   {
     type: 'phone',
     title: 'Phone Campaign',
     description: 'Automated or manual calling campaign',
     icon: Phone,
+    comingSoon: true,
   },
   {
     type: 'social',
     title: 'Social Media',
     description: 'Post to your social media channels',
     icon: Users,
+    comingSoon: true,
   },
 ]
 
 function CampaignCreate() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [selectedType, setSelectedType] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  
+  // Auto-select type from URL query param (e.g., /campaigns/create?type=email)
+  // Also pre-populate from template if templateId is provided
+  useEffect(() => {
+    const typeParam = searchParams.get('type')
+    if (typeParam && campaignTypes.some(t => t.type === typeParam.toLowerCase())) {
+      setSelectedType(typeParam.toLowerCase())
+      setStep(2)
+    }
+    // Pre-populate form from template params (from EmailTemplatesLibrary "Use" button)
+    const templateName = searchParams.get('templateName')
+    const templateSubject = searchParams.get('templateSubject')
+    const templateId = searchParams.get('templateId')
+    if (templateId) {
+      setFormData(prev => ({
+        ...prev,
+        name: templateName ? `Campaign - ${templateName}` : prev.name,
+        subject: templateSubject || prev.subject,
+      }))
+      // Load template body from API
+      templatesApi.getEmailTemplate(templateId).then((res: any) => {
+        const body = res?.body || res?.data?.body || ''
+        if (body) {
+          setFormData(prev => ({ ...prev, content: body }))
+        }
+      }).catch(() => {
+        toast.warning('Could not load template content — you can type manually')
+      })
+    }
+  }, [searchParams])
   
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false)
@@ -62,19 +99,29 @@ function CampaignCreate() {
   // AI Content Generator state
   const [showContentGenerator, setShowContentGenerator] = useState(false)
   
-  // Fetch leads count for audience selection
+  // Fetch leads counts for audience selection
   const { data: leadsData } = useQuery({
     queryKey: ['leads-count'],
     queryFn: async () => {
-      const response = await leadsApi.getLeads({ page: 1, limit: 1 })
-      return response.data
+      const [allRes, newRes, contactedRes, qualifiedRes] = await Promise.all([
+        leadsApi.getLeads({ page: 1, limit: 1 }),
+        leadsApi.getLeads({ page: 1, limit: 1, status: 'new' }),
+        leadsApi.getLeads({ page: 1, limit: 1, status: 'contacted' }),
+        leadsApi.getLeads({ page: 1, limit: 1, status: 'qualified' }),
+      ])
+      return {
+        total: allRes.data?.pagination?.total || 0,
+        new: newRes.data?.pagination?.total || 0,
+        contacted: contactedRes.data?.pagination?.total || 0,
+        qualified: qualifiedRes.data?.pagination?.total || 0,
+      }
     },
   })
 
-  const totalLeads = leadsData?.pagination?.total || 0
-  const newLeads = leadsData?.leads?.filter((l: Lead) => l.status === 'new').length || 0
-  const warmLeads = leadsData?.leads?.filter((l: Lead) => l.status === 'contacted' || l.status === 'qualified').length || 0
-  const hotLeads = leadsData?.leads?.filter((l: Lead) => l.status === 'qualified').length || 0
+  const totalLeads = leadsData?.total || 0
+  const newLeads = leadsData?.new || 0
+  const warmLeads = (leadsData?.contacted || 0) + (leadsData?.qualified || 0)
+  const hotLeads = leadsData?.qualified || 0
   
   // Form state
   const [formData, setFormData] = useState({
@@ -140,18 +187,6 @@ function CampaignCreate() {
     fetchFilteredCount()
   }, [formData.audience, formData.audienceFilters, totalLeads, newLeads, warmLeads, hotLeads])
 
-  const createMutation = useMutation({
-    mutationFn: campaignsApi.createCampaign,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-      toast.success(`Your ${selectedType} campaign "${formData.name}" has been created`)
-      navigate('/campaigns')
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create campaign')
-    }
-  })
-
   const handleTypeSelect = (type: string) => {
     setSelectedType(type)
     setStep(2)
@@ -159,6 +194,74 @@ function CampaignCreate() {
 
   const updateFormData = (updates: Partial<typeof formData>) => {
     setFormData(prev => ({ ...prev, ...updates }))
+  }
+
+  // Build the campaign data payload (shared between create & save-as-draft)
+  const buildCampaignPayload = (statusOverride?: string): CreateCampaignData => {
+    return {
+      name: formData.name,
+      type: selectedType.toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL',
+      status: (statusOverride || 'DRAFT') as 'DRAFT' | 'SCHEDULED' | 'ACTIVE',
+      subject: formData.subject || undefined,
+      body: formData.content || undefined,
+      previewText: formData.description || undefined,
+      startDate: formData.schedule === 'scheduled' && formData.scheduleDate 
+        ? `${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00Z` 
+        : undefined,
+      audience: formData.audience === 'custom' 
+        ? formData.customAudience.length 
+        : formData.audience === 'all' 
+        ? totalLeads 
+        : formData.audience === 'new'
+        ? newLeads
+        : formData.audience === 'warm'
+        ? warmLeads
+        : hotLeads,
+      budget: formData.budget ? parseFloat(formData.budget) : undefined,
+      isABTest: formData.enableABTest,
+      abTestData: formData.enableABTest && formData.abTestVariant 
+        ? { variantSubject: formData.abTestVariant } 
+        : undefined,
+      // Recurring campaign fields
+      isRecurring: formData.isRecurring,
+      frequency: formData.isRecurring ? formData.frequency : undefined,
+      recurringPattern: formData.isRecurring ? {
+        ...(formData.frequency === 'weekly' && formData.daysOfWeek.length > 0 && {
+          daysOfWeek: formData.daysOfWeek
+        }),
+        ...(formData.frequency === 'monthly' && {
+          dayOfMonth: formData.dayOfMonth
+        }),
+        time: formData.scheduleTime || '09:00'
+      } : undefined,
+      endDate: formData.isRecurring && formData.recurringEndType === 'date' && formData.recurringEndDate
+        ? new Date(formData.recurringEndDate).toISOString()
+        : undefined,
+      maxOccurrences: formData.isRecurring && formData.recurringEndType === 'count'
+        ? formData.maxOccurrences
+        : undefined,
+    }
+  }
+
+  // Save as Draft — creates the campaign and navigates to campaigns list
+  const handleSaveAsDraft = async () => {
+    if (!formData.name.trim()) {
+      toast.error('Please enter a campaign name')
+      return
+    }
+    
+    try {
+      setIsCreating(true)
+      const campaignData = buildCampaignPayload('DRAFT')
+      await campaignsApi.createCampaign(campaignData)
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      toast.success(`Draft campaign "${formData.name}" saved`)
+      navigate('/campaigns')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save draft')
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   const handleCreate = async () => {
@@ -173,46 +276,8 @@ function CampaignCreate() {
     }
     
     try {
-      // Transform formData to match backend expectations
-      const campaignData: CreateCampaignData = {
-        name: formData.name,
-        type: selectedType.toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL',
-        status: 'DRAFT', // Create as DRAFT first
-        subject: formData.subject || undefined,
-        body: formData.content || undefined,
-        startDate: formData.schedule === 'scheduled' && formData.scheduleDate 
-          ? `${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00Z` 
-          : undefined,
-        audience: formData.audience === 'custom' 
-          ? formData.customAudience.length 
-          : formData.audience === 'all' 
-          ? totalLeads 
-          : formData.audience === 'new'
-          ? newLeads
-          : formData.audience === 'warm'
-          ? warmLeads
-          : hotLeads,
-        budget: formData.budget ? parseFloat(formData.budget) : undefined,
-        isABTest: formData.enableABTest,
-        // Recurring campaign fields
-        isRecurring: formData.isRecurring,
-        frequency: formData.isRecurring ? formData.frequency : undefined,
-        recurringPattern: formData.isRecurring ? {
-          ...(formData.frequency === 'weekly' && formData.daysOfWeek.length > 0 && {
-            daysOfWeek: formData.daysOfWeek
-          }),
-          ...(formData.frequency === 'monthly' && {
-            dayOfMonth: formData.dayOfMonth
-          }),
-          time: formData.scheduleTime || '09:00'
-        } : undefined,
-        endDate: formData.isRecurring && formData.recurringEndType === 'date' && formData.recurringEndDate
-          ? new Date(formData.recurringEndDate).toISOString()
-          : undefined,
-        maxOccurrences: formData.isRecurring && formData.recurringEndType === 'count'
-          ? formData.maxOccurrences
-          : undefined,
-      }
+      setIsCreating(true)
+      const campaignData = buildCampaignPayload('DRAFT')
       
       // Create campaign as DRAFT
       const response = await campaignsApi.createCampaign(campaignData)
@@ -232,6 +297,8 @@ function CampaignCreate() {
       setShowPreview(true)
     } catch (error: any) {
       toast.error(error.message || 'Failed to create campaign preview')
+    } finally {
+      setIsCreating(false)
     }
   }
   
@@ -281,42 +348,68 @@ function CampaignCreate() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      <CampaignsSubNav />
+
+      {/* Mock Mode Warning */}
+      <MockModeBanner />
+
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Create New Campaign</h1>
-        <p className="mt-2 text-muted-foreground">
-          Choose a campaign type to get started
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Create New Campaign</h1>
+          <p className="mt-2 text-muted-foreground">
+            {selectedType 
+              ? `Creating ${campaignTypes.find(t => t.type === selectedType)?.title || 'campaign'}`
+              : 'Choose a campaign type to get started'}
+          </p>
+        </div>
+        {step >= 2 && (
+          <Button variant="outline" onClick={handleSaveAsDraft} disabled={isCreating || !formData.name.trim()}>
+            <Save className="mr-2 h-4 w-4" />
+            Save as Draft
+          </Button>
+        )}
       </div>
 
-      {/* Progress Steps */}
+      {/* Progress Steps — clickable */}
       <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+        <button 
+          className="flex items-center space-x-2 cursor-pointer" 
+          onClick={() => setStep(1)}
+        >
+          <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
             1
           </div>
           <span className={step >= 1 ? 'font-medium' : 'text-muted-foreground'}>
             Choose Type
           </span>
-        </div>
-        <div className={`h-0.5 w-16 ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
-        <div className="flex items-center space-x-2">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+        </button>
+        <div className={`h-0.5 w-16 transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
+        <button 
+          className={`flex items-center space-x-2 ${selectedType ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+          onClick={() => selectedType && setStep(2)}
+          disabled={!selectedType}
+        >
+          <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
             2
           </div>
           <span className={step >= 2 ? 'font-medium' : 'text-muted-foreground'}>
             Basic Details
           </span>
-        </div>
-        <div className={`h-0.5 w-16 ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
-        <div className="flex items-center space-x-2">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+        </button>
+        <div className={`h-0.5 w-16 transition-colors ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
+        <button 
+          className={`flex items-center space-x-2 ${selectedType && formData.name ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+          onClick={() => selectedType && formData.name && setStep(3)}
+          disabled={!selectedType || !formData.name}
+        >
+          <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
             3
           </div>
           <span className={step >= 3 ? 'font-medium' : 'text-muted-foreground'}>
             Configure
           </span>
-        </div>
+        </button>
       </div>
 
       {/* Step 1: Choose Type */}
@@ -325,12 +418,24 @@ function CampaignCreate() {
           {campaignTypes.map((type) => (
             <Card
               key={type.type}
-              className="cursor-pointer transition-shadow hover:shadow-lg"
-              onClick={() => handleTypeSelect(type.type)}
+              className={`transition-shadow ${
+                type.comingSoon 
+                  ? 'opacity-60 cursor-not-allowed' 
+                  : 'cursor-pointer hover:shadow-lg'
+              }`}
+              onClick={() => !type.comingSoon && handleTypeSelect(type.type)}
+              title={type.comingSoon ? `${type.title} is coming soon` : undefined}
             >
               <CardHeader>
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <type.icon className="h-6 w-6" />
+                <div className="flex items-start justify-between">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${
+                    type.comingSoon ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'
+                  }`}>
+                    <type.icon className="h-6 w-6" />
+                  </div>
+                  {type.comingSoon && (
+                    <Badge variant="warning">Coming Soon</Badge>
+                  )}
                 </div>
                 <CardTitle className="mt-4">{type.title}</CardTitle>
                 <CardDescription>{type.description}</CardDescription>
@@ -418,6 +523,15 @@ function CampaignCreate() {
             <CardContent className="space-y-4">
               {selectedType === 'email' && (
                 <>
+                  {/* Subject line editable in step 3 too */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Email Subject</label>
+                    <Input
+                      placeholder="e.g., Exclusive Summer Offer - 50% Off!"
+                      value={formData.subject}
+                      onChange={(e) => updateFormData({ subject: e.target.value })}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">Email Body</label>
@@ -452,7 +566,7 @@ function CampaignCreate() {
                       onChange={(e) => updateFormData({ content: e.target.value })}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Tip: Use {`{firstName}`} to personalize with lead's first name
+                      Tip: Use {`{{lead.firstName}}`} to personalize with lead's first name
                     </p>
                   </div>
                 </>
@@ -460,26 +574,66 @@ function CampaignCreate() {
               
               {selectedType === 'sms' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">SMS Message</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">SMS Message</label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowContentGenerator(true)}
+                        className="gap-2"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Generate with AI
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowEnhancer(true)}
+                        disabled={!formData.content.trim()}
+                        className="gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Enhance
+                      </Button>
+                    </div>
+                  </div>
                   <textarea
                     className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     placeholder="Enter your SMS message..."
-                    maxLength={160}
+                    maxLength={320}
                     value={formData.content}
                     onChange={(e) => updateFormData({ content: e.target.value })}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {formData.content.length}/160 characters
-                  </p>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{formData.content.length}/320 characters</span>
+                    <span>{formData.content.length > 160 ? `${Math.ceil(formData.content.length / 160)} segments` : '1 segment'}</span>
+                  </div>
                 </div>
               )}
 
               {selectedType === 'phone' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Call Script</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Call Script <span className="text-muted-foreground font-normal">(optional)</span></label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowContentGenerator(true)}
+                        className="gap-2"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Generate with AI
+                      </Button>
+                    </div>
+                  </div>
                   <textarea
                     className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    placeholder="Enter your call script..."
+                    placeholder="Enter your call script — or leave blank and configure later..."
                     value={formData.content}
                     onChange={(e) => updateFormData({ content: e.target.value })}
                   />
@@ -488,7 +642,21 @@ function CampaignCreate() {
 
               {selectedType === 'social' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Post Content</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Post Content <span className="text-muted-foreground font-normal">(optional)</span></label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowContentGenerator(true)}
+                        className="gap-2"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Generate with AI
+                      </Button>
+                    </div>
+                  </div>
                   <textarea
                     className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     placeholder="Enter your social media post..."
@@ -921,9 +1089,35 @@ function CampaignCreate() {
             <Button variant="outline" onClick={() => setStep(2)}>
               Back
             </Button>
-            <Button onClick={handleCreate} disabled={!formData.content || createMutation.isPending}>
-              {createMutation.isPending ? 'Creating Campaign...' : 'Preview Campaign'}
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handleSaveAsDraft} 
+                disabled={isCreating || !formData.name.trim()}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Save Draft
+              </Button>
+              <Button 
+                onClick={handleCreate} 
+                disabled={
+                  isCreating || 
+                  ((selectedType === 'email' || selectedType === 'sms') && !formData.content)
+                }
+              >
+                {isCreating ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <ChevronRight className="mr-2 h-4 w-4" />
+                    Preview & Send
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}

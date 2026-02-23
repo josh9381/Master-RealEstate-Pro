@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw, Brain, Target, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +11,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const IntelligenceInsights = () => {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [optimizing, setOptimizing] = useState(false)
   const [insights, setInsights] = useState<Array<{
@@ -307,19 +309,19 @@ const IntelligenceInsights = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-4">
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/leads')}>
               <TrendingUp className="h-4 w-4 mr-2" />
               Follow Up Leads
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/leads')}>
               <AlertTriangle className="h-4 w-4 mr-2" />
               Address Risks
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="justify-start" disabled title="Optimization actions coming soon">
               <Lightbulb className="h-4 w-4 mr-2" />
               Apply Optimizations
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/analytics')}>
               <Sparkles className="h-4 w-4 mr-2" />
               View All Trends
             </Button>
@@ -331,8 +333,8 @@ const IntelligenceInsights = () => {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">All Insights</h2>
         {insights.map((insight) => {
-          const Icon = categoryIcons[insight.category as keyof typeof categoryIcons];
-          const colorClass = categoryColors[insight.category as keyof typeof categoryColors];
+          const Icon = categoryIcons[insight.category as keyof typeof categoryIcons] || Sparkles;
+          const colorClass = categoryColors[insight.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-600';
 
           return (
             <Card key={insight.id} className="hover:shadow-md transition-shadow">
@@ -385,7 +387,7 @@ const IntelligenceInsights = () => {
                         <Button variant="outline" size="sm" onClick={() => handleDismissInsight(insight.id)}>
                           Dismiss
                         </Button>
-                        <Button size="sm">Take Action</Button>
+                        <Button size="sm" disabled title="Insight actions coming soon">Take Action</Button>
                       </div>
                     </div>
                   </div>

@@ -37,7 +37,7 @@ export function ActivityLog() {
     queryKey: ['activity-logs'],
     queryFn: async () => {
       const response = await api.get('/admin/activity-logs?limit=10')
-      return response.data
+      return response.data?.data || response.data
     },
     enabled: isAdmin() || isManager(),
     refetchInterval: 60000, // Refresh every minute

@@ -12,11 +12,33 @@ import {
   noteIdSchema,
 } from '../validators/note.validator';
 import { sensitiveLimiter } from '../middleware/rateLimiter';
+import prisma from '../config/database';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+/**
+ * @route   POST /api/notes
+ * @desc    Create a new note
+ * @access  Private
+ */
+router.post('/', asyncHandler(async (req: any, res: any) => {
+  const { leadId, content } = req.body;
+  if (!leadId || !content) {
+    return res.status(400).json({ success: false, message: 'leadId and content are required' });
+  }
+  const note = await prisma.note.create({
+    data: {
+      content,
+      leadId,
+      authorId: req.user!.userId,
+    },
+    include: { author: { select: { id: true, firstName: true, lastName: true } } }
+  });
+  res.status(201).json({ success: true, data: note });
+}));
 
 /**
  * @route   GET /api/notes/:id

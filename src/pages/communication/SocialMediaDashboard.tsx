@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Facebook, Twitter, Instagram, Linkedin, Send, Calendar, BarChart3, RefreshCw } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Send, Calendar, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -27,9 +27,9 @@ const SocialMediaDashboard = () => {
       content: 'Excited to announce our partnership with...',
       scheduled: '2024-01-18 14:30 PM',
       status: 'published',
-      likes: 234,
-      comments: 45,
-      shares: 67,
+      likes: 0,
+      comments: 0,
+      shares: 0,
     },
     {
       id: 3,
@@ -37,9 +37,9 @@ const SocialMediaDashboard = () => {
       content: 'Join our webinar next week on digital marketing trends',
       scheduled: '2024-01-17 09:00 AM',
       status: 'published',
-      likes: 156,
-      comments: 23,
-      shares: 89,
+      likes: 0,
+      comments: 0,
+      shares: 0,
     },
   ])
 
@@ -89,6 +89,19 @@ const SocialMediaDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Coming Soon Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-semibold text-amber-800">Coming Soon — Social Media Integration</h3>
+          <p className="text-sm text-amber-700 mt-1">
+            Social media management requires platform API integrations which are not yet available.
+            This feature is on the roadmap. In the meantime, use the Communications inbox for Email and SMS.
+          </p>
+        </div>
+        <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Social Media Dashboard</h1>
@@ -101,7 +114,7 @@ const SocialMediaDashboard = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button disabled title="Social media integration coming soon">
             <Send className="h-4 w-4 mr-2" />
             Create Post
           </Button>
@@ -127,8 +140,8 @@ const SocialMediaDashboard = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">145</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -137,8 +150,8 @@ const SocialMediaDashboard = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23.5K</div>
-            <p className="text-xs text-muted-foreground">+18.2% from last month</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -147,8 +160,8 @@ const SocialMediaDashboard = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23</div>
-            <p className="text-xs text-muted-foreground">Next 7 days</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -157,8 +170,8 @@ const SocialMediaDashboard = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8.9K</div>
-            <p className="text-xs text-muted-foreground">Per post</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
       </div>
@@ -172,10 +185,10 @@ const SocialMediaDashboard = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             {[
-              { name: 'Facebook', followers: '12.5K', status: 'connected' },
-              { name: 'Twitter', followers: '8.9K', status: 'connected' },
-              { name: 'Instagram', followers: '15.2K', status: 'connected' },
-              { name: 'LinkedIn', followers: '5.4K', status: 'disconnected' },
+              { name: 'Facebook', followers: '—', status: 'disconnected' },
+              { name: 'Twitter', followers: '—', status: 'disconnected' },
+              { name: 'Instagram', followers: '—', status: 'disconnected' },
+              { name: 'LinkedIn', followers: '—', status: 'disconnected' },
             ].map((platform) => {
               const Icon = platformIcons[platform.name as keyof typeof platformIcons];
               return (
@@ -188,7 +201,7 @@ const SocialMediaDashboard = () => {
                   </div>
                   <h4 className="font-semibold">{platform.name}</h4>
                   <p className="text-sm text-muted-foreground mt-1">{platform.followers} followers</p>
-                  <Button variant="outline" size="sm" className="mt-3 w-full">
+                  <Button variant="outline" size="sm" className="mt-3 w-full" disabled title="Platform integration coming soon">
                     {platform.status === 'connected' ? 'Disconnect' : 'Connect'}
                   </Button>
                 </div>
@@ -317,9 +330,9 @@ const SocialMediaDashboard = () => {
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button>Schedule Post</Button>
-            <Button variant="outline">Save Draft</Button>
-            <Button variant="outline">Post Now</Button>
+            <Button disabled title="Social media integration coming soon">Schedule Post</Button>
+            <Button variant="outline" disabled>Save Draft</Button>
+            <Button variant="outline" disabled>Post Now</Button>
           </div>
         </CardContent>
       </Card>
@@ -333,10 +346,10 @@ const SocialMediaDashboard = () => {
         <CardContent>
           <div className="space-y-4">
             {[
-              { platform: 'Facebook', posts: 45, engagement: 8900, reach: 125000, growth: '+12%' },
-              { platform: 'Twitter', posts: 67, engagement: 5600, reach: 89000, growth: '+8%' },
-              { platform: 'Instagram', posts: 23, engagement: 12300, reach: 152000, growth: '+24%' },
-              { platform: 'LinkedIn', posts: 10, engagement: 2100, reach: 34000, growth: '+5%' },
+              { platform: 'Facebook', posts: 0, engagement: 0, reach: 0, growth: '—' },
+              { platform: 'Twitter', posts: 0, engagement: 0, reach: 0, growth: '—' },
+              { platform: 'Instagram', posts: 0, engagement: 0, reach: 0, growth: '—' },
+              { platform: 'LinkedIn', posts: 0, engagement: 0, reach: 0, growth: '—' },
             ].map((stat) => {
               const Icon = platformIcons[stat.platform as keyof typeof platformIcons];
               return (

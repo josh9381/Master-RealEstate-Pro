@@ -116,8 +116,8 @@ const AIAnalytics = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">99.9%</div>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">Not yet tracked</p>
           </CardContent>
         </Card>
       </div>

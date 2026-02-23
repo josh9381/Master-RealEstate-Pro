@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { prisma } from '../config/database';
 import { getIntelligenceService } from '../services/intelligence.service';
 import { getMLOptimizationService } from '../services/ml-optimization.service';
 
@@ -21,9 +22,6 @@ export async function getLeadPrediction(req: Request, res: Response): Promise<vo
     }
 
     // Verify lead belongs to user's organization
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
     const lead = await prisma.lead.findUnique({
       where: { id },
       select: { organizationId: true },
@@ -66,9 +64,6 @@ export async function getLeadEngagement(req: Request, res: Response): Promise<vo
     }
 
     // Verify lead belongs to user's organization
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
     const lead = await prisma.lead.findUnique({
       where: { id },
       select: { organizationId: true },
@@ -110,9 +105,6 @@ export async function getNextAction(req: Request, res: Response): Promise<void> 
     }
 
     // Verify lead belongs to user's organization
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
     const lead = await prisma.lead.findUnique({
       where: { id },
       select: { organizationId: true },
@@ -226,9 +218,6 @@ export async function analyzeBatch(req: Request, res: Response): Promise<void> {
     }
 
     // Verify all leads belong to user's organization
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
     const leads = await prisma.lead.findMany({
       where: {
         id: { in: leadIds },
@@ -342,9 +331,6 @@ export async function recordConversion(req: Request, res: Response): Promise<voi
     }
 
     // Verify lead belongs to user's organization
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
       select: { organizationId: true },

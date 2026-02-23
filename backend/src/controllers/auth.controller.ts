@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/database';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
@@ -297,4 +298,44 @@ export async function me(req: Request, res: Response): Promise<void> {
       }
     }
   });
+}
+
+/**
+ * Forgot password
+ * POST /api/auth/forgot-password
+ */
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  const { email } = req.body;
+
+  // Don't reveal if email exists - always show success
+  const user = await prisma.user.findFirst({ where: { email } });
+  if (user) {
+    // In production, would send real email. For now, log the token.
+    const token = crypto.randomBytes(32).toString('hex');
+    console.log(`Password reset token for ${email}: ${token}`); // TODO: Replace with real email sending
+  }
+
+  res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+}
+
+/**
+ * Reset password
+ * POST /api/auth/reset-password
+ */
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  const { token: _token, password: _password } = req.body;
+
+  // For now, just return an error since we don't store tokens yet
+  res.status(400).json({ success: false, message: 'Password reset is not yet fully configured. Contact support.' });
+}
+
+/**
+ * Logout
+ * POST /api/auth/logout
+ */
+export async function logout(_req: Request, res: Response): Promise<void> {
+  // Clear any server-side session data
+  // For JWT-based auth, the client just discards the token
+  // But we acknowledge the logout request properly
+  res.json({ success: true, message: 'Logged out successfully' });
 }

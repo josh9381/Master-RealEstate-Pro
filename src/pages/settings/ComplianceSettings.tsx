@@ -32,8 +32,22 @@ const ComplianceSettings = () => {
     else setLoading(true);
     
     try {
-      // Compliance settings would be part of settingsApi in real implementation
       const settings = await settingsApi.getBusinessSettings();
+      if (settings) {
+        const data = settings.data || settings;
+        if (data.tcpaEnabled !== undefined) setTcpaEnabled(data.tcpaEnabled);
+        if (data.requireConsent !== undefined) setRequireConsent(data.requireConsent);
+        if (data.blockRevokedConsent !== undefined) setBlockRevokedConsent(data.blockRevokedConsent);
+        if (data.dncEnabled !== undefined) setDncEnabled(data.dncEnabled);
+        if (data.autoCheckDnc !== undefined) setAutoCheckDnc(data.autoCheckDnc);
+        if (data.blockDncNumbers !== undefined) setBlockDncNumbers(data.blockDncNumbers);
+        if (data.gdprEnabled !== undefined) setGdprEnabled(data.gdprEnabled);
+        if (data.rightToErasure !== undefined) setRightToErasure(data.rightToErasure);
+        if (data.dataPortability !== undefined) setDataPortability(data.dataPortability);
+        if (data.auditEnabled !== undefined) setAuditEnabled(data.auditEnabled);
+        if (data.logAllChanges !== undefined) setLogAllChanges(data.logAllChanges);
+        if (data.retentionDays !== undefined) setRetentionDays(String(data.retentionDays));
+      }
       if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
       console.error('Failed to load compliance settings:', error);
@@ -49,8 +63,20 @@ const ComplianceSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Would use settingsApi.updateComplianceSettings() in real implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await settingsApi.updateBusinessSettings({
+        tcpaEnabled,
+        requireConsent,
+        blockRevokedConsent,
+        dncEnabled,
+        autoCheckDnc,
+        blockDncNumbers,
+        gdprEnabled,
+        rightToErasure,
+        dataPortability,
+        auditEnabled,
+        logAllChanges,
+        retentionDays: parseInt(retentionDays, 10),
+      });
       toast.success('Settings Saved', 'Compliance settings have been updated successfully.');
     } catch (error) {
       toast.error('Error', 'Failed to save compliance settings.');

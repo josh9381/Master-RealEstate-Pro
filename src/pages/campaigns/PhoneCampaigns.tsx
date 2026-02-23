@@ -1,10 +1,12 @@
-import { Phone, PhoneCall, Clock, TrendingUp, RefreshCw } from 'lucide-react';
+import { Phone, PhoneCall, Clock, TrendingUp, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 
 const PhoneCampaigns = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,11 +14,12 @@ const PhoneCampaigns = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
-    answerRate: 66.7,
-    avgDuration: '6m 20s',
+    answerRate: 0,
+    avgDuration: '0m 0s',
     conversions: 0
   });
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadCampaigns();
@@ -27,14 +30,21 @@ const PhoneCampaigns = () => {
     setIsLoading(true);
     try {
       const response = await campaignsApi.getCampaigns({ type: 'PHONE', limit: 50 });
-      const phoneCampaigns = response.data || [];
+      const phoneCampaigns = response.data?.campaigns || response.campaigns || [];
       
       setCampaigns(phoneCampaigns);
+      // Compute real stats from campaign data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalCalls = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.sent || 0), 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalAnswered = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.opened || 0), 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const totalConversions = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.converted || 0), 0);
       setStats({
-        total: response.total || 0,
-        answerRate: 66.7, // Mock
-        avgDuration: '6m 20s', // Mock
-        conversions: 0 // Mock
+        total: response.data?.pagination?.total || phoneCampaigns.length,
+        answerRate: totalCalls > 0 ? parseFloat(((totalAnswered / totalCalls) * 100).toFixed(1)) : 0,
+        avgDuration: totalCalls > 0 ? 'N/A' : 'N/A', // Voice integration coming soon
+        conversions: totalConversions
       });
     } catch (error) {
       console.error('Error loading phone campaigns:', error);
@@ -46,6 +56,22 @@ const PhoneCampaigns = () => {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <CampaignsSubNav />
+
+      {/* Coming Soon Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-semibold text-amber-800">Coming Soon — Voice Telephony</h3>
+          <p className="text-sm text-amber-700 mt-1">
+            Phone campaigns require voice telephony integration which is not yet available. 
+            This feature is on the roadmap. In the meantime, use Email or SMS campaigns to reach your leads.
+          </p>
+        </div>
+        <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Phone Campaigns</h1>
@@ -58,7 +84,7 @@ const PhoneCampaigns = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button disabled title="Voice telephony integration coming soon">
             <Phone className="h-4 w-4 mr-2" />
             Create Phone Campaign
           </Button>
@@ -84,7 +110,7 @@ const PhoneCampaigns = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.answerRate}%</div>
-            <p className="text-xs text-muted-foreground">Average rate</p>
+            <p className="text-xs text-muted-foreground">{stats.total > 0 ? 'From your campaigns' : 'Voice integration pending'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -94,7 +120,7 @@ const PhoneCampaigns = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.avgDuration}</div>
-            <p className="text-xs text-muted-foreground">Per call</p>
+            <p className="text-xs text-muted-foreground">{stats.total > 0 ? 'Per call' : 'Voice integration pending'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -117,34 +143,34 @@ const PhoneCampaigns = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer">
-              <Phone className="h-8 w-8 mb-3 text-primary" />
+            <div className="p-4 border rounded-lg opacity-60 cursor-not-allowed">
+              <Phone className="h-8 w-8 mb-3 text-muted-foreground" />
               <h4 className="font-semibold mb-2">Automated Calls</h4>
               <p className="text-sm text-muted-foreground mb-3">
                 Pre-recorded messages delivered automatically
               </p>
-              <Button variant="outline" size="sm" className="w-full">
-                Create
+              <Button variant="outline" size="sm" className="w-full" disabled>
+                Coming Soon
               </Button>
             </div>
-            <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer">
-              <PhoneCall className="h-8 w-8 mb-3 text-primary" />
+            <div className="p-4 border rounded-lg opacity-60 cursor-not-allowed">
+              <PhoneCall className="h-8 w-8 mb-3 text-muted-foreground" />
               <h4 className="font-semibold mb-2">IVR Campaigns</h4>
               <p className="text-sm text-muted-foreground mb-3">
                 Interactive voice response with menu options
               </p>
-              <Button variant="outline" size="sm" className="w-full">
-                Create
+              <Button variant="outline" size="sm" className="w-full" disabled>
+                Coming Soon
               </Button>
             </div>
-            <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer">
-              <Clock className="h-8 w-8 mb-3 text-primary" />
+            <div className="p-4 border rounded-lg opacity-60 cursor-not-allowed">
+              <Clock className="h-8 w-8 mb-3 text-muted-foreground" />
               <h4 className="font-semibold mb-2">Reminder Calls</h4>
               <p className="text-sm text-muted-foreground mb-3">
                 Appointment and event reminders
               </p>
-              <Button variant="outline" size="sm" className="w-full">
-                Create
+              <Button variant="outline" size="sm" className="w-full" disabled>
+                Coming Soon
               </Button>
             </div>
           </div>
@@ -174,9 +200,9 @@ const PhoneCampaigns = () => {
                       <Badge variant="outline">{campaign.type}</Badge>
                       <Badge
                         variant={
-                          campaign.status === 'active'
+                          campaign.status?.toUpperCase() === 'ACTIVE'
                             ? 'success'
-                            : campaign.status === 'completed'
+                            : campaign.status?.toUpperCase() === 'COMPLETED'
                             ? 'secondary'
                             : 'warning'
                         }
@@ -185,39 +211,39 @@ const PhoneCampaigns = () => {
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
-                      {campaign.status !== 'scheduled' ? (
+                      {campaign.status?.toUpperCase() !== 'SCHEDULED' ? (
                         <>
                           <div>
                             <p className="text-xs text-muted-foreground">Total Calls</p>
-                            <p className="font-medium">{campaign.totalCalls}</p>
+                            <p className="font-medium">{campaign.sent ?? 0}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Answered</p>
-                            <p className="font-medium">{campaign.answered}</p>
+                            <p className="font-medium">{campaign.opened ?? 0}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground">Voicemail</p>
-                            <p className="font-medium">{campaign.voicemail}</p>
+                            <p className="text-xs text-muted-foreground">Conversions</p>
+                            <p className="font-medium">{campaign.converted ?? 0}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground">Avg Duration</p>
-                            <p className="font-medium">{campaign.avgDuration}</p>
+                            <p className="text-xs text-muted-foreground">Revenue</p>
+                            <p className="font-medium">${campaign.revenue?.toLocaleString() ?? '0'}</p>
                           </div>
                         </>
                       ) : (
                         <div>
                           <p className="text-xs text-muted-foreground">Scheduled For</p>
-                          <p className="font-medium">{campaign.scheduled}</p>
+                          <p className="font-medium">{campaign.startDate ? new Date(campaign.startDate).toLocaleDateString() : 'TBD'}</p>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                     View Report
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}>
                     Edit
                   </Button>
                 </div>

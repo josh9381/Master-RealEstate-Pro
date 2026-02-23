@@ -1,13 +1,12 @@
 import { Request, Response } from 'express';
-import { PrismaClient, SubscriptionTier } from '@prisma/client';
+import { SubscriptionTier } from '@prisma/client';
 import { 
   PLAN_FEATURES, 
   getPlanFeatures, 
   checkUsageLimit,
   getTrialDaysRemaining,
 } from '../config/subscriptions';
-
-const prisma = new PrismaClient();
+import { prisma } from '../config/database';
 
 /**
  * Get current subscription for the user's organization
@@ -31,7 +30,7 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
     });
 
     if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
+      return res.status(404).json({ success: false, message: 'Organization not found' });
     }
 
     // Get plan features
@@ -98,23 +97,26 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
     };
 
     res.json({
-      subscription: {
-        tier: organization.subscriptionTier,
-        name: planFeatures.name,
-        price: planFeatures.price,
-        billingPeriod: planFeatures.billingPeriod,
-        subscriptionId: organization.subscriptionId,
-        isInTrial,
-        trialEndsAt: organization.trialEndsAt,
-        trialDaysRemaining,
-        features: planFeatures.features,
+      success: true,
+      data: {
+        subscription: {
+          tier: organization.subscriptionTier,
+          name: planFeatures.name,
+          price: planFeatures.price,
+          billingPeriod: planFeatures.billingPeriod,
+          subscriptionId: organization.subscriptionId,
+          isInTrial,
+          trialEndsAt: organization.trialEndsAt,
+          trialDaysRemaining,
+          features: planFeatures.features,
+        },
+        usage,
+        planFeatures,
       },
-      usage,
-      planFeatures,
     });
   } catch (error) {
     console.error('Error fetching subscription:', error);
-    res.status(500).json({ error: 'Failed to fetch subscription' });
+    res.status(500).json({ success: false, message: 'Failed to fetch subscription' });
   }
 };
 
@@ -133,7 +135,7 @@ export const getAvailablePlans = async (req: Request, res: Response) => {
     });
 
     if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
+      return res.status(404).json({ success: false, message: 'Organization not found' });
     }
 
     const currentTier = organization.subscriptionTier;
@@ -147,10 +149,10 @@ export const getAvailablePlans = async (req: Request, res: Response) => {
       isDowngrade: getTierLevel(tier as SubscriptionTier) < getTierLevel(currentTier),
     }));
 
-    res.json({ plans });
+    res.json({ success: true, data: { plans } });
   } catch (error) {
     console.error('Error fetching plans:', error);
-    res.status(500).json({ error: 'Failed to fetch plans' });
+    res.status(500).json({ success: false, message: 'Failed to fetch plans' });
   }
 };
 
@@ -166,7 +168,7 @@ export const changePlan = async (req: Request, res: Response) => {
 
     // Validate new tier
     if (!['FREE', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'].includes(newTier)) {
-      return res.status(400).json({ error: 'Invalid subscription tier' });
+      return res.status(400).json({ success: false, message: 'Invalid subscription tier' });
     }
 
     // Get current organization
@@ -179,7 +181,7 @@ export const changePlan = async (req: Request, res: Response) => {
     });
 
     if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
+      return res.status(404).json({ success: false, message: 'Organization not found' });
     }
 
     const oldTier = organization.subscriptionTier;
@@ -213,17 +215,20 @@ export const changePlan = async (req: Request, res: Response) => {
     const newPlanFeatures = getPlanFeatures(newTier as SubscriptionTier);
 
     res.json({
-      message: 'Subscription updated successfully',
-      subscription: {
-        tier: updatedOrganization.subscriptionTier,
-        name: newPlanFeatures.name,
-        price: newPlanFeatures.price,
-        features: newPlanFeatures.features,
+      success: true,
+      data: {
+        subscription: {
+          tier: updatedOrganization.subscriptionTier,
+          name: newPlanFeatures.name,
+          price: newPlanFeatures.price,
+          features: newPlanFeatures.features,
+        },
       },
+      message: 'Subscription updated successfully',
     });
   } catch (error) {
     console.error('Error changing plan:', error);
-    res.status(500).json({ error: 'Failed to change subscription plan' });
+    res.status(500).json({ success: false, message: 'Failed to change subscription plan' });
   }
 };
 
@@ -242,7 +247,7 @@ export const getUsageStats = async (req: Request, res: Response) => {
     });
 
     if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
+      return res.status(404).json({ success: false, message: 'Organization not found' });
     }
 
     // Get counts
@@ -295,21 +300,24 @@ export const getUsageStats = async (req: Request, res: Response) => {
     };
 
     res.json({
-      usage: {
-        users: { current: userCount, ...limits.users },
-        leads: { current: leadCount, ...limits.leads },
-        campaigns: { current: campaignCount, ...limits.campaigns },
-        workflows: { current: workflowCount, ...limits.workflows },
-        emails: { current: monthlyEmails, ...limits.emails, period: 'monthly' },
-        sms: { current: monthlySMS, ...limits.sms, period: 'monthly' },
-        totalMessages: messageCount,
-        totalAppointments: appointmentCount,
+      success: true,
+      data: {
+        usage: {
+          users: { current: userCount, ...limits.users },
+          leads: { current: leadCount, ...limits.leads },
+          campaigns: { current: campaignCount, ...limits.campaigns },
+          workflows: { current: workflowCount, ...limits.workflows },
+          emails: { current: monthlyEmails, ...limits.emails, period: 'monthly' },
+          sms: { current: monthlySMS, ...limits.sms, period: 'monthly' },
+          totalMessages: messageCount,
+          totalAppointments: appointmentCount,
+        },
+        tier: organization.subscriptionTier,
       },
-      tier: organization.subscriptionTier,
     });
   } catch (error) {
     console.error('Error fetching usage stats:', error);
-    res.status(500).json({ error: 'Failed to fetch usage statistics' });
+    res.status(500).json({ success: false, message: 'Failed to fetch usage statistics' });
   }
 };
 

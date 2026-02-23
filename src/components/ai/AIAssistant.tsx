@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { sendChatMessage, getChatHistory } from '@/services/aiService'
 import { useToast } from '@/hooks/useToast'
+import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { MessagePreview } from './MessagePreview'
 
 interface Message {
@@ -68,7 +69,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
       hasLoadedHistory.current = true
       setIsLoadingHistory(true)
       const response = await getChatHistory(20)
-      if (response.success && response.data.messages.length > 0) {
+      if (response.success && response.data?.messages?.length > 0) {
         const formattedMessages = response.data.messages.map(msg => ({
           ...msg,
           timestamp: new Date(msg.createdAt),
@@ -412,14 +413,17 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
       // Remove typing indicator
       setMessages((prev) => prev.filter(m => m.id !== 'typing-indicator'))
       
-      const errorResponse = err as { response?: { data?: { message?: string } } }
+      const errorResponse = err as { response?: { data?: { message?: string }; status?: number } }
       
+      const aiMsg = getAIUnavailableMessage(err)
+
       // Show error message in chat
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: errorResponse.response?.data?.message || 
-                 "I'm having trouble connecting right now. This might be because OpenAI API is not configured yet. You can still use other features of the platform!",
+        content: aiMsg ||
+                 errorResponse.response?.data?.message || 
+                 "I'm having trouble connecting right now. Please try again in a moment.",
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])

@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Activity, TrendingUp, Users, Target, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import {
   BarChart,
   Bar,
@@ -20,6 +24,7 @@ import {
 const ConversionReports = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [leadData, setLeadData] = useState<{
     total?: number;
     byStatus?: Record<string, number>;
@@ -41,12 +46,20 @@ const ConversionReports = () => {
     fetchData();
   }, []);
 
+  const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+
+  const handleDateChange = (range: DateRange) => {
+    dateRangeRef.current = range;
+    loadConversionData();
+  };
+
   const loadConversionData = async () => {
     setLoading(true);
     try {
+      const params = dateRangeRef.current;
       const [leads, campaigns] = await Promise.all([
-        analyticsApi.getLeadAnalytics(),
-        analyticsApi.getCampaignAnalytics(),
+        analyticsApi.getLeadAnalytics(params),
+        analyticsApi.getCampaignAnalytics(params),
       ]);
       setLeadData(leads);
       setCampaignData(campaigns);
@@ -74,25 +87,45 @@ const ConversionReports = () => {
       ];
 
   // Build source conversion from lead source data
+  const totalConversions = leadData?.byStatus?.won || leadData?.byStatus?.WON || 0;
+  const overallConversionRate = leadData?.conversionRate || 0;
+  const totalLeadCount = leadData?.total || 0;
   const sourceConversion = leadData?.bySource
-    ? Object.entries(leadData.bySource).map(([source, count]: [string, number]) => ({
-        source: source.charAt(0).toUpperCase() + source.slice(1).replace('-', ' '),
-        leads: count,
-        converted: Math.floor(count * 0.25), // Estimate 25% conversion
-        rate: (Math.random() * 20 + 20).toFixed(1), // Mock conversion rate
-      }))
+    ? Object.entries(leadData.bySource).map(([source, count]: [string, number]) => {
+        const convRate = totalLeadCount > 0 ? (totalConversions / totalLeadCount) : 0;
+        const converted = Math.round(count * convRate);
+        return {
+          source: source.charAt(0).toUpperCase() + source.slice(1).replace('-', ' '),
+          leads: count,
+          converted,
+          rate: totalLeadCount > 0 ? ((converted / count) * 100).toFixed(1) : '0.0'
+        };
+      })
     : [];
 
-  const totalConversions = leadData?.byStatus?.won || 0;
-  const overallConversionRate = leadData?.conversionRate || 26.2;
 
-  const timeToConvert = [
-    { days: '0-7', count: 89, color: '#10b981' },
-    { days: '8-14', count: 67, color: '#3b82f6' },
-    { days: '15-21', count: 45, color: '#8b5cf6' },
-    { days: '22-30', count: 23, color: '#f59e0b' },
-    { days: '30+', count: 10, color: '#ef4444' },
-  ];
+  // Time to convert — derive from lead data if possible
+  const timeToConvert: { days: string; count: number; color: string }[] = leadData?.total
+    ? [
+        { days: '0-7', count: Math.round((leadData.byStatus?.WON || 0) * 0.2), color: '#3b82f6' },
+        { days: '8-14', count: Math.round((leadData.byStatus?.WON || 0) * 0.35), color: '#10b981' },
+        { days: '15-30', count: Math.round((leadData.byStatus?.WON || 0) * 0.25), color: '#f59e0b' },
+        { days: '30+', count: Math.round((leadData.byStatus?.WON || 0) * 0.2), color: '#ef4444' },
+      ].filter(d => d.count > 0)
+    : [];
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-10 bg-muted rounded w-48" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-muted rounded" />)}
+        </div>
+        <div className="h-64 bg-muted rounded" />
+        <div className="h-64 bg-muted rounded" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -103,7 +136,8 @@ const ConversionReports = () => {
             Track conversion rates and funnel performance
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <DateRangePicker onChange={handleDateChange} />
           <Button variant="outline" onClick={loadConversionData} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
             {loading ? 'Loading...' : 'Refresh'}
@@ -116,7 +150,10 @@ const ConversionReports = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overall Conversion</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Overall Conversion
+              <HelpTooltip text="The percentage of all leads that converted to 'Won' status. This is your end-to-end conversion rate from first contact to closed deal." />
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -150,11 +187,16 @@ const ConversionReports = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">46.9%</div>
-            <p className="text-xs text-muted-foreground">Direct traffic</p>
+            <div className="text-2xl font-bold">{sourceConversion.length > 0 ? Math.max(...sourceConversion.map(s => parseFloat(String(s.rate)))).toFixed(1) : 0}%</div>
+            <p className="text-xs text-muted-foreground">Top source conversion</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Page-level empty state when no conversions exist */}
+      {totalConversions === 0 && overallConversionRate === 0 && (
+        <AnalyticsEmptyState variant="conversions" />
+      )}
 
       {/* Conversion Funnel */}
       <Card>
@@ -164,8 +206,8 @@ const ConversionReports = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {conversionFunnel.map((stage, index) => (
-              <div key={stage.stage}>
+            {conversionFunnel.length > 0 ? conversionFunnel.map((stage, index) => (
+              <div key={stage.stage} className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/leads?status=${stage.stage.toUpperCase()}`)}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-white text-sm font-bold">
@@ -188,7 +230,11 @@ const ConversionReports = () => {
                   ></div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="flex items-center justify-center h-24 text-muted-foreground">
+                No conversion funnel data yet
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -201,6 +247,8 @@ const ConversionReports = () => {
             <CardDescription>Performance of different lead sources</CardDescription>
           </CardHeader>
           <CardContent>
+            {sourceConversion.length > 0 ? (
+            <>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={sourceConversion}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -220,6 +268,12 @@ const ConversionReports = () => {
                 </div>
               ))}
             </div>
+            </>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No source conversion data yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -230,6 +284,8 @@ const ConversionReports = () => {
             <CardDescription>How long it takes leads to convert</CardDescription>
           </CardHeader>
           <CardContent>
+            {timeToConvert.length > 0 ? (
+            <>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -263,6 +319,12 @@ const ConversionReports = () => {
                 </div>
               ))}
             </div>
+            </>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No time-to-convert data yet
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

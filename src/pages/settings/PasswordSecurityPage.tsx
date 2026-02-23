@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/hooks/useToast'
+import { settingsApi } from '@/lib/api'
 
 export default function PasswordSecurityPage() {
   const { toast } = useToast();
@@ -33,8 +34,7 @@ export default function PasswordSecurityPage() {
     setLoading(true)
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await settingsApi.changePassword({ currentPassword, newPassword })
       
       // Reset form
       setCurrentPassword('')
@@ -42,8 +42,9 @@ export default function PasswordSecurityPage() {
       setConfirmPassword('')
       
       toast.success('Password updated successfully');
-    } catch (error) {
-      toast.error('Failed to update password');
+    } catch (error: any) {
+      const message = error.response?.data?.message || error.response?.data?.error || 'Failed to update password';
+      toast.error(message);
     } finally {
       setLoading(false)
     }

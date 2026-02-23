@@ -276,10 +276,20 @@ const AIHub = () => {
     )
   }
   
-  // Recent insights with fallback
-  const recentInsightsData = recentInsights.length > 0 ? recentInsights : getMockInsights()
+  // Recent insights — no mock fallback (show empty if no data)
+  const recentInsightsData = recentInsights
   
   // AI Features with icon mapping
+  // Route mapping: feature title -> actual route path
+  const routeMap: Record<string, string> = {
+    'Lead Scoring': '/ai/lead-scoring',
+    'Customer Segmentation': '/ai/segmentation',
+    'Predictive Analytics': '/ai/predictive',
+    'Model Training': '/ai/training',
+    'Intelligence Insights': '/ai/insights',
+    'Performance Analytics': '/ai/analytics',
+  };
+  const comingSoonFeatureIds = [2, 4] // Customer Segmentation, Model Training
   const aiFeaturesData = (aiFeatures.length > 0 ? aiFeatures : getMockFeatures()).map(feature => ({
     ...feature,
     icon: feature.id === 1 ? Target :
@@ -288,7 +298,8 @@ const AIHub = () => {
           feature.id === 4 ? Brain :
           feature.id === 5 ? Sparkles :
           BarChart3,
-    path: `/ai/${feature.title.toLowerCase().replace(/\s+/g, '-')}`
+    path: routeMap[feature.title] || `/ai/${feature.title.toLowerCase().replace(/\s+/g, '-')}`,
+    comingSoon: comingSoonFeatureIds.includes(feature.id as number),
   }))
 
   return (
@@ -308,8 +319,8 @@ const AIHub = () => {
             <Brain className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeModels || 6}</div>
-            <p className="text-xs text-muted-foreground">+{stats?.modelsInTraining || 2} in training</p>
+            <div className="text-2xl font-bold">{stats?.activeModels ?? 0}</div>
+            <p className="text-xs text-muted-foreground">+{stats?.modelsInTraining ?? 0} in training</p>
           </CardContent>
         </Card>
         <Card>
@@ -318,8 +329,8 @@ const AIHub = () => {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.avgAccuracy || 91.2}%</div>
-            <p className="text-xs text-muted-foreground">+{stats?.accuracyChange || 2.3}% from last month</p>
+            <div className="text-2xl font-bold">{stats?.avgAccuracy ?? 0}%</div>
+            <p className="text-xs text-muted-foreground">+{stats?.accuracyChange ?? 0}% from last month</p>
           </CardContent>
         </Card>
         <Card>
@@ -328,8 +339,8 @@ const AIHub = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.predictionsToday?.toLocaleString() || '2,547'}</div>
-            <p className="text-xs text-muted-foreground">+{stats?.predictionsChange || 12}% from yesterday</p>
+            <div className="text-2xl font-bold">{stats?.predictionsToday?.toLocaleString() ?? '0'}</div>
+            <p className="text-xs text-muted-foreground">+{stats?.predictionsChange ?? 0}% from yesterday</p>
           </CardContent>
         </Card>
         <Card>
@@ -338,8 +349,8 @@ const AIHub = () => {
             <Sparkles className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeInsights || 23}</div>
-            <p className="text-xs text-muted-foreground">{stats?.highPriorityInsights || 3} high priority</p>
+            <div className="text-2xl font-bold">{stats?.activeInsights ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.highPriorityInsights ?? 0} high priority</p>
           </CardContent>
         </Card>
       </div>
@@ -361,6 +372,9 @@ const AIHub = () => {
                       </div>
                       <div>
                         <CardTitle className="text-lg">{feature.title}</CardTitle>
+                        {feature.comingSoon ? (
+                          <Badge variant="warning" className="mt-1">Coming Soon</Badge>
+                        ) : (
                         <Badge
                           variant={
                             feature.status === 'active'
@@ -373,6 +387,7 @@ const AIHub = () => {
                         >
                           {feature.status}
                         </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -658,7 +673,7 @@ const AIHub = () => {
                     <h4 className="font-medium mb-1">{rec.title}</h4>
                     <p className="text-sm text-muted-foreground">{rec.description}</p>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full">
+                  <Button variant="outline" size="sm" className="w-full" disabled title="Recommendation actions coming soon">
                     <Zap className="mr-2 h-4 w-4" />
                     {rec.action}
                   </Button>

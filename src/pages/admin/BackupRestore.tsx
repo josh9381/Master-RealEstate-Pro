@@ -83,14 +83,6 @@ const BackupRestore = () => {
     }, 1500);
   };
 
-  // TODO: Future use - delete backup functionality
-  const _handleDelete = (backupId: number) => {
-    if (confirm('Are you sure you want to delete this backup? This action cannot be undone.')) {
-      setBackupHistory(backupHistory.filter(b => b.id !== backupId));
-      toast.success('Backup deleted successfully');
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div>

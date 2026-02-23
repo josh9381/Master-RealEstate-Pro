@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 import {
   BarChart,
   Bar,
@@ -31,6 +32,17 @@ const ABTesting = () => {
     avgImprovement: 0,
     totalTested: 0,
   });
+
+  // Create form state
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    testType: 'EMAIL_SUBJECT' as 'EMAIL_SUBJECT' | 'EMAIL_CONTENT' | 'EMAIL_TIMING' | 'SMS_CONTENT' | 'LANDING_PAGE',
+    variantA: '',
+    variantB: '',
+    duration: '48',
+    confidence: '95',
+  });
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     loadABTests();
@@ -112,8 +124,26 @@ const ABTesting = () => {
   const activeTests = tests.filter(t => t.status === 'RUNNING');
   const completedTests = tests.filter(t => t.status === 'COMPLETED');
 
+  if (isLoading && tests.length === 0) {
+    return (
+      <div className="space-y-6">
+        <CampaignsSubNav />
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-muted rounded w-32" />
+          <div className="grid gap-4 md:grid-cols-4">
+            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-muted rounded" />)}
+          </div>
+          <div className="h-64 bg-muted rounded" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <CampaignsSubNav />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">A/B Testing</h1>
@@ -126,7 +156,7 @@ const ABTesting = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button onClick={() => document.getElementById('create-ab-test-form')?.scrollIntoView({ behavior: 'smooth' })}>
             <TestTube2 className="h-4 w-4 mr-2" />
             Create A/B Test
           </Button>
@@ -290,7 +320,7 @@ const ABTesting = () => {
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div
                       className={winner === 'A' ? 'bg-green-500 h-2 rounded-full' : 'bg-blue-500 h-2 rounded-full'}
-                      style={{ width: `${Math.min(variantA.clickRate * 2, 100)}%` }}
+                      style={{ width: `${Math.min(variantA.clickRate, 100)}%` }}
                     ></div>
                   </div>
                   <div className="flex items-center justify-between">
@@ -335,7 +365,7 @@ const ABTesting = () => {
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div
                       className={winner === 'B' ? 'bg-green-500 h-2 rounded-full' : 'bg-blue-500 h-2 rounded-full'}
-                      style={{ width: `${Math.min(variantB.clickRate * 2, 100)}%` }}
+                      style={{ width: `${Math.min(variantB.clickRate, 100)}%` }}
                     ></div>
                   </div>
                   <div className="flex items-center justify-between">
@@ -413,7 +443,11 @@ const ABTesting = () => {
                         <Badge variant="success">Variant {winner}</Badge>
                         <p className="text-sm font-medium text-green-600 mt-1">+{improvement}% improvement</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => window.location.href = `/campaigns/ab-tests/${test.id}`}>
+                      <Button variant="outline" size="sm" onClick={() => {
+                        // Scroll to the test card if it's on the page
+                        const testCard = document.getElementById(`test-${test.id}`);
+                        if (testCard) testCard.scrollIntoView({ behavior: 'smooth' });
+                      }}>
                         View Details
                       </Button>
                     </div>
@@ -426,7 +460,7 @@ const ABTesting = () => {
       </Card>
 
       {/* Create New Test */}
-      <Card>
+      <Card id="create-ab-test-form">
         <CardHeader>
           <CardTitle>Create New A/B Test</CardTitle>
           <CardDescription>Set up a new split test campaign</CardDescription>
@@ -438,38 +472,102 @@ const ABTesting = () => {
               type="text"
               placeholder="e.g., Subject Line Test - Spring Campaign"
               className="w-full px-3 py-2 border rounded-lg"
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
             />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">What to Test</label>
-            <select className="w-full px-3 py-2 border rounded-lg">
-              <option>Subject Line</option>
-              <option>From Name</option>
-              <option>Email Content</option>
-              <option>Call to Action</option>
-              <option>Send Time</option>
+            <select
+              className="w-full px-3 py-2 border rounded-lg"
+              value={createForm.testType}
+              onChange={(e) => setCreateForm({ ...createForm, testType: e.target.value as typeof createForm.testType })}
+            >
+              <option value="EMAIL_SUBJECT">Subject Line</option>
+              <option value="EMAIL_CONTENT">Email Content</option>
+              <option value="EMAIL_TIMING">Send Time</option>
+              <option value="SMS_CONTENT">SMS Content</option>
+              <option value="LANDING_PAGE">Landing Page</option>
             </select>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
+              <label className="text-sm font-medium mb-2 block">Variant A</label>
+              <input
+                type="text"
+                placeholder="e.g., Original subject line"
+                className="w-full px-3 py-2 border rounded-lg"
+                value={createForm.variantA}
+                onChange={(e) => setCreateForm({ ...createForm, variantA: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Variant B</label>
+              <input
+                type="text"
+                placeholder="e.g., Alternative subject line"
+                className="w-full px-3 py-2 border rounded-lg"
+                value={createForm.variantB}
+                onChange={(e) => setCreateForm({ ...createForm, variantB: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
               <label className="text-sm font-medium mb-2 block">Test Duration</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>24 hours</option>
-                <option>48 hours</option>
-                <option>72 hours</option>
-                <option>1 week</option>
+              <select
+                className="w-full px-3 py-2 border rounded-lg"
+                value={createForm.duration}
+                onChange={(e) => setCreateForm({ ...createForm, duration: e.target.value })}
+              >
+                <option value="24">24 hours</option>
+                <option value="48">48 hours</option>
+                <option value="72">72 hours</option>
+                <option value="168">1 week</option>
               </select>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Confidence Level</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>90%</option>
-                <option>95%</option>
-                <option>99%</option>
+              <select
+                className="w-full px-3 py-2 border rounded-lg"
+                value={createForm.confidence}
+                onChange={(e) => setCreateForm({ ...createForm, confidence: e.target.value })}
+              >
+                <option value="90">90%</option>
+                <option value="95">95%</option>
+                <option value="99">99%</option>
               </select>
             </div>
           </div>
-          <Button>Create A/B Test</Button>
+          <Button
+            disabled={!createForm.name.trim() || isCreating}
+            onClick={async () => {
+              if (!createForm.name.trim()) {
+                toast.error('Please enter a test name');
+                return;
+              }
+              setIsCreating(true);
+              try {
+                await abtestService.createABTest({
+                  name: createForm.name,
+                  type: createForm.testType,
+                  variantA: { subject: createForm.variantA || 'Variant A' },
+                  variantB: { subject: createForm.variantB || 'Variant B' },
+                  duration: parseInt(createForm.duration),
+                  confidenceLevel: parseInt(createForm.confidence),
+                });
+                toast.success('A/B Test created successfully!');
+                setCreateForm({ name: '', testType: 'EMAIL_SUBJECT', variantA: '', variantB: '', duration: '48', confidence: '95' });
+                loadABTests();
+              } catch (error) {
+                toast.error('Failed to create A/B test');
+              } finally {
+                setIsCreating(false);
+              }
+            }}
+          >
+            {isCreating ? 'Creating...' : 'Create A/B Test'}
+          </Button>
         </CardContent>
       </Card>
     </div>

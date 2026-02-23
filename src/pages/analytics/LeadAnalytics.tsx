@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Users, Target, Calendar, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,20 +14,30 @@ import {
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const LeadAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [leadData, setLeadData] = useState<any>(null);
   const toast = useToast();
+  const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadLeadAnalytics();
   }, []);
 
+  const handleDateChange = (range: DateRange) => {
+    dateRangeRef.current = range;
+    loadLeadAnalytics();
+  };
+
   const loadLeadAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await analyticsApi.getLeadAnalytics().catch(() => ({ data: null }));
+      const response = await analyticsApi.getLeadAnalytics(dateRangeRef.current).catch(() => ({ data: null }));
       setLeadData(response.data);
     } catch (error) {
       console.error('Error loading lead analytics:', error);
@@ -45,51 +56,34 @@ const LeadAnalytics = () => {
   }
 
   // Use API data with fallbacks
-  const totalLeads = leadData?.total || 4567;
-  const conversionRate = leadData?.conversionRate || 26.2;
-  const averageScore = leadData?.averageScore || 73.4;
+  const totalLeads = leadData?.total || 0;
+  const conversionRate = leadData?.conversionRate || 0;
+  const averageScore = leadData?.averageScore || 0;
   const topLeads = leadData?.topLeads || [];
 
-  // Mock data for trends (would come from a time-series endpoint)
-  const leadTrends = [
-    { month: 'Jul', newLeads: 145, qualified: 89, converted: 34 },
-    { month: 'Aug', newLeads: 168, qualified: 103, converted: 42 },
-    { month: 'Sep', newLeads: 192, qualified: 118, converted: 51 },
-    { month: 'Oct', newLeads: 178, qualified: 112, converted: 47 },
-    { month: 'Nov', newLeads: 205, qualified: 132, converted: 58 },
-    { month: 'Dec', newLeads: 223, qualified: 145, converted: 67 },
-  ];
+  // Lead trends from API data — use byStatus trends if available, otherwise show empty
+  const leadTrends = leadData?.trends || [];
 
   // Source breakdown from API data
   const sourceBreakdown = leadData?.bySource
     ? Object.entries(leadData.bySource).map(([source, count]: [string, any]) => ({
         source,
         count: count as number,
-        percentage: Math.round(((count as number) / totalLeads) * 100)
+        percentage: totalLeads > 0 ? Math.round(((count as number) / totalLeads) * 100) : 0
       }))
-    : [
-        { source: 'Website Form', count: 342, percentage: 38 },
-        { source: 'Email Campaign', count: 276, percentage: 31 },
-        { source: 'Social Media', count: 165, percentage: 18 },
-        { source: 'Referral', count: 89, percentage: 10 },
-        { source: 'Other', count: 28, percentage: 3 },
-      ];
+    : [];
 
   // Top performing leads
   const topPerformers = topLeads.length > 0
     ? topLeads.slice(0, 4).map((lead: any) => ({
+        id: lead.id,
         name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown',
         leads: 1,
         converted: lead.status === 'WON' ? 1 : 0,
         rate: `${lead.score || 0}%`,
         score: lead.score
       }))
-    : [
-        { name: 'Sarah Johnson', leads: 89, converted: 34, rate: '38.2%' },
-        { name: 'Mike Smith', leads: 76, converted: 28, rate: '36.8%' },
-        { name: 'Emily Brown', leads: 65, converted: 22, rate: '33.8%' },
-        { name: 'David Lee', leads: 54, converted: 17, rate: '31.5%' },
-      ];
+    : [];
 
   return (
     <div className="space-y-6">
@@ -100,7 +94,8 @@ const LeadAnalytics = () => {
             Track lead generation and conversion performance
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
+          <DateRangePicker onChange={handleDateChange} />
           <Button variant="outline" onClick={loadLeadAnalytics}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -116,7 +111,10 @@ const LeadAnalytics = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Total Leads
+              <HelpTooltip text="Total number of leads across all statuses in the selected date range." />
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -128,7 +126,10 @@ const LeadAnalytics = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Conversion Rate
+              <HelpTooltip text="Percentage of leads that reached 'Won' status. Calculated as (Won ÷ Total) × 100. Industry average for real estate is 2–5%; a CRM-tracked rate of 15–25% indicates strong qualification." />
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -140,7 +141,10 @@ const LeadAnalytics = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Lead Score</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Avg Lead Score
+              <HelpTooltip text="Average quality score (0–100) across all leads. Based on engagement, profile completeness, and source quality. Higher scores indicate warmer leads ready for outreach." />
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -152,7 +156,10 @@ const LeadAnalytics = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Qualified Leads</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Qualified Leads
+              <HelpTooltip text="Leads that have been vetted and marked as 'Qualified' — meaning they meet your criteria for a potential deal. These leads are ready for direct outreach or a proposal." />
+            </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -162,17 +169,13 @@ const LeadAnalytics = () => {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lead Score Avg</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">73.4</div>
-            <p className="text-xs text-muted-foreground">+5.2 from last month</p>
-          </CardContent>
-        </Card>
+
       </div>
+
+      {/* Page-level empty state when no leads exist */}
+      {totalLeads === 0 && (
+        <AnalyticsEmptyState variant="leads" />
+      )}
 
       {/* Lead Trends */}
       <Card>
@@ -181,6 +184,7 @@ const LeadAnalytics = () => {
           <CardDescription>New leads, qualified, and converted over time</CardDescription>
         </CardHeader>
         <CardContent>
+          {leadTrends.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={leadTrends}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -198,6 +202,11 @@ const LeadAnalytics = () => {
               <Area type="monotone" dataKey="converted" stackId="3" stroke="#8b5cf6" fill="#8b5cf6" />
             </AreaChart>
           </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              No lead trend data yet
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -210,8 +219,8 @@ const LeadAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {sourceBreakdown.map((source) => (
-                <div key={source.source}>
+              {sourceBreakdown.length > 0 ? sourceBreakdown.map((source) => (
+                <div key={source.source} className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/leads?source=${source.source}`)}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">{source.source}</span>
                     <span className="text-sm text-muted-foreground">
@@ -225,7 +234,11 @@ const LeadAnalytics = () => {
                     ></div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="flex items-center justify-center h-24 text-muted-foreground">
+                  No lead source data yet
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -234,12 +247,12 @@ const LeadAnalytics = () => {
         <Card>
           <CardHeader>
             <CardTitle>Top Performers</CardTitle>
-            <CardDescription>Team members with highest conversion rates</CardDescription>
+            <CardDescription>Leads with highest scores</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topPerformers.map((performer: any, index: number) => (
-                <div key={performer.name} className="flex items-center justify-between">
+              {topPerformers.length > 0 ? topPerformers.map((performer: any, index: number) => (
+                <div key={performer.name} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => performer.id && navigate(`/leads/${performer.id}`)}>
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-white text-sm font-bold">
                       #{index + 1}
@@ -256,7 +269,11 @@ const LeadAnalytics = () => {
                     <p className="text-xs text-muted-foreground">Conv. rate</p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="flex items-center justify-center h-24 text-muted-foreground">
+                  No performance data yet
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

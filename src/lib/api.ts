@@ -1,12 +1,12 @@
 import axios, { AxiosError } from 'axios'
 import type { User } from '@/types'
+import { devApiSuccessInterceptor, devApiErrorInterceptor } from './devErrorMonitor'
 
 // Determine the API base URL
 const getApiBaseUrl = () => {
   // Check if we have an environment variable for the API URL
   const envApiUrl = import.meta.env.VITE_API_URL
   if (envApiUrl) {
-    console.log('🔧 Using API URL from environment:', envApiUrl)
     return envApiUrl
   }
 
@@ -15,19 +15,17 @@ const getApiBaseUrl = () => {
     // Replace the port 3000 with 8000 for backend
     const backendUrl = window.location.origin.replace('-3000.', '-8000.')
     const apiUrl = `${backendUrl}/api`
-    console.log('🔧 Detected Codespaces, using API URL:', apiUrl)
     return apiUrl
   }
 
   // Default to relative path (works with Vite proxy in local development)
-  console.log('🔧 Using relative API URL (Vite proxy): /api')
   return '/api'
 }
 
 // Create axios instance
 const api = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 30000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -66,7 +64,7 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 }
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => devApiSuccessInterceptor(response),
   async (error: AxiosError) => {
     const originalRequest = error.config as typeof error.config & { _retry?: boolean }
 
@@ -92,7 +90,9 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refreshToken')
 
       if (!refreshToken) {
-        localStorage.clear()
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('auth-storage')
         window.location.href = '/auth/login'
         return Promise.reject(error)
       }
@@ -116,7 +116,9 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError as Error, null)
-        localStorage.clear()
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('auth-storage')
         window.location.href = '/auth/login'
         return Promise.reject(refreshError)
       } finally {
@@ -124,7 +126,7 @@ api.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error)
+    return devApiErrorInterceptor(error)
   }
 )
 
@@ -169,8 +171,13 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     const refreshToken = localStorage.getItem('refreshToken')
-    await api.post('/auth/logout', { refreshToken })
-    localStorage.clear()
+    try {
+      await api.post('/auth/logout', { refreshToken })
+    } catch {
+      // Logout should succeed even if the API call fails
+    }
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
   },
 
   refreshToken: async (refreshToken: string): Promise<{ accessToken: string }> => {
@@ -180,8 +187,21 @@ export const authApi = {
 
   getCurrentUser: async (): Promise<User> => {
     const response = await api.get('/auth/me')
-    return response.data
+    // Backend returns { success: true, data: { user: { ... } } }
+    const data = response.data
+    if (data?.data?.user) {
+      return data.data.user
+    }
+    // Fallback: maybe it's already the user object
+    if (data?.user) {
+      return data.user
+    }
+    return data
   },
+
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }).then(r => r.data),
+
+  resetPassword: (token: string, password: string) => api.post('/auth/reset-password', { token, password }).then(r => r.data),
 }
 
 // ============================================================================
@@ -214,6 +234,7 @@ export interface CreateLeadData {
   value?: number
   stage?: string
   assignedToId?: string
+  notes?: string
   customFields?: Record<string, any>
   tags?: string[]
 }
@@ -254,7 +275,7 @@ export const leadsApi = {
   },
 
   bulkUpdate: async (data: BulkUpdateData) => {
-    const response = await api.patch('/leads/bulk-update', data)
+    const response = await api.post('/leads/bulk-update', data)
     return response.data
   },
 
@@ -267,6 +288,18 @@ export const leadsApi = {
     const response = await api.post('/leads/count-filtered', { filters })
     return response.data
   },
+
+  mergeLeads: async (data: { primaryLeadId: string; secondaryLeadId: string }) => {
+    const response = await api.post('/leads/merge', {
+      primaryLeadId: data.primaryLeadId,
+      secondaryLeadIds: [data.secondaryLeadId],
+    })
+    return response.data
+  },
+
+  importLeads: (formData: FormData) => api.post('/leads/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }).then(r => r.data),
 }
 
 // ============================================================================
@@ -290,7 +323,7 @@ export const tagsApi = {
   },
 
   updateTag: async (id: string, data: Partial<CreateTagData>) => {
-    const response = await api.patch(`/tags/${id}`, data)
+    const response = await api.put(`/tags/${id}`, data)
     return response.data
   },
 
@@ -480,6 +513,22 @@ export const campaignsApi = {
     const response = await api.post(`/campaigns/${id}/unarchive`)
     return response.data
   },
+
+  // Campaign analytics endpoints
+  getCampaignAnalytics: async (id: string) => {
+    const response = await api.get(`/campaigns/${id}/analytics`)
+    return response.data
+  },
+
+  getCampaignTimeline: async (id: string, params?: { days?: number }) => {
+    const response = await api.get(`/campaigns/${id}/analytics/timeline`, { params })
+    return response.data
+  },
+
+  getCampaignLinkStats: async (id: string) => {
+    const response = await api.get(`/campaigns/${id}/analytics/links`)
+    return response.data
+  },
 }
 
 // ============================================================================
@@ -497,10 +546,12 @@ export interface ActivitiesQuery {
 }
 
 export interface CreateActivityData {
-  type: 'email' | 'call' | 'meeting' | 'note' | 'status_change'
+  type: 'email' | 'call' | 'meeting' | 'note' | 'status_change' | 'task'
   leadId: string
   description: string
   metadata?: Record<string, unknown>
+  scheduledAt?: string
+  status?: string
 }
 
 export const activitiesApi = {
@@ -520,7 +571,7 @@ export const activitiesApi = {
   },
 
   updateActivity: async (id: string, data: Partial<CreateActivityData>) => {
-    const response = await api.patch(`/activities/${id}`, data)
+    const response = await api.put(`/activities/${id}`, data)
     return response.data
   },
 
@@ -586,7 +637,7 @@ export const tasksApi = {
   },
 
   updateTask: async (id: string, data: Partial<CreateTaskData>) => {
-    const response = await api.patch(`/tasks/${id}`, data)
+    const response = await api.put(`/tasks/${id}`, data)
     return response.data
   },
 
@@ -636,13 +687,58 @@ export const analyticsApi = {
     return response.data
   },
 
-  getActivityFeed: async (params?: { page?: number; limit?: number }) => {
+  getActivityFeed: async (params?: { page?: number; limit?: number; startDate?: string; endDate?: string }) => {
     const response = await api.get('/analytics/activity-feed', { params })
     return response.data
   },
 
   getConversionFunnel: async (params?: AnalyticsQuery) => {
     const response = await api.get('/analytics/conversion-funnel', { params })
+    return response.data
+  },
+
+  getMonthlyPerformance: async (params?: { months?: number }) => {
+    const response = await api.get('/analytics/monthly-performance', { params })
+    return response.data
+  },
+
+  getHourlyEngagement: async (params?: { days?: number }) => {
+    const response = await api.get('/analytics/hourly-engagement', { params })
+    return response.data
+  },
+
+  getTeamPerformance: async (params?: AnalyticsQuery) => {
+    const response = await api.get('/analytics/team-performance', { params })
+    return response.data
+  },
+
+  getRevenueTimeline: async (params?: { months?: number }) => {
+    const response = await api.get('/analytics/revenue-timeline', { params })
+    return response.data
+  },
+
+  getDashboardAlerts: async () => {
+    const response = await api.get('/analytics/dashboard-alerts')
+    return response.data
+  },
+
+  getTaskAnalytics: async (params?: AnalyticsQuery) => {
+    const response = await api.get('/analytics/tasks', { params })
+    return response.data
+  },
+
+  getPipelineMetrics: async () => {
+    const response = await api.get('/analytics/pipeline-metrics')
+    return response.data
+  },
+
+  getDeviceBreakdown: async (params?: { campaignId?: string }) => {
+    const response = await api.get('/analytics/device-breakdown', { params })
+    return response.data
+  },
+
+  getGeographicBreakdown: async (params?: { campaignId?: string }) => {
+    const response = await api.get('/analytics/geographic', { params })
     return response.data
   },
 }
@@ -759,6 +855,16 @@ export const aiApi = {
     return response.data
   },
 
+  composeEmail: async (payload: { leadName?: string; leadEmail?: string; tone?: string; purpose?: string; context?: string }) => {
+    const response = await api.post('/ai/compose', payload)
+    return response.data
+  },
+
+  generateSMS: async (payload: { leadName?: string; leadPhone?: string; tone?: string; purpose?: string; context?: string }) => {
+    const response = await api.post('/ai/generate/sms', payload)
+    return response.data
+  },
+
   suggestActions: async (payload: SuggestActionsPayload) => {
     const response = await api.post('/ai/suggest-actions', payload)
     return response.data
@@ -830,6 +936,21 @@ export const messagesApi = {
     return response.data
   },
 
+  starMessage: async (id: string, starred: boolean) => {
+    const response = await api.patch(`/messages/${id}/star`, { starred })
+    return response.data
+  },
+
+  archiveMessage: async (id: string, archived: boolean) => {
+    const response = await api.patch(`/messages/${id}/archive`, { archived })
+    return response.data
+  },
+
+  snoozeMessage: async (id: string, snoozedUntil: string | null) => {
+    const response = await api.patch(`/messages/${id}/snooze`, { snoozedUntil })
+    return response.data
+  },
+
   getStats: async (params?: { leadId?: string; type?: string }) => {
     const response = await api.get('/messages/stats', { params: params || {} })
     return response.data
@@ -864,16 +985,6 @@ export const templatesApi = {
     return response.data
   },
 
-  useEmailTemplate: async (id: string) => {
-    const response = await api.post(`/templates/email/${id}/use`)
-    return response.data
-  },
-
-  getEmailTemplateStats: async () => {
-    const response = await api.get('/templates/email/stats')
-    return response.data
-  },
-
   // SMS Templates (dedicated endpoints)
   getSMSTemplates: async (params?: any) => {
     const response = await api.get('/sms-templates', { params })
@@ -900,27 +1011,6 @@ export const templatesApi = {
     return response.data
   },
 
-  useSMSTemplate: async (id: string) => {
-    const response = await api.post(`/templates/sms/${id}/use`)
-    return response.data
-  },
-
-  getSMSTemplateStats: async () => {
-    const response = await api.get('/templates/sms/stats')
-    return response.data
-  },
-
-  // Generic template endpoints (via /api/templates route)
-  // These provide alternative access patterns for the same functionality
-  getAllEmailTemplates: async (params?: any) => {
-    const response = await api.get('/templates/email', { params })
-    return response.data
-  },
-
-  getAllSMSTemplates: async (params?: any) => {
-    const response = await api.get('/templates/sms', { params })
-    return response.data
-  },
 }
 
 // Workflows API
@@ -1108,6 +1198,21 @@ export const settingsApi = {
 
   getIntegrationStatus: async (provider: string) => {
     const response = await api.get(`/integrations/${provider}/status`)
+    return response.data
+  },
+
+  updateIntegrationSettings: async (provider: string, data: any) => {
+    const response = await api.put(`/integrations/${provider}/settings`, data)
+    return response.data
+  },
+
+  updateServiceConfig: async (service: string, data: any) => {
+    const response = await api.put(`/settings/services/${service}`, data)
+    return response.data
+  },
+
+  testServiceConnection: async (service: string, data?: any) => {
+    const response = await api.post(`/settings/services/${service}/test`, data || {})
     return response.data
   },
 
@@ -1333,5 +1438,185 @@ export const notificationsApi = {
   },
 }
 
+// ============================================================================
+// USERS API
+// ============================================================================
+
+export const usersApi = {
+  getUsers: async (params?: { page?: number; limit?: number; search?: string }) => {
+    const response = await api.get('/users', { params })
+    return response.data
+  },
+
+  getTeamMembers: async () => {
+    const response = await api.get('/users')
+    return response.data?.data?.users || response.data?.users || []
+  },
+}
+
+// ============================================================================
+// ADMIN API
+// ============================================================================
+
+export const adminApi = {
+  // System Settings
+  getSystemSettings: async () => {
+    const response = await api.get('/admin/system-settings')
+    return response.data
+  },
+
+  updateSystemSettings: async (data: any) => {
+    const response = await api.put('/admin/system-settings', data)
+    return response.data
+  },
+
+  // Health Check
+  healthCheck: async () => {
+    const response = await api.get('/admin/health')
+    return response.data
+  },
+
+  // Database Maintenance
+  runMaintenance: async (operation: string, options?: any) => {
+    const response = await api.post('/admin/maintenance', { operation, ...options })
+    return response.data
+  },
+
+  // Admin Stats (existing)
+  getStats: async () => {
+    const response = await api.get('/admin/stats')
+    return response.data
+  },
+}
+
+// ============================================================================
+// BILLING API
+// ============================================================================
+
+export const billingApi = {
+  getSubscription: async () => {
+    const response = await api.get('/billing/subscription')
+    return response.data
+  },
+
+  createCheckoutSession: async (planId: string) => {
+    const response = await api.post('/billing/checkout', { planId })
+    return response.data
+  },
+
+  getBillingPortal: async () => {
+    const response = await api.post('/billing/portal')
+    return response.data
+  },
+
+  getInvoices: async () => {
+    const response = await api.get('/billing/invoices')
+    return response.data
+  },
+
+  getPaymentMethods: async () => {
+    const response = await api.get('/billing/payment-methods')
+    return response.data
+  },
+}
+
 // Export the axios instance as default for backward compatibility
+
+// ============================================================================
+// SEGMENTS API
+// ============================================================================
+
+export const segmentsApi = {
+  getSegments: async () => {
+    const response = await api.get('/segments')
+    return response.data
+  },
+
+  getSegment: async (id: string) => {
+    const response = await api.get(`/segments/${id}`)
+    return response.data
+  },
+
+  createSegment: async (data: { name: string; description?: string; rules: any[]; matchType?: string; color?: string }) => {
+    const response = await api.post('/segments', data)
+    return response.data
+  },
+
+  updateSegment: async (id: string, data: Partial<{ name: string; description?: string; rules: any[]; matchType?: string; color?: string; isActive?: boolean }>) => {
+    const response = await api.patch(`/segments/${id}`, data)
+    return response.data
+  },
+
+  deleteSegment: async (id: string) => {
+    const response = await api.delete(`/segments/${id}`)
+    return response.data
+  },
+
+  getSegmentMembers: async (id: string, params?: { page?: number; limit?: number }) => {
+    const response = await api.get(`/segments/${id}/members`, { params })
+    return response.data
+  },
+
+  refreshCounts: async () => {
+    const response = await api.post('/segments/refresh')
+    return response.data
+  },
+}
+
+// ============================================================================
+// EXPORT API — Server-side export for large datasets (Phase 8.8)
+// ============================================================================
+
+export const exportApi = {
+  /**
+   * Download server-generated export file
+   * @param type - 'leads' | 'campaigns' | 'activities'
+   * @param format - 'xlsx' | 'csv'
+   * @param filters - optional query filters
+   */
+  download: async (
+    type: 'leads' | 'campaigns' | 'activities',
+    format: 'xlsx' | 'csv' = 'xlsx',
+    filters?: {
+      status?: string;
+      source?: string;
+      assignedTo?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      fields?: string[];
+    }
+  ) => {
+    const params: any = { format };
+    if (filters?.status) params.status = filters.status;
+    if (filters?.source) params.source = filters.source;
+    if (filters?.assignedTo) params.assignedTo = filters.assignedTo;
+    if (filters?.dateFrom) params.dateFrom = filters.dateFrom;
+    if (filters?.dateTo) params.dateTo = filters.dateTo;
+    if (filters?.fields) params.fields = filters.fields.join(',');
+
+    const response = await api.get(`/export/${type}`, {
+      params,
+      responseType: 'blob',
+    });
+
+    // Trigger browser download
+    const blob = new Blob([response.data], {
+      type: format === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'text/csv',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const timestamp = new Date().toISOString().split('T')[0];
+    a.download = `${type}_export_${timestamp}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    return { success: true, records: 0 }; // record count not known from blob
+  },
+}
+
 export default api

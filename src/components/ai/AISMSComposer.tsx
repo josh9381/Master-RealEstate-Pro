@@ -3,31 +3,35 @@ import { X, Sparkles, Send, RefreshCw, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
+import { aiApi, messagesApi } from '@/lib/api'
+import { useToast } from '@/hooks/useToast'
+import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 
 interface AISMSComposerProps {
   isOpen: boolean
   onClose: () => void
   leadName?: string
   leadPhone?: string
+  leadId?: string
 }
 
 const smsTemplates = [
   {
     id: '1',
     tone: 'Professional',
-    message: "Hi {{name}}, this is Sarah from CRM Pro. I wanted to follow up on our conversation. Do you have 10 minutes this week for a quick demo? Let me know what works for you!",
-    chars: 158,
+    message: "Hi {{name}}, I wanted to follow up on our conversation. Do you have 10 minutes this week for a quick demo? Let me know what works for you!",
+    chars: 140,
   },
   {
     id: '2',
     tone: 'Friendly',
-    message: "Hey {{name}}! 👋 Quick question - would you be interested in seeing how our CRM could help your team? I can show you a quick 10-min demo. Available this week?",
+    message: "Hey {{name}}! \uD83D\uDC4B Quick question - would you be interested in seeing how our platform could help your team? I can show you a quick 10-min demo. Available this week?",
     chars: 149,
   },
   {
     id: '3',
     tone: 'Brief',
-    message: "Hi {{name}}, Sarah here from CRM Pro. Available for a 10min demo this week? Just reply with a good time. Thanks!",
+    message: "Hi {{name}}, following up on our chat. Available for a 10min demo this week? Just reply with a good time. Thanks!",
     chars: 111,
   },
 ]
@@ -35,13 +39,16 @@ const smsTemplates = [
 export function AISMSComposer({ 
   isOpen, 
   onClose, 
-  leadName = 'John',
-  leadPhone = '+1 (555) 123-4567'
+  leadName = '',
+  leadPhone = '',
+  leadId,
 }: AISMSComposerProps) {
   const [selectedTemplate, setSelectedTemplate] = useState(smsTemplates[0])
   const [customMessage, setCustomMessage] = useState('')
   const [isCustom, setIsCustom] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const { toast } = useToast()
 
   if (!isOpen) return null
 
@@ -49,19 +56,60 @@ export function AISMSComposer({
   const charCount = currentMessage.length
   const segmentCount = Math.ceil(charCount / 160)
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
     setIsGenerating(true)
-    setTimeout(() => {
-      // Shuffle templates for demo
-      const newTemplate = smsTemplates[Math.floor(Math.random() * smsTemplates.length)]
-      setSelectedTemplate(newTemplate)
+    try {
+      const result = await aiApi.generateSMS({
+        leadName,
+        leadPhone,
+        tone: selectedTemplate.tone.toLowerCase(),
+        purpose: 'follow-up',
+      })
+      if (result.success && result.data) {
+        const message = result.data.message || result.data.content || result.data.sms || ''
+        setSelectedTemplate({
+          id: Date.now().toString(),
+          tone: selectedTemplate.tone,
+          message,
+          chars: message.length,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to generate SMS:', error)
+      const aiMsg = getAIUnavailableMessage(error)
+      if (aiMsg) {
+        toast.error(aiMsg)
+      } else {
+        toast.error('Failed to generate SMS. Please try again.')
+      }
+      // Keep existing template on failure
+    } finally {
       setIsGenerating(false)
-    }, 1000)
+    }
   }
 
-  const handleSend = () => {
-    alert(`SMS would be sent to ${leadPhone}:\n\n${currentMessage}`)
-    onClose()
+  const handleSend = async () => {
+    if (!leadPhone) {
+      toast.error('No phone number provided')
+      return
+    }
+    setIsSending(true)
+    try {
+      const result = await messagesApi.sendSMS({
+        to: leadPhone,
+        body: currentMessage,
+        leadId,
+      })
+      if (result.success) {
+        toast.success(`SMS sent to ${leadName || leadPhone}`)
+        onClose()
+      }
+    } catch (error) {
+      console.error('Failed to send SMS:', error)
+      toast.error('Failed to send SMS. Please try again.')
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
@@ -234,9 +282,9 @@ export function AISMSComposer({
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSend} className="bg-gradient-to-r from-green-600 to-emerald-600">
+            <Button onClick={handleSend} disabled={isSending} className="bg-gradient-to-r from-green-600 to-emerald-600">
               <Send className="mr-2 h-4 w-4" />
-              Send SMS
+              {isSending ? 'Sending...' : 'Send SMS'}
             </Button>
           </div>
         </div>

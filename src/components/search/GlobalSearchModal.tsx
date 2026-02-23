@@ -32,7 +32,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     queryFn: async () => {
       if (!searchQuery) return null
       const response = await api.get('/leads', { params: { search: searchQuery, limit: 5 } })
-      return response.data
+      return response.data?.data || response.data
     },
     enabled: searchQuery.length > 0,
   })
@@ -43,7 +43,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     queryFn: async () => {
       if (!searchQuery) return null
       const response = await api.get('/campaigns', { params: { search: searchQuery, limit: 5 } })
-      return response.data
+      return response.data?.data || response.data
     },
     enabled: searchQuery.length > 0,
   })
@@ -54,7 +54,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     queryFn: async () => {
       if (!searchQuery) return null
       const response = await api.get('/workflows', { params: { search: searchQuery, limit: 5 } })
-      return response.data
+      return response.data?.data || response.data
     },
     enabled: searchQuery.length > 0,
   })

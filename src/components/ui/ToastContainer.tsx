@@ -1,4 +1,4 @@
-import { useToastStore, type ToastType } from '@/store/toastStore'
+import { useToastStore } from '@/store/toastStore'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { Button } from './Button'
 

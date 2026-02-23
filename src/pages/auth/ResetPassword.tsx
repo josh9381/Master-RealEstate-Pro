@@ -1,22 +1,62 @@
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { useToast } from '@/hooks/useToast';
+import { authApi } from '@/lib/api';
 
 const ResetPassword = () => {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const _navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
 
-  const passwordRequirements = [
-    { met: true, text: 'At least 8 characters' },
-    { met: true, text: 'Contains uppercase letter' },
-    { met: false, text: 'Contains lowercase letter' },
-    { met: true, text: 'Contains a number' },
-    { met: false, text: 'Contains special character' },
-  ];
+  const passwordRequirements = useMemo(() => [
+    { met: password.length >= 8, text: 'At least 8 characters' },
+    { met: /[A-Z]/.test(password), text: 'Contains uppercase letter' },
+    { met: /[a-z]/.test(password), text: 'Contains lowercase letter' },
+    { met: /[0-9]/.test(password), text: 'Contains a number' },
+    { met: /[^A-Za-z0-9]/.test(password), text: 'Contains special character' },
+  ], [password]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (password !== confirmPassword) {
+      toast.error('Password mismatch', 'Passwords do not match.');
+      return;
+    }
+
+    const allMet = passwordRequirements.every(r => r.met);
+    if (!allMet) {
+      toast.error('Weak password', 'Please meet all password requirements.');
+      return;
+    }
+
+    const token = searchParams.get('token');
+    if (!token) {
+      toast.error('Invalid link', 'No reset token found. Please request a new reset link.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await authApi.resetPassword(token, password);
+      toast.success('Password reset!', 'Your password has been updated. Please sign in.');
+      navigate('/auth/login');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error('Reset failed', err.response?.data?.message || 'Could not reset password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -39,6 +79,8 @@ const ResetPassword = () => {
               <Input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Enter new password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
               <button
                 type="button"
@@ -56,6 +98,8 @@ const ResetPassword = () => {
               <Input
                 type={showConfirmPassword ? 'text' : 'password'}
                 placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
               />
               <button
                 type="button"
@@ -82,8 +126,8 @@ const ResetPassword = () => {
             ))}
           </div>
 
-          <Button className="w-full">
-            Reset Password
+          <Button className="w-full" onClick={handleSubmit} loading={loading} disabled={loading}>
+            {loading ? 'Resetting...' : 'Reset Password'}
           </Button>
 
           <div className="pt-4 border-t text-center">

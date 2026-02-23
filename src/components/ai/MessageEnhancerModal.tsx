@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Sparkles, Loader2, Check, X } from 'lucide-react';
 import { enhanceMessage } from '@/services/aiService';
 import { useToast } from '@/hooks/useToast';
+import { getAIUnavailableMessage } from '@/hooks/useAIAvailability';
 
 interface MessageEnhancerModalProps {
   isOpen: boolean;
@@ -46,7 +47,12 @@ export function MessageEnhancerModal({
       toast.success('Message enhanced successfully!');
     } catch (error) {
       console.error('Enhancement error:', error);
-      toast.error('Failed to enhance message. Please try again.');
+      const aiMsg = getAIUnavailableMessage(error);
+      if (aiMsg) {
+        toast.error(aiMsg);
+      } else {
+        toast.error('Failed to enhance message. Please try again.');
+      }
     } finally {
       setIsEnhancing(false);
     }

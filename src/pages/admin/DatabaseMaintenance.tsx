@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Database, Zap, RefreshCw, FileText } from 'lucide-react';
+import { Database, Zap, RefreshCw, FileText, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { adminApi } from '@/lib/api';
 
 const DatabaseMaintenance = () => {
   const { toast } = useToast();
@@ -11,97 +12,57 @@ const DatabaseMaintenance = () => {
   const [analyze, setAnalyze] = useState(true);
   const [backupSchedule, setBackupSchedule] = useState('Daily at 2:00 AM');
   const [retentionPeriod, setRetentionPeriod] = useState('7 days');
+  const [runningOp, setRunningOp] = useState<string | null>(null);
 
-  const handleOptimize = () => {
-    toast.info('Optimizing database...');
-    setTimeout(() => {
-      toast.success('Database optimized successfully');
-    }, 2000);
+  const runMaintenanceOp = async (operation: string, label: string, options?: any) => {
+    setRunningOp(operation);
+    toast.info(`Running ${label}...`);
+    try {
+      await adminApi.runMaintenance(operation, options);
+      toast.success(`${label} completed successfully`);
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        toast.error('This feature requires backend setup — maintenance endpoint not available');
+      } else {
+        const message = error?.response?.data?.message || `Failed to run ${label}`;
+        toast.error(message);
+      }
+    } finally {
+      setRunningOp(null);
+    }
   };
 
-  const handleReindex = () => {
-    toast.info('Reindexing tables...');
-    setTimeout(() => {
-      toast.success('All tables reindexed successfully');
-    }, 2500);
-  };
-
-  const handleBackup = () => {
-    toast.info('Creating database backup...');
-    setTimeout(() => {
-      toast.success('Backup created successfully');
-    }, 1500);
-  };
+  const handleOptimize = () => runMaintenanceOp('optimize', 'Database optimization');
+  const handleReindex = () => runMaintenanceOp('reindex', 'Table reindexing');
+  const handleBackup = () => runMaintenanceOp('backup', 'Database backup');
 
   const handleVacuum = () => {
-    const options = [];
+    const options: string[] = [];
     if (vacuumFull) options.push('FULL');
     if (analyze) options.push('ANALYZE');
-    
-    toast.info(`Running VACUUM ${options.join(' + ')}...`);
-    setTimeout(() => {
-      toast.success('Vacuum completed successfully');
-    }, 3000);
+    runMaintenanceOp('vacuum', `VACUUM ${options.join(' + ')}`, { vacuumFull, analyze });
   };
 
-  const handleReindexAll = () => {
-    toast.info('Reindexing all tables...');
-    setTimeout(() => {
-      toast.success('All indexes rebuilt successfully');
-    }, 2500);
-  };
+  const handleReindexAll = () => runMaintenanceOp('reindex_all', 'Full reindex');
 
   const handleCluster = () => {
     if (confirm('This will lock tables and may take significant time. Continue?')) {
-      toast.info('Clustering tables...');
-      setTimeout(() => {
-        toast.success('Tables clustered successfully');
-      }, 3500);
+      runMaintenanceOp('cluster', 'Table clustering');
     }
   };
 
   const handleOptimizeTable = (tableName: string) => {
-    toast.info(`Optimizing ${tableName} table...`);
-    setTimeout(() => {
-      toast.success(`Table ${tableName} optimized`);
-    }, 1500);
+    runMaintenanceOp('optimize_table', `Optimize ${tableName}`, { table: tableName });
   };
 
   const handleViewDetails = (tableName: string) => {
     toast.info(`Viewing details for ${tableName} table`);
   };
 
-  const handleBackupNow = () => {
-    toast.info('Creating backup...');
-    setTimeout(() => {
-      toast.success('Backup created successfully');
-    }, 1500);
-  };
+  const handleBackupNow = () => runMaintenanceOp('backup', 'Backup creation');
 
   const handleViewHistory = () => {
     toast.info('Opening backup history...');
-  };
-
-  const handleTruncateAll = () => {
-    if (confirm('⚠️ WARNING: This will delete ALL data from ALL tables. This cannot be undone. Are you absolutely sure?')) {
-      if (confirm('Type "DELETE ALL DATA" to confirm (just click OK for demo)')) {
-        toast.error('Truncating all tables...');
-        setTimeout(() => {
-          toast.success('All tables truncated');
-        }, 2000);
-      }
-    }
-  };
-
-  const handleDropDatabase = () => {
-    if (confirm('🚨 DANGER: This will permanently delete the ENTIRE database. This cannot be undone. Are you absolutely sure?')) {
-      if (confirm('Type "DROP DATABASE" to confirm (just click OK for demo)')) {
-        toast.error('Dropping database...');
-        setTimeout(() => {
-          toast.error('Database dropped (demo mode - not actually dropped)');
-        }, 2000);
-      }
-    }
   };
 
   return (
@@ -167,22 +128,22 @@ const DatabaseMaintenance = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <Button className="h-auto py-4 flex-col" onClick={handleOptimize}>
-              <Zap className="h-6 w-6 mb-2" />
+            <Button className="h-auto py-4 flex-col" onClick={handleOptimize} disabled={!!runningOp}>
+              {runningOp === 'optimize' ? <Loader2 className="h-6 w-6 mb-2 animate-spin" /> : <Zap className="h-6 w-6 mb-2" />}
               <span className="font-semibold">Optimize Database</span>
               <span className="text-xs text-muted-foreground mt-1">
                 Run vacuum and analyze
               </span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col" onClick={handleReindex}>
-              <RefreshCw className="h-6 w-6 mb-2" />
+            <Button variant="outline" className="h-auto py-4 flex-col" onClick={handleReindex} disabled={!!runningOp}>
+              {runningOp === 'reindex' ? <Loader2 className="h-6 w-6 mb-2 animate-spin" /> : <RefreshCw className="h-6 w-6 mb-2" />}
               <span className="font-semibold">Reindex Tables</span>
               <span className="text-xs text-muted-foreground mt-1">
                 Rebuild all indexes
               </span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col" onClick={handleBackup}>
-              <Database className="h-6 w-6 mb-2" />
+            <Button variant="outline" className="h-auto py-4 flex-col" onClick={handleBackup} disabled={!!runningOp}>
+              {runningOp === 'backup' ? <Loader2 className="h-6 w-6 mb-2 animate-spin" /> : <Database className="h-6 w-6 mb-2" />}
               <span className="font-semibold">Backup Database</span>
               <span className="text-xs text-muted-foreground mt-1">
                 Create manual backup
@@ -405,30 +366,33 @@ const DatabaseMaintenance = () => {
         </CardContent>
       </Card>
 
-      {/* Danger Zone */}
-      <Card className="border-red-200">
+      {/* Danger Zone - Destructive operations removed for safety */}
+      <Card className="border-orange-200">
         <CardHeader>
-          <CardTitle className="text-red-600">Danger Zone</CardTitle>
-          <CardDescription>Dangerous operations - use with caution</CardDescription>
+          <CardTitle className="text-orange-600 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>Destructive database operations have been disabled for safety</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-orange-200 rounded-lg bg-orange-50">
             <div>
-              <h4 className="font-semibold">Truncate All Tables</h4>
+              <h4 className="font-semibold text-muted-foreground">Truncate All Tables</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Delete all data from all tables (structure remains)
+                This operation has been disabled. Contact your database administrator for data cleanup.
               </p>
             </div>
-            <Button variant="destructive" onClick={handleTruncateAll}>Truncate All</Button>
+            <Button variant="outline" disabled>Disabled</Button>
           </div>
-          <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-orange-200 rounded-lg bg-orange-50">
             <div>
-              <h4 className="font-semibold">Drop Database</h4>
+              <h4 className="font-semibold text-muted-foreground">Drop Database</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Permanently delete the entire database
+                This operation has been disabled. Database destruction must be done via infrastructure tools.
               </p>
             </div>
-            <Button variant="destructive" onClick={handleDropDatabase}>Drop Database</Button>
+            <Button variant="outline" disabled>Disabled</Button>
           </div>
         </CardContent>
       </Card>

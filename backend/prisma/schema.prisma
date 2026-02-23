@@ -20,8 +20,8 @@ model Activity {
   organizationId String
   campaign       Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User?        @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([campaignId])
   @@index([createdAt])
@@ -61,10 +61,10 @@ model Appointment {
   attendees      Json?
   reminderSent   Boolean           @default(false)
   createdAt      DateTime          @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime          @updatedAt
   organizationId String
-  lead           Lead?             @relation(fields: [leadId], references: [id])
-  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead           Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
@@ -115,9 +115,9 @@ model Campaign {
   roi              Float?
   isABTest         Boolean        @default(false)
   abTestData       Json?
-  createdById      String
+  createdById      String?
   createdAt        DateTime       @default(now())
-  updatedAt        DateTime @updatedAt
+  updatedAt        DateTime       @updatedAt
   frequency        String?
   isRecurring      Boolean        @default(false)
   lastSentAt       DateTime?
@@ -130,8 +130,8 @@ model Campaign {
   organizationId   String
   ABTestResult     ABTestResult[]
   activities       Activity[]
-  user             User           @relation(fields: [createdById], references: [id])
-  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   tags             Tag[]          @relation("CampaignToTag")
 
   @@index([createdAt])
@@ -175,9 +175,9 @@ model EmailTemplate {
   usageCount     Int          @default(0)
   lastUsedAt     DateTime?
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime     @updatedAt
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([category])
   @@index([isActive])
@@ -196,7 +196,7 @@ model Integration {
   syncStatus  String?
   syncError   String?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
@@ -217,7 +217,7 @@ model Lead {
   stage             String?
   assignedToId      String?
   createdAt         DateTime       @default(now())
-  updatedAt         DateTime @updatedAt
+  updatedAt         DateTime       @updatedAt
   lastContactAt     DateTime?
   customFields      Json?
   firstName         String
@@ -233,9 +233,10 @@ model Lead {
   appointments      Appointment[]
   Call              Call[]
   assignedTo        User?          @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
-  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   messages          Message[]
   notes             Note[]
+  tasks             Task[]
   tags              Tag[]          @relation("LeadToTag")
 
   @@unique([organizationId, email])
@@ -278,9 +279,12 @@ model Message {
   maxRetries      Int              @default(3)
   retryCount      Int              @default(0)
   spamComplaintAt DateTime?
+  starred         Boolean          @default(false)
+  archived        Boolean          @default(false)
+  snoozedUntil    DateTime?
   organizationId  String
-  lead            Lead?            @relation(fields: [leadId], references: [id])
-  organization Organization     @relation(fields: [organizationId], references: [id])
+  lead            Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([direction])
@@ -301,10 +305,10 @@ model Note {
   id        String   @id @default(cuid())
   content   String
   leadId    String
-  authorId  String
+  authorId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  author    User     @relation("NoteAuthor", fields: [authorId], references: [id])
+  author    User?    @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
@@ -346,9 +350,9 @@ model SMSTemplate {
   usageCount     Int          @default(0)
   lastUsedAt     DateTime?
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime     @updatedAt
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([category])
   @@index([isActive])
@@ -362,7 +366,7 @@ model Tag {
   color          String?
   createdAt      DateTime     @default(now())
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   campaigns      Campaign[]   @relation("CampaignToTag")
   leads          Lead[]       @relation("LeadToTag")
 
@@ -371,19 +375,24 @@ model Tag {
 }
 
 model Task {
-  id           String       @id @default(cuid())
-  title        String
-  description  String?
-  dueDate      DateTime?
-  priority     TaskPriority @default(MEDIUM)
-  status       TaskStatus   @default(PENDING)
-  assignedToId String?
-  leadId       String?
-  completedAt  DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime @updatedAt
-  assignedTo   User?        @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  status         TaskStatus   @default(PENDING)
+  priority       TaskPriority @default(MEDIUM)
+  dueDate        DateTime?
+  leadId         String?
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assignedToId   String?
+  assignedTo     User?        @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  completedAt    DateTime?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
+  @@index([organizationId])
+  @@index([leadId])
   @@index([assignedToId])
   @@index([dueDate])
   @@index([priority])
@@ -395,9 +404,10 @@ model Team {
   name             String
   slug             String           @unique
   settings         Json?
+  // Cached from Subscription.tier — kept in sync by subscription update logic
   subscriptionTier SubscriptionTier @default(FREE)
   createdAt        DateTime         @default(now())
-  updatedAt        DateTime @updatedAt
+  updatedAt        DateTime         @updatedAt
   teamMembers      TeamMember[]
 
   @@index([slug])
@@ -433,11 +443,12 @@ model User {
   lastLoginIp          String?
   twoFactorEnabled     Boolean               @default(false)
   twoFactorSecret      String?
+  // Cached from Subscription.tier — kept in sync by subscription update logic
   subscriptionTier     SubscriptionTier      @default(FREE)
   subscriptionId       String?
   trialEndsAt          DateTime?
   createdAt            DateTime              @default(now())
-  updatedAt            DateTime @updatedAt
+  updatedAt            DateTime              @updatedAt
   organizationId       String
   ABTest               ABTest[]
   aPIKeyAudit          APIKeyAudit[]
@@ -456,7 +467,7 @@ model User {
   smsConfig            SMSConfig?
   tasks                Task[]                @relation("TaskAssignedTo")
   teamMembers          TeamMember[]
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   UserAIPreferences    UserAIPreferences?
 
   @@unique([organizationId, email])
@@ -477,15 +488,33 @@ model Workflow {
   successRate        Float?
   lastRunAt          DateTime?
   createdAt          DateTime            @default(now())
-  updatedAt          DateTime @updatedAt
+  updatedAt          DateTime            @updatedAt
   organizationId     String
-  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   workflowExecutions WorkflowExecution[]
 
   @@index([isActive])
   @@index([triggerType])
   @@index([organizationId])
   @@index([organizationId, isActive])
+}
+
+model Segment {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  rules          Json         // Array of { field, operator, value } filter rules
+  matchType      String       @default("all") // "all" = AND, "any" = OR
+  memberCount    Int          @default(0)
+  isActive       Boolean      @default(true)
+  color          String?      @default("#3B82F6")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([isActive])
 }
 
 model WorkflowExecution {
@@ -510,7 +539,7 @@ model ABTest {
   description      String?
   type             ABTestType
   organizationId   String
-  createdBy        String
+  createdBy        String?
   variantA         Json
   variantB         Json
   status           ABTestStatus   @default(DRAFT)
@@ -520,10 +549,10 @@ model ABTest {
   winnerId         String?
   confidence       Float?
   createdAt        DateTime       @default(now())
-  updatedAt        DateTime @updatedAt
-  creator User           @relation(fields: [createdBy], references: [id])
-  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  results     ABTestResult[]
+  updatedAt        DateTime       @updatedAt
+  creator          User?          @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  results          ABTestResult[]
 
   @@index([createdBy])
   @@index([organizationId])
@@ -543,9 +572,9 @@ model ABTestResult {
   repliedAt  DateTime?
   metadata   Json?
   createdAt  DateTime  @default(now())
-  campaign Campaign? @relation(fields: [campaignId], references: [id])
-  lead Lead?     @relation(fields: [leadId], references: [id])
-  abtest ABTest    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  lead       Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  abtest     ABTest    @relation(fields: [testId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([converted])
@@ -566,8 +595,8 @@ model AIAssistant {
   phoneNumber     String?
   isActive        Boolean      @default(true)
   createdAt       DateTime     @default(now())
-  updatedAt       DateTime @updatedAt
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   Call            Call[]
 
   @@index([organizationId])
@@ -591,10 +620,10 @@ model Call {
   appointmentBooked Boolean      @default(false)
   metadata          Json?
   createdAt         DateTime     @default(now())
-  updatedAt         DateTime @updatedAt
-  aiassistant AIAssistant? @relation(fields: [assistantId], references: [id])
-  lead Lead?        @relation(fields: [leadId], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedAt         DateTime     @updatedAt
+  aiassistant       AIAssistant? @relation(fields: [assistantId], references: [id], onDelete: SetNull)
+  lead              Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([direction])
   @@index([leadId])
@@ -612,8 +641,8 @@ model ChatMessage {
   cost           Float?
   metadata       Json?
   createdAt      DateTime     @default(now())
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
   @@index([organizationId])
@@ -632,7 +661,7 @@ model Invoice {
   paidAt          DateTime?
   pdfUrl          String?
   createdAt       DateTime      @default(now())
-  subscription Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  subscription    Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([subscriptionId])
@@ -645,11 +674,11 @@ model LeadScoringModel {
   lastTrainedAt     DateTime?
   trainingDataCount Int          @default(0)
   createdAt         DateTime     @default(now())
-  updatedAt         DateTime @updatedAt
+  updatedAt         DateTime     @updatedAt
   userId            String       @unique
   organizationId    String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
 }
@@ -664,8 +693,8 @@ model Notification {
   link           String?
   read           Boolean      @default(false)
   createdAt      DateTime     @default(now())
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([organizationId])
@@ -679,12 +708,13 @@ model Organization {
   slug              String              @unique
   domain            String?             @unique
   logo              String?
+  // Cached from Subscription.tier — kept in sync by subscription update logic
   subscriptionTier  SubscriptionTier    @default(FREE)
   subscriptionId    String?
   trialEndsAt       DateTime?
   isActive          Boolean             @default(true)
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime @updatedAt
+  updatedAt         DateTime            @updatedAt
   ABTest            ABTest[]
   AIAssistant       AIAssistant[]
   Activity          Activity[]
@@ -697,10 +727,12 @@ model Organization {
   LeadScoringModel  LeadScoringModel[]
   Message           Message[]
   Notification      Notification[]
+  Segment           Segment[]
   SMSTemplate       SMSTemplate[]
   Subscription      Subscription?
   Tag               Tag[]
-  users              User[]
+  Task              Task[]
+  users             User[]
   UserAIPreferences UserAIPreferences[]
   Workflow          Workflow[]
 
@@ -722,9 +754,9 @@ model Subscription {
   cancelAt             DateTime?
   canceledAt           DateTime?
   createdAt            DateTime           @default(now())
-  updatedAt            DateTime @updatedAt
+  updatedAt            DateTime           @updatedAt
   Invoice              Invoice[]
-  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   UsageTracking        UsageTracking[]
 }
 
@@ -736,8 +768,8 @@ model UsageTracking {
   callMinutes    Float        @default(0)
   enhancements   Int          @default(0)
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime @updatedAt
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime     @updatedAt
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@unique([subscriptionId, month])
   @@index([month])
@@ -753,10 +785,10 @@ model UserAIPreferences {
   aiInsightsFrequency  String       @default("daily")
   customInstructions   String?
   createdAt            DateTime     @default(now())
-  updatedAt            DateTime @updatedAt
+  updatedAt            DateTime     @updatedAt
   organizationId       String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
 }
@@ -799,6 +831,7 @@ enum AppointmentType {
 enum CampaignStatus {
   DRAFT
   SCHEDULED
+  SENDING
   ACTIVE
   PAUSED
   COMPLETED

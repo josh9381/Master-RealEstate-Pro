@@ -4,11 +4,14 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useState, useEffect } from 'react';
 import { activitiesApi } from '@/lib/api';
+import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
 
 const LeadHistory = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [timeline, setTimeline] = useState<any[]>([]);
+  const [allTimeline, setAllTimeline] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
   const [stats, setStats] = useState({
     total: 0,
     statusChanges: 0,
@@ -27,7 +30,7 @@ const LeadHistory = () => {
     setIsLoading(true);
     try {
       const response = await activitiesApi.getActivities({ limit: 50 });
-      const activities = response.data || [];
+      const activities = response.data?.activities || [];
       
       // Transform activities to timeline format
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,13 +39,16 @@ const LeadHistory = () => {
         type: activity.type || 'activity',
         title: formatTitle(activity.type),
         description: activity.description || 'No description',
-        user: activity.userId ? `User ${activity.userId}` : 'System',
+        user: activity.user 
+          ? `${activity.user.firstName || ''} ${activity.user.lastName || ''}`.trim() || 'System'
+          : 'System',
         timestamp: activity.createdAt ? new Date(activity.createdAt).toLocaleString() : 'Unknown',
         icon: getIconForType(activity.type),
         color: getColorForType(activity.type),
       }));
 
       setTimeline(timelineItems);
+      setAllTimeline(timelineItems);
 
       // Calculate stats
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,6 +110,15 @@ const LeadHistory = () => {
     return colors[type] || 'gray';
   };
 
+  const handleFilterChange = (filterType: string) => {
+    setActiveFilter(filterType);
+    if (filterType === 'all') {
+      setTimeline(allTimeline);
+    } else {
+      setTimeline(allTimeline.filter(item => item.type === filterType));
+    }
+  };
+
   const displayStats = [
     { label: 'Total Activities', value: stats.total.toString() },
     { label: 'Status Changes', value: stats.statusChanges.toString() },
@@ -115,6 +130,9 @@ const LeadHistory = () => {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <LeadsSubNav />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Lead Activity History</h1>
@@ -221,23 +239,47 @@ const LeadHistory = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="default" className="cursor-pointer">
-              All Activities (47)
+            <Badge 
+              variant={activeFilter === 'all' ? 'default' : 'outline'} 
+              className="cursor-pointer"
+              onClick={() => handleFilterChange('all')}
+            >
+              All Activities ({stats.total})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer">
-              Status Changes (8)
+            <Badge 
+              variant={activeFilter === 'status_change' ? 'default' : 'outline'} 
+              className="cursor-pointer"
+              onClick={() => handleFilterChange('status_change')}
+            >
+              Status Changes ({stats.statusChanges})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer">
-              Emails (12)
+            <Badge 
+              variant={activeFilter === 'email' ? 'default' : 'outline'} 
+              className="cursor-pointer"
+              onClick={() => handleFilterChange('email')}
+            >
+              Emails ({stats.emails})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer">
-              Notes (15)
+            <Badge 
+              variant={activeFilter === 'note' ? 'default' : 'outline'} 
+              className="cursor-pointer"
+              onClick={() => handleFilterChange('note')}
+            >
+              Notes ({stats.notes})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer">
-              Tasks (9)
+            <Badge 
+              variant={activeFilter === 'task' ? 'default' : 'outline'} 
+              className="cursor-pointer"
+              onClick={() => handleFilterChange('task')}
+            >
+              Tasks ({stats.tasks})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer">
-              Calls (3)
+            <Badge 
+              variant={activeFilter === 'call' ? 'default' : 'outline'} 
+              className="cursor-pointer"
+              onClick={() => handleFilterChange('call')}
+            >
+              Calls ({stats.calls})
             </Badge>
           </div>
         </CardContent>

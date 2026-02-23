@@ -1,12 +1,16 @@
-import { useState } from 'react';
-import { Users, Shield, Activity, Settings } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Users, Shield, Activity, Settings, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { adminApi } from '@/lib/api';
 
 const SystemSettings = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [savingGeneral, setSavingGeneral] = useState(false);
+  const [savingSecurity, setSavingSecurity] = useState(false);
   
   // General Settings
   const [systemName, setSystemName] = useState('Your CRM System');
@@ -24,22 +28,111 @@ const SystemSettings = () => {
   const [sessionTimeout, setSessionTimeout] = useState(60);
   const [maxLoginAttempts, setMaxLoginAttempts] = useState(5);
   const [lockoutDuration, setLockoutDuration] = useState(30);
+
+  // Load settings from API on mount
+  const loadSettings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await adminApi.getSystemSettings();
+      const data = response.data || response;
+      
+      if (data.general) {
+        setSystemName(data.general.systemName || 'Your CRM System');
+        setSystemUrl(data.general.systemUrl || 'https://crm.yourcompany.com');
+        setSystemDescription(data.general.systemDescription || '');
+        setLanguage(data.general.language || 'en');
+        setTimezone(data.general.timezone || 'America/New_York');
+        setDateFormat(data.general.dateFormat || 'MM/DD/YYYY');
+        setTimeFormat(data.general.timeFormat || '12');
+      }
+
+      if (data.security) {
+        setStrongPasswords(data.security.strongPasswords ?? true);
+        setEnable2FA(data.security.enable2FA ?? true);
+        setRequire2FAAdmins(data.security.require2FAAdmins ?? true);
+        setSessionTimeout(data.security.sessionTimeout ?? 60);
+        setMaxLoginAttempts(data.security.maxLoginAttempts ?? 5);
+        setLockoutDuration(data.security.lockoutDuration ?? 30);
+      }
+    } catch (error: any) {
+      // If 404 or no endpoint, use defaults silently
+      if (error?.response?.status !== 404) {
+        console.error('Failed to load system settings:', error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
   
-  const handleSaveGeneralSettings = () => {
+  const handleSaveGeneralSettings = async () => {
     if (!systemName || !systemUrl) {
       toast.error('System name and URL are required');
       return;
     }
-    toast.success('General settings saved successfully');
+    
+    setSavingGeneral(true);
+    try {
+      await adminApi.updateSystemSettings({
+        section: 'general',
+        data: {
+          systemName,
+          systemUrl,
+          systemDescription,
+          language,
+          timezone,
+          dateFormat,
+          timeFormat,
+        },
+      });
+      toast.success('General settings saved successfully');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to save general settings';
+      toast.error(message);
+    } finally {
+      setSavingGeneral(false);
+    }
   };
   
-  const handleSaveSecuritySettings = () => {
+  const handleSaveSecuritySettings = async () => {
     if (sessionTimeout < 1 || maxLoginAttempts < 1 || lockoutDuration < 1) {
       toast.error('Please enter valid positive numbers for all fields');
       return;
     }
-    toast.success('Security settings saved successfully');
+
+    setSavingSecurity(true);
+    try {
+      await adminApi.updateSystemSettings({
+        section: 'security',
+        data: {
+          strongPasswords,
+          enable2FA,
+          require2FAAdmins,
+          sessionTimeout,
+          maxLoginAttempts,
+          lockoutDuration,
+        },
+      });
+      toast.success('Security settings saved successfully');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to save security settings';
+      toast.error(message);
+    } finally {
+      setSavingSecurity(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Loading system settings...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -184,7 +277,10 @@ const SystemSettings = () => {
               </select>
             </div>
           </div>
-          <Button onClick={handleSaveGeneralSettings}>Save General Settings</Button>
+          <Button onClick={handleSaveGeneralSettings} disabled={savingGeneral}>
+            {savingGeneral && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Save General Settings
+          </Button>
         </CardContent>
       </Card>
 
@@ -258,7 +354,10 @@ const SystemSettings = () => {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-          <Button onClick={handleSaveSecuritySettings}>Save Security Settings</Button>
+          <Button onClick={handleSaveSecuritySettings} disabled={savingSecurity}>
+            {savingSecurity && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Save Security Settings
+          </Button>
         </CardContent>
       </Card>
 

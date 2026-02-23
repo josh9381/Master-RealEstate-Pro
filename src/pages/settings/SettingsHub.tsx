@@ -1,11 +1,7 @@
 import { Settings, User, Building2, Shield, Bell, CreditCard, Tag, List } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
-
 const SettingsHub = () => {
-  // Minimal state for consistency - this is primarily a navigation page
-  const [loading] = useState(false);
   const settingsCategories = [
     {
       id: 'profile',

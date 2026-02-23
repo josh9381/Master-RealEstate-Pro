@@ -68,10 +68,13 @@ export async function executeCampaign(
 
     console.log(`[CAMPAIGN] Executing campaign ${campaign.name} to ${leads.length} leads`);
 
-    // Send based on campaign type
+    // A/B Test: Split audience 50/50 if campaign is an A/B test
     let result: { success: number; failed: number };
 
-    if (campaign.type === 'EMAIL') {
+    if (campaign.isABTest && campaign.abTestData) {
+      console.log(`[CAMPAIGN] A/B Test detected — splitting audience 50/50`);
+      result = await executeABTestCampaign(campaign, leads);
+    } else if (campaign.type === 'EMAIL') {
       result = await sendEmailCampaign(campaign, leads);
     } else if (campaign.type === 'SMS') {
       result = await sendSMSCampaign(campaign, leads);
@@ -124,6 +127,15 @@ async function getTargetLeads(
     return await prisma.lead.findMany({
       where: {
         id: { in: leadIds },
+      },
+      include: {
+        assignedTo: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
   }
@@ -215,11 +227,11 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
           status: lead.status,
           score: lead.score,
         },
-        user: lead.user
+        user: lead.assignedTo
           ? {
-              firstName: lead.user.firstName,
-              lastName: lead.user.lastName,
-              email: lead.user.email,
+              firstName: lead.assignedTo.firstName,
+              lastName: lead.assignedTo.lastName,
+              email: lead.assignedTo.email,
             }
           : {
               firstName: 'Team',
@@ -261,7 +273,7 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
       batchGroup.map((batch, batchIndex) => {
         const actualBatchNum = i + batchIndex + 1;
         console.log(`[CAMPAIGN] Sending batch ${actualBatchNum}/${batches.length} (${batch.length} emails)`);
-        return sendBulkEmails(batch, campaign.id, userId);
+        return sendBulkEmails(batch, campaign.id, userId, campaign.organizationId);
       })
     );
 
@@ -314,10 +326,10 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
           status: lead.status,
           score: lead.score,
         },
-        user: lead.user
+        user: lead.assignedTo
           ? {
-              firstName: lead.user.firstName,
-              lastName: lead.user.lastName,
+              firstName: lead.assignedTo.firstName,
+              lastName: lead.assignedTo.lastName,
             }
           : {
               firstName: 'Team',
@@ -355,7 +367,7 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
       batchGroup.map((batch, batchIndex) => {
         const actualBatchNum = i + batchIndex + 1;
         console.log(`[CAMPAIGN] Sending batch ${actualBatchNum}/${batches.length} (${batch.length} SMS)`);
-        return sendBulkSMS(batch, campaign.id, userId);
+        return sendBulkSMS(batch, campaign.id, userId, campaign.organizationId);
       })
     );
 
@@ -378,6 +390,104 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
 
   console.log(`[CAMPAIGN] SMS campaign completed: ${totalSuccess} sent, ${totalFailed} failed`);
 
+  return { success: totalSuccess, failed: totalFailed };
+}
+
+/**
+ * Execute an A/B test campaign — split audience 50/50 and send variant A/B
+ */
+async function executeABTestCampaign(campaign: any, leads: any[]) {
+  const abTestData = campaign.abTestData as any;
+  const variantSubject = abTestData?.variantSubject || campaign.subject || '';
+
+  // Shuffle leads for fair distribution
+  const shuffled = [...leads].sort(() => Math.random() - 0.5);
+  const midpoint = Math.ceil(shuffled.length / 2);
+  const groupA = shuffled.slice(0, midpoint);
+  const groupB = shuffled.slice(midpoint);
+
+  console.log(`[A/B TEST] Variant A: ${groupA.length} leads, Variant B: ${groupB.length} leads`);
+
+  // Find or create A/B test record
+  let abTest = await prisma.aBTest.findFirst({
+    where: {
+      organizationId: campaign.organizationId,
+      name: `${campaign.name} A/B Test`,
+    },
+  });
+
+  if (!abTest) {
+    abTest = await prisma.aBTest.create({
+      data: {
+        name: `${campaign.name} A/B Test`,
+        type: campaign.type === 'SMS' ? 'SMS_CONTENT' : 'EMAIL_SUBJECT',
+        status: 'RUNNING',
+        organizationId: campaign.organizationId,
+        createdBy: campaign.createdById,
+        variantA: { subject: campaign.subject || 'Variant A' },
+        variantB: { subject: variantSubject || 'Variant B' },
+        startDate: new Date(),
+        participantCount: leads.length,
+      },
+    });
+  }
+
+  let totalSuccess = 0;
+  let totalFailed = 0;
+
+  if (campaign.type === 'EMAIL') {
+    // Send Variant A with original subject
+    const resultA = await sendEmailCampaign(campaign, groupA);
+
+    // Send Variant B with alternative subject
+    const variantBCampaign = {
+      ...campaign,
+      subject: variantSubject || campaign.subject,
+    };
+    const resultB = await sendEmailCampaign(variantBCampaign, groupB);
+
+    totalSuccess = resultA.success + resultB.success;
+    totalFailed = resultA.failed + resultB.failed;
+
+    // Create A/B test result records for tracking
+    const createResults = [];
+    for (const lead of groupA) {
+      createResults.push({
+        testId: abTest.id,
+        variant: 'A',
+        leadId: lead.id,
+        campaignId: campaign.id,
+      });
+    }
+    for (const lead of groupB) {
+      createResults.push({
+        testId: abTest.id,
+        variant: 'B',
+        leadId: lead.id,
+        campaignId: campaign.id,
+      });
+    }
+    await prisma.aBTestResult.createMany({ data: createResults });
+  } else if (campaign.type === 'SMS') {
+    const resultA = await sendSMSCampaign(campaign, groupA);
+
+    const variantBCampaign = {
+      ...campaign,
+      body: abTestData?.variantBody || campaign.body,
+    };
+    const resultB = await sendSMSCampaign(variantBCampaign, groupB);
+
+    totalSuccess = resultA.success + resultB.success;
+    totalFailed = resultA.failed + resultB.failed;
+  }
+
+  // Update A/B test participant count
+  await prisma.aBTest.update({
+    where: { id: abTest.id },
+    data: { participantCount: totalSuccess },
+  });
+
+  console.log(`[A/B TEST] Completed: ${totalSuccess} sent, ${totalFailed} failed`);
   return { success: totalSuccess, failed: totalFailed };
 }
 

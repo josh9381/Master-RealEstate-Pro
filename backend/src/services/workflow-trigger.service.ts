@@ -1,6 +1,6 @@
 import { prisma } from '../config/database'
 import type { WorkflowTrigger, Workflow } from '@prisma/client'
-import { workflowExecutorService } from './workflow-executor.service'
+import { executeWorkflow } from './workflow.service'
 
 /**
  * Workflow Trigger Detection Service
@@ -131,33 +131,10 @@ export class WorkflowTriggerService {
         return value
       }))
 
-      // Create execution record
-      await prisma.workflowExecution.create({
-        data: {
-          workflowId,
-          status: 'PENDING',
-          leadId,
-          metadata: {
-            eventData: serializedData,
-            queuedAt: new Date().toISOString(),
-          },
-          startedAt: new Date(),
-        },
-      })
-
-      // Update workflow stats
-      await prisma.workflow.update({
-        where: { id: workflowId },
-        data: {
-          executions: { increment: 1 },
-          lastRunAt: new Date(),
-        },
-      })
-
       console.log(`📝 Workflow queued for execution: ${workflowId}`)
 
-      // Execute the workflow immediately (in production, this would be queued)
-      // Run in background without awaiting
+      // Execute the workflow using the main workflow service
+      // executeWorkflow handles its own execution record creation, stats updates, and error tracking
       this.executeWorkflowAsync(workflowId, serializedData, leadId)
     } catch (error) {
       console.error('Error queueing workflow:', error)
@@ -174,10 +151,10 @@ export class WorkflowTriggerService {
     leadId?: string
   ): Promise<void> {
     try {
-      await workflowExecutorService.executeWorkflow(workflowId, eventData, leadId)
+      await executeWorkflow(workflowId, leadId, eventData)
     } catch (error) {
       console.error(`Error executing workflow ${workflowId}:`, error)
-      // Error is already logged in executor and execution marked as failed
+      // Error is already logged in executeWorkflow and execution marked as failed
     }
   }
 

@@ -187,7 +187,7 @@ export const getCampaign = async (req: Request, res: Response) => {
  * POST /api/campaigns
  */
 export const createCampaign = async (req: Request, res: Response) => {
-  const { name, type, status, subject, body, previewText, startDate, endDate, budget, audience, isABTest, abTestData, tagIds } = req.body;
+  const { name, type, status, subject, body, previewText, startDate, endDate, budget, audience, isABTest, abTestData, tagIds, isRecurring, frequency, recurringPattern, maxOccurrences } = req.body;
   const userId = req.user?.userId;
   const organizationId = req.user?.organizationId;
 
@@ -211,6 +211,10 @@ export const createCampaign = async (req: Request, res: Response) => {
       audience: audience || null,
       isABTest: isABTest || false,
       abTestData: abTestData || null,
+      isRecurring: isRecurring || false,
+      frequency: frequency || null,
+      recurringPattern: recurringPattern || null,
+      maxOccurrences: maxOccurrences || null,
       createdById: userId,
       ...(tagIds && tagIds.length > 0 && {
         tags: {
@@ -347,7 +351,7 @@ export const deleteCampaign = async (req: Request, res: Response) => {
  * GET /api/campaigns/stats
  */
 export const getCampaignStats = async (req: Request, res: Response) => {
-  const userId = req.user?.userId;
+  const organizationId = req.user?.organizationId;
 
   // Get campaign counts by status
   const byStatus = await prisma.campaign.groupBy({
@@ -355,7 +359,7 @@ export const getCampaignStats = async (req: Request, res: Response) => {
     _count: {
       id: true,
     },
-    ...(userId && { where: { createdById: userId } }),
+    ...(organizationId && { where: { organizationId } }),
   });
 
   // Get campaign counts by type
@@ -364,7 +368,7 @@ export const getCampaignStats = async (req: Request, res: Response) => {
     _count: {
       id: true,
     },
-    ...(userId && { where: { createdById: userId } }),
+    ...(organizationId && { where: { organizationId } }),
   });
 
   // Get aggregate metrics
@@ -384,7 +388,7 @@ export const getCampaignStats = async (req: Request, res: Response) => {
     _count: {
       id: true,
     },
-    ...(userId && { where: { createdById: userId } }),
+    ...(organizationId && { where: { organizationId } }),
   });
 
   // Calculate overall rates
@@ -425,9 +429,12 @@ export const updateCampaignMetrics = async (req: Request, res: Response) => {
   const { id } = req.params;
   const metrics = req.body;
 
-  // Check if campaign exists
-  const existingCampaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Check if campaign exists AND belongs to this organization
+  const existingCampaign = await prisma.campaign.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId
+    },
   });
 
   if (!existingCampaign) {
@@ -459,9 +466,12 @@ export const pauseCampaign = async (req: Request, res: Response) => {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Check if campaign exists
-  const existingCampaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Check if campaign exists AND belongs to this organization
+  const existingCampaign = await prisma.campaign.findFirst({
+    where: { 
+      id,
+      organizationId: req.user!.organizationId
+    },
   });
 
   if (!existingCampaign) {
@@ -507,9 +517,9 @@ export const sendCampaign = async (req: Request, res: Response) => {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Check if campaign exists
-  const existingCampaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Check if campaign exists and belongs to user's org
+  const existingCampaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!existingCampaign) {
@@ -572,9 +582,9 @@ export const sendCampaign = async (req: Request, res: Response) => {
 export const sendCampaignNow = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  // Get campaign
-  const campaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Get campaign with ownership check
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!campaign) {
@@ -658,9 +668,9 @@ export const rescheduleCampaign = async (req: Request, res: Response) => {
     return;
   }
 
-  // Get campaign
-  const campaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Get campaign with ownership check
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!campaign) {
@@ -720,9 +730,9 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Get campaign with tags
-  const campaign = await prisma.campaign.findUnique({
-    where: { id },
+  // Get campaign with tags (scoped to organization)
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
     include: {
       tags: true,
       user: {
@@ -834,9 +844,9 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
           score: firstLead.score,
         },
         user: {
-          firstName: campaign.user.firstName,
-          lastName: campaign.user.lastName,
-          email: campaign.user.email,
+          firstName: campaign.user?.firstName ?? '',
+          lastName: campaign.user?.lastName ?? '',
+          email: campaign.user?.email ?? '',
         },
         currentDate: new Date().toLocaleDateString(),
         currentTime: new Date().toLocaleTimeString(),
@@ -962,6 +972,7 @@ export const createCampaignFromTemplate = async (req: Request, res: Response) =>
       frequency: template.frequency || null,
       recurringPattern: template.recurringPattern || null,
       createdById: userId,
+      organizationId: req.user!.organizationId,
       ...(tagIds && tagIds.length > 0 && {
         tags: {
           connect: tagIds.map((id: string) => ({ id })),
@@ -1116,8 +1127,8 @@ export const archiveCampaign = async (req: Request, res: Response) => {
 export const unarchiveCampaign = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const campaign = await prisma.campaign.findUnique({
-    where: { id },
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!campaign) {

@@ -10,36 +10,14 @@ import { messagesApi } from '@/lib/api'
 const SMSCenter = () => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [sending, setSending] = useState(false)
   const { toast } = useToast()
-  const [recentMessages, setRecentMessages] = useState([
-    {
-      id: 1,
-      contact: 'John Smith',
-      phone: '+1 (555) 123-4567',
-      message: 'Thanks for the update! Looking forward to our meeting.',
-      time: '2 minutes ago',
-      status: 'delivered',
-      direction: 'inbound',
-    },
-    {
-      id: 2,
-      contact: 'Sarah Johnson',
-      phone: '+1 (555) 234-5678',
-      message: 'Your appointment is confirmed for tomorrow at 2 PM',
-      time: '15 minutes ago',
-      status: 'delivered',
-      direction: 'outbound',
-    },
-    {
-      id: 3,
-      contact: 'Mike Wilson',
-      phone: '+1 (555) 345-6789',
-      message: 'Can we reschedule our call?',
-      time: '1 hour ago',
-      status: 'read',
-      direction: 'inbound',
-    },
-  ])
+  const [recentMessages, setRecentMessages] = useState<Array<{ id: number; contact: string; phone: string; message: string; time: string; status: string; direction: string }>>([])
+  
+  // Quick Send form state
+  const [smsRecipient, setSmsRecipient] = useState('')
+  const [smsMessage, setSmsMessage] = useState('')
+  const [smsSearch, setSmsSearch] = useState('')
 
   useEffect(() => {
     loadMessages()
@@ -71,6 +49,34 @@ const SMSCenter = () => {
     loadMessages(true)
   }
 
+  const handleSendSMS = async () => {
+    if (!smsRecipient.trim()) {
+      toast.error('Please enter a recipient phone number')
+      return
+    }
+    if (!smsMessage.trim()) {
+      toast.error('Please enter a message')
+      return
+    }
+    setSending(true)
+    try {
+      await messagesApi.sendSMS({
+        to: smsRecipient.trim(),
+        message: smsMessage.trim(),
+      })
+      toast.success('SMS sent successfully!')
+      setSmsRecipient('')
+      setSmsMessage('')
+      // Refresh messages list to show the new message
+      loadMessages(true)
+    } catch (error: any) {
+      console.error('Failed to send SMS:', error)
+      toast.error(error?.response?.data?.message || 'Failed to send SMS')
+    } finally {
+      setSending(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -83,7 +89,13 @@ const SMSCenter = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button onClick={() => {
+            setSmsRecipient('');
+            setSmsMessage('');
+            toast.info('Fill in the Quick Send form below');
+            // Scroll to quick send section
+            document.querySelector('[data-quick-send]')?.scrollIntoView({ behavior: 'smooth' });
+          }}>
             <Send className="h-4 w-4 mr-2" />
             New SMS
           </Button>
@@ -109,8 +121,8 @@ const SMSCenter = () => {
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
-            <p className="text-xs text-muted-foreground">+23% from yesterday</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -119,8 +131,8 @@ const SMSCenter = () => {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">98.4%</div>
-            <p className="text-xs text-muted-foreground">153 delivered</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -129,8 +141,8 @@ const SMSCenter = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24.6%</div>
-            <p className="text-xs text-muted-foreground">38 replies</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -139,14 +151,14 @@ const SMSCenter = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8m 32s</div>
-            <p className="text-xs text-muted-foreground">Fast replies</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Quick Send */}
-      <Card>
+      <Card data-quick-send>
         <CardHeader>
           <CardTitle>Quick Send</CardTitle>
           <CardDescription>Send an SMS to contacts or phone numbers</CardDescription>
@@ -154,7 +166,11 @@ const SMSCenter = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Recipients</label>
-            <Input placeholder="Enter phone numbers or select contacts..." />
+            <Input
+              placeholder="Enter phone number (e.g., +1234567890)"
+              value={smsRecipient}
+              onChange={(e) => setSmsRecipient(e.target.value)}
+            />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Message</label>
@@ -162,14 +178,23 @@ const SMSCenter = () => {
               className="w-full min-h-[120px] p-3 border rounded-md"
               placeholder="Type your message..."
               maxLength={160}
+              value={smsMessage}
+              onChange={(e) => setSmsMessage(e.target.value)}
             />
             <div className="flex justify-between items-center mt-2">
-              <p className="text-xs text-muted-foreground">0 / 160 characters • 1 SMS</p>
+              <p className="text-xs text-muted-foreground">{smsMessage.length} / 160 characters • {Math.ceil(Math.max(smsMessage.length, 1) / 160)} SMS</p>
               <div className="space-x-2">
-                <Button variant="outline" size="sm">
-                  Use Template
+                <Button
+                  size="sm"
+                  onClick={handleSendSMS}
+                  disabled={sending || !smsRecipient.trim() || !smsMessage.trim()}
+                >
+                  {sending ? (
+                    <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                  ) : (
+                    <>Send Now</>
+                  )}
                 </Button>
-                <Button size="sm">Send Now</Button>
               </div>
             </div>
           </div>
@@ -184,12 +209,25 @@ const SMSCenter = () => {
               <CardTitle>Recent Messages</CardTitle>
               <CardDescription>Your latest SMS conversations</CardDescription>
             </div>
-            <Input placeholder="Search messages..." className="w-64" />
+            <Input
+              placeholder="Search messages..."
+              className="w-64"
+              value={smsSearch}
+              onChange={(e) => setSmsSearch(e.target.value)}
+            />
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentMessages.map((msg) => (
+            {recentMessages
+              .filter((msg) => {
+                if (!smsSearch.trim()) return true;
+                const q = smsSearch.toLowerCase();
+                return msg.contact.toLowerCase().includes(q) ||
+                       msg.phone.toLowerCase().includes(q) ||
+                       msg.message.toLowerCase().includes(q);
+              })
+              .map((msg) => (
               <div
                 key={msg.id}
                 className="flex items-start justify-between p-4 border rounded-lg hover:bg-accent"
@@ -224,7 +262,12 @@ const SMSCenter = () => {
                     <p className="text-xs text-muted-foreground">{msg.time}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setSmsRecipient(msg.phone);
+                  setSmsMessage('');
+                  document.querySelector('[data-quick-send]')?.scrollIntoView({ behavior: 'smooth' });
+                  toast.info(`Replying to ${msg.contact}`);
+                }}>
                   Reply
                 </Button>
               </div>

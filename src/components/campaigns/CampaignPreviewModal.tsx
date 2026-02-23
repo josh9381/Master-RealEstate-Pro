@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { AlertTriangle, DollarSign, Users, Mail, MessageSquare, Phone, CheckCircle } from 'lucide-react'
+import { AlertTriangle, DollarSign, Users, CheckCircle } from 'lucide-react'
+import DOMPurify from 'dompurify'
 
 interface SampleRecipient {
   id: string
@@ -52,22 +53,6 @@ const getStatusBadgeVariant = (status: string): 'default' | 'success' | 'warning
       return 'destructive'
     default:
       return 'default'
-  }
-}
-
-// TODO: Future use - helper function for campaign type icons
-const _getCampaignIcon = (type: string) => {
-  switch (type.toUpperCase()) {
-    case 'EMAIL':
-      return Mail
-    case 'SMS':
-      return MessageSquare
-    case 'PHONE':
-      return Phone
-    case 'SOCIAL':
-      return Users
-    default:
-      return Mail
   }
 }
 
@@ -178,7 +163,7 @@ export function CampaignPreviewModal({
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Message:</p>
                 <div 
                   className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: preview.messagePreview.body }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview.messagePreview.body || '') }}
                 />
               </div>
               <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">

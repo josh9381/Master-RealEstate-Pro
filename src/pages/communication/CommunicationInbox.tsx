@@ -40,8 +40,10 @@ import {
   AlertDialogTitle
 } from '@/components/ui/Dialog'
 import { useToast } from '@/hooks/useToast'
+import { MockModeBanner } from '@/components/shared/MockModeBanner'
 import { messagesApi, leadsApi, aiApi } from '@/lib/api'
 import { AIComposer } from '@/components/ai/AIComposer'
+import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 
 interface Message {
   id: number
@@ -133,16 +135,16 @@ const CommunicationInbox = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showAttachmentModal, setShowAttachmentModal] = useState(false)
+  const [_pendingAttachments, setPendingAttachments] = useState<File[]>([])
   const [bulkSelectMode, setBulkSelectMode] = useState(false)
   const [selectedThreadIds, setSelectedThreadIds] = useState<Set<number>>(new Set())
   const [showQuickReplies, setShowQuickReplies] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [threadToDelete, setThreadToDelete] = useState<number | null>(null)
   const [showAIComposer, setShowAIComposer] = useState(false)
-  const [showEnhanceMode, setShowEnhanceMode] = useState(false)
+  const [, setShowEnhanceMode] = useState(false)
   const [enhancedMessage, setEnhancedMessage] = useState('')
   const [showBeforeAfter, setShowBeforeAfter] = useState(false)
-  const [showGenerateMode, setShowGenerateMode] = useState(false)
   const [showReplaceWarning, setShowReplaceWarning] = useState(false)
   const [enhanceTone, setEnhanceTone] = useState('professional')
   const [enhancingMessage, setEnhancingMessage] = useState(false)
@@ -263,7 +265,6 @@ const CommunicationInbox = () => {
       }
 
       const response = await messagesApi.getMessages()
-      console.log('📥 Messages API response:', response)
       
       // Transform API response to thread format if needed
       const threadsData = response?.data?.threads || response?.threads || response
@@ -277,7 +278,6 @@ const CommunicationInbox = () => {
           if (updatedSelectedThread) {
             // Update selected thread without triggering auto-mark-as-read
             setSelectedThread(updatedSelectedThread)
-            console.log('✅ Preserved thread selection, unread:', updatedSelectedThread.unread)
           }
         } else if (threadsData.length > 0 && !selectedThread) {
           // Only auto-select first thread on initial load when nothing is selected
@@ -431,7 +431,6 @@ const CommunicationInbox = () => {
   }
 
   const handleSelectThread = async (thread: Thread, autoMarkRead = true) => {
-    console.log('📖 Selecting thread:', thread.id, 'Unread:', thread.unread, 'Auto-mark:', autoMarkRead)
     setSelectedThread(thread)
     
     // Auto-mark as read when opening a thread (only if explicitly requested)
@@ -442,10 +441,6 @@ const CommunicationInbox = () => {
           .map(m => String(m.id))
           .filter(id => id && id !== 'undefined' && id !== 'null') // Filter out invalid IDs
         
-        console.log('📝 Unread message IDs to mark:', unreadMessageIds)
-        console.log('📝 Sample message object:', thread.messages[0])
-        console.log('📝 All messages in thread:', thread.messages.map(m => ({ id: m.id, unread: m.unread })))
-        
         // Update local state immediately for responsive UI
         setThreads(prev => prev.map(t => 
           t.id === thread.id 
@@ -455,11 +450,7 @@ const CommunicationInbox = () => {
         
         // Call API and await it to ensure it completes before any potential reload
         if (unreadMessageIds.length > 0) {
-          console.log('🚀 Calling markAsRead API with:', { messageIds: unreadMessageIds })
           await messagesApi.markAsRead({ messageIds: unreadMessageIds })
-          console.log('✅ Successfully marked messages as read via API')
-        } else {
-          console.log('⚠️ No valid message IDs to mark as read')
         }
       } catch (error: any) {
         console.error('❌ Error marking thread as read:', error)
@@ -477,8 +468,6 @@ const CommunicationInbox = () => {
         const details = error.response?.data?.details ? ` (${JSON.stringify(error.response.data.details)})` : ''
         toast.error(`Failed to mark as read: ${errorMsg}${details}`)
       }
-    } else if (thread.unread > 0) {
-      console.log('⏭️ Skipping auto-mark-as-read (autoMarkRead=false)')
     }
   }
 
@@ -610,19 +599,30 @@ const CommunicationInbox = () => {
     toast.success('Signature saved')
   }
 
-  const toggleStarThread = (threadId: number) => {
+  const toggleStarThread = async (threadId: number) => {
     const thread = threads.find(t => t.id === threadId)
-    const isStarred = thread?.messages.some(m => m.starred)
+    if (!thread) return
+    const isStarred = thread.messages.some(m => m.starred)
     
+    // Optimistically update local state
     setThreads(prev => prev.map(t => 
       t.id === threadId 
         ? { ...t, messages: t.messages.map(m => ({ ...m, starred: !isStarred })) } 
         : t
     ))
     toast.success(isStarred ? 'Removed star' : 'Starred')
+
+    // Persist to backend
+    try {
+      await Promise.all(
+        thread.messages.map(m => messagesApi.starMessage(String(m.id), !isStarred))
+      )
+    } catch (error) {
+      console.error('Failed to star message:', error)
+    }
   }
 
-  const togglePinThread = (threadId: number) => {
+  const togglePinThread = async (threadId: number) => {
     const thread = threads.find(t => t.id === threadId)
     const isPinned = thread?.messages.some(m => m.pinned)
     
@@ -632,12 +632,37 @@ const CommunicationInbox = () => {
         : t
     ))
     toast.success(isPinned ? 'Unpinned thread' : 'Pinned to top')
+
+    // Persist to backend
+    if (thread) {
+      try {
+        await Promise.all(
+          thread.messages.map(m => messagesApi.starMessage(String(m.id), !isPinned))
+        )
+      } catch (error) {
+        console.error('Failed to pin message:', error)
+      }
+    }
   }
 
-  const archiveThread = (threadId: number) => {
+  const archiveThread = async (threadId: number) => {
+    const thread = threads.find(t => t.id === threadId)
+    
+    // Optimistically update local state
     setThreads(prev => prev.map(t => t.id === threadId ? { ...t, messages: t.messages.map(m => ({ ...m, archived: true })) } : t))
     toast.success('Thread archived')
-    setSelectedThread(null) // Close the thread view
+    setSelectedThread(null)
+
+    // Persist to backend
+    if (thread) {
+      try {
+        await Promise.all(
+          thread.messages.map(m => messagesApi.archiveMessage(String(m.id), true))
+        )
+      } catch (error) {
+        console.error('Failed to archive message:', error)
+      }
+    }
   }
 
   const trashThread = (threadId: number) => {
@@ -645,11 +670,23 @@ const CommunicationInbox = () => {
     setShowDeleteConfirm(true)
   }
 
-  const confirmTrashThread = () => {
+  const confirmTrashThread = async () => {
     if (threadToDelete) {
+      const thread = threads.find(t => t.id === threadToDelete)
       setThreads(prev => prev.map(t => t.id === threadToDelete ? { ...t, messages: t.messages.map(m => ({ ...m, trashed: true })) } : t))
       toast.success('Moved to trash')
-      setSelectedThread(null) // Close the thread view
+      setSelectedThread(null)
+
+      // Persist to backend
+      if (thread) {
+        try {
+          await Promise.all(
+            thread.messages.map(m => messagesApi.deleteMessage(String(m.id)))
+          )
+        } catch (error) {
+          console.error('Failed to trash message:', error)
+        }
+      }
     }
     setShowDeleteConfirm(false)
     setThreadToDelete(null)
@@ -660,20 +697,25 @@ const CommunicationInbox = () => {
     setThreadToDelete(null)
   }
 
-  const snoozeThread = (threadId: number, minutes = 60) => {
+  const snoozeThread = async (threadId: number, minutes = 60) => {
+    const thread = threads.find(t => t.id === threadId)
     const snoozeUntil = Date.now() + minutes * 60 * 1000
+    
+    // Optimistically update local state
     setThreads(prev => prev.map(t => t.id === threadId ? { ...t, messages: t.messages.map(m => ({ ...m, snoozed: snoozeUntil })) } : t))
     toast.success('Thread snoozed')
-  }
 
-  const handleAICompose = () => {
-    console.log('🤖 AI Compose clicked!', {
-      currentState: showAIComposer,
-      selectedThread: selectedThread?.id,
-      hasLead: !!selectedThread?.lead,
-      leadId: selectedThread?.lead?.id
-    })
-    setShowAIComposer(!showAIComposer)
+    // Persist to backend
+    if (thread) {
+      try {
+        const snoozedUntilISO = new Date(snoozeUntil).toISOString()
+        await Promise.all(
+          thread.messages.map(m => messagesApi.snoozeMessage(String(m.id), snoozedUntilISO))
+        )
+      } catch (error) {
+        console.error('Failed to snooze message:', error)
+      }
+    }
   }
 
   const handleMessageGenerated = (message: string, subject?: string) => {
@@ -705,7 +747,8 @@ const CommunicationInbox = () => {
       setShowBeforeAfter(true)
     } catch (error) {
       console.error('Enhance error:', error)
-      toast.error('Failed to enhance message')
+      const aiMsg = getAIUnavailableMessage(error)
+      toast.error(aiMsg || 'Failed to enhance message')
       setShowEnhanceMode(false)
     } finally {
       setEnhancingMessage(false)
@@ -899,6 +942,9 @@ const CommunicationInbox = () => {
 
   return (
     <div className="space-y-6">
+      {/* Mock Mode Warning */}
+      <MockModeBanner />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -2015,8 +2061,10 @@ const CommunicationInbox = () => {
                     id="file-upload"
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
-                        const fileNames = Array.from(e.target.files).map(f => f.name).join(', ')
-                        toast.success(`Selected: ${fileNames}`)
+                        const files = Array.from(e.target.files)
+                        setPendingAttachments(prev => [...prev, ...files])
+                        const fileNames = files.map(f => f.name).join(', ')
+                        toast.success(`Attached: ${fileNames}`)
                         setShowAttachmentModal(false)
                       }
                     }}

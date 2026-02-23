@@ -731,3 +731,69 @@ export const markAllAsRead = async (req: Request, res: Response) => {
     count: result.count,
   })
 }
+
+// Star/unstar a message
+export const starMessage = async (req: Request, res: Response) => {
+  const { id } = req.params
+  const { starred } = req.body
+  const organizationId = req.user!.organizationId
+
+  const message = await prisma.message.findFirst({
+    where: { id, organizationId },
+  })
+
+  if (!message) {
+    return res.status(404).json({ success: false, message: 'Message not found' })
+  }
+
+  await prisma.message.update({
+    where: { id },
+    data: { starred: starred ?? !message.starred },
+  })
+
+  res.json({ success: true, message: `Message ${starred ? 'starred' : 'unstarred'}` })
+}
+
+// Archive/unarchive a message
+export const archiveMessage = async (req: Request, res: Response) => {
+  const { id } = req.params
+  const { archived } = req.body
+  const organizationId = req.user!.organizationId
+
+  const message = await prisma.message.findFirst({
+    where: { id, organizationId },
+  })
+
+  if (!message) {
+    return res.status(404).json({ success: false, message: 'Message not found' })
+  }
+
+  await prisma.message.update({
+    where: { id },
+    data: { archived: archived ?? !message.archived },
+  })
+
+  res.json({ success: true, message: `Message ${archived ? 'archived' : 'unarchived'}` })
+}
+
+// Snooze/unsnooze a message
+export const snoozeMessage = async (req: Request, res: Response) => {
+  const { id } = req.params
+  const { snoozedUntil } = req.body
+  const organizationId = req.user!.organizationId
+
+  const message = await prisma.message.findFirst({
+    where: { id, organizationId },
+  })
+
+  if (!message) {
+    return res.status(404).json({ success: false, message: 'Message not found' })
+  }
+
+  await prisma.message.update({
+    where: { id },
+    data: { snoozedUntil: snoozedUntil ? new Date(snoozedUntil) : null },
+  })
+
+  res.json({ success: true, message: snoozedUntil ? 'Message snoozed' : 'Message unsnoozed' })
+}

@@ -73,22 +73,20 @@ export interface Lead {
 }
 
 export interface Campaign {
-  id: number | string
+  id: string
   name: string
-  type: 'email' | 'sms' | 'phone' | 'social'
-  status: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED'
+  type: 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL'
+  status: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
   startDate: string
   endDate?: string
+  scheduledDate?: string
   budget?: number
   spent?: number
   audience?: number
   recipients?: number
   sent: number
-  opens?: number
   opened?: number
-  clicks?: number
   clicked?: number
-  conversions?: number
   converted?: number
   revenue?: number
   roi?: string
@@ -98,8 +96,18 @@ export interface Campaign {
   tags?: string[]
   subject?: string | null
   previewText?: string
+  body?: string
+  content?: string
+  fullContent?: string
+  delivered?: number
+  bounced?: number
+  unsubscribed?: number
   isArchived?: boolean
   archivedAt?: string
+  isRecurring?: boolean
+  frequency?: string
+  recurringPattern?: string
+  maxOccurrences?: number
   abTest?: {
     variant: 'A' | 'B'
     winner?: 'A' | 'B'

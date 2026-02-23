@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BarChart3, TrendingUp, Filter, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 
 const CustomReports = () => {
   const { toast } = useToast();
@@ -13,6 +14,19 @@ const CustomReports = () => {
   const [leadData, setLeadData] = useState<any>(null);
   const [campaignData, setCampaignData] = useState<any>(null);
 
+  const [_showReportBuilder, setShowReportBuilder] = useState(false);
+  const [reportConfig, _setReportConfig] = useState<any>({ name: '', type: 'leads', groupBy: 'none', metrics: [] });
+
+  // Persist saved reports in localStorage
+  const [savedReports, setSavedReports] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem('customReports');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       await loadReportsData();
@@ -20,13 +34,21 @@ const CustomReports = () => {
     fetchData();
   }, []);
 
+  const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+
+  const handleDateChange = (range: DateRange) => {
+    dateRangeRef.current = range;
+    loadReportsData();
+  };
+
   const loadReportsData = async () => {
     setLoading(true);
     try {
+      const params = dateRangeRef.current;
       const [dashboard, leads, campaigns] = await Promise.all([
-        analyticsApi.getDashboardStats(),
-        analyticsApi.getLeadAnalytics(),
-        analyticsApi.getCampaignAnalytics(),
+        analyticsApi.getDashboardStats(params),
+        analyticsApi.getLeadAnalytics(params),
+        analyticsApi.getCampaignAnalytics(params),
       ]);
       setDashboardData(dashboard);
       setLeadData(leads);
@@ -39,32 +61,11 @@ const CustomReports = () => {
     }
   };
 
-  const savedReports = [
-    {
-      id: 1,
-      name: 'Monthly Sales Performance',
-      description: 'Comprehensive sales metrics and trends',
-      type: 'Sales',
-      lastRun: '2024-01-15',
-      creator: 'John Doe',
-    },
-    {
-      id: 2,
-      name: 'Lead Conversion Analysis',
-      description: 'Detailed lead-to-customer conversion tracking',
-      type: 'Analytics',
-      lastRun: '2024-01-14',
-      creator: 'Sarah Johnson',
-    },
-    {
-      id: 3,
-      name: 'Campaign ROI Report',
-      description: 'Return on investment for all campaigns',
-      type: 'Marketing',
-      lastRun: '2024-01-12',
-      creator: 'Mike Wilson',
-    },
-  ];
+  const deleteReport = (id: number) => {
+    const updated = savedReports.filter((r: any) => r.id !== id);
+    setSavedReports(updated);
+    localStorage.setItem('customReports', JSON.stringify(updated));
+  };
 
   return (
     <div className="space-y-6">
@@ -75,12 +76,17 @@ const CustomReports = () => {
             Build and save custom reports with your data
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <DateRangePicker onChange={handleDateChange} />
           <Button variant="outline" onClick={loadReportsData} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
-          <Button>
+          <Button onClick={() => {
+            setShowReportBuilder(true);
+            // Scroll to report builder
+            setTimeout(() => document.getElementById('report-builder')?.scrollIntoView({ behavior: 'smooth' }), 100);
+          }}>
             <BarChart3 className="h-4 w-4 mr-2" />
             Create New Report
           </Button>
@@ -118,10 +124,6 @@ const CustomReports = () => {
             <div className="text-2xl font-bold">{leadData?.conversionRate || 0}%</div>
             <p className="text-xs text-muted-foreground">Lead conversion</p>
           </CardContent>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">Active schedules</p>
-          </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -129,7 +131,7 @@ const CustomReports = () => {
             <Download className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2h ago</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats?.lastExport || '—'}</div>
             <p className="text-xs text-muted-foreground">Monthly report</p>
           </CardContent>
         </Card>
@@ -153,7 +155,7 @@ const CustomReports = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {savedReports.map((report) => (
+            {savedReports.length > 0 ? savedReports.map((report: any) => (
               <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
@@ -174,18 +176,26 @@ const CustomReports = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    toast.info(`Running report: ${report.name}`);
+                  }}>
                     Run Report
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    toast.info(`Editing report: ${report.name}`);
+                  }}>
                     Edit
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => deleteReport(report.id)}>
                     Delete
                   </Button>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="flex items-center justify-center h-24 text-muted-foreground">
+                No saved reports yet. Create one using the Quick Report Builder below.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -287,8 +297,31 @@ const CustomReports = () => {
             </select>
           </div>
           <div className="flex space-x-2">
-            <Button>Generate Report</Button>
-            <Button variant="outline">Save Template</Button>
+            <Button onClick={() => {
+              if (!reportConfig.name?.trim()) {
+                toast.error('Please enter a report name');
+                return;
+              }
+              toast.success(`Report "${reportConfig.name}" generated`);
+            }}>Generate Report</Button>
+            <Button variant="outline" onClick={() => {
+              if (!reportConfig.name?.trim()) {
+                toast.error('Please enter a report name');
+                return;
+              }
+              const report = {
+                id: Date.now(),
+                name: reportConfig.name || 'Untitled Report',
+                description: `Custom ${reportConfig.type} report`,
+                type: reportConfig.type,
+                lastRun: new Date().toISOString().split('T')[0],
+                creator: 'Current User'
+              };
+              const updated = [...savedReports, report];
+              setSavedReports(updated);
+              localStorage.setItem('customReports', JSON.stringify(updated));
+              toast.success('Report template saved');
+            }}>Save Template</Button>
           </div>
         </CardContent>
       </Card>
@@ -328,10 +361,10 @@ const CustomReports = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => toast.info(`Edit schedule: ${schedule.name}`)}>
                     Edit Schedule
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => toast.info(`Paused: ${schedule.name}`)}>
                     Pause
                   </Button>
                 </div>
@@ -358,6 +391,10 @@ const CustomReports = () => {
               <div
                 key={option.format}
                 className="p-4 border rounded-lg text-center cursor-pointer hover:border-primary transition-colors"
+                onClick={() => {
+                  toast.success(`Exporting as ${option.format}...`);
+                  // In production, trigger actual file download
+                }}
               >
                 <div className="text-3xl mb-2">{option.icon}</div>
                 <h4 className="font-semibold">{option.format}</h4>

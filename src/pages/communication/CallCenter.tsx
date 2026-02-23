@@ -10,39 +10,10 @@ import { messagesApi } from '@/lib/api'
 const CallCenter = () => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [dialNumber, setDialNumber] = useState('')
+  const [_showNewCallModal, setShowNewCallModal] = useState(false)
   const { toast } = useToast()
-  const [recentCalls, setRecentCalls] = useState([
-    {
-      id: 1,
-      contact: 'John Smith',
-      phone: '+1 (555) 123-4567',
-      type: 'inbound',
-      duration: '12m 34s',
-      status: 'completed',
-      time: '5 minutes ago',
-      notes: 'Discussed pricing and features',
-    },
-    {
-      id: 2,
-      contact: 'Sarah Johnson',
-      phone: '+1 (555) 234-5678',
-      type: 'outbound',
-      duration: '8m 12s',
-      status: 'completed',
-      time: '1 hour ago',
-      notes: 'Follow-up call - interested in demo',
-    },
-    {
-      id: 3,
-      contact: 'Mike Wilson',
-      phone: '+1 (555) 345-6789',
-      type: 'missed',
-      duration: '0m 0s',
-      status: 'missed',
-      time: '2 hours ago',
-      notes: 'No answer - will call back',
-    },
-  ])
+  const [recentCalls, setRecentCalls] = useState<Array<{ id: number; contact: string; phone: string; type: string; duration: string; status: string; time: string; notes: string }>>([])
 
   useEffect(() => {
     loadCalls()
@@ -86,7 +57,7 @@ const CallCenter = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button onClick={() => setShowNewCallModal(true)}>
             <Phone className="h-4 w-4 mr-2" />
             Make Call
           </Button>
@@ -112,8 +83,8 @@ const CallCenter = () => {
             <Phone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">47</div>
-            <p className="text-xs text-muted-foreground">+15% from yesterday</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -122,8 +93,8 @@ const CallCenter = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">9m 42s</div>
-            <p className="text-xs text-muted-foreground">Per call</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -132,8 +103,8 @@ const CallCenter = () => {
             <PhoneIncoming className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">83.2%</div>
-            <p className="text-xs text-muted-foreground">39 answered</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -142,8 +113,8 @@ const CallCenter = () => {
             <PhoneMissed className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">Need follow-up</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
       </div>
@@ -155,20 +126,44 @@ const CallCenter = () => {
           <CardDescription>Enter a phone number or search contacts</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Input placeholder="Enter phone number or contact name..." />
+          <Input
+            placeholder="Enter phone number or contact name..."
+            value={dialNumber}
+            onChange={(e) => setDialNumber(e.target.value)}
+          />
           <div className="grid grid-cols-3 gap-2">
             {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((num) => (
-              <Button key={num} variant="outline" size="lg" className="text-lg">
+              <Button
+                key={num}
+                variant="outline"
+                size="lg"
+                className="text-lg"
+                onClick={() => setDialNumber(prev => prev + num)}
+              >
                 {num}
               </Button>
             ))}
           </div>
           <div className="flex space-x-2">
-            <Button className="flex-1">
+            <Button
+              className="flex-1"
+              disabled={!dialNumber.trim()}
+              onClick={() => {
+                toast.success(`Initiating call to ${dialNumber}...`);
+                // In production, this would initiate a VoIP/telephony call
+              }}
+            >
               <Phone className="h-4 w-4 mr-2" />
               Call
             </Button>
-            <Button variant="outline" className="flex-1">
+            <Button
+              variant="outline"
+              className="flex-1"
+              disabled={!dialNumber.trim()}
+              onClick={() => {
+                toast.info(`Leaving voicemail for ${dialNumber}...`);
+              }}
+            >
               <Mic className="h-4 w-4 mr-2" />
               Voicemail
             </Button>

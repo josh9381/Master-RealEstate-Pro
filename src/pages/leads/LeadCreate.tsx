@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Save, User, Building2, Mail, Phone, MapPin, DollarSign, Tag } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Save, User, Building2, Mail, Phone, MapPin, DollarSign, Tag, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
-import { leadsApi, CreateLeadData } from '@/lib/api'
+import { leadsApi, usersApi, CreateLeadData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
+import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 export default function LeadCreate() {
   const navigate = useNavigate()
@@ -31,6 +32,25 @@ export default function LeadCreate() {
     assignedTo: '',
     tags: [] as string[],
     notes: ''
+  })
+  const [newTagInput, setNewTagInput] = useState('')
+
+  // Fetch team members for assigned-to dropdown
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['team-members'],
+    queryFn: async () => {
+      try {
+        const members = await usersApi.getTeamMembers()
+        return Array.isArray(members) ? members : []
+      } catch {
+        try {
+          const response = await usersApi.getUsers({ limit: 50 })
+          return response.data?.users || response.data || []
+        } catch {
+          return []
+        }
+      }
+    },
   })
 
   const createMutation = useMutation({
@@ -66,6 +86,8 @@ export default function LeadCreate() {
       source: formData.source || 'website',
       assignedToId: formData.assignedTo || undefined, // Backend expects assignedToId
       value: formData.dealValue ? parseInt(formData.dealValue) : undefined,
+      tags: formData.tags.length > 0 ? formData.tags : undefined,
+      notes: formData.notes || undefined,
       customFields: {
         address: formData.address || undefined,
         city: formData.city || undefined,
@@ -85,6 +107,9 @@ export default function LeadCreate() {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <LeadsSubNav hideAddButton />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -317,10 +342,12 @@ export default function LeadCreate() {
                   >
                     <option value="website">Website</option>
                     <option value="referral">Referral</option>
-                    <option value="social-media">Social Media</option>
-                    <option value="email-campaign">Email Campaign</option>
-                    <option value="cold-call">Cold Call</option>
+                    <option value="social">Social Media</option>
+                    <option value="email">Email Campaign</option>
+                    <option value="cold_call">Cold Call</option>
+                    <option value="linkedin">LinkedIn</option>
                     <option value="event">Event</option>
+                    <option value="partner">Partner</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
@@ -339,6 +366,8 @@ export default function LeadCreate() {
                     <option value="qualified">Qualified</option>
                     <option value="proposal">Proposal</option>
                     <option value="negotiation">Negotiation</option>
+                    <option value="won">Won</option>
+                    <option value="lost">Lost</option>
                   </select>
                 </div>
                 
@@ -351,10 +380,15 @@ export default function LeadCreate() {
                     className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
                     <option value="">Unassigned</option>
-                    <option value="user1">John Smith</option>
-                    <option value="user2">Sarah Johnson</option>
-                    <option value="user3">Mike Davis</option>
-                    <option value="user4">Emily Brown</option>
+                    {teamMembers.length > 0 ? (
+                      teamMembers.map((member: any) => (
+                        <option key={member.id} value={member.id}>
+                          {member.firstName} {member.lastName}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>No team members available</option>
+                    )}
                   </select>
                 </div>
               </div>
@@ -368,14 +402,49 @@ export default function LeadCreate() {
               </div>
               
               <div className="flex flex-wrap gap-2 mb-3">
-                <Badge>Hot Lead</Badge>
-                <Badge variant="secondary">Enterprise</Badge>
-                <Badge variant="outline">High Value</Badge>
+                {formData.tags.map((tag) => (
+                  <Badge key={tag} className="cursor-pointer" onClick={() => {
+                    setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }))
+                  }}>
+                    {tag}
+                    <X className="h-3 w-3 ml-1" />
+                  </Badge>
+                ))}
+                {formData.tags.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No tags added yet</p>
+                )}
               </div>
               
-              <Button variant="outline" size="sm" className="w-full">
-                Add Tags
-              </Button>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a tag..."
+                  value={newTagInput}
+                  onChange={(e) => setNewTagInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (newTagInput.trim() && !formData.tags.includes(newTagInput.trim())) {
+                        setFormData(prev => ({ ...prev, tags: [...prev.tags, newTagInput.trim()] }))
+                        setNewTagInput('')
+                      }
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (newTagInput.trim() && !formData.tags.includes(newTagInput.trim())) {
+                      setFormData(prev => ({ ...prev, tags: [...prev.tags, newTagInput.trim()] }))
+                      setNewTagInput('')
+                    }
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
             </Card>
 
             {/* Actions */}

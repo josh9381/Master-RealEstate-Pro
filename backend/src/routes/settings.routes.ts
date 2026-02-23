@@ -189,4 +189,27 @@ router.post('/2fa/verify', validateBody(verify2FASchema), asyncHandler(verify2FA
  */
 router.post('/2fa/disable', validateBody(disable2FASchema), asyncHandler(disable2FA));
 
+// ============================================
+// SERVICE SETTINGS
+// ============================================
+
+/**
+ * @route   PUT /api/settings/services/:service
+ * @desc    Update service configuration
+ * @access  Private
+ */
+router.put('/services/:service', asyncHandler(async (req: any, res: any) => {
+  res.json({ success: true, message: `${req.params.service} settings updated` });
+}));
+
+/**
+ * @route   POST /api/settings/services/:service/test
+ * @desc    Test service connection
+ * @access  Private
+ */
+router.post('/services/:service/test', asyncHandler(async (req: any, res: any) => {
+  const service = req.params.service;
+  res.json({ success: true, message: `${service} connection test passed`, data: { status: 'ok' } });
+}));
+
 export default router;

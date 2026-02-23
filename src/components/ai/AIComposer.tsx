@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/hooks/useToast'
 import api from '@/lib/api'
+import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { VariationsPanel } from './VariationsPanel'
 
 interface AIComposerProps {
@@ -182,18 +183,21 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       })
       
       if (response.data.success) {
-        setMessage(response.data.data.message.body)
-        if (response.data.data.message.subject) {
+        setMessage(response.data?.data?.message?.body || '')
+        if (response.data?.data?.message?.subject) {
           setSubject(response.data.data.message.subject)
         }
-        setContext(response.data.data.context)
-        setSuggestions(response.data.data.suggestions)
+        setContext(response.data?.data?.context || {})
+        setSuggestions(response.data?.data?.suggestions || [])
       } else {
         toast.error('Failed to generate message')
       }
     } catch (error: any) {
       console.error('Generate message error:', error)
-      if (error.response?.status === 401) {
+      const aiMsg = getAIUnavailableMessage(error)
+      if (aiMsg) {
+        toast.error(aiMsg)
+      } else if (error.response?.status === 401) {
         toast.error('Session expired. Please refresh the page.')
       } else if (error.response?.status === 400) {
         toast.error(error.response?.data?.message || 'Invalid request')

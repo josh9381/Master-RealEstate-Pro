@@ -1,39 +1,79 @@
-import { useState } from 'react';
-import { Activity, Database, Cpu, HardDrive, Network, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Activity, Database, Cpu, HardDrive, Network, CheckCircle, AlertTriangle, XCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { adminApi } from '@/lib/api';
+
+const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+
+interface ServiceHealth {
+  name: string;
+  status: 'healthy' | 'degraded' | 'down' | 'checking';
+  latency: string;
+  uptime: string;
+}
 
 const HealthCheckDashboard = () => {
   const { toast } = useToast();
   const [lastRefresh, setLastRefresh] = useState(new Date());
-  const [services, setServices] = useState([
-    { name: 'Database', status: 'healthy', latency: '12ms', uptime: '99.9%' },
-    { name: 'API Server', status: 'healthy', latency: '45ms', uptime: '99.8%' },
-    { name: 'Cache (Redis)', status: 'healthy', latency: '2ms', uptime: '100%' },
-    { name: 'Email Service', status: 'degraded', latency: '234ms', uptime: '98.5%' },
-    { name: 'Storage (S3)', status: 'healthy', latency: '67ms', uptime: '99.95%' },
-    { name: 'Search (Elasticsearch)', status: 'down', latency: 'N/A', uptime: '85.2%' },
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [services, setServices] = useState<ServiceHealth[]>([
+    { name: 'Database', status: 'checking', latency: '—', uptime: '—' },
+    { name: 'API Server', status: 'checking', latency: '—', uptime: '—' },
+    { name: 'Cache (Redis)', status: 'checking', latency: '—', uptime: '—' },
+    { name: 'Email Service', status: 'checking', latency: '—', uptime: '—' },
+    { name: 'Storage (S3)', status: 'checking', latency: '—', uptime: '—' },
+    { name: 'Search (Elasticsearch)', status: 'checking', latency: '—', uptime: '—' },
   ]);
+
+  const fetchHealthData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await adminApi.healthCheck();
+      const data = response.data || response;
+
+      if (data.services && Array.isArray(data.services)) {
+        setServices(data.services);
+      }
+      setLastRefresh(new Date());
+    } catch (error: any) {
+      // If health endpoint doesn't exist (404), show unknown state
+      if (error?.response?.status === 404) {
+        setServices(prev => prev.map(s => ({
+          ...s,
+          status: 'checking' as const,
+          latency: 'N/A',
+          uptime: 'N/A',
+        })));
+      } else {
+        console.error('Health check failed:', error);
+        toast.error('Failed to fetch health data');
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [toast]);
+
+  // Initial load and auto-refresh every 30 seconds
+  useEffect(() => {
+    fetchHealthData();
+    const interval = setInterval(fetchHealthData, AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchHealthData]);
 
   const handleRefresh = () => {
     toast.info('Refreshing health checks...');
-    
-    // Simulate health check refresh with slightly updated latency values
-    setTimeout(() => {
-      setServices(services.map(service => {
-        if (service.latency !== 'N/A') {
-          const currentLatency = parseInt(service.latency);
-          const newLatency = currentLatency + Math.floor(Math.random() * 10 - 5); // +/- 5ms variation
-          return { ...service, latency: `${Math.max(1, newLatency)}ms` };
-        }
-        return service;
-      }));
-      setLastRefresh(new Date());
-      toast.success('Health checks refreshed successfully');
-    }, 1500);
+    fetchHealthData();
   };
+
+  const healthyCount = services.filter(s => s.status === 'healthy').length;
+  const degradedCount = services.filter(s => s.status === 'degraded').length;
+  const downCount = services.filter(s => s.status === 'down').length;
+  const checkingCount = services.filter(s => s.status === 'checking').length;
+
+  const overallStatus = downCount > 0 ? 'degraded' : degradedCount > 0 ? 'partial' : checkingCount === services.length ? 'checking' : 'operational';
 
   return (
     <div className="space-y-6">
@@ -44,23 +84,32 @@ const HealthCheckDashboard = () => {
             Monitor system status and performance • Last updated: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
-        <Button onClick={handleRefresh}>
-          <Activity className="h-4 w-4 mr-2" />
+        <Button onClick={handleRefresh} disabled={isRefreshing}>
+          {isRefreshing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Activity className="h-4 w-4 mr-2" />}
           Refresh
         </Button>
       </div>
 
       {/* Overall Status */}
-      <Card className="border-green-200 bg-green-50">
+      <Card className={`border-${overallStatus === 'operational' ? 'green' : overallStatus === 'checking' ? 'gray' : 'orange'}-200 bg-${overallStatus === 'operational' ? 'green' : overallStatus === 'checking' ? 'gray' : 'orange'}-50`}>
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center justify-center h-16 w-16 rounded-full bg-green-600">
-              <CheckCircle className="h-8 w-8 text-white" />
+            <div className={`flex items-center justify-center h-16 w-16 rounded-full ${overallStatus === 'operational' ? 'bg-green-600' : overallStatus === 'checking' ? 'bg-gray-400' : 'bg-orange-600'}`}>
+              {overallStatus === 'checking' ? (
+                <Loader2 className="h-8 w-8 text-white animate-spin" />
+              ) : overallStatus === 'operational' ? (
+                <CheckCircle className="h-8 w-8 text-white" />
+              ) : (
+                <AlertTriangle className="h-8 w-8 text-white" />
+              )}
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-green-900">System Operational</h3>
-              <p className="text-green-800 mt-1">
-                All core services are running. 1 service degraded, 1 service down.
+              <h3 className="text-2xl font-bold">
+                {overallStatus === 'checking' ? 'Checking Services...' : overallStatus === 'operational' ? 'System Operational' : 'System Issues Detected'}
+              </h3>
+              <p className="mt-1 text-muted-foreground">
+                {healthyCount} healthy, {degradedCount} degraded, {downCount} down{checkingCount > 0 ? `, ${checkingCount} checking` : ''}.
+                Auto-refreshes every 30s.
               </p>
             </div>
           </div>
@@ -128,6 +177,8 @@ const HealthCheckDashboard = () => {
                         ? 'bg-green-100'
                         : service.status === 'degraded'
                         ? 'bg-orange-100'
+                        : service.status === 'checking'
+                        ? 'bg-gray-100'
                         : 'bg-red-100'
                     }`}
                   >
@@ -135,6 +186,8 @@ const HealthCheckDashboard = () => {
                       <CheckCircle className="h-5 w-5 text-green-600" />
                     ) : service.status === 'degraded' ? (
                       <AlertTriangle className="h-5 w-5 text-orange-600" />
+                    ) : service.status === 'checking' ? (
+                      <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
                     ) : (
                       <XCircle className="h-5 w-5 text-red-600" />
                     )}

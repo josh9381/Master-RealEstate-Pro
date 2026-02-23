@@ -19,6 +19,7 @@ import {
   completeTaskSchema,
 } from '../validators/task.validator';
 import { sensitiveLimiter } from '../middleware/rateLimiter';
+import prisma from '../config/database';
 
 const router = Router();
 
@@ -31,6 +32,27 @@ router.use(authenticate);
  * @access  Private
  */
 router.get('/stats', asyncHandler(getTaskStats));
+
+/**
+ * @route   GET /api/tasks/user
+ * @desc    Get current user's tasks
+ * @access  Private
+ */
+router.get('/user', asyncHandler(async (req: any, res: any) => {
+  const tasks = await prisma.task.findMany({
+    where: {
+      assignedToId: req.user!.userId,
+      organizationId: req.user!.organizationId
+    },
+    orderBy: { dueDate: 'asc' },
+    take: parseInt(req.query.limit as string) || 50,
+    include: {
+      assignedTo: { select: { id: true, firstName: true, lastName: true } },
+      lead: { select: { id: true, firstName: true, lastName: true } }
+    }
+  });
+  res.json({ success: true, data: tasks });
+}));
 
 /**
  * @route   GET /api/tasks

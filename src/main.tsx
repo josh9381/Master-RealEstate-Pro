@@ -5,7 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import { ToastContainer } from './components/ui/ToastContainer'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { DevErrorPanel } from './components/DevErrorPanel'
+import { initDevErrorMonitor } from './lib/devErrorMonitor'
 import './index.css'
+
+// Initialize dev error monitoring (only active in dev mode)
+initDevErrorMonitor()
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +34,7 @@ createRoot(document.getElementById('root')!).render(
         >
           <App />
           <ToastContainer />
+          <DevErrorPanel />
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

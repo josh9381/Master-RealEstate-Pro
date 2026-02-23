@@ -4,18 +4,29 @@ import { useAuthStore } from '@/store/authStore'
 import { UpgradePrompt } from './UpgradePrompt'
 import api from '@/lib/api'
 
+interface UsageEntry {
+  current: number
+  limit: number | 'unlimited' | null
+  remaining?: number | 'unlimited'
+  percentage?: number
+  isAtLimit?: boolean
+}
+
 interface SubscriptionData {
-  currentPlan: {
+  subscription: {
     tier: string
+    name?: string
+    price?: number
   }
   usage: {
-    users: { current: number; limit: number | null }
-    leads: { current: number; limit: number | null }
-    campaigns: { current: number; limit: number | null }
-    workflows: { current: number; limit: number | null }
-    emailsPerMonth: { current: number; limit: number | null }
-    smsPerMonth: { current: number; limit: number | null }
+    users: UsageEntry
+    leads: UsageEntry
+    campaigns: UsageEntry
+    workflows: UsageEntry
+    emailsPerMonth?: UsageEntry
+    smsPerMonth?: UsageEntry
   }
+  planFeatures?: Record<string, unknown>
 }
 
 interface FeatureGateProps {
@@ -44,19 +55,19 @@ export function FeatureGate({
     queryKey: ['subscription-status'],
     queryFn: async () => {
       const response = await api.get('/subscriptions/current')
-      return response.data
+      return response.data?.data || response.data
     },
   })
   
-  if (!subscriptionData) {
+  if (!subscriptionData?.usage) {
     return <>{children}</>
   }
   
   const usage = subscriptionData.usage[resource]
   const tier = getSubscriptionTier()
   
-  // If no limit (unlimited), always allow
-  if (usage.limit === null) {
+  // If no usage data or no limit (unlimited), always allow
+  if (!usage || usage.limit === null || usage.limit === 'unlimited') {
     return <>{children}</>
   }
   
@@ -100,15 +111,16 @@ export function UsageBadge({ resource }: UsageBadgeProps) {
     queryKey: ['subscription-status'],
     queryFn: async () => {
       const response = await api.get('/subscriptions/current')
-      return response.data
+      return response.data?.data || response.data
     },
   })
   
-  if (!subscriptionData) return null
+  if (!subscriptionData?.usage) return null
   
   const usage = subscriptionData.usage[resource]
+  if (!usage) return null
   
-  if (usage.limit === null) {
+  if (usage.limit === null || usage.limit === 'unlimited') {
     return (
       <span className="text-xs text-gray-500">
         {usage.current.toLocaleString()} / Unlimited
@@ -116,7 +128,7 @@ export function UsageBadge({ resource }: UsageBadgeProps) {
     )
   }
   
-  const percentage = (usage.current / usage.limit) * 100
+  const percentage = (usage.current / (usage.limit as number)) * 100
   const isNearLimit = percentage >= 75
   const isAtLimit = percentage >= 100
   

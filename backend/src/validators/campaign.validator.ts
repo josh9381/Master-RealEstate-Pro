@@ -27,13 +27,33 @@ export const createCampaignSchema = z.object({
   subject: z.string().max(255).optional(),
   body: z.string().max(50000).optional(),
   previewText: z.string().max(500).optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: z.string().optional().transform(val => {
+    if (!val) return val;
+    // Accept both ISO datetime and date-only formats
+    if (val.includes('T')) return val;
+    return `${val}T00:00:00.000Z`;
+  }),
+  endDate: z.string().optional().transform(val => {
+    if (!val) return val;
+    if (val.includes('T')) return val;
+    return `${val}T00:00:00.000Z`;
+  }),
   budget: z.number().min(0).optional(),
   audience: z.number().min(0).optional(),
   isABTest: z.boolean().optional(),
   abTestData: z.record(z.string(), z.any()).optional(),
   tagIds: z.array(z.string()).optional(),
+  isRecurring: z.boolean().optional(),
+  frequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
+  recurringPattern: z.union([
+    z.string(),
+    z.object({
+      daysOfWeek: z.array(z.number()).optional(),
+      dayOfMonth: z.number().optional(),
+      time: z.string().optional(),
+    }),
+  ]).optional(),
+  maxOccurrences: z.number().min(1).optional(),
 });
 
 /**
@@ -46,8 +66,16 @@ export const updateCampaignSchema = z.object({
   subject: z.string().max(255).optional().nullable(),
   body: z.string().max(50000).optional().nullable(),
   previewText: z.string().max(500).optional().nullable(),
-  startDate: z.string().datetime().optional().nullable(),
-  endDate: z.string().datetime().optional().nullable(),
+  startDate: z.string().optional().nullable().transform(val => {
+    if (!val) return val;
+    if (val.includes('T')) return val;
+    return `${val}T00:00:00.000Z`;
+  }),
+  endDate: z.string().optional().nullable().transform(val => {
+    if (!val) return val;
+    if (val.includes('T')) return val;
+    return `${val}T00:00:00.000Z`;
+  }),
   budget: z.number().min(0).optional().nullable(),
   spent: z.number().min(0).optional(),
   audience: z.number().min(0).optional().nullable(),
@@ -62,6 +90,17 @@ export const updateCampaignSchema = z.object({
   roi: z.number().optional().nullable(),
   isABTest: z.boolean().optional(),
   abTestData: z.record(z.string(), z.any()).optional().nullable(),
+  isRecurring: z.boolean().optional(),
+  frequency: z.enum(['daily', 'weekly', 'monthly']).optional().nullable(),
+  recurringPattern: z.union([
+    z.string(),
+    z.object({
+      daysOfWeek: z.array(z.number()).optional(),
+      dayOfMonth: z.number().optional(),
+      time: z.string().optional(),
+    }),
+  ]).optional().nullable(),
+  maxOccurrences: z.number().min(1).optional().nullable(),
 });
 
 /**
@@ -80,6 +119,7 @@ export const listCampaignsQuerySchema = z.object({
   status: campaignStatusSchema.optional(),
   type: campaignTypeSchema.optional(),
   search: z.string().optional(), // Search in name, subject
+  includeArchived: z.string().optional().transform(val => val === 'true'),
   sortBy: z.enum(['createdAt', 'updatedAt', 'startDate', 'name', 'sent', 'opened', 'clicked', 'converted', 'delivered', 'bounced']).optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });

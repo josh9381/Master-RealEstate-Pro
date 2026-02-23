@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BarChart3, TrendingUp, Users, DollarSign, Mail, Phone, Target, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -19,30 +20,44 @@ import {
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const AnalyticsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [leadAnalytics, setLeadAnalytics] = useState<any>(null);
   const [campaignAnalytics, setCampaignAnalytics] = useState<any>(null);
+  const [teamPerformanceData, setTeamPerformanceData] = useState<any[]>([]);
   const toast = useToast();
+  const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadAnalytics();
   }, []);
 
+  const handleDateChange = (range: DateRange) => {
+    dateRangeRef.current = range;
+    loadAnalytics();
+  };
+
   const loadAnalytics = async () => {
     try {
       setLoading(true);
-      const [dashboard, leads, campaigns] = await Promise.all([
-        analyticsApi.getDashboardStats().catch(() => ({ data: null })),
-        analyticsApi.getLeadAnalytics().catch(() => ({ data: null })),
-        analyticsApi.getCampaignAnalytics().catch(() => ({ data: null }))
+      const params = dateRangeRef.current;
+      const [dashboard, leads, campaigns, teamPerf] = await Promise.all([
+        analyticsApi.getDashboardStats(params).catch(() => ({ data: null })),
+        analyticsApi.getLeadAnalytics(params).catch(() => ({ data: null })),
+        analyticsApi.getCampaignAnalytics(params).catch(() => ({ data: null })),
+        analyticsApi.getTeamPerformance(params).catch(() => ({ data: null }))
       ]);
 
       setDashboardData(dashboard.data);
       setLeadAnalytics(leads.data);
       setCampaignAnalytics(campaigns.data);
+      setTeamPerformanceData(teamPerf?.data || []);
     } catch (error) {
       console.error('Error loading analytics:', error);
       toast.toast.error('Error loading analytics', 'Using fallback data');
@@ -51,45 +66,14 @@ const AnalyticsDashboard = () => {
     }
   };
 
-  // Mock data as fallback
-  const getMockRevenueData = () => [
-    { month: 'Jan', revenue: 45000, target: 50000 },
-    { month: 'Feb', revenue: 52000, target: 50000 },
-    { month: 'Mar', revenue: 48000, target: 50000 },
-    { month: 'Apr', revenue: 61000, target: 55000 },
-    { month: 'May', revenue: 55000, target: 55000 },
-    { month: 'Jun', revenue: 67000, target: 60000 },
-  ];
-
-  const getMockChannelData = () => [
-    { name: 'Email', value: 45, color: '#3b82f6' },
-    { name: 'Phone', value: 30, color: '#10b981' },
-    { name: 'Social', value: 15, color: '#8b5cf6' },
-    { name: 'Direct', value: 10, color: '#f59e0b' },
-  ];
-
-  const getMockConversionFunnel = () => [
-    { stage: 'Visitors', count: 15420 },
-    { stage: 'Leads', count: 4567 },
-    { stage: 'Qualified', count: 2134 },
-    { stage: 'Opportunities', count: 892 },
-    { stage: 'Customers', count: 234 },
-  ];
-
-  const getMockTeamPerformance = () => [
-    { name: 'John D', deals: 45, revenue: 234000 },
-    { name: 'Sarah M', deals: 38, revenue: 198000 },
-    { name: 'Mike R', deals: 32, revenue: 176000 },
-    { name: 'Emma W', deals: 28, revenue: 145000 },
-    { name: 'Tom H', deals: 25, revenue: 132000 },
-  ];
-
-  // Use API data with zero fallbacks
-  const revenueData = getMockRevenueData();
+  // Mock data as fallback — REMOVED: use API data only
+  // Revenue data from campaign analytics
+  const revenueData = campaignAnalytics?.monthlyData || [];
   const totalRevenue = campaignAnalytics?.performance?.totalRevenue || 0;
   const totalLeads = dashboardData?.leads?.total || leadAnalytics?.total || 0;
   const conversionRate = leadAnalytics?.conversionRate || dashboardData?.leads?.conversionRate || 0;
-  const avgDealSize = totalLeads > 0 ? totalRevenue / totalLeads : 0;
+  const wonLeads = leadAnalytics?.byStatus?.WON || 0;
+  const avgDealSize = wonLeads > 0 ? totalRevenue / wonLeads : 0;
 
   // Channel data from lead sources
   const channelData = leadAnalytics?.bySource 
@@ -111,7 +95,7 @@ const AnalyticsDashboard = () => {
       ]
     : [];
 
-  const teamPerformance: any[] = [];
+  const teamPerformance = teamPerformanceData || [];
 
   // Campaign performance metrics
   const emailOpenRate = campaignAnalytics?.performance?.openRate || 0;
@@ -135,17 +119,20 @@ const AnalyticsDashboard = () => {
             Comprehensive view of your business performance
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
+          <DateRangePicker onChange={handleDateChange} />
           <Button variant="outline" onClick={loadAnalytics}>Refresh</Button>
-          <Button>Customize Dashboard</Button>
         </div>
       </div>
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/campaigns')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Total Revenue
+              <HelpTooltip text="Sum of all deal values from won leads plus campaign revenue. This reflects recognized revenue within the selected date range." />
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -155,9 +142,12 @@ const AnalyticsDashboard = () => {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/leads')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Total Leads
+              <HelpTooltip text="Total number of leads in your CRM for the selected period." />
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -167,9 +157,12 @@ const AnalyticsDashboard = () => {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/leads')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Conversion Rate
+              <HelpTooltip text="Percentage of leads that reached 'Won' status. Higher is better — aim for 15–25% with qualified leads." />
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -179,9 +172,12 @@ const AnalyticsDashboard = () => {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/leads')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Deal Size</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Avg Deal Size
+              <HelpTooltip text="Average value of won deals. Calculated by dividing total revenue by the number of won leads." />
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -193,6 +189,11 @@ const AnalyticsDashboard = () => {
         </Card>
       </div>
 
+      {/* Page-level empty state when no data exists */}
+      {totalLeads === 0 && totalRevenue === 0 && (
+        <AnalyticsEmptyState variant="general" />
+      )}
+
       {/* Revenue & Conversion Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -201,6 +202,7 @@ const AnalyticsDashboard = () => {
             <CardDescription>Monthly revenue vs target</CardDescription>
           </CardHeader>
           <CardContent>
+            {revenueData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -227,6 +229,11 @@ const AnalyticsDashboard = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No revenue data yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -236,6 +243,7 @@ const AnalyticsDashboard = () => {
             <CardDescription>Distribution by channel</CardDescription>
           </CardHeader>
           <CardContent>
+            {channelData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -255,6 +263,11 @@ const AnalyticsDashboard = () => {
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No lead source data yet
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -266,6 +279,7 @@ const AnalyticsDashboard = () => {
           <CardDescription>Lead progression through sales stages</CardDescription>
         </CardHeader>
         <CardContent>
+          {conversionFunnel.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={conversionFunnel} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
@@ -275,6 +289,11 @@ const AnalyticsDashboard = () => {
               <Bar dataKey="count" fill="hsl(var(--primary))" />
             </BarChart>
           </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              No conversion data yet
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -286,7 +305,7 @@ const AnalyticsDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {teamPerformance.map((member, index) => (
+            {teamPerformance.length > 0 ? teamPerformance.map((member, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="font-semibold text-lg text-muted-foreground w-6">
@@ -302,14 +321,18 @@ const AnalyticsDashboard = () => {
                   <p className="text-sm text-muted-foreground">revenue</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="flex items-center justify-center h-24 text-muted-foreground">
+                No team performance data yet
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/campaigns')}>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Mail className="h-4 w-4 mr-2" />
@@ -359,26 +382,27 @@ const AnalyticsDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/leads/pipeline')}>
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChart3 className="h-4 w-4 mr-2" />
               Pipeline Health
+              <HelpTooltip text="Open Opportunities = leads at 'Qualified' stage. Pipeline Value = total value of all deals in progress. A healthy pipeline should have 3–5x your revenue target in open opportunities." />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm">Open Opportunities</span>
-                <span className="font-semibold">892</span>
+                <span className="font-semibold">{leadAnalytics?.byStatus?.QUALIFIED || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Pipeline Value</span>
-                <span className="font-semibold">$4.2M</span>
+                <span className="font-semibold">${totalRevenue > 0 ? `${(totalRevenue / 1000000).toFixed(1)}M` : '0'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Forecast</span>
-                <span className="font-semibold">$1.1M</span>
+                <span className="font-semibold text-muted-foreground">—</span>
               </div>
             </div>
           </CardContent>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getAIUnavailableMessage } from '@/hooks/useAIAvailability';
 import {
   Wand2,
   Mail,
@@ -135,7 +136,8 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
       }
     } catch (error) {
       console.error('Content generation error:', error);
-      alert('Failed to generate content');
+      const aiMsg = getAIUnavailableMessage(error);
+      alert(aiMsg || 'Failed to generate content. Please try again.');
     } finally {
       setIsGenerating(false);
     }

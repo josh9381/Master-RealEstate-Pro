@@ -46,7 +46,7 @@ export function TeamManagement() {
         params.append('role', roleFilter)
       }
       const response = await api.get(`/admin/team-members?${params}`)
-      return response.data
+      return response.data?.data || response.data
     },
     enabled: isAdmin() || isManager(),
   })

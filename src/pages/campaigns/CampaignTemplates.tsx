@@ -1,4 +1,4 @@
-import { FileText, RefreshCw, Clock, Calendar, Tag } from 'lucide-react';
+import { FileText, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useNavigate } from 'react-router-dom';
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 
 interface CampaignTemplate {
   id: string;
@@ -57,7 +58,7 @@ const CampaignTemplates = () => {
     setIsLoading(true);
     try {
       const response = await campaignsApi.getTemplates();
-      const templateList = response.data.templates || [];
+      const templateList = response.data?.templates || [];
       
       setTemplates(templateList);
       
@@ -102,8 +103,8 @@ const CampaignTemplates = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(t =>
         t.name.toLowerCase().includes(query) ||
-        t.description.toLowerCase().includes(query) ||
-        t.tags.some(tag => tag.toLowerCase().includes(query))
+        (t.description || '').toLowerCase().includes(query) ||
+        (t.tags || []).some(tag => tag.toLowerCase().includes(query))
       );
     }
     
@@ -120,7 +121,11 @@ const CampaignTemplates = () => {
         name: template.name
       });
 
-      const campaignId = response.data.campaign.id;
+      const campaignId = response.data?.campaign?.id;
+      if (!campaignId) {
+        toast.error('Campaign created but ID not returned');
+        return;
+      }
       toast.success(`Campaign created from template: ${template.name}`);
       
       // Navigate to edit the new campaign
@@ -135,6 +140,9 @@ const CampaignTemplates = () => {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <CampaignsSubNav />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Campaign Templates</h1>

@@ -336,7 +336,7 @@ export async function sendBulkEmails(
  * Mock email sending (when SendGrid not configured)
  */
 async function mockEmailSend(options: EmailOptions): Promise<EmailResult> {
-  const { to, subject, html, text, leadId } = options;
+  const { to, subject, html, text, leadId, organizationId } = options;
 
   console.log('[EMAIL] MOCK MODE - Email not actually sent:');
   console.log('To:', to);
@@ -353,6 +353,7 @@ async function mockEmailSend(options: EmailOptions): Promise<EmailResult> {
     toAddress: Array.isArray(to) ? to.join(', ') : to,
     status: 'DELIVERED', // Mock mode treats as immediately delivered
     provider: 'mock',
+    organizationId,
     leadId,
     metadata: {
       mockMode: true,

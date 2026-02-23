@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useState, useEffect } from 'react';
 import { leadsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
 
 interface LeadData {
   id: number | string;
@@ -31,6 +32,13 @@ const LeadsMerge = () => {
     mergedMonth: 0,
     autoMerged: 0,
   });
+  const [mergeSettings, setMergeSettings] = useState({
+    matchEmail: true,
+    matchPhone: true,
+    matchName: true,
+    matchCompany: false,
+    threshold: 80,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,22 +50,28 @@ const LeadsMerge = () => {
     setIsLoading(true);
     try {
       const response = await leadsApi.getLeads({ limit: 200 });
-      const leads = response.data || [];
+      const leads = response.data?.leads || response.data || [];
       
-      // Find potential duplicates
+      // Find potential duplicates based on merge settings
       const duplicatePairs: DuplicatePair[] = [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const emailMap = new Map<string, any>();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const phoneMap = new Map<string, any>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nameMap = new Map<string, any>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const companyMap = new Map<string, any>();
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       leads.forEach((lead: any) => {
         const email = lead.email?.toLowerCase();
         const phone = lead.phone?.replace(/\D/g, '');
+        const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim().toLowerCase();
+        const company = lead.company?.toLowerCase();
         
         // Check for email duplicates
-        if (email && emailMap.has(email)) {
+        if (mergeSettings.matchEmail && email && emailMap.has(email)) {
           const existing = emailMap.get(email);
           duplicatePairs.push({
             id: duplicatePairs.length + 1,
@@ -80,12 +94,12 @@ const LeadsMerge = () => {
             similarity: 95,
             reason: 'Same email address',
           });
-        } else if (email) {
+        } else if (mergeSettings.matchEmail && email) {
           emailMap.set(email, lead);
         }
         
         // Check for phone duplicates
-        if (phone && phone.length >= 10 && phoneMap.has(phone)) {
+        if (mergeSettings.matchPhone && phone && phone.length >= 10 && phoneMap.has(phone)) {
           const existing = phoneMap.get(phone);
           // Only add if not already added by email match
           const alreadyMatched = duplicatePairs.some(
@@ -116,14 +130,56 @@ const LeadsMerge = () => {
               reason: 'Same phone number',
             });
           }
-        } else if (phone && phone.length >= 10) {
+        } else if (mergeSettings.matchPhone && phone && phone.length >= 10) {
           phoneMap.set(phone, lead);
+        }
+
+        // Check for name duplicates
+        if (mergeSettings.matchName && fullName.length > 1 && nameMap.has(fullName)) {
+          const existing = nameMap.get(fullName);
+          const alreadyMatched = duplicatePairs.some(
+            d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
+                 (d.lead1.id === lead.id && d.lead2.id === existing.id)
+          );
+          if (!alreadyMatched) {
+            duplicatePairs.push({
+              id: duplicatePairs.length + 1,
+              lead1: { id: existing.id, name: `${existing.firstName} ${existing.lastName}`, email: existing.email, phone: existing.phone, company: existing.company, score: existing.score || 0 },
+              lead2: { id: lead.id, name: `${lead.firstName} ${lead.lastName}`, email: lead.email, phone: lead.phone, company: lead.company, score: lead.score || 0 },
+              similarity: 80,
+              reason: 'Same full name',
+            });
+          }
+        } else if (mergeSettings.matchName && fullName.length > 1) {
+          nameMap.set(fullName, lead);
+        }
+
+        // Check for company duplicates
+        if (mergeSettings.matchCompany && company && company.length > 1 && companyMap.has(company)) {
+          const existing = companyMap.get(company);
+          const alreadyMatched = duplicatePairs.some(
+            d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
+                 (d.lead1.id === lead.id && d.lead2.id === existing.id)
+          );
+          if (!alreadyMatched) {
+            duplicatePairs.push({
+              id: duplicatePairs.length + 1,
+              lead1: { id: existing.id, name: `${existing.firstName} ${existing.lastName}`, email: existing.email, phone: existing.phone, company: existing.company, score: existing.score || 0 },
+              lead2: { id: lead.id, name: `${lead.firstName} ${lead.lastName}`, email: lead.email, phone: lead.phone, company: lead.company, score: lead.score || 0 },
+              similarity: 70,
+              reason: 'Same company',
+            });
+          }
+        } else if (mergeSettings.matchCompany && company && company.length > 1) {
+          companyMap.set(company, lead);
         }
       });
 
-      setDuplicates(duplicatePairs);
+      // Filter by similarity threshold
+      const filteredPairs = duplicatePairs.filter(d => d.similarity >= mergeSettings.threshold);
+      setDuplicates(filteredPairs);
       setStats({
-        potential: duplicatePairs.length,
+        potential: filteredPairs.length,
         mergedMonth: 0,
         autoMerged: 0,
       });
@@ -140,21 +196,44 @@ const LeadsMerge = () => {
     if (!duplicate) return;
 
     try {
-      // In a real implementation, you'd call an API endpoint to merge
-      // For now, we'll just show a success message
+      // Call the merge API endpoint
+      await leadsApi.mergeLeads({
+        primaryLeadId: String(duplicate.lead1.id),
+        secondaryLeadId: String(duplicate.lead2.id),
+      });
+      
       toast.success(`Merged leads #${duplicate.lead1.id} and #${duplicate.lead2.id}`);
       
       // Remove from list
       setDuplicates(prev => prev.filter(d => d.id !== duplicateId));
       setStats(prev => ({ ...prev, potential: prev.potential - 1, mergedMonth: prev.mergedMonth + 1 }));
-    } catch (error) {
-      console.error('Error merging leads:', error);
-      toast.error('Failed to merge leads');
+    } catch (error: any) {
+      // Handle 404 gracefully — merge endpoint may not be deployed yet
+      if (error?.response?.status === 404) {
+        toast.error('Merge endpoint not available yet. Please try again later.');
+      } else {
+        console.error('Error merging leads:', error);
+        toast.error('Failed to merge leads');
+      }
     }
+  };
+
+  const handleDismiss = (duplicateId: number) => {
+    setDuplicates(prev => prev.filter(d => d.id !== duplicateId));
+    setStats(prev => ({ ...prev, potential: prev.potential - 1 }));
+    toast.info('Marked as not duplicate');
+  };
+
+  const handleSkip = (duplicateId: number) => {
+    setDuplicates(prev => prev.filter(d => d.id !== duplicateId));
+    toast.info('Skipped for now');
   };
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <LeadsSubNav />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Merge Duplicate Leads</h1>
@@ -197,7 +276,7 @@ const LeadsMerge = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.autoMerged}</div>
-            <p className="text-xs text-muted-foreground">By rules</p>
+            <p className="text-xs text-muted-foreground" title="Auto-merge rules are coming soon">Coming Soon</p>
           </CardContent>
         </Card>
       </div>
@@ -211,27 +290,54 @@ const LeadsMerge = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={mergeSettings.matchEmail} 
+                onChange={(e) => setMergeSettings(prev => ({ ...prev, matchEmail: e.target.checked }))}
+                className="rounded" 
+              />
               <span className="text-sm">Match by email address</span>
             </label>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={mergeSettings.matchPhone} 
+                onChange={(e) => setMergeSettings(prev => ({ ...prev, matchPhone: e.target.checked }))}
+                className="rounded" 
+              />
               <span className="text-sm">Match by phone number</span>
             </label>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={mergeSettings.matchName} 
+                onChange={(e) => setMergeSettings(prev => ({ ...prev, matchName: e.target.checked }))}
+                className="rounded" 
+              />
               <span className="text-sm">Match by full name</span>
             </label>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={mergeSettings.matchCompany} 
+                onChange={(e) => setMergeSettings(prev => ({ ...prev, matchCompany: e.target.checked }))}
+                className="rounded" 
+              />
               <span className="text-sm">Match by company name</span>
             </label>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Similarity Threshold</label>
             <div className="flex items-center space-x-4">
-              <input type="range" min="50" max="100" defaultValue="80" className="flex-1" />
-              <span className="text-sm font-medium">80%</span>
+              <input 
+                type="range" 
+                min="50" 
+                max="100" 
+                value={mergeSettings.threshold} 
+                onChange={(e) => setMergeSettings(prev => ({ ...prev, threshold: parseInt(e.target.value) }))}
+                className="flex-1" 
+              />
+              <span className="text-sm font-medium">{mergeSettings.threshold}%</span>
             </div>
           </div>
           <Button onClick={loadDuplicates}>Run Duplicate Scan</Button>
@@ -331,10 +437,10 @@ const LeadsMerge = () => {
 
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <div className="flex space-x-2">
-                <Button variant="outline">Not Duplicates</Button>
-                <Button variant="outline">Skip for Now</Button>
+                <Button variant="outline" onClick={() => handleDismiss(duplicate.id)}>Not Duplicates</Button>
+                <Button variant="outline" onClick={() => handleSkip(duplicate.id)}>Skip for Now</Button>
               </div>
-              <Button>
+              <Button onClick={() => handleMerge(duplicate.id)}>
                 <Merge className="h-4 w-4 mr-2" />
                 Merge These Leads
               </Button>
@@ -350,37 +456,15 @@ const LeadsMerge = () => {
           <CardDescription>Previously merged duplicate records</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[
-              {
-                merged: 'Mike Wilson + M. Wilson',
-                date: '2024-01-15',
-                by: 'John Doe',
-              },
-              {
-                merged: 'Emily Brown + E. Brown',
-                date: '2024-01-14',
-                by: 'Sarah Johnson',
-              },
-              {
-                merged: 'David Lee + D. Lee',
-                date: '2024-01-13',
-                by: 'Auto-merge',
-              },
-            ].map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">{item.merged}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {item.date} by {item.by}
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm">
-                  View Details
-                </Button>
-              </div>
-            ))}
-          </div>
+          {stats.mergedMonth === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No merge history yet. Merged records will appear here.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              {stats.mergedMonth} leads merged this session.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

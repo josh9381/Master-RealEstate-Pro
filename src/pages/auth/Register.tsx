@@ -21,42 +21,33 @@ function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('Form submitted', formData)
-    
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-      console.log('Validation failed: missing fields')
       toast.error('Missing fields', 'Please fill in all required fields')
       return
     }
     
     if (formData.password !== formData.confirmPassword) {
-      console.log('Validation failed: passwords do not match')
       toast.error('Password mismatch', 'Passwords do not match')
       return
     }
     
     if (formData.password.length < 6) {
-      console.log('Validation failed: password too short')
       toast.warning('Weak password', 'Password should be at least 6 characters')
       return
     }
 
     try {
-      console.log('Calling register API...')
       await register({ 
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email, 
         password: formData.password 
       })
-      console.log('Registration successful!')
       toast.success('Account created successfully!', 'Welcome to CRM Platform')
       setTimeout(() => navigate('/'), 500)
     } catch (error: unknown) {
-      console.error('Registration error:', error)
-      const err = error as { response?: { data?: { message?: string; errors?: any } } }
+      const err = error as { response?: { data?: { message?: string; errors?: unknown } } }
       const errorMessage = err.response?.data?.message || 'Could not create account'
-      console.log('Error details:', err.response?.data)
       toast.error('Registration failed', errorMessage)
     }
   }

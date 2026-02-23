@@ -546,6 +546,7 @@ export async function bulkUpdateLeads(req: Request, res: Response): Promise<void
       id: {
         in: leadIds,
       },
+      organizationId: req.user!.organizationId,
     },
     data: updates,
   });
@@ -876,6 +877,70 @@ export async function recalculateAllScores(req: Request, res: Response): Promise
       error: error.message,
     });
   }
+}
+
+/**
+ * Import leads from CSV
+ * POST /api/leads/import
+ */
+export async function importLeads(req: Request, res: Response): Promise<void> {
+  const organizationId = (req as any).user!.organizationId;
+  const file = (req as any).file;
+
+  if (!file) {
+    res.status(400).json({ success: false, message: 'No file uploaded' });
+    return;
+  }
+
+  const csv = file.buffer.toString('utf-8');
+  const lines = csv.split('\n').filter((l: string) => l.trim());
+
+  if (lines.length < 2) {
+    res.status(400).json({ success: false, message: 'CSV file is empty or has no data rows' });
+    return;
+  }
+
+  const headers = lines[0].split(',').map((h: string) => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    try {
+      const values = lines[i].split(',').map((v: string) => v.trim().replace(/^"|"$/g, ''));
+      const row: Record<string, string> = {};
+      headers.forEach((h: string, idx: number) => { row[h] = values[idx] || ''; });
+
+      const leadData = {
+        firstName: row['first name'] || row['firstname'] || row['first_name'] || row['name']?.split(' ')[0] || '',
+        lastName: row['last name'] || row['lastname'] || row['last_name'] || row['name']?.split(' ').slice(1).join(' ') || '',
+        email: row['email'] || '',
+        phone: row['phone'] || row['phone number'] || row['phonenumber'] || '',
+        source: row['source'] || 'IMPORT',
+        status: 'NEW' as const,
+        organizationId,
+        assignedToId: (req as any).user!.id,
+      };
+
+      if (!leadData.firstName && !leadData.email) {
+        skipped++;
+        errors.push(`Row ${i}: Missing name and email`);
+        continue;
+      }
+
+      await prisma.lead.create({ data: leadData as any });
+      imported++;
+    } catch (err: any) {
+      skipped++;
+      errors.push(`Row ${i}: ${err.message}`);
+    }
+  }
+
+  res.json({
+    success: true,
+    data: { imported, skipped, total: lines.length - 1, errors: errors.slice(0, 10) },
+  });
 }
 
 /**

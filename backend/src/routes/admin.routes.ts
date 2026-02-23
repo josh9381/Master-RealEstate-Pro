@@ -3,6 +3,10 @@ import {
   getAdminStats,
   getTeamMembers,
   getActivityLogs,
+  getSystemSettings,
+  updateSystemSettings,
+  healthCheck,
+  runMaintenance,
 } from '../controllers/admin.controller';
 
 const router = express.Router();
@@ -18,5 +22,15 @@ router.get('/team-members', getTeamMembers);
 
 // Get activity logs for the organization
 router.get('/activity-logs', getActivityLogs);
+
+// System settings
+router.get('/system-settings', getSystemSettings);
+router.put('/system-settings', updateSystemSettings);
+
+// Health check
+router.get('/health', healthCheck);
+
+// Database maintenance
+router.post('/maintenance', runMaintenance);
 
 export default router;

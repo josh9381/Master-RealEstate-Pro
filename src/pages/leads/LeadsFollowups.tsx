@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -11,13 +12,13 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  LayoutGrid,
-  List,
   Search,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { leadsApi, activitiesApi } from '@/lib/api'
+import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 interface FollowUp {
   id: number
@@ -33,11 +34,21 @@ interface FollowUp {
 }
 
 function LeadsFollowups() {
-  const [view, setView] = useState<'queue' | 'calendar'>('queue')
   const [filter, setFilter] = useState<'all' | 'overdue' | 'today' | 'week'>('all')
   const [followups, setFollowups] = useState<FollowUp[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [availableLeads, setAvailableLeads] = useState<Array<{id: string; name: string; company: string}>>([])
+  const [newFollowup, setNewFollowup] = useState({
+    leadId: '',
+    type: 'call' as 'call' | 'email' | 'meeting' | 'task',
+    date: new Date().toISOString().split('T')[0],
+    time: '09:00',
+    priority: 'medium' as 'high' | 'medium' | 'low',
+    notes: '',
+  })
+  const [isCreating, setIsCreating] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -50,11 +61,11 @@ function LeadsFollowups() {
     try {
       // Get recent activities that are pending
       const activitiesResponse = await activitiesApi.getActivities({ limit: 50 })
-      const activities = activitiesResponse.data || []
+      const activities = activitiesResponse.data?.activities || []
       
       // Get leads to map names
       const leadsResponse = await leadsApi.getLeads({ limit: 100 })
-      const leads = leadsResponse.data || []
+      const leads = leadsResponse.data?.leads || []
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const leadMap = new Map(leads.map((l: any) => [l.id, l]))
@@ -82,11 +93,49 @@ function LeadsFollowups() {
       })
       
       setFollowups(followupList)
+      
+      // Store leads for Add Follow-up dropdown
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setAvailableLeads(leads.map((l: any) => ({
+        id: String(l.id),
+        name: `${l.firstName} ${l.lastName}`,
+        company: l.company || '',
+      })))
     } catch (error) {
       console.error('Error loading follow-ups:', error)
       toast.error('Failed to load follow-ups')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleCreateFollowup = async () => {
+    if (!newFollowup.leadId) {
+      toast.error('Please select a lead')
+      return
+    }
+    const scheduledDate = new Date(`${newFollowup.date}T${newFollowup.time}:00`)
+    if (scheduledDate <= new Date()) {
+      toast.error('Please select a future date and time')
+      return
+    }
+    setIsCreating(true)
+    try {
+      await activitiesApi.createActivity({
+        leadId: newFollowup.leadId,
+        type: newFollowup.type,
+        description: newFollowup.notes || `Scheduled ${newFollowup.type} follow-up`,
+        scheduledAt: scheduledDate.toISOString(),
+      })
+      toast.success('Follow-up created successfully')
+      setShowAddModal(false)
+      setNewFollowup({ leadId: '', type: 'call', date: new Date().toISOString().split('T')[0], time: '09:00', priority: 'medium', notes: '' })
+      loadFollowups()
+    } catch (error) {
+      console.error('Failed to create follow-up:', error)
+      toast.error('Failed to create follow-up')
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -119,12 +168,26 @@ function LeadsFollowups() {
     }
   }
 
-  const handleComplete = (id: number) => {
+  const handleComplete = async (id: number) => {
+    const followup = followups.find((f: FollowUp) => f.id === id)
+    
+    // Optimistic update
     setFollowups((prev: FollowUp[]) => 
       prev.map((f: FollowUp) => f.id === id ? { ...f, status: 'completed' } : f)
     )
-    const followup = followups.find((f: FollowUp) => f.id === id)
     toast.success(`Follow-up with ${followup?.lead} marked as complete`)
+
+    // Persist to backend
+    try {
+      await activitiesApi.updateActivity(String(id), { description: `Completed follow-up`, status: 'completed' })
+    } catch (error) {
+      console.error('Failed to update activity status:', error)
+      // Revert on failure
+      setFollowups((prev: FollowUp[]) =>
+        prev.map((f: FollowUp) => f.id === id ? { ...f, status: followup?.status || 'pending' } : f)
+      )
+      toast.error('Failed to mark follow-up as complete')
+    }
   }
 
   const filteredFollowups = followups.filter((f: FollowUp) => {
@@ -133,26 +196,33 @@ function LeadsFollowups() {
     
     if (!matchesSearch) return false
 
-    const today = '2025-10-20'
-    const weekEnd = '2025-10-27'
+    const now = new Date()
+    const todayStr = now.toISOString().split('T')[0]
+    const weekEnd = new Date(now)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+    const weekEndStr = weekEnd.toISOString().split('T')[0]
     
     switch (filter) {
       case 'overdue':
         return f.status === 'overdue'
       case 'today':
-        return f.date === today
+        return f.date === todayStr
       case 'week':
-        return f.date >= today && f.date <= weekEnd
+        return f.date >= todayStr && f.date <= weekEndStr
       default:
         return true
     }
   })
 
   const overdueCount = followups.filter((f: FollowUp) => f.status === 'overdue').length
-  const todayCount = followups.filter((f: FollowUp) => f.date === '2025-10-20').length
+  const todayStr = new Date().toISOString().split('T')[0]
+  const todayCount = followups.filter((f: FollowUp) => f.date === todayStr).length
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <LeadsSubNav />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -166,20 +236,7 @@ function LeadsFollowups() {
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" onClick={() => setView(view === 'queue' ? 'calendar' : 'queue')}>
-            {view === 'queue' ? (
-              <>
-                <LayoutGrid className="mr-2 h-4 w-4" />
-                Calendar View
-              </>
-            ) : (
-              <>
-                <List className="mr-2 h-4 w-4" />
-                Queue View
-              </>
-            )}
-          </Button>
-          <Button>
+          <Button onClick={() => setShowAddModal(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Follow-up
           </Button>
@@ -314,8 +371,10 @@ function LeadsFollowups() {
                         Complete
                       </Button>
                     )}
-                    <Button size="sm" variant="outline">
-                      View Lead
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={followup.leadId ? `/leads/${followup.leadId}` : '/leads'}>
+                        View Lead
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -337,12 +396,104 @@ function LeadsFollowups() {
                 : 'Get started by scheduling your first follow-up'
               }
             </p>
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={() => setShowAddModal(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Schedule Follow-up
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Add Follow-up Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md p-6 m-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Add Follow-up</h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowAddModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Lead *</label>
+                <select
+                  className="w-full p-2 border rounded-md"
+                  value={newFollowup.leadId}
+                  onChange={(e) => setNewFollowup(prev => ({ ...prev, leadId: e.target.value }))}
+                >
+                  <option value="">Select a lead...</option>
+                  {availableLeads.map(lead => (
+                    <option key={lead.id} value={lead.id}>
+                      {lead.name} {lead.company ? `(${lead.company})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Type</label>
+                <select
+                  className="w-full p-2 border rounded-md"
+                  value={newFollowup.type}
+                  onChange={(e) => setNewFollowup(prev => ({ ...prev, type: e.target.value as FollowUp['type'] }))}
+                >
+                  <option value="call">Call</option>
+                  <option value="email">Email</option>
+                  <option value="meeting">Meeting</option>
+                  <option value="task">Task</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Date</label>
+                  <input
+                    type="date"
+                    className="w-full p-2 border rounded-md"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={newFollowup.date}
+                    onChange={(e) => setNewFollowup(prev => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Time</label>
+                  <input
+                    type="time"
+                    className="w-full p-2 border rounded-md"
+                    value={newFollowup.time}
+                    onChange={(e) => setNewFollowup(prev => ({ ...prev, time: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Priority</label>
+                <select
+                  className="w-full p-2 border rounded-md"
+                  value={newFollowup.priority}
+                  onChange={(e) => setNewFollowup(prev => ({ ...prev, priority: e.target.value as FollowUp['priority'] }))}
+                >
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Notes</label>
+                <textarea
+                  className="w-full p-2 border rounded-md min-h-[80px]"
+                  placeholder="Add notes about this follow-up..."
+                  value={newFollowup.notes}
+                  onChange={(e) => setNewFollowup(prev => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button variant="outline" onClick={() => setShowAddModal(false)}>Cancel</Button>
+                <Button onClick={handleCreateFollowup} disabled={isCreating}>
+                  {isCreating ? 'Creating...' : 'Create Follow-up'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   )

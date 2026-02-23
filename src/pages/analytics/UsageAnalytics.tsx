@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Activity, Clock, Users, Zap, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import {
   AreaChart,
   Area,
@@ -21,6 +23,12 @@ const UsageAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [activityData, setActivityData] = useState<any[]>([]);
+  const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+
+  const handleDateChange = (range: DateRange) => {
+    dateRangeRef.current = range;
+    loadUsageData();
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,8 +40,9 @@ const UsageAnalytics = () => {
   const loadUsageData = async () => {
     setLoading(true);
     try {
+      const dateParams = dateRangeRef.current;
       const [dashboard, activity] = await Promise.all([
-        analyticsApi.getDashboardStats(),
+        analyticsApi.getDashboardStats(dateParams),
         analyticsApi.getActivityFeed(),
       ]);
       setDashboardData(dashboard);
@@ -46,30 +55,66 @@ const UsageAnalytics = () => {
     }
   };
 
-  // Mock usage data since we don't have specific usage metrics endpoint
-  const usageData = [
-    { date: 'Jan 1', users: 45, apiCalls: 12340, storage: 8.2 },
-    { date: 'Jan 5', users: 52, apiCalls: 15670, storage: 8.5 },
-    { date: 'Jan 10', users: 48, apiCalls: 13890, storage: 8.9 },
-    { date: 'Jan 15', users: 61, apiCalls: 18920, storage: 9.2 },
-    { date: 'Jan 20', users: 58, apiCalls: 17450, storage: 9.5 },
-  ];
+  // Usage data derived from activity feed
+  const usageData = activityData.length > 0
+    ? Object.values(
+        activityData.reduce((acc: Record<string, { date: string; users: number; apiCalls: number; storage: number }>, activity: any) => {
+          const date = (activity.createdAt || activity.time || '').split('T')[0];
+          if (!date) return acc;
+          if (!acc[date]) {
+            acc[date] = { date, users: 0, apiCalls: 0, storage: 0 };
+          }
+          acc[date].apiCalls++;
+          acc[date].users = Math.max(acc[date].users, 1);
+          return acc;
+        }, {})
+      ).slice(-14) as { date: string; users: number; apiCalls: number; storage: number }[]
+    : [];
 
-  const topUsers = [
-    { name: 'John Doe', logins: 145, actions: 2340, lastActive: '2 min ago' },
-    { name: 'Sarah Johnson', logins: 132, actions: 2103, lastActive: '15 min ago' },
-    { name: 'Mike Wilson', logins: 118, actions: 1876, lastActive: '1 hour ago' },
-    { name: 'Emily Brown', logins: 107, actions: 1654, lastActive: '3 hours ago' },
-  ];
+  // Active users derived from activity data
+  const topUsers = activityData.length > 0
+    ? Object.values(
+        activityData.reduce((acc: Record<string, { name: string; logins: number; actions: number; lastActive: string }>, activity: any) => {
+          const name = activity.userName || activity.user || 'Unknown';
+          if (!acc[name]) {
+            acc[name] = { name, logins: 0, actions: 0, lastActive: '' };
+          }
+          acc[name].actions++;
+          acc[name].lastActive = activity.createdAt || activity.time || '';
+          return acc;
+        }, {})
+      ).slice(0, 4) as { name: string; logins: number; actions: number; lastActive: string }[]
+    : [];
 
-  const featureUsage = [
-    { feature: 'Lead Management', usage: 3450, percentage: 32 },
-    { feature: 'Email Campaigns', usage: 2876, percentage: 27 },
-    { feature: 'Analytics', usage: 1987, percentage: 18 },
-    { feature: 'Workflows', usage: 1234, percentage: 12 },
-    { feature: 'Reports', usage: 890, percentage: 8 },
-    { feature: 'Settings', usage: 321, percentage: 3 },
-  ];
+  // Feature usage — derived from activity types
+  const featureUsage = activityData.length > 0
+    ? (() => {
+        const typeCounts: Record<string, number> = {};
+        activityData.forEach((a: any) => {
+          const type = a.type || a.activityType || 'other';
+          typeCounts[type] = (typeCounts[type] || 0) + 1;
+        });
+        const total = activityData.length;
+        return Object.entries(typeCounts).map(([feature, usage]) => ({
+          feature: feature.charAt(0).toUpperCase() + feature.slice(1).replace(/_/g, ' '),
+          usage,
+          percentage: Math.round((usage / total) * 100)
+        })).sort((a, b) => b.usage - a.usage).slice(0, 8);
+      })()
+    : [] as { feature: string; usage: number; percentage: number }[];
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-10 bg-muted rounded w-48" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-muted rounded" />)}
+        </div>
+        <div className="h-64 bg-muted rounded" />
+        <div className="h-48 bg-muted rounded" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -80,10 +125,13 @@ const UsageAnalytics = () => {
             Track system usage, user activity, and resource consumption
           </p>
         </div>
-        <Button variant="outline" onClick={loadUsageData} disabled={loading}>
-          {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
-          {loading ? 'Loading...' : 'Refresh'}
-        </Button>
+        <div className="flex items-center space-x-2">
+          <DateRangePicker onChange={handleDateChange} />
+          <Button variant="outline" onClick={loadUsageData} disabled={loading}>
+            {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
+            {loading ? 'Loading...' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
       {/* Key Metrics */}
@@ -124,11 +172,16 @@ const UsageAnalytics = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24m 36s</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats?.avgSessionTime || '—'}</div>
             <p className="text-xs text-muted-foreground">This week</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Page-level empty state when no activity data exists */}
+      {activityData.length === 0 && (
+        <AnalyticsEmptyState variant="usage" />
+      )}
 
       {/* Usage Trends */}
       <Card>
@@ -137,6 +190,7 @@ const UsageAnalytics = () => {
           <CardDescription>User activity and resource consumption over time</CardDescription>
         </CardHeader>
         <CardContent>
+          {usageData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={usageData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -166,6 +220,11 @@ const UsageAnalytics = () => {
               />
             </AreaChart>
           </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              No usage trend data yet
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -178,7 +237,7 @@ const UsageAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topUsers.map((user, index) => (
+              {topUsers.length > 0 ? topUsers.map((user, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 font-bold text-primary">
@@ -193,7 +252,11 @@ const UsageAnalytics = () => {
                   </div>
                   <Badge variant="secondary">{user.lastActive}</Badge>
                 </div>
-              ))}
+              )) : (
+                <div className="flex items-center justify-center h-24 text-muted-foreground">
+                  No user activity data yet
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -206,7 +269,7 @@ const UsageAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {featureUsage.map((item) => (
+              {featureUsage.length > 0 ? featureUsage.map((item) => (
                 <div key={item.feature}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">{item.feature}</span>
@@ -221,7 +284,11 @@ const UsageAnalytics = () => {
                     ></div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="flex items-center justify-center h-24 text-muted-foreground">
+                  No feature usage data yet
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -240,28 +307,17 @@ const UsageAnalytics = () => {
               <h4 className="font-semibold mb-4">Storage</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Documents</span>
-                  <span className="font-medium">3.2 GB</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Database</span>
-                  <span className="font-medium">4.1 GB</span>
+                  <span className="font-medium">{dashboardData?.stats?.storage?.database || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Backups</span>
-                  <span className="font-medium">1.8 GB</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Other</span>
-                  <span className="font-medium">0.4 GB</span>
+                  <span className="text-muted-foreground">Documents</span>
+                  <span className="font-medium">{dashboardData?.stats?.storage?.documents || '—'}</span>
                 </div>
                 <div className="pt-3 border-t">
                   <div className="flex items-center justify-between font-semibold">
                     <span>Total</span>
-                    <span>9.5 GB / 50 GB</span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2 mt-2">
-                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: '19%' }}></div>
+                    <span>{dashboardData?.stats?.storage?.total || 'N/A'}</span>
                   </div>
                 </div>
               </div>
@@ -272,61 +328,33 @@ const UsageAnalytics = () => {
               <h4 className="font-semibold mb-4">API Usage</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Leads API</span>
-                  <span className="font-medium">6,234</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Campaigns API</span>
-                  <span className="font-medium">4,567</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Analytics API</span>
-                  <span className="font-medium">3,890</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Webhooks</span>
-                  <span className="font-medium">2,759</span>
+                  <span className="text-muted-foreground">Total API Calls</span>
+                  <span className="font-medium">{dashboardData?.stats?.apiCalls || '—'}</span>
                 </div>
                 <div className="pt-3 border-t">
                   <div className="flex items-center justify-between font-semibold">
-                    <span>Total</span>
-                    <span>17,450 / 100K</span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2 mt-2">
-                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '17.5%' }}></div>
+                    <span>Status</span>
+                    <span>{dashboardData?.stats?.apiCalls ? 'Active' : 'No data'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bandwidth */}
+            {/* System Info */}
             <div className="p-4 border rounded-lg">
-              <h4 className="font-semibold mb-4">Bandwidth</h4>
+              <h4 className="font-semibold mb-4">System</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Inbound</span>
-                  <span className="font-medium">12.3 GB</span>
+                  <span className="text-muted-foreground">Total Leads</span>
+                  <span className="font-medium">{dashboardData?.stats?.totalLeads || 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Outbound</span>
-                  <span className="font-medium">8.7 GB</span>
+                  <span className="text-muted-foreground">Campaigns</span>
+                  <span className="font-medium">{dashboardData?.stats?.totalCampaigns || 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">CDN</span>
-                  <span className="font-medium">15.2 GB</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Other</span>
-                  <span className="font-medium">3.8 GB</span>
-                </div>
-                <div className="pt-3 border-t">
-                  <div className="flex items-center justify-between font-semibold">
-                    <span>Total</span>
-                    <span>40 GB / 500 GB</span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2 mt-2">
-                    <div className="bg-purple-500 h-2 rounded-full" style={{ width: '8%' }}></div>
-                  </div>
+                  <span className="text-muted-foreground">Workflows</span>
+                  <span className="font-medium">{dashboardData?.stats?.totalWorkflows || 0}</span>
                 </div>
               </div>
             </div>
@@ -342,53 +370,29 @@ const UsageAnalytics = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              {
-                user: 'John Doe',
-                action: 'Created 3 new leads',
-                time: '2 minutes ago',
-                type: 'create',
-              },
-              {
-                user: 'Sarah Johnson',
-                action: 'Sent email campaign to 2,340 recipients',
-                time: '15 minutes ago',
-                type: 'send',
-              },
-              {
-                user: 'Mike Wilson',
-                action: 'Updated lead status (5 leads)',
-                time: '1 hour ago',
-                type: 'update',
-              },
-              {
-                user: 'System',
-                action: 'Automated backup completed',
-                time: '2 hours ago',
-                type: 'system',
-              },
-              {
-                user: 'Emily Brown',
-                action: 'Exported analytics report',
-                time: '3 hours ago',
-                type: 'export',
-              },
-            ].map((activity, index) => (
+            {activityData.length > 0 ? activityData.slice(0, 5).map((activity: any, index: number) => (
               <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted text-sm font-medium">
-                    {activity.user.charAt(0)}
+                    {(activity.userName || activity.user || 'S').charAt(0)}
                   </div>
                   <div>
                     <p className="text-sm">
-                      <span className="font-medium">{activity.user}</span> {activity.action}
+                      <span className="font-medium">{activity.userName || activity.user || 'System'}</span>{' '}
+                      {activity.description || activity.action || 'performed an action'}
                     </p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {activity.createdAt ? new Date(activity.createdAt).toLocaleString() : activity.time || ''}
+                    </p>
                   </div>
                 </div>
-                <Badge variant="secondary">{activity.type}</Badge>
+                <Badge variant="secondary">{activity.type || 'action'}</Badge>
               </div>
-            ))}
+            )) : (
+              <div className="flex items-center justify-center h-24 text-muted-foreground">
+                No recent activity yet
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, Send, Users, TrendingUp, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 
 const CampaignSchedule = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [scheduledCampaigns, setScheduledCampaigns] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,7 +50,7 @@ const CampaignSchedule = () => {
     try {
       // Fetch all campaigns
       const response = await campaignsApi.getCampaigns();
-      const campaigns = response.data.campaigns || [];
+      const campaigns = response.data?.campaigns || [];
 
       // Filter scheduled campaigns (status: SCHEDULED or PAUSED - uppercase from backend)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,11 +80,12 @@ const CampaignSchedule = () => {
         clicked: c.clicked || 0,
       })).slice(0, 5);
 
-      // Recurring campaigns (filter by name pattern for now)
+      // Recurring campaigns (use isRecurring field from backend)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const recurring = campaigns.filter((c: any) => 
-        (c.name.toLowerCase().includes('weekly') || c.name.toLowerCase().includes('monthly')) && 
-        c.status === 'SCHEDULED'
+        c.isRecurring === true || 
+        ((c.name.toLowerCase().includes('weekly') || c.name.toLowerCase().includes('monthly')) && 
+        (c.status === 'SCHEDULED' || c.status === 'ACTIVE'))
       ).slice(0, 3);
 
       setScheduledCampaigns(scheduled);
@@ -210,6 +214,9 @@ const CampaignSchedule = () => {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <CampaignsSubNav />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Campaign Schedule</h1>
@@ -222,7 +229,7 @@ const CampaignSchedule = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button onClick={() => navigate('/campaigns/create')}>
             <Calendar className="h-4 w-4 mr-2" />
             Schedule Campaign
           </Button>
@@ -307,7 +314,7 @@ const CampaignSchedule = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => window.location.href = `/campaigns/${campaign.id}/edit`}
+                    onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
                   >
                     Edit
                   </Button>
@@ -375,10 +382,20 @@ const CampaignSchedule = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => {
+                      setRescheduleModal({ isOpen: true, campaignId: schedule.id, campaignName: schedule.name, currentDate: schedule.scheduledDate || schedule.startDate || '' });
+                    }}>
                       Edit Schedule
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={async () => {
+                      try {
+                        await campaignsApi.pauseCampaign(String(schedule.id));
+                        toast.success('Campaign paused successfully');
+                        loadCampaigns();
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.message || 'Failed to pause campaign');
+                      }
+                    }}>
                       Pause
                     </Button>
                   </div>
@@ -393,7 +410,7 @@ const CampaignSchedule = () => {
       <Card>
         <CardHeader>
           <CardTitle>Recently Sent Campaigns</CardTitle>
-          <CardDescription>Campaigns sent in the last 7 days</CardDescription>
+          <CardDescription>Recently completed campaigns</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -423,16 +440,16 @@ const CampaignSchedule = () => {
                       <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
                         <span>
                           Opened: {campaign.opened} (
-                          {((campaign.opened / campaign.recipients) * 100).toFixed(1)}%)
+                          {campaign.recipients > 0 ? ((campaign.opened / campaign.recipients) * 100).toFixed(1) : '0.0'}%)
                         </span>
                         <span>
                           Clicked: {campaign.clicked} (
-                          {((campaign.clicked / campaign.recipients) * 100).toFixed(1)}%)
+                          {campaign.recipients > 0 ? ((campaign.clicked / campaign.recipients) * 100).toFixed(1) : '0.0'}%)
                         </span>
                       </div>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                     View Report
                   </Button>
                 </div>
@@ -449,41 +466,9 @@ const CampaignSchedule = () => {
           <CardDescription>Set up a new scheduled campaign</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Campaign Name</label>
-              <input
-                type="text"
-                placeholder="Enter campaign name"
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Campaign Type</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>Email Campaign</option>
-                <option>SMS Campaign</option>
-                <option>Phone Campaign</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Send Date</label>
-              <input type="date" className="w-full px-3 py-2 border rounded-lg" />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Send Time</label>
-              <input type="time" className="w-full px-3 py-2 border rounded-lg" />
-            </div>
-          </div>
-          <div>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
-              <span className="text-sm">Make this a recurring campaign</span>
-            </label>
-          </div>
+          <p className="text-muted-foreground">Create a new campaign and set it to scheduled status to have it appear here.</p>
           <div className="flex space-x-2">
-            <Button>Schedule Campaign</Button>
-            <Button variant="outline">Save as Draft</Button>
+            <Button onClick={() => navigate('/campaigns/create')}>Create & Schedule Campaign</Button>
           </div>
         </CardContent>
       </Card>
@@ -491,7 +476,7 @@ const CampaignSchedule = () => {
       {/* Reschedule Modal */}
       {rescheduleModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
             <h3 className="text-lg font-semibold mb-4">Reschedule Campaign</h3>
             
             <div className="space-y-4">

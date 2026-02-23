@@ -210,40 +210,75 @@ export const testWorkflow = async (req: Request, res: Response) => {
   const { id } = req.params
   const { testData } = req.body
 
-  const workflow = await prisma.workflow.findUnique({
-    where: { id },
+  const workflow = await prisma.workflow.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   })
 
   if (!workflow) {
     throw new NotFoundError('Workflow not found')
   }
 
-  // Create a test execution log
-  const execution = await prisma.workflowExecution.create({
-    data: {
-      workflowId: id,
-      status: 'SUCCESS',
-      metadata: {
-        test: true,
-        testData: testData || {},
-        executedAt: new Date().toISOString(),
+  const startedAt = new Date()
+
+  // Actually execute the workflow in dry-run mode (validates actions without side effects)
+  try {
+    const { executeWorkflow } = await import('../services/workflow.service')
+    
+    // Pass dryRun=true so actions are validated but not actually sent/executed
+    await executeWorkflow(id, testData?.leadId || undefined, { test: true, testData: testData || {} }, true)
+
+    // Create a test execution log with real result
+    const execution = await prisma.workflowExecution.create({
+      data: {
+        workflowId: id,
+        status: 'SUCCESS',
+        metadata: {
+          test: true,
+          dryRun: true,
+          testData: testData || {},
+          executedAt: new Date().toISOString(),
+        },
+        startedAt,
+        completedAt: new Date(),
       },
-      startedAt: new Date(),
-      completedAt: new Date(),
-    },
-  })
+    })
 
-  // In production, this would actually execute the workflow actions
-  // For now, we'll just simulate success
+    res.json({
+      success: true,
+      data: {
+        execution,
+        note: 'Workflow test executed successfully (dry run — actions validated but not sent)',
+        actions: workflow.actions,
+      }
+    })
+  } catch (error) {
+    // Record the failure
+    const execution = await prisma.workflowExecution.create({
+      data: {
+        workflowId: id,
+        status: 'FAILED',
+        error: error instanceof Error ? error.message : 'Unknown error during test execution',
+        metadata: {
+          test: true,
+          dryRun: true,
+          testData: testData || {},
+          executedAt: new Date().toISOString(),
+        },
+        startedAt,
+        completedAt: new Date(),
+      },
+    })
 
-  res.json({
-    success: true,
-    data: {
-      execution,
-      note: 'Workflow test executed successfully (mock mode)',
-      actions: workflow.actions,
-    }
-  })
+    res.json({
+      success: false,
+      data: {
+        execution,
+        note: 'Workflow test failed — see error details',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        actions: workflow.actions,
+      }
+    })
+  }
 }
 
 // Get workflow executions
@@ -251,8 +286,8 @@ export const getWorkflowExecutions = async (req: Request, res: Response) => {
   const { id } = req.params
   const { page = 1, limit = 20 } = req.query
 
-  const workflow = await prisma.workflow.findUnique({
-    where: { id },
+  const workflow = await prisma.workflow.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   })
 
   if (!workflow) {
@@ -289,17 +324,20 @@ export const getWorkflowExecutions = async (req: Request, res: Response) => {
 
 // Get workflow statistics
 export const getWorkflowStats = async (req: Request, res: Response) => {
-  const totalWorkflows = await prisma.workflow.count()
+  const orgId = req.user!.organizationId
+  const totalWorkflows = await prisma.workflow.count({ where: { organizationId: orgId } })
   const activeWorkflows = await prisma.workflow.count({
-    where: { isActive: true },
+    where: { isActive: true, organizationId: orgId },
   })
 
-  const totalExecutions = await prisma.workflowExecution.count()
+  const totalExecutions = await prisma.workflowExecution.count({
+    where: { workflow: { organizationId: orgId } },
+  })
   const successfulExecutions = await prisma.workflowExecution.count({
-    where: { status: 'SUCCESS' },
+    where: { status: 'SUCCESS', workflow: { organizationId: orgId } },
   })
   const failedExecutions = await prisma.workflowExecution.count({
-    where: { status: 'FAILED' },
+    where: { status: 'FAILED', workflow: { organizationId: orgId } },
   })
 
   const successRate = totalExecutions > 0 
@@ -327,6 +365,13 @@ export const getWorkflowAnalytics = async (req: Request, res: Response) => {
   const { id } = req.params
   const { days } = req.query
 
+  const workflow = await prisma.workflow.findFirst({
+    where: { id, organizationId: req.user!.organizationId }
+  })
+  if (!workflow) {
+    throw new NotFoundError('Workflow not found')
+  }
+
   const analytics = await getWorkflowAnalyticsService(
     id,
     days ? parseInt(days as string) : 30
@@ -345,6 +390,22 @@ export const triggerWorkflow = async (req: Request, res: Response) => {
   const { id } = req.params
   const { leadId } = req.body
 
+  const workflow = await prisma.workflow.findFirst({
+    where: { id, organizationId: req.user!.organizationId }
+  })
+  if (!workflow) {
+    throw new NotFoundError('Workflow not found')
+  }
+
+  if (leadId) {
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, organizationId: req.user!.organizationId }
+    })
+    if (!lead) {
+      throw new NotFoundError('Lead not found')
+    }
+  }
+
   const executionId = await manualTriggerWorkflow(id, leadId)
 
   res.json({
@@ -362,6 +423,13 @@ export const triggerWorkflowsForLead = async (req: Request, res: Response) => {
 
   if (!leadId || !triggerType) {
     throw new ValidationError('leadId and triggerType are required')
+  }
+
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, organizationId: req.user!.organizationId }
+  })
+  if (!lead) {
+    throw new NotFoundError('Lead not found')
   }
 
   const results = await triggerWorkflowsForLeadService(

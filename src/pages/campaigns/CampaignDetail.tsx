@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Edit, Pause, Trash2, X, Copy } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-import { campaignsApi, CreateCampaignData } from '@/lib/api'
+import { campaignsApi, analyticsApi, CreateCampaignData } from '@/lib/api'
 import { mockCampaigns } from '@/data/mockData'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
+import { CampaignExecutionStatus } from '@/components/campaigns/CampaignExecutionStatus'
 import {
   LineChart,
   Line,
@@ -25,52 +27,6 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-
-const performanceData = [
-  { date: 'Jan 15', sent: 100, opened: 50, clicked: 15 },
-  { date: 'Jan 16', sent: 150, opened: 75, clicked: 22 },
-  { date: 'Jan 17', sent: 200, opened: 100, clicked: 30 },
-  { date: 'Jan 18', sent: 250, opened: 125, clicked: 37 },
-  { date: 'Jan 19', sent: 300, opened: 150, clicked: 45 },
-  { date: 'Jan 20', sent: 250, opened: 125, clicked: 38 },
-]
-
-// Conversion funnel data
-const funnelData = [
-  { stage: 'Sent', count: 1250, percentage: 100 },
-  { stage: 'Delivered', count: 1200, percentage: 96 },
-  { stage: 'Opened', count: 625, percentage: 50 },
-  { stage: 'Clicked', count: 187, percentage: 15 },
-  { stage: 'Converted', count: 56, percentage: 4.5 },
-]
-
-// Engagement by time of day
-const hourlyEngagementData = [
-  { hour: '12am', opens: 5, clicks: 2 },
-  { hour: '3am', opens: 2, clicks: 1 },
-  { hour: '6am', opens: 15, clicks: 5 },
-  { hour: '9am', opens: 85, clicks: 28 },
-  { hour: '12pm', opens: 120, clicks: 42 },
-  { hour: '3pm', opens: 95, clicks: 35 },
-  { hour: '6pm', opens: 110, clicks: 38 },
-  { hour: '9pm', opens: 75, clicks: 22 },
-]
-
-// Device breakdown
-const deviceData = [
-  { name: 'Desktop', value: 520, color: '#3b82f6' },
-  { name: 'Mobile', value: 680, color: '#10b981' },
-  { name: 'Tablet', value: 180, color: '#f59e0b' },
-]
-
-// Geographic distribution
-const geoData = [
-  { location: 'California', opens: 245, clicks: 78, conversions: 23 },
-  { location: 'Texas', opens: 198, clicks: 62, conversions: 18 },
-  { location: 'New York', opens: 187, clicks: 55, conversions: 15 },
-  { location: 'Florida', opens: 156, clicks: 48, conversions: 12 },
-  { location: 'Illinois', opens: 124, clicks: 38, conversions: 10 },
-]
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
@@ -90,12 +46,12 @@ function CampaignDetail() {
     queryFn: async () => {
       try {
         const response = await campaignsApi.getCampaign(id!)
-        return response.data
+        // response shape: { success, data: { campaign: {...} } }
+        return response.data?.campaign || response.data || response
       } catch (error) {
         // If API fails, try to find campaign in mock data (if enabled)
-        console.log('API fetch failed')
         if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
-          const mockCampaign = mockCampaigns.find(c => c.id === Number(id))
+          const mockCampaign = mockCampaigns.find(c => String(c.id) === id)
           return mockCampaign || null
         }
         return null
@@ -130,14 +86,193 @@ function CampaignDetail() {
 
     return {
       ...campaignResponse,
-      opened: campaignResponse.opens || 0,
-      clicked: campaignResponse.clicks || 0,
-      converted: campaignResponse.conversions || 0,
-      fullContent: campaignResponse.content || '',
+      opened: campaignResponse.opened || campaignResponse.opens || 0,
+      clicked: campaignResponse.clicked || campaignResponse.clicks || 0,
+      converted: campaignResponse.converted || campaignResponse.conversions || 0,
+      fullContent: campaignResponse.body || campaignResponse.content || campaignResponse.fullContent || '',
     }
   }, [campaignResponse, id])
 
+  // Fetch real campaign analytics from backend
+  const { data: analyticsData } = useQuery({
+    queryKey: ['campaign-analytics', id],
+    queryFn: async () => {
+      try {
+        const response = await campaignsApi.getCampaignAnalytics(id!)
+        return response.data || response
+      } catch (error) {
+        console.warn('Campaign analytics not available:', error)
+        return null
+      }
+    },
+    enabled: !!id && !!campaignResponse,
+    retry: false,
+  })
+
+  // Fetch campaign timeline data
+  const { data: timelineData } = useQuery({
+    queryKey: ['campaign-timeline', id],
+    queryFn: async () => {
+      try {
+        const response = await campaignsApi.getCampaignTimeline(id!, { days: 30 })
+        return response.data || response
+      } catch (error) {
+        console.warn('Campaign timeline not available:', error)
+        return null
+      }
+    },
+    enabled: !!id && !!campaignResponse,
+    retry: false,
+  })
+
+  // Derive chart data from campaign metrics + real analytics
+  const hasSentData = (campaignData.sent || 0) > 0 || (analyticsData?.sent || 0) > 0
+
+  const performanceData = useMemo(() => {
+    // Use real timeline data from the campaign analytics API
+    if (timelineData && Array.isArray(timelineData) && timelineData.length > 0) {
+      return timelineData.map((d: any) => ({
+        date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        sent: d.sent || 0,
+        opened: d.opened || 0,
+        clicked: d.clicked || 0,
+      }))
+    }
+    return []
+  }, [timelineData])
+
+  const funnelData = useMemo(() => {
+    // Prefer analytics data over campaign field data
+    const sent = analyticsData?.sent || campaignData.sent || 0
+    if (sent === 0) return []
+    const delivered = analyticsData?.delivered || campaignData.delivered || 0
+    const opened = analyticsData?.opened || campaignData.opened || 0
+    const clicked = analyticsData?.clicked || campaignData.clicked || 0
+    const converted = analyticsData?.converted || campaignData.converted || 0
+    return [
+      { stage: 'Sent', count: sent, percentage: 100 },
+      { stage: 'Delivered', count: delivered, percentage: sent > 0 ? Math.round((delivered / sent) * 100) : 0 },
+      { stage: 'Opened', count: opened, percentage: sent > 0 ? Math.round((opened / sent) * 100) : 0 },
+      { stage: 'Clicked', count: clicked, percentage: sent > 0 ? Math.round((clicked / sent) * 100) : 0 },
+      { stage: 'Converted', count: converted, percentage: sent > 0 ? Math.round((converted / sent) * 100) : 0 },
+    ]
+  }, [analyticsData, campaignData.sent, campaignData.delivered, campaignData.opened, campaignData.clicked, campaignData.converted])
+
+  // Fetch hourly engagement data from Phase 5 backend
+  const { data: hourlyResponse } = useQuery({
+    queryKey: ['hourly-engagement'],
+    queryFn: async () => {
+      try {
+        const response = await analyticsApi.getHourlyEngagement({ days: 90 })
+        return response.data || response
+      } catch (error) {
+        console.warn('Hourly engagement not available:', error)
+        return null
+      }
+    },
+    enabled: !!id && hasSentData,
+    retry: false,
+  })
+
+  const hourlyEngagementData = useMemo((): { hour: string; opens: number; clicks: number }[] => {
+    if (hourlyResponse?.hourly && Array.isArray(hourlyResponse.hourly)) {
+      return hourlyResponse.hourly.map((h: any) => ({
+        hour: h.label,
+        opens: h.opens || 0,
+        clicks: h.clicks || 0,
+      }))
+    }
+    return []
+  }, [hourlyResponse])
+
+  const deviceData = useMemo((): { name: string; value: number; color: string }[] => {
+    // Phase 8.9: Fetch real device breakdown from analytics API
+    return []
+  }, [])
+
+  const geoData = useMemo((): { location: string; opens: number; clicks: number; conversions: number }[] => {
+    // Phase 8.9: Fetch real geographic data from analytics API
+    return []
+  }, [])
+
+  // Phase 8.9: Fetch real device/geo breakdown
+  const { data: deviceBreakdownData } = useQuery({
+    queryKey: ['campaign-device-breakdown', id],
+    queryFn: async () => {
+      try {
+        const response = await analyticsApi.getDeviceBreakdown({ campaignId: id! })
+        return response.data || null
+      } catch { return null }
+    },
+    enabled: !!id && hasSentData,
+    retry: false,
+  })
+
+  const { data: geoBreakdownData } = useQuery({
+    queryKey: ['campaign-geo-breakdown', id],
+    queryFn: async () => {
+      try {
+        const response = await analyticsApi.getGeographicBreakdown({ campaignId: id! })
+        return response.data || null
+      } catch { return null }
+    },
+    enabled: !!id && hasSentData,
+    retry: false,
+  })
+
+  const realDeviceData = useMemo(() => {
+    if (!deviceBreakdownData?.devices || deviceBreakdownData.devices.length === 0) return deviceData
+    const colorMap: Record<string, string> = { Desktop: '#3b82f6', Mobile: '#10b981', Tablet: '#f59e0b', Unknown: '#94a3b8' }
+    return deviceBreakdownData.devices.map((d: any) => ({
+      name: d.name,
+      value: d.count,
+      color: colorMap[d.name] || '#8b5cf6',
+    }))
+  }, [deviceBreakdownData, deviceData])
+
+  const realGeoData = useMemo(() => {
+    if (!geoBreakdownData?.countries || geoBreakdownData.countries.length === 0) return geoData
+    return geoBreakdownData.countries.map((c: any) => ({
+      location: c.name,
+      opens: c.count,
+      clicks: 0,
+      conversions: 0,
+    }))
+  }, [geoBreakdownData, geoData])
+
+  // Fetch A/B test results for this campaign
+  const { data: abTestResults } = useQuery({
+    queryKey: ['campaign-abtest', id],
+    queryFn: async () => {
+      try {
+        // Check if this campaign has A/B test data
+        if (!campaignData?.isABTest) return null
+        // Try to find related A/B tests via the ab-tests API
+        const abRes = await fetch(`/api/ab-tests?campaignId=${id}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        })
+        if (abRes.ok) {
+          const data = await abRes.json()
+          return Array.isArray(data) ? data : data?.data || null
+        }
+        return null
+      } catch {
+        return null
+      }
+    },
+    enabled: !!id && !!campaignData?.isABTest,
+    retry: false,
+  })
+
   const [editForm, setEditForm] = useState(campaignData)
+
+  // Keep editForm in sync when campaign data loads
+  // (useState only captures initial value which is the loading placeholder)
+  useEffect(() => {
+    if (campaignResponse) {
+      setEditForm(campaignData)
+    }
+  }, [campaignResponse])
 
   // Update campaign mutation
   const updateCampaignMutation = useMutation({
@@ -182,20 +317,21 @@ function CampaignDetail() {
   })
 
   const handleStatusToggle = () => {
-    const newStatus = campaignData.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
+    const currentStatus = (campaignData.status || '').toUpperCase()
+    const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
     updateCampaignMutation.mutate({ status: newStatus })
   }
 
   const handleEditClick = () => {
-    setEditForm(campaignData)
+    setEditForm({ ...campaignData })
     setShowEditModal(true)
   }
 
   const handleSaveEdit = () => {
     updateCampaignMutation.mutate({
       name: editForm.name,
-      type: editForm.type.toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE',
-      status: editForm.status.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED',
+      type: (editForm.type || '').toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL',
+      status: (editForm.status || '').toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED',
       subject: editForm.subject || undefined,
       body: editForm.fullContent || undefined,
     })
@@ -249,14 +385,22 @@ function CampaignDetail() {
 
   return (
     <div className="space-y-6">
+      <CampaignsSubNav />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{campaign.name}</h1>
           <div className="mt-2 flex items-center space-x-2">
-            <Badge variant="success">{campaign.status}</Badge>
+            <Badge variant={
+              (campaign.status || '').toUpperCase() === 'ACTIVE' ? 'success'
+              : (campaign.status || '').toUpperCase() === 'PAUSED' ? 'secondary'
+              : (campaign.status || '').toUpperCase() === 'SCHEDULED' ? 'warning'
+              : (campaign.status || '').toUpperCase() === 'COMPLETED' ? 'outline'
+              : 'secondary'
+            }>{campaign.status}</Badge>
             <span className="text-sm text-muted-foreground">
-              {campaign.startDate} - {campaign.endDate}
+              {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString() : 'N/A'} - {campaign.endDate ? new Date(campaign.endDate).toLocaleDateString() : 'N/A'}
             </span>
           </div>
         </div>
@@ -275,7 +419,7 @@ function CampaignDetail() {
           </Button>
           <Button variant="outline" onClick={handleStatusToggle}>
             <Pause className="mr-2 h-4 w-4" />
-            {campaign.status === 'active' ? 'Pause' : 'Resume'}
+            {campaign.status?.toUpperCase() === 'ACTIVE' ? 'Pause' : 'Resume'}
           </Button>
           <Button variant="outline" onClick={() => setShowDeleteModal(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
@@ -293,7 +437,7 @@ function CampaignDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaign.sent.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(campaign.sent || 0).toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
@@ -303,7 +447,7 @@ function CampaignDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaign.opened.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(campaign.opened || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{openRate}% open rate</p>
           </CardContent>
         </Card>
@@ -314,7 +458,7 @@ function CampaignDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaign.clicked.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(campaign.clicked || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{clickRate}% click rate</p>
           </CardContent>
         </Card>
@@ -325,11 +469,19 @@ function CampaignDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaign.converted}</div>
+            <div className="text-2xl font-bold">{(campaign.converted || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{conversionRate}% conversion</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Real-time Execution Status */}
+      {(['SENDING', 'ACTIVE', 'SCHEDULED'].includes((campaign.status || '').toUpperCase())) && (
+        <CampaignExecutionStatus
+          campaignId={campaign.id}
+          onComplete={() => queryClient.invalidateQueries({ queryKey: ['campaign', id] })}
+        />
+      )}
 
       {/* Performance Chart */}
       <Card>
@@ -337,17 +489,23 @@ function CampaignDetail() {
           <CardTitle>Performance Over Time</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={performanceData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="sent" stroke="#3b82f6" name="Sent" />
-              <Line type="monotone" dataKey="opened" stroke="#10b981" name="Opened" />
-              <Line type="monotone" dataKey="clicked" stroke="#f59e0b" name="Clicked" />
-            </LineChart>
-          </ResponsiveContainer>
+          {hasSentData ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={performanceData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="sent" stroke="#3b82f6" name="Sent" />
+                <Line type="monotone" dataKey="opened" stroke="#10b981" name="Opened" />
+                <Line type="monotone" dataKey="clicked" stroke="#f59e0b" name="Clicked" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              Analytics available when campaign tracking is configured.
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -359,6 +517,7 @@ function CampaignDetail() {
             <CardTitle>Conversion Funnel</CardTitle>
           </CardHeader>
           <CardContent>
+            {funnelData.length > 0 ? (
             <div className="space-y-3">
               {funnelData.map((stage, index) => (
                 <div key={stage.stage} className="space-y-2">
@@ -380,6 +539,11 @@ function CampaignDetail() {
                 </div>
               ))}
             </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                No data yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -389,10 +553,12 @@ function CampaignDetail() {
             <CardTitle>Device Breakdown</CardTitle>
           </CardHeader>
           <CardContent>
+            {realDeviceData.length > 0 ? (
+            <>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
-                  data={deviceData}
+                  data={realDeviceData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -401,7 +567,7 @@ function CampaignDetail() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {deviceData.map((entry, index) => (
+                  {realDeviceData.map((entry: { name: string; value: number; color: string }, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -409,7 +575,7 @@ function CampaignDetail() {
               </PieChart>
             </ResponsiveContainer>
             <div className="mt-4 space-y-2">
-              {deviceData.map((device) => (
+              {realDeviceData.map((device: { name: string; value: number; color: string }) => (
                 <div key={device.name} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div
@@ -422,6 +588,12 @@ function CampaignDetail() {
                 </div>
               ))}
             </div>
+            </>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                No data yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -431,6 +603,7 @@ function CampaignDetail() {
             <CardTitle>Engagement by Time of Day</CardTitle>
           </CardHeader>
           <CardContent>
+            {hourlyEngagementData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={hourlyEngagementData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -442,6 +615,11 @@ function CampaignDetail() {
                 <Bar dataKey="clicks" fill="#3b82f6" name="Clicks" />
               </BarChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                No data yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -451,8 +629,9 @@ function CampaignDetail() {
             <CardTitle>Top Performing Locations</CardTitle>
           </CardHeader>
           <CardContent>
+            {realGeoData.length > 0 ? (
             <div className="space-y-4">
-              {geoData.map((location, index) => (
+              {realGeoData.map((location: { location: string; opens: number; clicks: number; conversions: number }, index: number) => (
                 <div key={location.location} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -475,7 +654,7 @@ function CampaignDetail() {
                       <div
                         className="h-full bg-green-500"
                         style={{
-                          width: `${(location.opens / Math.max(...geoData.map(g => g.opens))) * 100}%`,
+                          width: `${(location.opens / Math.max(...realGeoData.map((g: { opens: number }) => g.opens), 1)) * 100}%`,
                         }}
                       />
                     </div>
@@ -483,7 +662,7 @@ function CampaignDetail() {
                       <div
                         className="h-full bg-blue-500"
                         style={{
-                          width: `${(location.clicks / Math.max(...geoData.map(g => g.clicks))) * 100}%`,
+                          width: `${(location.clicks / Math.max(...realGeoData.map((g: { clicks: number }) => g.clicks), 1)) * 100}%`,
                         }}
                       />
                     </div>
@@ -494,9 +673,51 @@ function CampaignDetail() {
                 </div>
               ))}
             </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                No data yet
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* A/B Test Results */}
+      {campaignData?.isABTest && (
+        <Card>
+          <CardHeader>
+            <CardTitle>A/B Test Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {abTestResults && abTestResults.length > 0 ? (
+              <div className="space-y-4">
+                {abTestResults.map((test: any) => (
+                  <div key={test.id} className="grid gap-4 md:grid-cols-2">
+                    <div className="p-4 border rounded-lg">
+                      <Badge variant="secondary" className="mb-2">Variant A</Badge>
+                      <h4 className="font-medium">{test.variantA?.subject || 'Original'}</h4>
+                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        <div>Participants: {test._count?.results ? Math.ceil(test._count.results / 2) : 0}</div>
+                      </div>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <Badge variant="secondary" className="mb-2">Variant B</Badge>
+                      <h4 className="font-medium">{test.variantB?.subject || 'Variant'}</h4>
+                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        <div>Participants: {test._count?.results ? Math.floor(test._count.results / 2) : 0}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[100px] text-muted-foreground">
+                A/B test results will appear here once the campaign sends.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Additional Performance Metrics */}
       <Card>
@@ -507,17 +728,17 @@ function CampaignDetail() {
           <div className="grid gap-6 md:grid-cols-3">
             <div className="space-y-2">
               <div className="text-sm font-medium text-muted-foreground">
-                Average Time to Open
+                Open Rate
               </div>
-              <div className="text-2xl font-bold">4.2 hours</div>
-              <div className="text-xs text-green-600">↑ 15% faster than average</div>
+              <div className="text-2xl font-bold">{openRate}%</div>
+              <div className="text-xs text-muted-foreground">{campaign.opened?.toLocaleString() || 0} of {campaign.sent?.toLocaleString() || 0} opened</div>
             </div>
             <div className="space-y-2">
               <div className="text-sm font-medium text-muted-foreground">
-                Best Performing Link
+                Click-Through Rate
               </div>
-              <div className="text-2xl font-bold">Property Gallery</div>
-              <div className="text-xs text-muted-foreground">187 clicks (15% CTR)</div>
+              <div className="text-2xl font-bold">{clickRate}%</div>
+              <div className="text-xs text-muted-foreground">{campaign.clicked?.toLocaleString() || 0} clicks</div>
             </div>
             <div className="space-y-2">
               <div className="text-sm font-medium text-muted-foreground">
@@ -525,7 +746,7 @@ function CampaignDetail() {
               </div>
               <div className="text-2xl font-bold">${campaign.revenue?.toLocaleString() || '0'}</div>
               <div className="text-xs text-blue-600">
-                ROI: {campaign.roi ? `${campaign.roi.toFixed(1)}%` : 'N/A'}
+                {campaign.budget && campaign.budget > 0 ? `Budget: $${campaign.budget.toLocaleString()}` : 'No budget set'}
               </div>
             </div>
           </div>
@@ -541,7 +762,7 @@ function CampaignDetail() {
           <div className="rounded-lg border p-6 bg-muted/30">
             <h3 className="text-lg font-semibold mb-2">{campaign.subject}</h3>
             <p className="text-muted-foreground">
-              {campaign.content}
+              {campaign.content || campaign.previewText || campaign.body || 'No content preview available'}
             </p>
             <Button className="mt-4" onClick={() => setShowContentModal(true)}>View Full Content</Button>
           </div>
@@ -564,7 +785,7 @@ function CampaignDetail() {
 
             <div className="prose prose-sm max-w-none dark:prose-invert">
               <div className="bg-white dark:bg-gray-900 p-8 rounded-lg border">
-                <div dangerouslySetInnerHTML={{ __html: campaign.fullContent }} />
+                <div className="whitespace-pre-wrap">{campaign.fullContent || campaign.body || 'No content available'}</div>
               </div>
             </div>
 
@@ -619,12 +840,12 @@ function CampaignDetail() {
                       <select
                         className="w-full rounded-md border border-input bg-background px-3 py-2"
                         value={editForm.type}
-                        onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'email' | 'sms' | 'phone' | 'social' })}
+                        onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL' })}
                       >
-                        <option value="email">Email</option>
-                        <option value="sms">SMS</option>
-                        <option value="phone">Phone</option>
-                        <option value="social">Social Media</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="SMS">SMS</option>
+                        <option value="PHONE">Phone</option>
+                        <option value="SOCIAL">Social Media</option>
                       </select>
                     </div>
                     <div>
@@ -632,13 +853,13 @@ function CampaignDetail() {
                       <select
                         className="w-full rounded-md border border-input bg-background px-3 py-2"
                         value={editForm.status}
-                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'active' | 'paused' | 'completed' | 'draft' | 'scheduled' })}
+                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'DRAFT' | 'SCHEDULED' })}
                       >
-                        <option value="active">Active</option>
-                        <option value="paused">Paused</option>
-                        <option value="completed">Completed</option>
-                        <option value="draft">Draft</option>
-                        <option value="scheduled">Scheduled</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="PAUSED">Paused</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="SCHEDULED">Scheduled</option>
                       </select>
                     </div>
                   </div>

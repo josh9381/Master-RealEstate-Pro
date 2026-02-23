@@ -1,11 +1,21 @@
 import express from 'express'
+import rateLimit from 'express-rate-limit'
 import * as aiController from '../controllers/ai.controller'
 import { authenticate } from '../middleware/auth'
+
+const aiRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100,            // 100 requests per minute per user
+  keyGenerator: (req: any) => req.user?.userId || 'anonymous',
+  message: { success: false, message: 'Too many AI requests. Please wait a moment.' },
+  validate: { xForwardedForHeader: false }
+})
 
 const router = express.Router()
 
 // All AI routes require authentication
 router.use(authenticate)
+router.use(aiRateLimiter)
 
 // AI Hub Overview & Stats
 router.get('/stats', aiController.getAIStats)

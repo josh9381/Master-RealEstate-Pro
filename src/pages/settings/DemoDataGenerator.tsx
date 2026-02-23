@@ -1,4 +1,4 @@
-import { Database, Trash2, Download, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Database, Trash2, Download, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';

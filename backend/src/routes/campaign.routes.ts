@@ -38,6 +38,7 @@ import {
   updateCampaignMetricsSchema,
 } from '../validators/campaign.validator';
 import { sensitiveLimiter } from '../middleware/rateLimiter';
+import prisma from '../config/database';
 
 const router = Router();
 
@@ -71,6 +72,132 @@ router.get('/templates/:templateId', asyncHandler(getCampaignTemplate));
  * @access  Private
  */
 router.post('/from-template/:templateId', asyncHandler(createCampaignFromTemplate));
+
+/**
+ * @route   GET /api/campaigns/top-performers
+ * @desc    Get top performing campaigns
+ * @access  Private
+ */
+router.get('/top-performers', asyncHandler(getTopPerformers));
+
+/**
+ * @route   POST /api/campaigns/compare
+ * @desc    Compare multiple campaigns
+ * @access  Private
+ */
+router.post('/compare', asyncHandler(compareCampaignsEndpoint));
+
+/**
+ * @route   GET /api/campaigns/:id/stats
+ * @desc    Get per-campaign statistics
+ * @access  Private
+ */
+router.get('/:id/stats', asyncHandler(async (req: any, res: any) => {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: req.params.id, organizationId: req.user!.organizationId }
+  });
+  if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
+  res.json({
+    success: true,
+    data: {
+      sent: campaign.sent,
+      delivered: campaign.delivered,
+      opened: campaign.opened,
+      clicked: campaign.clicked,
+      converted: campaign.converted,
+      bounced: campaign.bounced,
+      revenue: campaign.revenue,
+      roi: campaign.roi,
+    }
+  });
+}));
+
+/**
+ * @route   GET /api/campaigns/:id/execution-status
+ * @desc    Get real-time campaign execution progress
+ * @access  Private
+ */
+router.get('/:id/execution-status', asyncHandler(async (req: any, res: any) => {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: req.params.id, organizationId: req.user!.organizationId },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      sent: true,
+      delivered: true,
+      opened: true,
+      clicked: true,
+      bounced: true,
+      audience: true,
+      startDate: true,
+      updatedAt: true,
+      isABTest: true,
+    },
+  });
+  if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
+
+  // Calculate execution phase
+  const totalRecipients = campaign.audience || 0;
+  const totalSent = campaign.sent || 0;
+  let phase: 'queued' | 'sending' | 'completed' | 'draft' | 'paused' = 'draft';
+  let progress = 0;
+
+  if (campaign.status === 'SENDING') {
+    phase = 'sending';
+    progress = totalRecipients > 0 ? Math.round((totalSent / totalRecipients) * 100) : 0;
+  } else if (campaign.status === 'ACTIVE' || campaign.status === 'COMPLETED') {
+    phase = 'completed';
+    progress = 100;
+  } else if (campaign.status === 'SCHEDULED') {
+    phase = 'queued';
+    progress = 0;
+  } else if (campaign.status === 'PAUSED') {
+    phase = 'paused';
+    progress = totalRecipients > 0 ? Math.round((totalSent / totalRecipients) * 100) : 0;
+  }
+
+  // Check if SENDGRID_API_KEY or TWILIO env vars are configured
+  const isMockMode = !process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === '';
+
+  res.json({
+    success: true,
+    data: {
+      campaignId: campaign.id,
+      name: campaign.name,
+      phase,
+      progress,
+      totalRecipients,
+      totalSent,
+      delivered: campaign.delivered || 0,
+      bounced: campaign.bounced || 0,
+      isABTest: campaign.isABTest,
+      isMockMode,
+      startedAt: campaign.startDate,
+      lastUpdated: campaign.updatedAt,
+    }
+  });
+}));
+
+/**
+ * @route   POST /api/campaigns/:id/recipients
+ * @desc    Add recipients to a campaign
+ * @access  Private
+ */
+router.post('/:id/recipients', asyncHandler(async (req: any, res: any) => {
+  const { leadIds } = req.body;
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: req.params.id, organizationId: req.user!.organizationId }
+  });
+  if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
+
+  const currentCount = campaign.audience || 0;
+  await prisma.campaign.update({
+    where: { id: req.params.id },
+    data: { audience: currentCount + (leadIds?.length || 0) }
+  });
+  res.json({ success: true, data: { added: leadIds.length } });
+}));
 
 /**
  * @route   GET /api/campaigns
@@ -217,20 +344,6 @@ router.post(
   validateParams(campaignIdSchema),
   asyncHandler(unarchiveCampaign)
 );
-
-/**
- * @route   GET /api/campaigns/top-performers
- * @desc    Get top performing campaigns
- * @access  Private
- */
-router.get('/top-performers', asyncHandler(getTopPerformers));
-
-/**
- * @route   POST /api/campaigns/compare
- * @desc    Compare multiple campaigns
- * @access  Private
- */
-router.post('/compare', asyncHandler(compareCampaignsEndpoint));
 
 /**
  * @route   GET /api/campaigns/:id/analytics

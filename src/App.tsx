@@ -1,13 +1,21 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import { MainLayout } from './components/layout/MainLayout'
 import { AuthLayout } from './components/layout/AuthLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { PageErrorBoundary } from './components/PageErrorBoundary'
 
-// Dashboard
+// Loading fallback for lazy components
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+)
+
+// Dashboard (eagerly loaded - first page users see)
 import Dashboard from './pages/dashboard/Dashboard'
 
-// Auth
+// Auth (eagerly loaded - needed before main app)
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import ForgotPassword from './pages/auth/ForgotPassword'
@@ -16,121 +24,120 @@ import ResetPassword from './pages/auth/ResetPassword'
 // Public pages
 import { UnsubscribePage } from './pages/unsubscribe/UnsubscribePage'
 
-// Leads
-import LeadsList from './pages/leads/LeadsList'
-import LeadDetail from './pages/leads/LeadDetail'
-import LeadsPipeline from './pages/leads/LeadsPipeline'
-import LeadsImport from './pages/leads/LeadsImport'
-import LeadsExport from './pages/leads/LeadsExport'
-import LeadsFollowups from './pages/leads/LeadsFollowups'
-import LeadHistory from './pages/leads/LeadHistory'
-import LeadsMerge from './pages/leads/LeadsMerge'
+// Leads (lazy loaded)
+const LeadsList = lazy(() => import('./pages/leads/LeadsList'))
+const LeadDetail = lazy(() => import('./pages/leads/LeadDetail'))
+const LeadsPipeline = lazy(() => import('./pages/leads/LeadsPipeline'))
+const LeadsImport = lazy(() => import('./pages/leads/LeadsImport'))
+const LeadsExport = lazy(() => import('./pages/leads/LeadsExport'))
+const LeadsFollowups = lazy(() => import('./pages/leads/LeadsFollowups'))
+const LeadHistory = lazy(() => import('./pages/leads/LeadHistory'))
+const LeadsMerge = lazy(() => import('./pages/leads/LeadsMerge'))
+const LeadCreate = lazy(() => import('./pages/leads/LeadCreate'))
 
-// Campaigns
-import CampaignsList from './pages/campaigns/CampaignsList'
-import CampaignCreate from './pages/campaigns/CampaignCreate'
-import CampaignDetail from './pages/campaigns/CampaignDetail'
-import CampaignEdit from './pages/campaigns/CampaignEdit'
-import CampaignTemplates from './pages/campaigns/CampaignTemplates'
-import CampaignSchedule from './pages/campaigns/CampaignSchedule'
-import CampaignReports from './pages/campaigns/CampaignReports'
-import EmailCampaigns from './pages/campaigns/EmailCampaigns'
-import SMSCampaigns from './pages/campaigns/SMSCampaigns'
-import PhoneCampaigns from './pages/campaigns/PhoneCampaigns'
-import ABTesting from './pages/campaigns/ABTesting'
+// Campaigns (lazy loaded)
+const CampaignsList = lazy(() => import('./pages/campaigns/CampaignsList'))
+const CampaignCreate = lazy(() => import('./pages/campaigns/CampaignCreate'))
+const CampaignDetail = lazy(() => import('./pages/campaigns/CampaignDetail'))
+const CampaignEdit = lazy(() => import('./pages/campaigns/CampaignEdit'))
+const CampaignTemplates = lazy(() => import('./pages/campaigns/CampaignTemplates'))
+const CampaignSchedule = lazy(() => import('./pages/campaigns/CampaignSchedule'))
+const CampaignReports = lazy(() => import('./pages/campaigns/CampaignReports'))
+const EmailCampaigns = lazy(() => import('./pages/campaigns/EmailCampaigns'))
+const SMSCampaigns = lazy(() => import('./pages/campaigns/SMSCampaigns'))
+const PhoneCampaigns = lazy(() => import('./pages/campaigns/PhoneCampaigns'))
+const ABTesting = lazy(() => import('./pages/campaigns/ABTesting'))
 
-// AI Hub
-import AIHub from './pages/ai/AIHub'
-import LeadScoring from './pages/ai/LeadScoring'
-import Segmentation from './pages/ai/Segmentation'
-import PredictiveAnalytics from './pages/ai/PredictiveAnalytics'
-import ModelTraining from './pages/ai/ModelTraining'
-import IntelligenceInsights from './pages/ai/IntelligenceInsights'
-import AIAnalytics from './pages/ai/AIAnalytics'
+// AI Hub (lazy loaded)
+const AIHub = lazy(() => import('./pages/ai/AIHub'))
+const LeadScoring = lazy(() => import('./pages/ai/LeadScoring'))
+const Segmentation = lazy(() => import('./pages/ai/Segmentation'))
+const PredictiveAnalytics = lazy(() => import('./pages/ai/PredictiveAnalytics'))
+const ModelTraining = lazy(() => import('./pages/ai/ModelTraining'))
+const IntelligenceInsights = lazy(() => import('./pages/ai/IntelligenceInsights'))
+const AIAnalytics = lazy(() => import('./pages/ai/AIAnalytics'))
 
-// Analytics
-import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard'
-import CampaignAnalytics from './pages/analytics/CampaignAnalytics'
-import LeadAnalytics from './pages/analytics/LeadAnalytics'
-import ConversionReports from './pages/analytics/ConversionReports'
-import UsageAnalytics from './pages/analytics/UsageAnalytics'
-import CustomReports from './pages/analytics/CustomReports'
-import ReportBuilder from './pages/analytics/ReportBuilder'
+// Analytics (lazy loaded)
+const AnalyticsDashboard = lazy(() => import('./pages/analytics/AnalyticsDashboard'))
+const CampaignAnalytics = lazy(() => import('./pages/analytics/CampaignAnalytics'))
+const LeadAnalytics = lazy(() => import('./pages/analytics/LeadAnalytics'))
+const ConversionReports = lazy(() => import('./pages/analytics/ConversionReports'))
+const UsageAnalytics = lazy(() => import('./pages/analytics/UsageAnalytics'))
+const CustomReports = lazy(() => import('./pages/analytics/CustomReports'))
+const ReportBuilder = lazy(() => import('./pages/analytics/ReportBuilder'))
 
-// Communication
-import CommunicationInbox from './pages/communication/CommunicationInbox'
-import EmailTemplatesLibrary from './pages/communication/EmailTemplatesLibrary'
-import SMSCenter from './pages/communication/SMSCenter'
-import CallCenter from './pages/communication/CallCenter'
-import SocialMediaDashboard from './pages/communication/SocialMediaDashboard'
-import NewsletterManagement from './pages/communication/NewsletterManagement'
+// Communication (lazy loaded)
+const CommunicationInbox = lazy(() => import('./pages/communication/CommunicationInbox'))
+const EmailTemplatesLibrary = lazy(() => import('./pages/communication/EmailTemplatesLibrary'))
+const SMSCenter = lazy(() => import('./pages/communication/SMSCenter'))
+const CallCenter = lazy(() => import('./pages/communication/CallCenter'))
+const SocialMediaDashboard = lazy(() => import('./pages/communication/SocialMediaDashboard'))
+const NewsletterManagement = lazy(() => import('./pages/communication/NewsletterManagement'))
 
-// Workflows
-import WorkflowsList from './pages/workflows/WorkflowsList'
-import WorkflowBuilder from './pages/workflows/WorkflowBuilder'
-import AutomationRules from './pages/workflows/AutomationRules'
+// Workflows (lazy loaded)
+const WorkflowsList = lazy(() => import('./pages/workflows/WorkflowsList'))
+const WorkflowBuilder = lazy(() => import('./pages/workflows/WorkflowBuilder'))
+const AutomationRules = lazy(() => import('./pages/workflows/AutomationRules'))
 
-// Settings
-import SettingsHub from './pages/settings/SettingsHub'
-import ProfileSettings from './pages/settings/ProfileSettings'
-import BusinessSettings from './pages/settings/BusinessSettings'
-import TeamManagement from './pages/settings/TeamManagement'
-import EmailConfiguration from './pages/settings/EmailConfiguration'
-import NotificationSettings from './pages/settings/NotificationSettings'
-import SecuritySettings from './pages/settings/SecuritySettings'
-import ComplianceSettings from './pages/settings/ComplianceSettings'
-import GoogleIntegration from './pages/settings/GoogleIntegration'
-import TwilioSetup from './pages/settings/TwilioSetup'
-import ServiceConfiguration from './pages/settings/ServiceConfiguration'
-import DemoDataGenerator from './pages/settings/DemoDataGenerator'
-import Integrations from './pages/settings/Integrations'
+// Settings (lazy loaded)
+const SettingsHub = lazy(() => import('./pages/settings/SettingsHub'))
+const ProfileSettings = lazy(() => import('./pages/settings/ProfileSettings'))
+const BusinessSettings = lazy(() => import('./pages/settings/BusinessSettings'))
+const TeamManagement = lazy(() => import('./pages/settings/TeamManagement'))
+const EmailConfiguration = lazy(() => import('./pages/settings/EmailConfiguration'))
+const NotificationSettings = lazy(() => import('./pages/settings/NotificationSettings'))
+const SecuritySettings = lazy(() => import('./pages/settings/SecuritySettings'))
+const ComplianceSettings = lazy(() => import('./pages/settings/ComplianceSettings'))
+const GoogleIntegration = lazy(() => import('./pages/settings/GoogleIntegration'))
+const TwilioSetup = lazy(() => import('./pages/settings/TwilioSetup'))
+const ServiceConfiguration = lazy(() => import('./pages/settings/ServiceConfiguration'))
+const DemoDataGenerator = lazy(() => import('./pages/settings/DemoDataGenerator'))
 
-// Admin
-import AdminPanel from './pages/admin/AdminPanel'
-import TeamManagementPage from './pages/admin/TeamManagementPage'
-import SubscriptionPage from './pages/admin/Subscription'
-import UserManagementDetail from './pages/admin/UserManagementDetail'
-import SystemSettings from './pages/admin/SystemSettings'
-import FeatureFlags from './pages/admin/FeatureFlags'
-import DebugConsole from './pages/admin/DebugConsole'
-import BackupRestore from './pages/admin/BackupRestore'
-import DataExportWizard from './pages/admin/DataExportWizard'
-import RetryQueue from './pages/admin/RetryQueue'
-import HealthCheckDashboard from './pages/admin/HealthCheckDashboard'
-import DatabaseMaintenance from './pages/admin/DatabaseMaintenance'
+// Admin (lazy loaded)
+const AdminPanel = lazy(() => import('./pages/admin/AdminPanel'))
+const TeamManagementPage = lazy(() => import('./pages/admin/TeamManagementPage'))
+const SubscriptionPage = lazy(() => import('./pages/admin/Subscription'))
+const UserManagementDetail = lazy(() => import('./pages/admin/UserManagementDetail'))
+const SystemSettings = lazy(() => import('./pages/admin/SystemSettings'))
+const FeatureFlags = lazy(() => import('./pages/admin/FeatureFlags'))
+const DebugConsole = lazy(() => import('./pages/admin/DebugConsole'))
+const BackupRestore = lazy(() => import('./pages/admin/BackupRestore'))
+const DataExportWizard = lazy(() => import('./pages/admin/DataExportWizard'))
+const RetryQueue = lazy(() => import('./pages/admin/RetryQueue'))
+const HealthCheckDashboard = lazy(() => import('./pages/admin/HealthCheckDashboard'))
+const DatabaseMaintenance = lazy(() => import('./pages/admin/DatabaseMaintenance'))
 
-// Billing
-import BillingPage from './pages/billing/BillingPage'
-import InvoiceDetail from './pages/billing/InvoiceDetail'
-import UsageDashboard from './pages/billing/UsageDashboard'
-import UpgradeWizard from './pages/billing/UpgradeWizard'
-import PaymentMethods from './pages/billing/PaymentMethods'
+// Billing (lazy loaded)
+const BillingPage = lazy(() => import('./pages/billing/BillingPage'))
+const InvoiceDetail = lazy(() => import('./pages/billing/InvoiceDetail'))
+const UsageDashboard = lazy(() => import('./pages/billing/UsageDashboard'))
+const UpgradeWizard = lazy(() => import('./pages/billing/UpgradeWizard'))
+const PaymentMethods = lazy(() => import('./pages/billing/PaymentMethods'))
 
-// Help
-import HelpCenter from './pages/help/HelpCenter'
-import DocumentationPages from './pages/help/DocumentationPages'
-import SupportTicketSystem from './pages/help/SupportTicketSystem'
-import VideoTutorialLibrary from './pages/help/VideoTutorialLibrary'
+// Help (lazy loaded)
+const HelpCenter = lazy(() => import('./pages/help/HelpCenter'))
+const DocumentationPages = lazy(() => import('./pages/help/DocumentationPages'))
+const SupportTicketSystem = lazy(() => import('./pages/help/SupportTicketSystem'))
+const VideoTutorialLibrary = lazy(() => import('./pages/help/VideoTutorialLibrary'))
 
-// Integrations
-import IntegrationsHub from './pages/integrations/IntegrationsHub'
-import APIIntegrationsPage from './pages/integrations/APIIntegrationsPage'
+// Integrations (lazy loaded)
+const IntegrationsHub = lazy(() => import('./pages/integrations/IntegrationsHub'))
+const APIIntegrationsPage = lazy(() => import('./pages/integrations/APIIntegrationsPage'))
 
-// New Pages
-import LeadCreate from './pages/leads/LeadCreate'
-import CalendarPage from './pages/calendar/CalendarPage'
-import ActivityPage from './pages/activity/ActivityPage'
-import TasksPage from './pages/tasks/TasksPage'
-import PasswordSecurityPage from './pages/settings/PasswordSecurityPage'
-import BillingSubscriptionPage from './pages/billing/BillingSubscriptionPage'
+// Other lazy pages
+const CalendarPage = lazy(() => import('./pages/calendar/CalendarPage'))
+const ActivityPage = lazy(() => import('./pages/activity/ActivityPage'))
+const TasksPage = lazy(() => import('./pages/tasks/TasksPage'))
+const PasswordSecurityPage = lazy(() => import('./pages/settings/PasswordSecurityPage'))
+const BillingSubscriptionPage = lazy(() => import('./pages/billing/BillingSubscriptionPage'))
 
-// Phase 5 - New Components
-import { TagsManager } from './components/settings/TagsManager'
-import { CustomFieldsManager } from './components/settings/CustomFieldsManager'
-import { NotificationsPage } from './pages/notifications/NotificationsPage'
+// Phase 5 - Components (lazy loaded)
+const TagsManager = lazy(() => import('./components/settings/TagsManager').then(m => ({ default: m.TagsManager })))
+const CustomFieldsManager = lazy(() => import('./components/settings/CustomFieldsManager').then(m => ({ default: m.CustomFieldsManager })))
+const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
 
 // 404
-import NotFound from './pages/NotFound'
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 function App() {
   return (
@@ -148,128 +155,124 @@ function App() {
 
       {/* Main app routes */}
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+        <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
         
         {/* Leads */}
-        <Route path="/leads" element={<PageErrorBoundary pageName="Leads List"><LeadsList /></PageErrorBoundary>} />
-        <Route path="/leads/create" element={<PageErrorBoundary pageName="Create Lead"><LeadCreate /></PageErrorBoundary>} />
-        <Route path="/leads/:id" element={<PageErrorBoundary pageName="Lead Detail"><LeadDetail /></PageErrorBoundary>} />
-        <Route path="/leads/pipeline" element={<PageErrorBoundary pageName="Pipeline"><LeadsPipeline /></PageErrorBoundary>} />
-        <Route path="/leads/import" element={<PageErrorBoundary pageName="Import Leads"><LeadsImport /></PageErrorBoundary>} />
-        <Route path="/leads/export" element={<PageErrorBoundary pageName="Export Leads"><LeadsExport /></PageErrorBoundary>} />
-        <Route path="/leads/followups" element={<PageErrorBoundary pageName="Follow-ups"><LeadsFollowups /></PageErrorBoundary>} />
-        <Route path="/leads/history" element={<PageErrorBoundary pageName="Lead History"><LeadHistory /></PageErrorBoundary>} />
-        <Route path="/leads/merge" element={<PageErrorBoundary pageName="Merge Leads"><LeadsMerge /></PageErrorBoundary>} />
+        <Route path="/leads" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Leads List"><LeadsList /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/create" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Create Lead"><LeadCreate /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/:id" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Detail"><LeadDetail /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/pipeline" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Pipeline"><LeadsPipeline /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/import" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Import Leads"><LeadsImport /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/export" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Export Leads"><LeadsExport /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/followups" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Follow-ups"><LeadsFollowups /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/history" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead History"><LeadHistory /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/merge" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Merge Leads"><LeadsMerge /></PageErrorBoundary></Suspense>} />
         
         {/* Calendar & Tasks */}
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/activity" element={<ActivityPage />} />
-        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/calendar" element={<Suspense fallback={<PageLoader />}><CalendarPage /></Suspense>} />
+        <Route path="/activity" element={<Suspense fallback={<PageLoader />}><ActivityPage /></Suspense>} />
+        <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><TasksPage /></Suspense>} />
         
         {/* Campaigns */}
-        <Route path="/campaigns" element={<CampaignsList />} />
-        <Route path="/campaigns/create" element={<CampaignCreate />} />
-        <Route path="/campaigns/:id" element={<CampaignDetail />} />
-        <Route path="/campaigns/:id/edit" element={<CampaignEdit />} />
-        <Route path="/campaigns/templates" element={<CampaignTemplates />} />
-        <Route path="/campaigns/schedule" element={<CampaignSchedule />} />
-        <Route path="/campaigns/reports" element={<CampaignReports />} />
-        <Route path="/campaigns/email" element={<EmailCampaigns />} />
-        <Route path="/campaigns/sms" element={<SMSCampaigns />} />
-        <Route path="/campaigns/phone" element={<PhoneCampaigns />} />
-        <Route path="/campaigns/ab-testing" element={<ABTesting />} />
+        <Route path="/campaigns" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaigns"><CampaignsList /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/create" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Create Campaign"><CampaignCreate /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/:id" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Detail"><CampaignDetail /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/:id/edit" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Edit Campaign"><CampaignEdit /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/templates" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Templates"><CampaignTemplates /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/schedule" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Schedule"><CampaignSchedule /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/reports" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Reports"><CampaignReports /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/email" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Campaigns"><EmailCampaigns /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/sms" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="SMS Campaigns"><SMSCampaigns /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/phone" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Phone Campaigns"><PhoneCampaigns /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/ab-testing" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="A/B Testing"><ABTesting /></PageErrorBoundary></Suspense>} />
         
         {/* AI Hub */}
-        <Route path="/ai" element={<PageErrorBoundary pageName="AI Hub"><AIHub /></PageErrorBoundary>} />
-        <Route path="/ai/lead-scoring" element={<PageErrorBoundary pageName="Lead Scoring"><LeadScoring /></PageErrorBoundary>} />
-        <Route path="/ai/segmentation" element={<PageErrorBoundary pageName="Segmentation"><Segmentation /></PageErrorBoundary>} />
-        <Route path="/ai/predictive" element={<PageErrorBoundary pageName="Predictive Analytics"><PredictiveAnalytics /></PageErrorBoundary>} />
-        <Route path="/ai/training" element={<PageErrorBoundary pageName="Model Training"><ModelTraining /></PageErrorBoundary>} />
-        <Route path="/ai/insights" element={<PageErrorBoundary pageName="Intelligence Insights"><IntelligenceInsights /></PageErrorBoundary>} />
-        <Route path="/ai/analytics" element={<PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary>} />
+        <Route path="/ai" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Hub"><AIHub /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/lead-scoring" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Scoring"><LeadScoring /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/segmentation" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Segmentation"><Segmentation /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/predictive" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Predictive Analytics"><PredictiveAnalytics /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/training" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Model Training"><ModelTraining /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/insights" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Insights"><IntelligenceInsights /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary></Suspense>} />
         
         {/* Analytics */}
-        <Route path="/analytics" element={<PageErrorBoundary pageName="Analytics Dashboard"><AnalyticsDashboard /></PageErrorBoundary>} />
-        <Route path="/analytics/campaigns" element={<PageErrorBoundary pageName="Campaign Analytics"><CampaignAnalytics /></PageErrorBoundary>} />
-        <Route path="/analytics/leads" element={<PageErrorBoundary pageName="Lead Analytics"><LeadAnalytics /></PageErrorBoundary>} />
-        <Route path="/analytics/conversions" element={<PageErrorBoundary pageName="Conversion Reports"><ConversionReports /></PageErrorBoundary>} />
-        <Route path="/analytics/usage" element={<PageErrorBoundary pageName="Usage Analytics"><UsageAnalytics /></PageErrorBoundary>} />
-        <Route path="/analytics/custom-reports" element={<PageErrorBoundary pageName="Custom Reports"><CustomReports /></PageErrorBoundary>} />
-        <Route path="/analytics/report-builder" element={<PageErrorBoundary pageName="Report Builder"><ReportBuilder /></PageErrorBoundary>} />
+        <Route path="/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Analytics Dashboard"><AnalyticsDashboard /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/campaigns" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Analytics"><CampaignAnalytics /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/leads" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Analytics"><LeadAnalytics /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/conversions" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Conversion Reports"><ConversionReports /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/usage" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Usage Analytics"><UsageAnalytics /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/custom-reports" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Custom Reports"><CustomReports /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/report-builder" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Report Builder"><ReportBuilder /></PageErrorBoundary></Suspense>} />
         
         {/* Communication */}
-        <Route path="/communication" element={<CommunicationInbox />} />
-        <Route path="/communication/inbox" element={<CommunicationInbox />} />
-        <Route path="/communication/templates" element={<EmailTemplatesLibrary />} />
-        <Route path="/communication/sms" element={<SMSCenter />} />
-        <Route path="/communication/calls" element={<CallCenter />} />
-        <Route path="/communication/social" element={<SocialMediaDashboard />} />
-        <Route path="/communication/newsletter" element={<NewsletterManagement />} />
+        <Route path="/communication" element={<Suspense fallback={<PageLoader />}><CommunicationInbox /></Suspense>} />
+        <Route path="/communication/inbox" element={<Suspense fallback={<PageLoader />}><CommunicationInbox /></Suspense>} />
+        <Route path="/communication/templates" element={<Suspense fallback={<PageLoader />}><EmailTemplatesLibrary /></Suspense>} />
+        <Route path="/communication/sms" element={<Suspense fallback={<PageLoader />}><SMSCenter /></Suspense>} />
+        <Route path="/communication/calls" element={<Suspense fallback={<PageLoader />}><CallCenter /></Suspense>} />
+        <Route path="/communication/social" element={<Suspense fallback={<PageLoader />}><SocialMediaDashboard /></Suspense>} />
+        <Route path="/communication/newsletter" element={<Suspense fallback={<PageLoader />}><NewsletterManagement /></Suspense>} />
         
         {/* Workflows */}
-        <Route path="/workflows" element={<WorkflowsList />} />
-        <Route path="/workflows/builder" element={<WorkflowBuilder />} />
-        <Route path="/workflows/automation" element={<AutomationRules />} />
+        <Route path="/workflows" element={<Suspense fallback={<PageLoader />}><WorkflowsList /></Suspense>} />
+        <Route path="/workflows/builder" element={<Suspense fallback={<PageLoader />}><WorkflowBuilder /></Suspense>} />
+        <Route path="/workflows/automation" element={<Suspense fallback={<PageLoader />}><AutomationRules /></Suspense>} />
         
         {/* Settings */}
-        <Route path="/settings" element={<SettingsHub />} />
-        <Route path="/settings/profile" element={<ProfileSettings />} />
-        <Route path="/settings/business" element={<BusinessSettings />} />
-        <Route path="/settings/team" element={<TeamManagement />} />
-        <Route path="/settings/email" element={<EmailConfiguration />} />
-        <Route path="/settings/notifications" element={<NotificationSettings />} />
-        <Route path="/settings/security" element={<SecuritySettings />} />
-        <Route path="/settings/compliance" element={<ComplianceSettings />} />
-        <Route path="/settings/google" element={<GoogleIntegration />} />
-        <Route path="/settings/twilio" element={<TwilioSetup />} />
-        <Route path="/settings/services" element={<ServiceConfiguration />} />
-        <Route path="/settings/demo-data" element={<DemoDataGenerator />} />
-        <Route path="/settings/tags" element={<TagsManager />} />
-        <Route path="/settings/custom-fields" element={<CustomFieldsManager />} />
-        <Route path="/settings/security/password" element={<PasswordSecurityPage />} />
-        <Route path="/integrations" element={<Integrations />} />
+        <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsHub /></Suspense>} />
+        <Route path="/settings/profile" element={<Suspense fallback={<PageLoader />}><ProfileSettings /></Suspense>} />
+        <Route path="/settings/business" element={<Suspense fallback={<PageLoader />}><BusinessSettings /></Suspense>} />
+        <Route path="/settings/team" element={<Suspense fallback={<PageLoader />}><TeamManagement /></Suspense>} />
+        <Route path="/settings/email" element={<Suspense fallback={<PageLoader />}><EmailConfiguration /></Suspense>} />
+        <Route path="/settings/notifications" element={<Suspense fallback={<PageLoader />}><NotificationSettings /></Suspense>} />
+        <Route path="/settings/security" element={<Suspense fallback={<PageLoader />}><SecuritySettings /></Suspense>} />
+        <Route path="/settings/compliance" element={<Suspense fallback={<PageLoader />}><ComplianceSettings /></Suspense>} />
+        <Route path="/settings/google" element={<Suspense fallback={<PageLoader />}><GoogleIntegration /></Suspense>} />
+        <Route path="/settings/twilio" element={<Suspense fallback={<PageLoader />}><TwilioSetup /></Suspense>} />
+        <Route path="/settings/services" element={<Suspense fallback={<PageLoader />}><ServiceConfiguration /></Suspense>} />
+        <Route path="/settings/demo-data" element={<Suspense fallback={<PageLoader />}><DemoDataGenerator /></Suspense>} />
+        <Route path="/settings/tags" element={<Suspense fallback={<PageLoader />}><TagsManager /></Suspense>} />
+        <Route path="/settings/custom-fields" element={<Suspense fallback={<PageLoader />}><CustomFieldsManager /></Suspense>} />
+        <Route path="/settings/security/password" element={<Suspense fallback={<PageLoader />}><PasswordSecurityPage /></Suspense>} />
         
         {/* Notifications */}
-        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
         
         {/* Admin */}
-        <Route path="/admin" element={<PageErrorBoundary pageName="Admin Panel"><AdminPanel /></PageErrorBoundary>} />
-        <Route path="/admin/team" element={<PageErrorBoundary pageName="Team Management"><TeamManagementPage /></PageErrorBoundary>} />
-        <Route path="/admin/subscription" element={<PageErrorBoundary pageName="Subscription Management"><SubscriptionPage /></PageErrorBoundary>} />
-        <Route path="/admin/users/:id" element={<PageErrorBoundary pageName="User Management"><UserManagementDetail /></PageErrorBoundary>} />
-        <Route path="/admin/system" element={<PageErrorBoundary pageName="System Settings"><SystemSettings /></PageErrorBoundary>} />
-        <Route path="/admin/features" element={<PageErrorBoundary pageName="Feature Flags"><FeatureFlags /></PageErrorBoundary>} />
-        <Route path="/admin/debug" element={<PageErrorBoundary pageName="Debug Console"><DebugConsole /></PageErrorBoundary>} />
-        <Route path="/admin/backup" element={<PageErrorBoundary pageName="Backup & Restore"><BackupRestore /></PageErrorBoundary>} />
-        <Route path="/admin/export" element={<PageErrorBoundary pageName="Data Export"><DataExportWizard /></PageErrorBoundary>} />
-        <Route path="/admin/retry-queue" element={<PageErrorBoundary pageName="Retry Queue"><RetryQueue /></PageErrorBoundary>} />
-        <Route path="/admin/health" element={<PageErrorBoundary pageName="Health Check"><HealthCheckDashboard /></PageErrorBoundary>} />
-        <Route path="/admin/database" element={<PageErrorBoundary pageName="Database Maintenance"><DatabaseMaintenance /></PageErrorBoundary>} />
+        <Route path="/admin" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Admin Panel"><AdminPanel /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/team" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Team Management"><TeamManagementPage /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/subscription" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Subscription Management"><SubscriptionPage /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/users/:id" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="User Management"><UserManagementDetail /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/system" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="System Settings"><SystemSettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/features" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Feature Flags"><FeatureFlags /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/debug" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Debug Console"><DebugConsole /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/backup" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Backup & Restore"><BackupRestore /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/export" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Data Export"><DataExportWizard /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/retry-queue" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Retry Queue"><RetryQueue /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/health" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Health Check"><HealthCheckDashboard /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin/database" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Database Maintenance"><DatabaseMaintenance /></PageErrorBoundary></Suspense>} />
         
         {/* Billing */}
-        <Route path="/billing" element={<BillingPage />} />
-        <Route path="/billing/subscription" element={<BillingSubscriptionPage />} />
-        <Route path="/billing/invoices/:id" element={<InvoiceDetail />} />
-        <Route path="/billing/usage" element={<UsageDashboard />} />
-        <Route path="/billing/upgrade" element={<UpgradeWizard />} />
-        <Route path="/billing/payment-methods" element={<PaymentMethods />} />
+        <Route path="/billing" element={<Suspense fallback={<PageLoader />}><BillingPage /></Suspense>} />
+        <Route path="/billing/subscription" element={<Suspense fallback={<PageLoader />}><BillingSubscriptionPage /></Suspense>} />
+        <Route path="/billing/invoices/:id" element={<Suspense fallback={<PageLoader />}><InvoiceDetail /></Suspense>} />
+        <Route path="/billing/usage" element={<Suspense fallback={<PageLoader />}><UsageDashboard /></Suspense>} />
+        <Route path="/billing/upgrade" element={<Suspense fallback={<PageLoader />}><UpgradeWizard /></Suspense>} />
+        <Route path="/billing/payment-methods" element={<Suspense fallback={<PageLoader />}><PaymentMethods /></Suspense>} />
         
         {/* Help */}
-        <Route path="/help" element={<HelpCenter />} />
-        <Route path="/help/docs" element={<DocumentationPages />} />
-        <Route path="/help/support" element={<SupportTicketSystem />} />
-        <Route path="/help/videos" element={<VideoTutorialLibrary />} />
+        <Route path="/help" element={<Suspense fallback={<PageLoader />}><HelpCenter /></Suspense>} />
+        <Route path="/help/docs" element={<Suspense fallback={<PageLoader />}><DocumentationPages /></Suspense>} />
+        <Route path="/help/support" element={<Suspense fallback={<PageLoader />}><SupportTicketSystem /></Suspense>} />
+        <Route path="/help/videos" element={<Suspense fallback={<PageLoader />}><VideoTutorialLibrary /></Suspense>} />
         
         {/* Integrations */}
-        <Route path="/integrations" element={<IntegrationsHub />} />
-        <Route path="/integrations/api" element={<APIIntegrationsPage />} />
-        
-        {/* Settings */}
-        <Route path="/settings" element={<SettingsHub />} />
+        <Route path="/integrations" element={<Suspense fallback={<PageLoader />}><IntegrationsHub /></Suspense>} />
+        <Route path="/integrations/api" element={<Suspense fallback={<PageLoader />}><APIIntegrationsPage /></Suspense>} />
         
         {/* 404 */}
-        <Route path="/404" element={<NotFound />} />
+        <Route path="/404" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Route>
     </Routes>

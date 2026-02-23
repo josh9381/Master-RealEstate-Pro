@@ -1,6 +1,5 @@
 import { Mail, MessageSquare, UserPlus, Tag, Clock, Zap, Filter, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
 export type NodeType = 'trigger' | 'condition' | 'action' | 'delay';
@@ -59,21 +58,6 @@ const getNodeColor = (type: NodeType) => {
   }
 };
 
-const getNodeBadgeColor = (type: NodeType) => {
-  switch (type) {
-    case 'trigger':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-    case 'condition':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-    case 'action':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-    case 'delay':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-    default:
-      return '';
-  }
-};
-
 export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
   node,
   isSelected = false,
@@ -84,7 +68,6 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
 }) => {
   const Icon = getNodeIcon(node.type, node.icon);
   const nodeColor = getNodeColor(node.type);
-  const badgeColor = getNodeBadgeColor(node.type);
 
   const handleClick = () => {
     if (onSelect) {

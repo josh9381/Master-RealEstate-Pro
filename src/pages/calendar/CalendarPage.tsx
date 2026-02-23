@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, Users, Video } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { appointmentsApi } from '@/lib/api'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -10,6 +12,31 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
+
+  // Fetch real appointments from API
+  const { data: appointmentsResponse } = useQuery({
+    queryKey: ['appointments', currentDate.getFullYear(), currentDate.getMonth()],
+    queryFn: () => appointmentsApi.getAppointments({
+      startDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString(),
+      endDate: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString(),
+    }),
+  })
+
+  // Map API appointments to calendar event format
+  const events = useMemo(() => {
+    const appts = appointmentsResponse?.data?.appointments || appointmentsResponse?.appointments || appointmentsResponse || []
+    if (!Array.isArray(appts)) return []
+    return appts.map((appt: any) => {
+      const date = new Date(appt.scheduledAt || appt.date || appt.startTime)
+      return {
+        id: appt.id || appt._id,
+        title: appt.title || 'Appointment',
+        time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: appt.type || 'meeting',
+        day: date.getMonth() === currentDate.getMonth() && date.getFullYear() === currentDate.getFullYear() ? date.getDate() : -1,
+      }
+    })
+  }, [appointmentsResponse, currentDate])
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -38,15 +65,6 @@ export default function CalendarPage() {
            currentDate.getMonth() === today.getMonth() && 
            currentDate.getFullYear() === today.getFullYear()
   }
-
-  // Sample events
-  const events = [
-    { id: 1, title: 'Meeting with John Doe', time: '10:00 AM', type: 'meeting', day: 15 },
-    { id: 2, title: 'Property Viewing', time: '2:00 PM', type: 'viewing', day: 15 },
-    { id: 3, title: 'Team Standup', time: '9:00 AM', type: 'meeting', day: 18 },
-    { id: 4, title: 'Client Call', time: '3:00 PM', type: 'call', day: 20 },
-    { id: 5, title: 'Contract Signing', time: '11:00 AM', type: 'meeting', day: 22 },
-  ]
 
   return (
     <div className="space-y-6">

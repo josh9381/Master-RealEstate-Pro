@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Mail, Users, Send, Calendar, BarChart3, FileText, RefreshCw } from 'lucide-react';
+import { Mail, Users, Send, Calendar, BarChart3, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -75,6 +75,19 @@ const NewsletterManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Coming Soon Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-semibold text-amber-800">Coming Soon — Newsletter Management</h3>
+          <p className="text-sm text-amber-700 mt-1">
+            Newsletter management requires a subscriber management backend which is not yet available.
+            This feature is on the roadmap. In the meantime, use Email Campaigns to send bulk emails to your leads.
+          </p>
+        </div>
+        <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Newsletter Management</h1>
@@ -87,7 +100,7 @@ const NewsletterManagement = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button>
+          <Button disabled title="Newsletter management coming soon">
             <Mail className="h-4 w-4 mr-2" />
             Create Newsletter
           </Button>
@@ -113,8 +126,8 @@ const NewsletterManagement = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24,567</div>
-            <p className="text-xs text-muted-foreground">+1,234 this month</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -123,8 +136,8 @@ const NewsletterManagement = () => {
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
-            <p className="text-xs text-muted-foreground">This year</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -133,8 +146,8 @@ const NewsletterManagement = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">40.3%</div>
-            <p className="text-xs text-muted-foreground">+2.1% from last month</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card>
@@ -143,8 +156,8 @@ const NewsletterManagement = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">7.4%</div>
-            <p className="text-xs text-muted-foreground">Industry avg: 5.2%</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
       </div>
@@ -279,7 +292,7 @@ const NewsletterManagement = () => {
           <div>
             <label className="text-sm font-medium mb-2 block">Subscriber List</label>
             <select className="w-full px-3 py-2 border rounded-lg" multiple>
-              <option>All Subscribers (24,567)</option>
+              <option>All Subscribers</option>
               <option>Active Users (18,900)</option>
               <option>Premium Members (5,667)</option>
               <option>Newsletter Only (12,345)</option>
@@ -297,8 +310,8 @@ const NewsletterManagement = () => {
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button>Continue to Design</Button>
-            <Button variant="outline">Save Draft</Button>
+            <Button disabled title="Newsletter management coming soon">Continue to Design</Button>
+            <Button variant="outline" disabled>Save Draft</Button>
           </div>
         </CardContent>
       </Card>
@@ -311,27 +324,7 @@ const NewsletterManagement = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { name: 'All Subscribers', count: 24567, growth: '+5.3%', active: 18900 },
-              { name: 'Active Users', count: 18900, growth: '+4.1%', active: 18900 },
-              { name: 'Premium Members', count: 5667, growth: '+8.7%', active: 5234 },
-              { name: 'Newsletter Only', count: 12345, growth: '+3.2%', active: 9876 },
-            ].map((list) => (
-              <div key={list.name} className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-semibold">{list.name}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {list.count.toLocaleString()} subscribers • {list.active.toLocaleString()} active
-                  </p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Badge variant="secondary">{list.growth}</Badge>
-                  <Button variant="outline" size="sm">
-                    Manage
-                  </Button>
-                </div>
-              </div>
-            ))}
+            <p className="text-sm text-muted-foreground">No subscriber lists yet. Create your first list to start managing audiences.</p>
           </div>
         </CardContent>
       </Card>
@@ -350,24 +343,24 @@ const NewsletterManagement = () => {
                   <h4 className="text-sm font-medium">Best Send Time</h4>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <p className="text-2xl font-bold">Tuesday</p>
-                <p className="text-sm text-muted-foreground">10:00 AM EST</p>
+                <p className="text-2xl font-bold">—</p>
+                <p className="text-sm text-muted-foreground">Not enough data</p>
               </div>
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-medium">Top Performing</h4>
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <p className="text-2xl font-bold">Product Updates</p>
-                <p className="text-sm text-muted-foreground">45.2% open rate</p>
+                <p className="text-2xl font-bold">—</p>
+                <p className="text-sm text-muted-foreground">No data yet</p>
               </div>
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-medium">Unsubscribe Rate</h4>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <p className="text-2xl font-bold">0.8%</p>
-                <p className="text-sm text-muted-foreground">Below industry avg</p>
+                <p className="text-2xl font-bold">—</p>
+                <p className="text-sm text-muted-foreground">No data yet</p>
               </div>
             </div>
           </div>
@@ -383,14 +376,14 @@ const NewsletterManagement = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             {[
-              { name: 'Basic Newsletter', uses: 45 },
-              { name: 'Product Update', uses: 32 },
-              { name: 'Company News', uses: 28 },
-              { name: 'Event Announcement', uses: 19 },
-              { name: 'Promotional', uses: 23 },
-              { name: 'Welcome Series', uses: 67 },
-              { name: 'Re-engagement', uses: 15 },
-              { name: 'Survey Request', uses: 12 },
+              { name: 'Basic Newsletter', uses: 0 },
+              { name: 'Product Update', uses: 0 },
+              { name: 'Company News', uses: 0 },
+              { name: 'Event Announcement', uses: 0 },
+              { name: 'Promotional', uses: 0 },
+              { name: 'Welcome Series', uses: 0 },
+              { name: 'Re-engagement', uses: 0 },
+              { name: 'Survey Request', uses: 0 },
             ].map((template) => (
               <div
                 key={template.name}

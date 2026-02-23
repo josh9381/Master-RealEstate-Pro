@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useState } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { authApi } from '@/lib/api';
 
 const ForgotPassword = () => {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email) {
@@ -21,10 +22,14 @@ const ForgotPassword = () => {
     
     setLoading(true);
     
-    setTimeout(() => {
+    try {
+      await authApi.forgotPassword(email);
+      toast.success('Email sent!', 'If that email is registered, a reset link has been sent.');
+    } catch {
+      toast.error('Something went wrong', 'Please try again later.');
+    } finally {
       setLoading(false);
-      toast.success('Email sent!', 'Check your inbox for password reset instructions');
-    }, 1000);
+    }
   };
 
   return (

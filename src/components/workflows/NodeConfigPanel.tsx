@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { WorkflowNodeData } from './WorkflowNode';
 
 interface NodeConfigPanelProps {
@@ -236,11 +237,13 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               {config.body ? (
                 <div 
                   dangerouslySetInnerHTML={{ 
-                    __html: String(config.body)
-                      .replace(/\{\{lead\.firstName\}\}/gi, '[FirstName]')
-                      .replace(/\{\{lead\.lastName\}\}/gi, '[LastName]')
-                      .replace(/\{\{lead\.FirstName\}\}/gi, '[FirstName]')
-                      .replace(/\{\{lead\.LastName\}\}/gi, '[LastName]')
+                    __html: DOMPurify.sanitize(
+                      String(config.body)
+                        .replace(/\{\{lead\.firstName\}\}/gi, '[FirstName]')
+                        .replace(/\{\{lead\.lastName\}\}/gi, '[LastName]')
+                        .replace(/\{\{lead\.FirstName\}\}/gi, '[FirstName]')
+                        .replace(/\{\{lead\.LastName\}\}/gi, '[LastName]')
+                    )
                   }}
                 />
               ) : (

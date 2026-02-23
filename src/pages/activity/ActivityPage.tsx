@@ -1,76 +1,72 @@
-import { useState } from 'react'
-import { Filter, Download, Mail, Phone, MessageSquare, Calendar, FileText, UserPlus } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Filter, Download, Mail, Phone, MessageSquare, Calendar, FileText, UserPlus, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import { activitiesApi } from '@/lib/api'
 
 export default function ActivityPage() {
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
 
-  const activities = [
-    {
-      id: 1,
-      type: 'email',
-      title: 'Sent email to John Doe',
-      description: 'Follow-up regarding property inquiry',
-      user: 'Sarah Johnson',
-      timestamp: '2 hours ago',
-      icon: Mail,
-      color: 'text-blue-500'
-    },
-    {
-      id: 2,
-      type: 'call',
-      title: 'Phone call with Mike Davis',
-      description: 'Discussed contract terms - 15 minutes',
-      user: 'John Smith',
-      timestamp: '3 hours ago',
-      icon: Phone,
-      color: 'text-green-500'
-    },
-    {
-      id: 3,
-      type: 'meeting',
-      title: 'Meeting scheduled',
-      description: 'Property viewing with Emily Brown',
-      user: 'Sarah Johnson',
-      timestamp: '5 hours ago',
-      icon: Calendar,
-      color: 'text-purple-500'
-    },
-    {
-      id: 4,
-      type: 'note',
-      title: 'Added note',
-      description: 'Client is interested in downtown properties',
-      user: 'Mike Davis',
-      timestamp: '1 day ago',
-      icon: FileText,
-      color: 'text-yellow-500'
-    },
-    {
-      id: 5,
-      type: 'sms',
-      title: 'SMS sent',
-      description: 'Reminder about upcoming appointment',
-      user: 'Emily Brown',
-      timestamp: '1 day ago',
-      icon: MessageSquare,
-      color: 'text-orange-500'
-    },
-    {
-      id: 6,
-      type: 'lead',
-      title: 'New lead created',
-      description: 'John Anderson - Commercial Real Estate',
-      user: 'System',
-      timestamp: '2 days ago',
-      icon: UserPlus,
-      color: 'text-indigo-500'
-    },
-  ]
+  // Fetch real activities from API
+  const { data: activitiesResponse } = useQuery({
+    queryKey: ['activities', filter],
+    queryFn: () => activitiesApi.getActivities({ limit: 50 }),
+  })
+
+  const iconMap: Record<string, any> = {
+    email: Mail,
+    call: Phone,
+    meeting: Calendar,
+    note: FileText,
+    sms: MessageSquare,
+    lead: UserPlus,
+    status_change: Activity,
+  }
+
+  const colorMap: Record<string, string> = {
+    email: 'text-blue-500',
+    call: 'text-green-500',
+    meeting: 'text-purple-500',
+    note: 'text-yellow-500',
+    sms: 'text-orange-500',
+    lead: 'text-indigo-500',
+    status_change: 'text-gray-500',
+  }
+
+  function getRelativeTime(dateStr: string): string {
+    const now = new Date()
+    const date = new Date(dateStr)
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins} minutes ago`
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    const diffMonths = Math.floor(diffDays / 30)
+    return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`
+  }
+
+  // Map API response to component format
+  const activities = useMemo(() => {
+    const raw = activitiesResponse?.data?.activities || activitiesResponse?.activities || activitiesResponse || []
+    if (!Array.isArray(raw)) return []
+    return raw.map((a: any) => ({
+      id: a.id || a._id,
+      type: a.type || 'note',
+      title: a.title || a.description || 'Activity',
+      description: a.description || '',
+      user: a.user?.name || a.userName || a.user || 'System',
+      timestamp: a.createdAt ? getRelativeTime(a.createdAt) : 'Unknown',
+      icon: iconMap[a.type] || Activity,
+      color: colorMap[a.type] || 'text-gray-500',
+    }))
+  }, [activitiesResponse])
 
   const filteredActivities = activities.filter(activity => {
     if (filter !== 'all' && activity.type !== filter) return false
@@ -96,19 +92,19 @@ export default function ActivityPage() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="p-4">
-          <div className="text-2xl font-bold">142</div>
-          <div className="text-sm text-muted-foreground">Today's Activities</div>
+          <div className="text-2xl font-bold">{activities.length}</div>
+          <div className="text-sm text-muted-foreground">Total Activities</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">48</div>
+          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'EMAIL' || a.type === 'email').length}</div>
           <div className="text-sm text-muted-foreground">Emails Sent</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">23</div>
+          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'CALL' || a.type === 'call').length}</div>
           <div className="text-sm text-muted-foreground">Calls Made</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">15</div>
+          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'MEETING' || a.type === 'meeting').length}</div>
           <div className="text-sm text-muted-foreground">Meetings</div>
         </Card>
       </div>

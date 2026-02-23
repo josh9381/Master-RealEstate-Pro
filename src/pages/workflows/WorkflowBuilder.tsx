@@ -47,13 +47,8 @@ const WorkflowBuilder = () => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  // Mock execution logs
-  const [executionLogs] = useState<ExecutionLog[]>([
-    { id: '1', timestamp: '2025-10-22 14:32:15', status: 'success', duration: 2.3, details: 'Lead scored, email sent' },
-    { id: '2', timestamp: '2025-10-22 14:15:42', status: 'success', duration: 1.8, details: 'Task created successfully' },
-    { id: '3', timestamp: '2025-10-22 13:58:21', status: 'failed', duration: 0.5, details: 'Email delivery failed' },
-    { id: '4', timestamp: '2025-10-22 13:45:10', status: 'success', duration: 3.1, details: 'Lead assigned to team' },
-  ]);
+  // Execution logs - empty until real data flows
+  const [executionLogs] = useState<ExecutionLog[]>([]);
 
   useEffect(() => {
     // Load workflow if ID is in URL params
@@ -181,7 +176,6 @@ const WorkflowBuilder = () => {
   const handleComponentSelect = (component: WorkflowComponent) => {
     // Only add when in click mode - in drag mode, components should only be added via drag & drop
     if (interactionMode === 'click') {
-      console.log('handleComponentSelect called with:', component.label);
       addNodeFromComponent(component);
     }
   };
@@ -220,9 +214,8 @@ const WorkflowBuilder = () => {
     setIsDraggingOver(false);
   };
 
-  const handleComponentDragStart = (component: WorkflowComponent) => {
+  const handleComponentDragStart = (_component: WorkflowComponent) => {
     // Optional: Add visual feedback when drag starts
-    console.log('Drag started:', component.label);
   };
 
   const handleNodeMove = (nodeId: string, position: { x: number; y: number }) => {
@@ -315,8 +308,22 @@ const WorkflowBuilder = () => {
 
   const saveWorkflow = async () => {
     try {
+      // Map nodes to the format the backend expects
+      const triggerNode = nodes.find(n => n.type === 'trigger');
+      const actionNodes = nodes.filter(n => n.type !== 'trigger');
+
       const workflowData = {
         name: workflowName,
+        description: `Workflow with ${nodes.length} nodes`,
+        triggerType: triggerNode?.label?.toLowerCase().replace(/\s+/g, '_') || 'manual',
+        triggerData: triggerNode?.config || {},
+        actions: actionNodes.map(n => ({
+          type: n.type,
+          config: {
+            ...n.config,
+            label: n.label
+          }
+        })),
         nodes: nodes,
         status: 'draft'
       };
@@ -348,16 +355,15 @@ const WorkflowBuilder = () => {
       
       if (workflowId) {
         await workflowsApi.testWorkflow(workflowId);
-      }
-      
-      setTimeout(() => {
-        setIsTestRunning(false);
         toast.success('Test completed successfully');
-      }, 3000);
+      } else {
+        toast.warning('Please save the workflow before testing');
+      }
     } catch (error) {
       console.error('Failed to test workflow:', error);
-      setIsTestRunning(false);
       toast.error('Test execution failed');
+    } finally {
+      setIsTestRunning(false);
     }
   };
 
@@ -533,53 +539,27 @@ const WorkflowBuilder = () => {
             <div className="grid gap-4 md:grid-cols-4 mb-6">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Total Executions</p>
-                <p className="text-2xl font-bold">1,463</p>
-                <p className="text-xs text-green-600">↑ 12% from last month</p>
+                <p className="text-2xl font-bold">0</p>
+                <p className="text-xs text-muted-foreground">No data yet</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Success Rate</p>
-                <p className="text-2xl font-bold">97.3%</p>
-                <p className="text-xs text-green-600">↑ 2.1% from last month</p>
+                <p className="text-2xl font-bold">—</p>
+                <p className="text-xs text-muted-foreground">No data yet</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Avg Duration</p>
-                <p className="text-2xl font-bold">2.4s</p>
-                <p className="text-xs text-green-600">↓ 0.3s faster</p>
+                <p className="text-2xl font-bold">—</p>
+                <p className="text-xs text-muted-foreground">No data yet</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Time Saved</p>
-                <p className="text-2xl font-bold">342h</p>
-                <p className="text-xs text-muted-foreground">This month</p>
+                <p className="text-2xl font-bold">—</p>
+                <p className="text-xs text-muted-foreground">No data yet</p>
               </div>
             </div>
             <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Email Automation</span>
-                  <span className="text-muted-foreground">456 runs</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '85%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Lead Scoring</span>
-                  <span className="text-muted-foreground">332 runs</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '98%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Task Creation</span>
-                  <span className="text-muted-foreground">289 runs</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div className="bg-purple-600 h-2 rounded-full" style={{ width: '92%' }}></div>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground">No execution data yet. Metrics will appear as workflows run.</p>
             </div>
           </CardContent>
         </Card>
@@ -638,7 +618,7 @@ const WorkflowBuilder = () => {
                   name: 'New Lead Welcome Series', 
                   desc: 'Automatically welcome and nurture new leads with personalized emails', 
                   icon: Mail, 
-                  uses: 1243, 
+                  uses: 0, 
                   nodes: 3,
                   category: 'email',
                   workflow: '1. Trigger: New lead created → 2. Wait 1 hour → 3. Send welcome email'
@@ -647,7 +627,7 @@ const WorkflowBuilder = () => {
                   name: 'Lead Score & Notify', 
                   desc: 'Score leads based on activity and notify sales team when hot', 
                   icon: TrendingUp, 
-                  uses: 892, 
+                  uses: 0, 
                   nodes: 4,
                   category: 'lead',
                   workflow: '1. Trigger: Lead activity → 2. Check score > 80 → 3. Add hot tag → 4. Notify team'
@@ -656,7 +636,7 @@ const WorkflowBuilder = () => {
                   name: 'Follow-up Automation', 
                   desc: 'Auto follow-up after property showing with feedback requests', 
                   icon: Calendar, 
-                  uses: 756, 
+                  uses: 0, 
                   nodes: 5,
                   category: 'email',
                   workflow: '1. Viewing complete → 2. Wait 2 hours → 3. Feedback email → 4. Wait 2 days → 5. Create task'
@@ -665,7 +645,7 @@ const WorkflowBuilder = () => {
                   name: 'Task Assignment', 
                   desc: 'Auto-assign tasks to team members based on lead status', 
                   icon: CheckCircle2, 
-                  uses: 654, 
+                  uses: 0, 
                   nodes: 3,
                   category: 'task',
                   workflow: '1. Lead status changed → 2. If qualified → 3. Assign to sales rep'
@@ -674,7 +654,7 @@ const WorkflowBuilder = () => {
                   name: 'SMS Drip Campaign', 
                   desc: 'Multi-step SMS nurture sequence with timing controls', 
                   icon: MessageSquare, 
-                  uses: 543, 
+                  uses: 0, 
                   nodes: 4,
                   category: 'sms',
                   workflow: '1. Lead opts in → 2. Send welcome SMS → 3. Wait 3 days → 4. Send value SMS'
@@ -683,7 +663,7 @@ const WorkflowBuilder = () => {
                   name: 'Email Re-engagement', 
                   desc: 'Re-engage cold leads with strategic emails', 
                   icon: Zap, 
-                  uses: 421, 
+                  uses: 0, 
                   nodes: 4,
                   category: 'email',
                   workflow: '1. No activity 30 days → 2. Re-engagement email → 3. Wait 7 days → 4. Check if engaged'
@@ -692,7 +672,7 @@ const WorkflowBuilder = () => {
                   name: 'Property Viewing Follow-up', 
                   desc: 'Automated follow-up after viewings with scheduling', 
                   icon: Calendar, 
-                  uses: 389, 
+                  uses: 0, 
                   nodes: 3,
                   category: 'task',
                   workflow: '1. Viewing completed → 2. Thank you email → 3. Create follow-up task'
@@ -701,7 +681,7 @@ const WorkflowBuilder = () => {
                   name: 'Contract Milestones', 
                   desc: 'Alert team at key contract stages and deadlines', 
                   icon: FileText, 
-                  uses: 312, 
+                  uses: 0, 
                   nodes: 5,
                   category: 'task',
                   workflow: '1. Contract stage change → 2. Check milestone → 3. Notify team → 4. Create reminder → 5. Update CRM'
@@ -710,7 +690,7 @@ const WorkflowBuilder = () => {
                   name: 'Lead Qualification', 
                   desc: 'Automatically qualify and route leads to right team', 
                   icon: Filter, 
-                  uses: 276, 
+                  uses: 0, 
                   nodes: 4,
                   category: 'lead',
                   workflow: '1. New lead → 2. Check budget & timeline → 3. Add qualified tag → 4. Assign to agent'
@@ -763,15 +743,15 @@ const WorkflowBuilder = () => {
             
             {/* No Results */}
             {[
-                { name: 'New Lead Welcome Series', desc: 'Automatically welcome and nurture new leads with personalized emails', icon: Mail, uses: 1243, nodes: 3, category: 'email', workflow: '' },
-                { name: 'Lead Score & Notify', desc: 'Score leads based on activity and notify sales team when hot', icon: TrendingUp, uses: 892, nodes: 4, category: 'lead', workflow: '' },
-                { name: 'Follow-up Automation', desc: 'Auto follow-up after property showing with feedback requests', icon: Calendar, uses: 756, nodes: 5, category: 'email', workflow: '' },
-                { name: 'Task Assignment', desc: 'Auto-assign tasks to team members based on lead status', icon: CheckCircle2, uses: 654, nodes: 3, category: 'task', workflow: '' },
-                { name: 'SMS Drip Campaign', desc: 'Multi-step SMS nurture sequence with timing controls', icon: MessageSquare, uses: 543, nodes: 4, category: 'sms', workflow: '' },
-                { name: 'Email Re-engagement', desc: 'Re-engage cold leads with strategic emails', icon: Zap, uses: 421, nodes: 4, category: 'email', workflow: '' },
-                { name: 'Property Viewing Follow-up', desc: 'Automated follow-up after viewings with scheduling', icon: Calendar, uses: 389, nodes: 3, category: 'task', workflow: '' },
-                { name: 'Contract Milestones', desc: 'Alert team at key contract stages and deadlines', icon: FileText, uses: 312, nodes: 5, category: 'task', workflow: '' },
-                { name: 'Lead Qualification', desc: 'Automatically qualify and route leads to right team', icon: Filter, uses: 276, nodes: 4, category: 'lead', workflow: '' },
+                { name: 'New Lead Welcome Series', desc: 'Automatically welcome and nurture new leads with personalized emails', icon: Mail, uses: 0, nodes: 3, category: 'email', workflow: '' },
+                { name: 'Lead Score & Notify', desc: 'Score leads based on activity and notify sales team when hot', icon: TrendingUp, uses: 0, nodes: 4, category: 'lead', workflow: '' },
+                { name: 'Follow-up Automation', desc: 'Auto follow-up after property showing with feedback requests', icon: Calendar, uses: 0, nodes: 5, category: 'email', workflow: '' },
+                { name: 'Task Assignment', desc: 'Auto-assign tasks to team members based on lead status', icon: CheckCircle2, uses: 0, nodes: 3, category: 'task', workflow: '' },
+                { name: 'SMS Drip Campaign', desc: 'Multi-step SMS nurture sequence with timing controls', icon: MessageSquare, uses: 0, nodes: 4, category: 'sms', workflow: '' },
+                { name: 'Email Re-engagement', desc: 'Re-engage cold leads with strategic emails', icon: Zap, uses: 0, nodes: 4, category: 'email', workflow: '' },
+                { name: 'Property Viewing Follow-up', desc: 'Automated follow-up after viewings with scheduling', icon: Calendar, uses: 0, nodes: 3, category: 'task', workflow: '' },
+                { name: 'Contract Milestones', desc: 'Alert team at key contract stages and deadlines', icon: FileText, uses: 0, nodes: 5, category: 'task', workflow: '' },
+                { name: 'Lead Qualification', desc: 'Automatically qualify and route leads to right team', icon: Filter, uses: 0, nodes: 4, category: 'lead', workflow: '' },
               ].filter(template => {
                 const matchesSearch = templateSearch === '' || 
                   template.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
@@ -811,8 +791,8 @@ const WorkflowBuilder = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,463</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">No executions yet</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow">
@@ -823,8 +803,8 @@ const WorkflowBuilder = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">97.3%</div>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">1,423 successful</p>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">No data yet</p>
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={() => setShowLogsPanel(!showLogsPanel)}>
@@ -1100,54 +1080,30 @@ const WorkflowBuilder = () => {
             )}
           </Card>
 
-          {/* Selected Node Configuration */}
-          {selectedNode && (
+          {/* Selected Node Configuration - opens proper config panel */}
+          {selectedNode && !showConfigPanel && (
             <Card className="border-primary">
               <CardHeader>
                 <CardTitle className="text-base">Node Configuration</CardTitle>
                 <CardDescription className="text-xs">{selectedNode.label}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Node Name</label>
-                  <Input defaultValue={selectedNode.label} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
-                  <Input placeholder="Optional description" />
-                </div>
-                {selectedNode.type === 'action' && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Action Settings</label>
-                    <Input placeholder="Configure action parameters" />
-                  </div>
-                )}
-                {selectedNode.type === 'condition' && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Condition Rules</label>
-                    <select className="w-full p-2 border rounded-md">
-                      <option>If lead score &gt; 80</option>
-                      <option>If lead status = Hot</option>
-                      <option>If email opened</option>
-                    </select>
-                  </div>
-                )}
-                {selectedNode.type === 'delay' && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Delay Duration</label>
-                    <div className="flex gap-2">
-                      <Input type="number" placeholder="5" className="w-20" />
-                      <select className="flex-1 p-2 border rounded-md">
-                        <option>Minutes</option>
-                        <option>Hours</option>
-                        <option>Days</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-                <Button className="w-full mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Selected: <span className="font-medium">{selectedNode.label}</span> ({selectedNode.type})
+                </p>
+                <Button
+                  className="w-full"
+                  onClick={() => setShowConfigPanel(true)}
+                >
                   <Save className="h-4 w-4 mr-2" />
-                  Save Configuration
+                  Configure Node
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setSelectedNode(null)}
+                >
+                  Deselect
                 </Button>
               </CardContent>
             </Card>

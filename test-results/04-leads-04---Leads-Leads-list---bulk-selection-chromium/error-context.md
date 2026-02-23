@@ -1,0 +1,986 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - link "CRM Platform" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e8]
+        - generic [ref=e13]: CRM Platform
+      - navigation [ref=e14]:
+        - list [ref=e15]:
+          - listitem [ref=e16]:
+            - link "Dashboard" [ref=e17] [cursor=pointer]:
+              - /url: /
+              - img [ref=e18]
+              - generic [ref=e23]: Dashboard
+          - listitem [ref=e24]:
+            - link "Leads" [ref=e25] [cursor=pointer]:
+              - /url: /leads
+              - img [ref=e26]
+              - generic [ref=e31]: Leads
+          - listitem [ref=e32]:
+            - link "Campaigns" [ref=e33] [cursor=pointer]:
+              - /url: /campaigns
+              - img [ref=e34]
+              - generic [ref=e37]: Campaigns
+          - listitem [ref=e38]:
+            - link "AI Hub" [ref=e39] [cursor=pointer]:
+              - /url: /ai
+              - img [ref=e40]
+              - generic [ref=e50]: AI Hub
+          - listitem [ref=e51]:
+            - link "Analytics" [ref=e52] [cursor=pointer]:
+              - /url: /analytics
+              - img [ref=e53]
+              - generic [ref=e55]: Analytics
+          - listitem [ref=e56]:
+            - link "Communications" [ref=e57] [cursor=pointer]:
+              - /url: /communication
+              - img [ref=e58]
+              - generic [ref=e60]: Communications
+          - listitem [ref=e61]:
+            - link "Automation" [ref=e62] [cursor=pointer]:
+              - /url: /workflows
+              - img [ref=e63]
+              - generic [ref=e65]: Automation
+          - listitem [ref=e66]:
+            - link "Settings" [ref=e67] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e68]
+              - generic [ref=e71]: Settings
+          - listitem [ref=e72]:
+            - link "Help" [ref=e73] [cursor=pointer]:
+              - /url: /help
+              - img [ref=e74]
+              - generic [ref=e77]: Help
+          - listitem [ref=e78]:
+            - generic [ref=e79]:
+              - img [ref=e80]
+              - generic [ref=e82]: Administration
+          - listitem [ref=e83]:
+            - link "Admin Panel" [ref=e84] [cursor=pointer]:
+              - /url: /admin
+              - img [ref=e85]
+              - generic [ref=e87]: Admin Panel
+          - listitem [ref=e88]:
+            - link "Team Management" [ref=e89] [cursor=pointer]:
+              - /url: /admin/team
+              - img [ref=e90]
+              - generic [ref=e102]: Team Management
+          - listitem [ref=e103]:
+            - link "Subscription" [ref=e104] [cursor=pointer]:
+              - /url: /admin/subscription
+              - img [ref=e105]
+              - generic [ref=e107]: Subscription
+          - listitem [ref=e108]:
+            - link "Billing" [ref=e109] [cursor=pointer]:
+              - /url: /billing
+              - img [ref=e110]
+              - generic [ref=e112]: Billing
+      - button "AU Admin User admin@realestate.com" [ref=e115] [cursor=pointer]:
+        - generic [ref=e116]: AU
+        - generic [ref=e117]:
+          - paragraph [ref=e118]: Admin User
+          - paragraph [ref=e119]: admin@realestate.com
+        - img [ref=e120]
+    - generic [ref=e122]:
+      - banner [ref=e123]:
+        - button [ref=e125] [cursor=pointer]:
+          - img [ref=e126]
+        - button "Search anything... ⌘ K" [ref=e128] [cursor=pointer]:
+          - generic [ref=e129]:
+            - img [ref=e130]
+            - generic [ref=e133]: Search anything...
+          - generic [ref=e134]:
+            - generic [ref=e135]: ⌘
+            - text: K
+        - generic [ref=e136]:
+          - button [ref=e137] [cursor=pointer]:
+            - img [ref=e138]
+          - button [ref=e141] [cursor=pointer]:
+            - img [ref=e142]
+          - button "AU" [ref=e146] [cursor=pointer]:
+            - generic [ref=e147]: AU
+            - img [ref=e148]
+      - main [ref=e150]:
+        - generic [ref=e151]:
+          - generic [ref=e152]:
+            - generic [ref=e154]:
+              - generic [ref=e155]:
+                - paragraph [ref=e156]: Total Leads
+                - heading "23" [level=3] [ref=e157]
+                - paragraph [ref=e158]: Showing page 1 of 1
+              - img [ref=e160]
+            - generic [ref=e166]:
+              - generic [ref=e167]:
+                - paragraph [ref=e168]: Qualified Rate
+                - heading "0%" [level=3] [ref=e169]
+                - paragraph [ref=e170]: ↑ 5% from last month
+              - img [ref=e172]
+            - generic [ref=e177]:
+              - generic [ref=e178]:
+                - paragraph [ref=e179]: Avg Lead Score
+                - heading "39" [level=3] [ref=e180]
+                - paragraph [ref=e181]: ↓ 2% from last month
+              - img [ref=e183]
+            - generic [ref=e187]:
+              - generic [ref=e188]:
+                - paragraph [ref=e189]: Conversion Rate
+                - heading "0%" [level=3] [ref=e190]
+                - paragraph [ref=e191]: ↑ 8% from last month
+              - img [ref=e193]
+          - generic [ref=e197]:
+            - generic [ref=e198]:
+              - heading "Lead Source Breakdown" [level=3] [ref=e199]
+              - img [ref=e202]:
+                - generic [ref=e203]:
+                  - generic [ref=e204]:
+                    - img [ref=e206]
+                    - img [ref=e208]
+                    - img [ref=e210]
+                    - img [ref=e212]
+                    - img [ref=e214]
+                    - img [ref=e216]
+                  - generic [ref=e217]:
+                    - generic [ref=e219]: "AI Assistant: 43%"
+                    - generic [ref=e221]: "Test: 30%"
+                    - generic [ref=e223]: "Campaign Test: 4%"
+                    - generic [ref=e225]: "Website: 4%"
+                    - generic [ref=e227]: "Workflow Test: 4%"
+                    - generic [ref=e229]: "Website: 13%"
+            - generic [ref=e230]:
+              - heading "Lead Score Distribution" [level=3] [ref=e231]
+              - generic [ref=e233]:
+                - img [ref=e234]:
+                  - generic [ref=e239]:
+                    - generic [ref=e241]: 60-70
+                    - generic [ref=e243]: 71-80
+                    - generic [ref=e245]: 81-90
+                    - generic [ref=e247]: 91-100
+                  - generic [ref=e249]:
+                    - generic [ref=e251]: "0"
+                    - generic [ref=e253]: "6"
+                    - generic [ref=e255]: "12"
+                    - generic [ref=e257]: "18"
+                    - generic [ref=e259]: "24"
+                - list [ref=e266]:
+                  - listitem [ref=e267]:
+                    - img [ref=e268]
+                    - text: Number of Leads
+          - generic [ref=e270]:
+            - generic [ref=e272]:
+              - generic [ref=e273]:
+                - img [ref=e274]
+                - heading "Advanced Filters" [level=2] [ref=e276]
+              - button [ref=e277] [cursor=pointer]:
+                - img [ref=e278]
+            - generic [ref=e281]:
+              - generic [ref=e282]:
+                - generic [ref=e283]:
+                  - img [ref=e284]
+                  - generic [ref=e286]: Status
+                - generic [ref=e287]:
+                  - generic [ref=e288] [cursor=pointer]:
+                    - checkbox "New" [ref=e289]
+                    - generic [ref=e290]: New
+                  - generic [ref=e291] [cursor=pointer]:
+                    - checkbox "Contacted" [ref=e292]
+                    - generic [ref=e293]: Contacted
+                  - generic [ref=e294] [cursor=pointer]:
+                    - checkbox "Qualified" [ref=e295]
+                    - generic [ref=e296]: Qualified
+                  - generic [ref=e297] [cursor=pointer]:
+                    - checkbox "Proposal" [ref=e298]
+                    - generic [ref=e299]: Proposal
+                  - generic [ref=e300] [cursor=pointer]:
+                    - checkbox "Won" [ref=e301]
+                    - generic [ref=e302]: Won
+                  - generic [ref=e303] [cursor=pointer]:
+                    - checkbox "Lost" [ref=e304]
+                    - generic [ref=e305]: Lost
+              - generic [ref=e306]:
+                - generic [ref=e307]:
+                  - img [ref=e308]
+                  - generic [ref=e311]: Source
+                - generic [ref=e312]:
+                  - generic [ref=e313] [cursor=pointer]:
+                    - checkbox "Website" [ref=e314]
+                    - generic [ref=e315]: Website
+                  - generic [ref=e316] [cursor=pointer]:
+                    - checkbox "Referral" [ref=e317]
+                    - generic [ref=e318]: Referral
+                  - generic [ref=e319] [cursor=pointer]:
+                    - checkbox "LinkedIn" [ref=e320]
+                    - generic [ref=e321]: LinkedIn
+                  - generic [ref=e322] [cursor=pointer]:
+                    - checkbox "Cold Call" [ref=e323]
+                    - generic [ref=e324]: Cold Call
+                  - generic [ref=e325] [cursor=pointer]:
+                    - checkbox "Campaign" [ref=e326]
+                    - generic [ref=e327]: Campaign
+                  - generic [ref=e328] [cursor=pointer]:
+                    - checkbox "Direct" [ref=e329]
+                    - generic [ref=e330]: Direct
+              - generic [ref=e331]:
+                - generic [ref=e332]:
+                  - generic [ref=e333]:
+                    - img [ref=e334]
+                    - generic [ref=e336]: Lead Score
+                  - generic [ref=e337]: 0 - 100
+                - generic [ref=e338]:
+                  - generic [ref=e339]:
+                    - text: Min Score
+                    - slider [ref=e340] [cursor=pointer]: "0"
+                  - generic [ref=e341]:
+                    - text: Max Score
+                    - slider [ref=e342] [cursor=pointer]: "100"
+              - generic [ref=e343]:
+                - generic [ref=e344]:
+                  - img [ref=e345]
+                  - generic [ref=e347]: Date Added
+                - generic [ref=e348]:
+                  - generic [ref=e349]:
+                    - text: From
+                    - textbox [ref=e350]
+                  - generic [ref=e351]:
+                    - text: To
+                    - textbox [ref=e352]
+              - generic [ref=e353]:
+                - generic [ref=e354]:
+                  - img [ref=e355]
+                  - generic [ref=e358]: Tags
+                - generic [ref=e359]:
+                  - generic [ref=e360] [cursor=pointer]:
+                    - checkbox "Enterprise" [ref=e361]
+                    - generic [ref=e362]: Enterprise
+                  - generic [ref=e363] [cursor=pointer]:
+                    - checkbox "Hot Lead" [ref=e364]
+                    - generic [ref=e365]: Hot Lead
+                  - generic [ref=e366] [cursor=pointer]:
+                    - checkbox "Demo Scheduled" [ref=e367]
+                    - generic [ref=e368]: Demo Scheduled
+                  - generic [ref=e369] [cursor=pointer]:
+                    - checkbox "Follow-up" [ref=e370]
+                    - generic [ref=e371]: Follow-up
+                  - generic [ref=e372] [cursor=pointer]:
+                    - checkbox "High Value" [ref=e373]
+                    - generic [ref=e374]: High Value
+                  - generic [ref=e375] [cursor=pointer]:
+                    - checkbox "Partner" [ref=e376]
+                    - generic [ref=e377]: Partner
+              - generic [ref=e378]:
+                - generic [ref=e379]:
+                  - img [ref=e380]
+                  - generic [ref=e383]: Assigned To
+                - generic [ref=e384]:
+                  - generic [ref=e385] [cursor=pointer]:
+                    - checkbox "Sarah Johnson" [ref=e386]
+                    - generic [ref=e387]: Sarah Johnson
+                  - generic [ref=e388] [cursor=pointer]:
+                    - checkbox "Mike Davis" [ref=e389]
+                    - generic [ref=e390]: Mike Davis
+                  - generic [ref=e391] [cursor=pointer]:
+                    - checkbox "Emily Wilson" [ref=e392]
+                    - generic [ref=e393]: Emily Wilson
+                  - generic [ref=e394] [cursor=pointer]:
+                    - checkbox "Unassigned" [ref=e395]
+                    - generic [ref=e396]: Unassigned
+            - generic [ref=e397]:
+              - button "Apply Filters" [ref=e398] [cursor=pointer]
+              - button "Clear All" [ref=e399] [cursor=pointer]
+          - generic [ref=e400]:
+            - generic [ref=e401]:
+              - heading "Leads" [level=1] [ref=e402]
+              - paragraph [ref=e403]: Manage and track all your leads in one place
+            - generic [ref=e404]:
+              - generic [ref=e405]: 23 / Unlimited
+              - link "Add Lead" [ref=e406] [cursor=pointer]:
+                - /url: /leads/create
+                - button "Add Lead" [ref=e407]:
+                  - img [ref=e408]
+                  - text: Add Lead
+          - generic [ref=e410]:
+            - generic [ref=e411]:
+              - img [ref=e412]
+              - textbox "Search leads..." [ref=e415]
+            - generic [ref=e416]:
+              - combobox [ref=e417]:
+                - option "All Scores" [selected]
+                - option "🔥 Hot (80-100)"
+                - option "🟡 Warm (50-79)"
+                - option "❄️ Cool (25-49)"
+                - option "⚫ Cold (0-24)"
+              - button "Filters" [ref=e418] [cursor=pointer]:
+                - img [ref=e419]
+                - text: Filters
+              - link "Import" [ref=e421] [cursor=pointer]:
+                - /url: /leads/import
+                - button "Import" [ref=e422]:
+                  - img [ref=e423]
+                  - text: Import
+              - generic [ref=e426]:
+                - button "Table View" [ref=e427] [cursor=pointer]:
+                  - img [ref=e428]
+                - button "Grid View" [ref=e431] [cursor=pointer]:
+                  - img [ref=e432]
+                - link [ref=e437] [cursor=pointer]:
+                  - /url: /leads/pipeline
+                  - button "Pipeline View" [ref=e438]:
+                    - img [ref=e439]
+          - table [ref=e446]:
+            - rowgroup [ref=e447]:
+              - row "Name Company Email Phone Score Status Source Tags Assigned To" [ref=e448]:
+                - columnheader [ref=e449]:
+                  - checkbox [ref=e450]
+                - columnheader [ref=e451]
+                - columnheader "Name" [ref=e452] [cursor=pointer]:
+                  - generic [ref=e453]:
+                    - text: Name
+                    - img [ref=e454]
+                - columnheader "Company" [ref=e457] [cursor=pointer]:
+                  - generic [ref=e458]:
+                    - text: Company
+                    - img [ref=e459]
+                - columnheader "Email" [ref=e462]
+                - columnheader "Phone" [ref=e463]
+                - columnheader "Score" [ref=e464] [cursor=pointer]:
+                  - generic [ref=e465]:
+                    - text: Score
+                    - img [ref=e466]
+                - columnheader "Status" [ref=e469] [cursor=pointer]:
+                  - generic [ref=e470]:
+                    - text: Status
+                    - img [ref=e471]
+                - columnheader "Source" [ref=e474] [cursor=pointer]:
+                  - generic [ref=e475]:
+                    - text: Source
+                    - img [ref=e476]
+                - columnheader "Tags" [ref=e479]
+                - columnheader "Assigned To" [ref=e480]
+                - columnheader [ref=e481]
+            - rowgroup [ref=e482]:
+              - row "Jenn Unknown jenn@example.com 6479722571 Warm NEW AI Assistant -" [ref=e483]:
+                - cell [ref=e484]:
+                  - checkbox [ref=e485]
+                - cell [ref=e486]:
+                  - button [ref=e487] [cursor=pointer]:
+                    - img [ref=e488]
+                - cell "Jenn Unknown" [ref=e490]:
+                  - link "Jenn Unknown" [ref=e491] [cursor=pointer]:
+                    - /url: /leads/cmim6ptuf000h8iuy2z0ny0hx
+                - cell [ref=e492]
+                - cell "jenn@example.com" [ref=e493]
+                - cell "6479722571" [ref=e494]
+                - cell "Warm" [ref=e495]:
+                  - generic [ref=e496]:
+                    - img [ref=e497]
+                    - text: Warm
+                - cell "NEW" [ref=e499]:
+                  - generic [ref=e500]: NEW
+                - cell "AI Assistant" [ref=e501]
+                - cell [ref=e502]
+                - cell "-" [ref=e503]
+                - cell [ref=e504]:
+                  - button [ref=e506] [cursor=pointer]:
+                    - img [ref=e507]
+              - row "Arshia Afra arshia@ahirsa.com 6478898999 Warm NEW AI Assistant -" [ref=e511]:
+                - cell [ref=e512]:
+                  - checkbox [ref=e513]
+                - cell [ref=e514]:
+                  - button [ref=e515] [cursor=pointer]:
+                    - img [ref=e516]
+                - cell "Arshia Afra" [ref=e518]:
+                  - link "Arshia Afra" [ref=e519] [cursor=pointer]:
+                    - /url: /leads/cmidiog7w00058idyu0hw9r16
+                - cell [ref=e520]
+                - cell "arshia@ahirsa.com" [ref=e521]
+                - cell "6478898999" [ref=e522]
+                - cell "Warm" [ref=e523]:
+                  - generic [ref=e524]:
+                    - img [ref=e525]
+                    - text: Warm
+                - cell "NEW" [ref=e527]:
+                  - generic [ref=e528]: NEW
+                - cell "AI Assistant" [ref=e529]
+                - cell [ref=e530]
+                - cell "-" [ref=e531]
+                - cell [ref=e532]:
+                  - button [ref=e534] [cursor=pointer]:
+                    - img [ref=e535]
+              - row "Jane Doe jane@test.com Warm NEW AI Assistant -" [ref=e539]:
+                - cell [ref=e540]:
+                  - checkbox [ref=e541]
+                - cell [ref=e542]:
+                  - button [ref=e543] [cursor=pointer]:
+                    - img [ref=e544]
+                - cell "Jane Doe" [ref=e546]:
+                  - link "Jane Doe" [ref=e547] [cursor=pointer]:
+                    - /url: /leads/cmidi7lxy00078i96ggvgfv59
+                - cell [ref=e548]
+                - cell "jane@test.com" [ref=e549]
+                - cell [ref=e550]
+                - cell "Warm" [ref=e551]:
+                  - generic [ref=e552]:
+                    - img [ref=e553]
+                    - text: Warm
+                - cell "NEW" [ref=e555]:
+                  - generic [ref=e556]: NEW
+                - cell "AI Assistant" [ref=e557]
+                - cell [ref=e558]
+                - cell "-" [ref=e559]
+                - cell [ref=e560]:
+                  - button [ref=e562] [cursor=pointer]:
+                    - img [ref=e563]
+              - row "Jenn Cam jenn@jenn.ca 6478889999 Warm NEW AI Assistant -" [ref=e567]:
+                - cell [ref=e568]:
+                  - checkbox [ref=e569]
+                - cell [ref=e570]:
+                  - button [ref=e571] [cursor=pointer]:
+                    - img [ref=e572]
+                - cell "Jenn Cam" [ref=e574]:
+                  - link "Jenn Cam" [ref=e575] [cursor=pointer]:
+                    - /url: /leads/cmicl3t6h00078iz8pjccxyp2
+                - cell [ref=e576]
+                - cell "jenn@jenn.ca" [ref=e577]
+                - cell "6478889999" [ref=e578]
+                - cell "Warm" [ref=e579]:
+                  - generic [ref=e580]:
+                    - img [ref=e581]
+                    - text: Warm
+                - cell "NEW" [ref=e583]:
+                  - generic [ref=e584]: NEW
+                - cell "AI Assistant" [ref=e585]
+                - cell [ref=e586]
+                - cell "-" [ref=e587]
+                - cell [ref=e588]:
+                  - button [ref=e590] [cursor=pointer]:
+                    - img [ref=e591]
+              - row "Test User test1763600723@example.com 555-9999 Warm CONTACTED AI Assistant -" [ref=e595]:
+                - cell [ref=e596]:
+                  - checkbox [ref=e597]
+                - cell [ref=e598]:
+                  - button [ref=e599] [cursor=pointer]:
+                    - img [ref=e600]
+                - cell "Test User" [ref=e602]:
+                  - link "Test User" [ref=e603] [cursor=pointer]:
+                    - /url: /leads/cmi6qc57f00df8itk6ptzfkw7
+                - cell [ref=e604]
+                - cell "test1763600723@example.com" [ref=e605]
+                - cell "555-9999" [ref=e606]
+                - cell "Warm" [ref=e607]:
+                  - generic [ref=e608]:
+                    - img [ref=e609]
+                    - text: Warm
+                - cell "CONTACTED" [ref=e611]:
+                  - generic [ref=e612]: CONTACTED
+                - cell "AI Assistant" [ref=e613]
+                - cell [ref=e614]
+                - cell "-" [ref=e615]
+                - cell [ref=e616]:
+                  - button [ref=e618] [cursor=pointer]:
+                    - img [ref=e619]
+              - row "Test User test1763600531@example.com 555-9999 Warm QUALIFIED AI Assistant -" [ref=e623]:
+                - cell [ref=e624]:
+                  - checkbox [ref=e625]
+                - cell [ref=e626]:
+                  - button [ref=e627] [cursor=pointer]:
+                    - img [ref=e628]
+                - cell "Test User" [ref=e630]:
+                  - link "Test User" [ref=e631] [cursor=pointer]:
+                    - /url: /leads/cmi6q809000an8itkot7pipqx
+                - cell [ref=e632]
+                - cell "test1763600531@example.com" [ref=e633]
+                - cell "555-9999" [ref=e634]
+                - cell "Warm" [ref=e635]:
+                  - generic [ref=e636]:
+                    - img [ref=e637]
+                    - text: Warm
+                - cell "QUALIFIED" [ref=e639]:
+                  - generic [ref=e640]: QUALIFIED
+                - cell "AI Assistant" [ref=e641]
+                - cell [ref=e642]
+                - cell "-" [ref=e643]
+                - cell [ref=e644]:
+                  - button [ref=e646] [cursor=pointer]:
+                    - img [ref=e647]
+              - row "Test User test1763600310@example.com 555-9999 Warm QUALIFIED AI Assistant -" [ref=e651]:
+                - cell [ref=e652]:
+                  - checkbox [ref=e653]
+                - cell [ref=e654]:
+                  - button [ref=e655] [cursor=pointer]:
+                    - img [ref=e656]
+                - cell "Test User" [ref=e658]:
+                  - link "Test User" [ref=e659] [cursor=pointer]:
+                    - /url: /leads/cmi6q3c1u007v8itkdw62z896
+                - cell [ref=e660]
+                - cell "test1763600310@example.com" [ref=e661]
+                - cell "555-9999" [ref=e662]
+                - cell "Warm" [ref=e663]:
+                  - generic [ref=e664]:
+                    - img [ref=e665]
+                    - text: Warm
+                - cell "QUALIFIED" [ref=e667]:
+                  - generic [ref=e668]: QUALIFIED
+                - cell "AI Assistant" [ref=e669]
+                - cell [ref=e670]
+                - cell "-" [ref=e671]
+                - cell [ref=e672]:
+                  - button [ref=e674] [cursor=pointer]:
+                    - img [ref=e675]
+              - row "Test User test1763599593@example.com 555-9999 Warm QUALIFIED AI Assistant -" [ref=e679]:
+                - cell [ref=e680]:
+                  - checkbox [ref=e681]
+                - cell [ref=e682]:
+                  - button [ref=e683] [cursor=pointer]:
+                    - img [ref=e684]
+                - cell "Test User" [ref=e686]:
+                  - link "Test User" [ref=e687] [cursor=pointer]:
+                    - /url: /leads/cmi6pnzd200538itkw9s7lp10
+                - cell [ref=e688]
+                - cell "test1763599593@example.com" [ref=e689]
+                - cell "555-9999" [ref=e690]
+                - cell "Warm" [ref=e691]:
+                  - generic [ref=e692]:
+                    - img [ref=e693]
+                    - text: Warm
+                - cell "QUALIFIED" [ref=e695]:
+                  - generic [ref=e696]: QUALIFIED
+                - cell "AI Assistant" [ref=e697]
+                - cell [ref=e698]
+                - cell "-" [ref=e699]
+                - cell [ref=e700]:
+                  - button [ref=e702] [cursor=pointer]:
+                    - img [ref=e703]
+              - row "John Doe john@test.com 555-1234 Warm NEW AI Assistant -" [ref=e707]:
+                - cell [ref=e708]:
+                  - checkbox [ref=e709]
+                - cell [ref=e710]:
+                  - button [ref=e711] [cursor=pointer]:
+                    - img [ref=e712]
+                - cell "John Doe" [ref=e714]:
+                  - link "John Doe" [ref=e715] [cursor=pointer]:
+                    - /url: /leads/cmi6p9vvk00098itkb23f1oht
+                - cell [ref=e716]
+                - cell "john@test.com" [ref=e717]
+                - cell "555-1234" [ref=e718]
+                - cell "Warm" [ref=e719]:
+                  - generic [ref=e720]:
+                    - img [ref=e721]
+                    - text: Warm
+                - cell "NEW" [ref=e723]:
+                  - generic [ref=e724]: NEW
+                - cell "AI Assistant" [ref=e725]
+                - cell [ref=e726]
+                - cell "-" [ref=e727]
+                - cell [ref=e728]:
+                  - button [ref=e730] [cursor=pointer]:
+                    - img [ref=e731]
+              - row "Josh Bob joshbob@gmail.com 6478889999 Warm NEW AI Assistant -" [ref=e735]:
+                - cell [ref=e736]:
+                  - checkbox [ref=e737]
+                - cell [ref=e738]:
+                  - button [ref=e739] [cursor=pointer]:
+                    - img [ref=e740]
+                - cell "Josh Bob" [ref=e742]:
+                  - link "Josh Bob" [ref=e743] [cursor=pointer]:
+                    - /url: /leads/cmi6p642600018itk7d5t5nhe
+                - cell [ref=e744]
+                - cell "joshbob@gmail.com" [ref=e745]
+                - cell "6478889999" [ref=e746]
+                - cell "Warm" [ref=e747]:
+                  - generic [ref=e748]:
+                    - img [ref=e749]
+                    - text: Warm
+                - cell "NEW" [ref=e751]:
+                  - generic [ref=e752]: NEW
+                - cell "AI Assistant" [ref=e753]
+                - cell [ref=e754]
+                - cell "-" [ref=e755]
+                - cell [ref=e756]:
+                  - button [ref=e758] [cursor=pointer]:
+                    - img [ref=e759]
+              - row "Campaign Target campaign.1762469271492@example.com +9876543210 Cool NEW Test -" [ref=e763]:
+                - cell [ref=e764]:
+                  - checkbox [ref=e765]
+                - cell [ref=e766]:
+                  - button [ref=e767] [cursor=pointer]:
+                    - img [ref=e768]
+                - cell "Campaign Target" [ref=e770]:
+                  - link "Campaign Target" [ref=e771] [cursor=pointer]:
+                    - /url: /leads/cmho0p80a000g8itht8oz6xet
+                - cell [ref=e772]
+                - cell "campaign.1762469271492@example.com" [ref=e773]
+                - cell "+9876543210" [ref=e774]
+                - cell "Cool" [ref=e775]:
+                  - generic [ref=e776]:
+                    - img [ref=e777]
+                    - text: Cool
+                - cell "NEW" [ref=e782]:
+                  - generic [ref=e783]: NEW
+                - cell "Test" [ref=e784]
+                - cell [ref=e785]
+                - cell "-" [ref=e786]
+                - cell [ref=e787]:
+                  - button [ref=e789] [cursor=pointer]:
+                    - img [ref=e790]
+              - row "Test User test.1762469271492@example.com +1234567890 Cool NEW Test -" [ref=e794]:
+                - cell [ref=e795]:
+                  - checkbox [ref=e796]
+                - cell [ref=e797]:
+                  - button [ref=e798] [cursor=pointer]:
+                    - img [ref=e799]
+                - cell "Test User" [ref=e801]:
+                  - link "Test User" [ref=e802] [cursor=pointer]:
+                    - /url: /leads/cmho0p5nq00078ithawajgx05
+                - cell [ref=e803]
+                - cell "test.1762469271492@example.com" [ref=e804]
+                - cell "+1234567890" [ref=e805]
+                - cell "Cool" [ref=e806]:
+                  - generic [ref=e807]:
+                    - img [ref=e808]
+                    - text: Cool
+                - cell "NEW" [ref=e813]:
+                  - generic [ref=e814]: NEW
+                - cell "Test" [ref=e815]
+                - cell [ref=e816]
+                - cell "-" [ref=e817]
+                - cell [ref=e818]:
+                  - button [ref=e820] [cursor=pointer]:
+                    - img [ref=e821]
+              - row "Campaign Target campaign.1762465582031@example.com +9876543210 Cool NEW Test -" [ref=e825]:
+                - cell [ref=e826]:
+                  - checkbox [ref=e827]
+                - cell [ref=e828]:
+                  - button [ref=e829] [cursor=pointer]:
+                    - img [ref=e830]
+                - cell "Campaign Target" [ref=e832]:
+                  - link "Campaign Target" [ref=e833] [cursor=pointer]:
+                    - /url: /leads/cmhnyi4us002c8id1q03owlps
+                - cell [ref=e834]
+                - cell "campaign.1762465582031@example.com" [ref=e835]
+                - cell "+9876543210" [ref=e836]
+                - cell "Cool" [ref=e837]:
+                  - generic [ref=e838]:
+                    - img [ref=e839]
+                    - text: Cool
+                - cell "NEW" [ref=e844]:
+                  - generic [ref=e845]: NEW
+                - cell "Test" [ref=e846]
+                - cell [ref=e847]
+                - cell "-" [ref=e848]
+                - cell [ref=e849]:
+                  - button [ref=e851] [cursor=pointer]:
+                    - img [ref=e852]
+              - row "Test User test.1762465582031@example.com +1234567890 Cool NEW Test -" [ref=e856]:
+                - cell [ref=e857]:
+                  - checkbox [ref=e858]
+                - cell [ref=e859]:
+                  - button [ref=e860] [cursor=pointer]:
+                    - img [ref=e861]
+                - cell "Test User" [ref=e863]:
+                  - link "Test User" [ref=e864] [cursor=pointer]:
+                    - /url: /leads/cmhnyi2re00238id1ll1xivk4
+                - cell [ref=e865]
+                - cell "test.1762465582031@example.com" [ref=e866]
+                - cell "+1234567890" [ref=e867]
+                - cell "Cool" [ref=e868]:
+                  - generic [ref=e869]:
+                    - img [ref=e870]
+                    - text: Cool
+                - cell "NEW" [ref=e875]:
+                  - generic [ref=e876]: NEW
+                - cell "Test" [ref=e877]
+                - cell [ref=e878]
+                - cell "-" [ref=e879]
+                - cell [ref=e880]:
+                  - button [ref=e882] [cursor=pointer]:
+                    - img [ref=e883]
+              - row "Campaign Target campaign.1762465572453@example.com +9876543210 Cool NEW Test -" [ref=e887]:
+                - cell [ref=e888]:
+                  - checkbox [ref=e889]
+                - cell [ref=e890]:
+                  - button [ref=e891] [cursor=pointer]:
+                    - img [ref=e892]
+                - cell "Campaign Target" [ref=e894]:
+                  - link "Campaign Target" [ref=e895] [cursor=pointer]:
+                    - /url: /leads/cmhnyhxlb001o8id1nmlo5dun
+                - cell [ref=e896]
+                - cell "campaign.1762465572453@example.com" [ref=e897]
+                - cell "+9876543210" [ref=e898]
+                - cell "Cool" [ref=e899]:
+                  - generic [ref=e900]:
+                    - img [ref=e901]
+                    - text: Cool
+                - cell "NEW" [ref=e906]:
+                  - generic [ref=e907]: NEW
+                - cell "Test" [ref=e908]
+                - cell [ref=e909]
+                - cell "-" [ref=e910]
+                - cell [ref=e911]:
+                  - button [ref=e913] [cursor=pointer]:
+                    - img [ref=e914]
+              - row "Test User test.1762465572453@example.com +1234567890 Cool NEW Test -" [ref=e918]:
+                - cell [ref=e919]:
+                  - checkbox [ref=e920]
+                - cell [ref=e921]:
+                  - button [ref=e922] [cursor=pointer]:
+                    - img [ref=e923]
+                - cell "Test User" [ref=e925]:
+                  - link "Test User" [ref=e926] [cursor=pointer]:
+                    - /url: /leads/cmhnyhvfb001f8id1wszyggbq
+                - cell [ref=e927]
+                - cell "test.1762465572453@example.com" [ref=e928]
+                - cell "+1234567890" [ref=e929]
+                - cell "Cool" [ref=e930]:
+                  - generic [ref=e931]:
+                    - img [ref=e932]
+                    - text: Cool
+                - cell "NEW" [ref=e937]:
+                  - generic [ref=e938]: NEW
+                - cell "Test" [ref=e939]
+                - cell [ref=e940]
+                - cell "-" [ref=e941]
+                - cell [ref=e942]:
+                  - button [ref=e944] [cursor=pointer]:
+                    - img [ref=e945]
+              - row "Michael Brown michael.brown@example.com +9876543210 Cool NEW Campaign Test -" [ref=e949]:
+                - cell [ref=e950]:
+                  - checkbox [ref=e951]
+                - cell [ref=e952]:
+                  - button [ref=e953] [cursor=pointer]:
+                    - img [ref=e954]
+                - cell "Michael Brown" [ref=e956]:
+                  - link "Michael Brown" [ref=e957] [cursor=pointer]:
+                    - /url: /leads/cmhnygr11000y8id1g1fh1v64
+                - cell [ref=e958]
+                - cell "michael.brown@example.com" [ref=e959]
+                - cell "+9876543210" [ref=e960]
+                - cell "Cool" [ref=e961]:
+                  - generic [ref=e962]:
+                    - img [ref=e963]
+                    - text: Cool
+                - cell "NEW" [ref=e968]:
+                  - generic [ref=e969]: NEW
+                - cell "Campaign Test" [ref=e970]
+                - cell [ref=e971]
+                - cell "-" [ref=e972]
+                - cell [ref=e973]:
+                  - button [ref=e975] [cursor=pointer]:
+                    - img [ref=e976]
+              - row "Sarah Johnson sarah.johnson@example.com +1234567890 Cool NEW Website -" [ref=e980]:
+                - cell [ref=e981]:
+                  - checkbox [ref=e982]
+                - cell [ref=e983]:
+                  - button [ref=e984] [cursor=pointer]:
+                    - img [ref=e985]
+                - cell "Sarah Johnson" [ref=e987]:
+                  - link "Sarah Johnson" [ref=e988] [cursor=pointer]:
+                    - /url: /leads/cmhnygpbd000p8id10unkeqsl
+                - cell [ref=e989]
+                - cell "sarah.johnson@example.com" [ref=e990]
+                - cell "+1234567890" [ref=e991]
+                - cell "Cool" [ref=e992]:
+                  - generic [ref=e993]:
+                    - img [ref=e994]
+                    - text: Cool
+                - cell "NEW" [ref=e999]:
+                  - generic [ref=e1000]: NEW
+                - cell "Website" [ref=e1001]
+                - cell [ref=e1002]
+                - cell "-" [ref=e1003]
+                - cell [ref=e1004]:
+                  - button [ref=e1006] [cursor=pointer]:
+                    - img [ref=e1007]
+              - row "Jane Smith jane.smith@example.com +9876543210 Cool NEW Workflow Test -" [ref=e1011]:
+                - cell [ref=e1012]:
+                  - checkbox [ref=e1013]
+                - cell [ref=e1014]:
+                  - button [ref=e1015] [cursor=pointer]:
+                    - img [ref=e1016]
+                - cell "Jane Smith" [ref=e1018]:
+                  - link "Jane Smith" [ref=e1019] [cursor=pointer]:
+                    - /url: /leads/cmhnyexuy000e8id1hpu5zdpp
+                - cell [ref=e1020]
+                - cell "jane.smith@example.com" [ref=e1021]
+                - cell "+9876543210" [ref=e1022]
+                - cell "Cool" [ref=e1023]:
+                  - generic [ref=e1024]:
+                    - img [ref=e1025]
+                    - text: Cool
+                - cell "NEW" [ref=e1030]:
+                  - generic [ref=e1031]: NEW
+                - cell "Workflow Test" [ref=e1032]
+                - cell [ref=e1033]
+                - cell "-" [ref=e1034]
+                - cell [ref=e1035]:
+                  - button [ref=e1037] [cursor=pointer]:
+                    - img [ref=e1038]
+              - row "John Doe john.doe@example.com +1234567890 Cool NEW Test -" [ref=e1042]:
+                - cell [ref=e1043]:
+                  - checkbox [ref=e1044]
+                - cell [ref=e1045]:
+                  - button [ref=e1046] [cursor=pointer]:
+                    - img [ref=e1047]
+                - cell "John Doe" [ref=e1049]:
+                  - link "John Doe" [ref=e1050] [cursor=pointer]:
+                    - /url: /leads/cmhnyew7r00018id1659wy90z
+                - cell [ref=e1051]
+                - cell "john.doe@example.com" [ref=e1052]
+                - cell "+1234567890" [ref=e1053]
+                - cell "Cool" [ref=e1054]:
+                  - generic [ref=e1055]:
+                    - img [ref=e1056]
+                    - text: Cool
+                - cell "NEW" [ref=e1061]:
+                  - generic [ref=e1062]: NEW
+                - cell "Test" [ref=e1063]
+                - cell [ref=e1064]
+                - cell "-" [ref=e1065]
+                - cell [ref=e1066]:
+                  - button [ref=e1068] [cursor=pointer]:
+                    - img [ref=e1069]
+              - row "John Doe john1762191738190@example.com +15550100123 Cool NEW website -" [ref=e1073]:
+                - cell [ref=e1074]:
+                  - checkbox [ref=e1075]
+                - cell [ref=e1076]:
+                  - button [ref=e1077] [cursor=pointer]:
+                    - img [ref=e1078]
+                - cell "John Doe" [ref=e1080]:
+                  - link "John Doe" [ref=e1081] [cursor=pointer]:
+                    - /url: /leads/cmhjfgnh9001d8ia6vaewnvzy
+                - cell [ref=e1082]
+                - cell "john1762191738190@example.com" [ref=e1083]
+                - cell "+15550100123" [ref=e1084]
+                - cell "Cool" [ref=e1085]:
+                  - generic [ref=e1086]:
+                    - img [ref=e1087]
+                    - text: Cool
+                - cell "NEW" [ref=e1092]:
+                  - generic [ref=e1093]: NEW
+                - cell "website" [ref=e1094]
+                - cell [ref=e1095]
+                - cell "-" [ref=e1096]
+                - cell [ref=e1097]:
+                  - button [ref=e1099] [cursor=pointer]:
+                    - img [ref=e1100]
+              - row "John Doe john1762191694610@example.com +15550100123 Cool NEW website -" [ref=e1104]:
+                - cell [ref=e1105]:
+                  - checkbox [ref=e1106]
+                - cell [ref=e1107]:
+                  - button [ref=e1108] [cursor=pointer]:
+                    - img [ref=e1109]
+                - cell "John Doe" [ref=e1111]:
+                  - link "John Doe" [ref=e1112] [cursor=pointer]:
+                    - /url: /leads/cmhjffput000s8ia6purhgu04
+                - cell [ref=e1113]
+                - cell "john1762191694610@example.com" [ref=e1114]
+                - cell "+15550100123" [ref=e1115]
+                - cell "Cool" [ref=e1116]:
+                  - generic [ref=e1117]:
+                    - img [ref=e1118]
+                    - text: Cool
+                - cell "NEW" [ref=e1123]:
+                  - generic [ref=e1124]: NEW
+                - cell "website" [ref=e1125]
+                - cell [ref=e1126]
+                - cell "-" [ref=e1127]
+                - cell [ref=e1128]:
+                  - button [ref=e1130] [cursor=pointer]:
+                    - img [ref=e1131]
+              - row "John Doe lead1762191677290340352@example.com +15550100123 Cool NEW website -" [ref=e1135]:
+                - cell [ref=e1136]:
+                  - checkbox [ref=e1137]
+                - cell [ref=e1138]:
+                  - button [ref=e1139] [cursor=pointer]:
+                    - img [ref=e1140]
+                - cell "John Doe" [ref=e1142]:
+                  - link "John Doe" [ref=e1143] [cursor=pointer]:
+                    - /url: /leads/cmhjffcsh000c8ia6wp8c1wqd
+                - cell [ref=e1144]
+                - cell "lead1762191677290340352@example.com" [ref=e1145]
+                - cell "+15550100123" [ref=e1146]
+                - cell "Cool" [ref=e1147]:
+                  - generic [ref=e1148]:
+                    - img [ref=e1149]
+                    - text: Cool
+                - cell "NEW" [ref=e1154]:
+                  - generic [ref=e1155]: NEW
+                - cell "website" [ref=e1156]
+                - cell [ref=e1157]
+                - cell "-" [ref=e1158]
+                - cell [ref=e1159]:
+                  - button [ref=e1161] [cursor=pointer]:
+                    - img [ref=e1162]
+          - generic [ref=e1167]:
+            - generic [ref=e1168]:
+              - generic [ref=e1169]: Show
+              - combobox [ref=e1170]:
+                - option "10"
+                - option "25" [selected]
+                - option "50"
+                - option "100"
+              - generic [ref=e1171]: per page • Showing 1 to 23 of 23 results
+            - generic [ref=e1172]:
+              - button "Previous" [disabled]
+              - button "1" [ref=e1173] [cursor=pointer]
+              - button "Next" [disabled]
+    - button "Open AI Assistant" [ref=e1174] [cursor=pointer]:
+      - img [ref=e1175]
+      - generic [ref=e1177]: "1"
+    - generic [ref=e1179]:
+      - generic [ref=e1180]:
+        - generic [ref=e1181]:
+          - img [ref=e1182]
+          - heading "AI Assistant" [level=2] [ref=e1184]
+        - button [ref=e1185] [cursor=pointer]:
+          - img [ref=e1186]
+      - generic [ref=e1189]:
+        - paragraph [ref=e1190]: SUGGESTED ACTIONS
+        - generic [ref=e1191]:
+          - button "Lead Statistics How many leads do I have?" [ref=e1192] [cursor=pointer]:
+            - generic [ref=e1193]:
+              - img [ref=e1195]
+              - generic [ref=e1198]:
+                - paragraph [ref=e1199]: Lead Statistics
+                - paragraph [ref=e1200]: How many leads do I have?
+          - button "Hot Leads Show me my best leads (score above 80)" [ref=e1201] [cursor=pointer]:
+            - generic [ref=e1202]:
+              - img [ref=e1204]
+              - generic [ref=e1206]:
+                - paragraph [ref=e1207]: Hot Leads
+                - paragraph [ref=e1208]: Show me my best leads (score above 80)
+          - button "Recent Activity What are my recent activities?" [ref=e1209] [cursor=pointer]:
+            - generic [ref=e1210]:
+              - img [ref=e1212]
+              - generic [ref=e1214]:
+                - paragraph [ref=e1215]: Recent Activity
+                - paragraph [ref=e1216]: What are my recent activities?
+      - generic [ref=e1219]:
+        - paragraph [ref=e1220]: Hi! I'm your AI assistant powered by GPT-4. I can help you with leads, campaigns, emails, and more. What can I help you with today?
+        - paragraph [ref=e1221]: 10:45 PM
+      - generic [ref=e1222]:
+        - generic [ref=e1223]: AI PERSONALITY
+        - combobox [ref=e1224]:
+          - option "🎯 Professional - Formal & Business-like"
+          - option "😊 Friendly - Warm & Conversational" [selected]
+          - option "⚡ Direct - Brief & To-the-Point"
+          - option "🎓 Coaching - Educational & Mentoring"
+          - option "💬 Casual - Relaxed & Informal"
+      - generic [ref=e1225]:
+        - generic [ref=e1226]: QUICK ACTIONS
+        - generic [ref=e1227]:
+          - button "📊 Lead Stats" [ref=e1228] [cursor=pointer]
+          - button "🔥 Hot Leads" [ref=e1229] [cursor=pointer]
+          - button "⚠️ At Risk" [ref=e1230] [cursor=pointer]
+          - button "📅 Recent Activity" [ref=e1231] [cursor=pointer]
+          - button "✉️ Draft Email" [ref=e1232] [cursor=pointer]
+      - generic [ref=e1233]:
+        - generic [ref=e1234]:
+          - textbox "Ask me anything..." [ref=e1235]
+          - button [disabled]:
+            - img
+        - paragraph [ref=e1236]: 💡 Powered by GPT-4 with real-time CRM data access
+  - generic [ref=e1237]: "0"
+```
