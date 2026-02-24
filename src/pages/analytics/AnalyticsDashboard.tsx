@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, TrendingUp, Users, DollarSign, Mail, Phone, Target, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -19,33 +20,17 @@ import {
   Cell,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
-import { useToast } from '@/hooks/useToast';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const AnalyticsDashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [leadAnalytics, setLeadAnalytics] = useState<any>(null);
-  const [campaignAnalytics, setCampaignAnalytics] = useState<any>(null);
-  const [teamPerformanceData, setTeamPerformanceData] = useState<any[]>([]);
-  const toast = useToast();
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
-
-  const handleDateChange = (range: DateRange) => {
-    dateRangeRef.current = range;
-    loadAnalytics();
-  };
-
-  const loadAnalytics = async () => {
-    try {
-      setLoading(true);
+  const { data: analyticsResult, isLoading: loading, refetch } = useQuery({
+    queryKey: ['analytics-dashboard'],
+    queryFn: async () => {
       const params = dateRangeRef.current;
       const [dashboard, leads, campaigns, teamPerf] = await Promise.all([
         analyticsApi.getDashboardStats(params).catch(() => ({ data: null })),
@@ -53,17 +38,23 @@ const AnalyticsDashboard = () => {
         analyticsApi.getCampaignAnalytics(params).catch(() => ({ data: null })),
         analyticsApi.getTeamPerformance(params).catch(() => ({ data: null }))
       ]);
+      return {
+        dashboardData: dashboard.data,
+        leadAnalytics: leads.data,
+        campaignAnalytics: campaigns.data,
+        teamPerformanceData: teamPerf?.data || [],
+      };
+    },
+  });
 
-      setDashboardData(dashboard.data);
-      setLeadAnalytics(leads.data);
-      setCampaignAnalytics(campaigns.data);
-      setTeamPerformanceData(teamPerf?.data || []);
-    } catch (error) {
-      console.error('Error loading analytics:', error);
-      toast.toast.error('Error loading analytics', 'Using fallback data');
-    } finally {
-      setLoading(false);
-    }
+  const dashboardData = analyticsResult?.dashboardData ?? null;
+  const leadAnalytics = analyticsResult?.leadAnalytics ?? null;
+  const campaignAnalytics = analyticsResult?.campaignAnalytics ?? null;
+  const teamPerformanceData = analyticsResult?.teamPerformanceData ?? [];
+
+  const handleDateChange = (range: DateRange) => {
+    dateRangeRef.current = range;
+    refetch();
   };
 
   // Mock data as fallback — REMOVED: use API data only
@@ -74,6 +65,8 @@ const AnalyticsDashboard = () => {
   const conversionRate = leadAnalytics?.conversionRate || dashboardData?.leads?.conversionRate || 0;
   const wonLeads = leadAnalytics?.byStatus?.WON || 0;
   const avgDealSize = wonLeads > 0 ? totalRevenue / wonLeads : 0;
+  const pipelineLeads = (leadAnalytics?.byStatus?.QUALIFIED || 0) + (leadAnalytics?.byStatus?.CONTACTED || 0) + (leadAnalytics?.byStatus?.NEGOTIATION || 0) + (leadAnalytics?.byStatus?.PROPOSAL || 0);
+  const pipelineValue = leadAnalytics?.pipelineValue ?? (avgDealSize > 0 ? pipelineLeads * avgDealSize : 0);
 
   // Channel data from lead sources
   const channelData = leadAnalytics?.bySource 
@@ -121,7 +114,7 @@ const AnalyticsDashboard = () => {
         </div>
         <div className="flex items-center space-x-2">
           <DateRangePicker onChange={handleDateChange} />
-          <Button variant="outline" onClick={loadAnalytics}>Refresh</Button>
+          <Button variant="outline" onClick={() => refetch()}>Refresh</Button>
         </div>
       </div>
 
@@ -305,7 +298,7 @@ const AnalyticsDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {teamPerformance.length > 0 ? teamPerformance.map((member, index) => (
+            {teamPerformance.length > 0 ? teamPerformance.map((member: { name: string; deals: number; revenue?: number; leads?: number; [k: string]: unknown }, index: number) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="font-semibold text-lg text-muted-foreground w-6">
@@ -317,7 +310,7 @@ const AnalyticsDashboard = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">${(member.revenue / 1000).toFixed(0)}K</p>
+                  <p className="font-semibold">${((member.revenue ?? 0) / 1000).toFixed(0)}K</p>
                   <p className="text-sm text-muted-foreground">revenue</p>
                 </div>
               </div>
@@ -387,18 +380,18 @@ const AnalyticsDashboard = () => {
             <CardTitle className="flex items-center">
               <BarChart3 className="h-4 w-4 mr-2" />
               Pipeline Health
-              <HelpTooltip text="Open Opportunities = leads at 'Qualified' stage. Pipeline Value = total value of all deals in progress. A healthy pipeline should have 3–5x your revenue target in open opportunities." />
+              <HelpTooltip text="Open Opportunities = leads at Qualified, Contacted, Negotiation, and Proposal stages. Pipeline Value = total estimated value of all deals in progress. A healthy pipeline should have 3–5x your revenue target in open opportunities." />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm">Open Opportunities</span>
-                <span className="font-semibold">{leadAnalytics?.byStatus?.QUALIFIED || 0}</span>
+                <span className="font-semibold">{pipelineLeads}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Pipeline Value</span>
-                <span className="font-semibold">${totalRevenue > 0 ? `${(totalRevenue / 1000000).toFixed(1)}M` : '0'}</span>
+                <span className="font-semibold">${pipelineValue > 0 ? `${(pipelineValue / 1000000).toFixed(1)}M` : '0'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Forecast</span>

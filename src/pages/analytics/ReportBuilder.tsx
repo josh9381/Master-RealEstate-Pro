@@ -3,128 +3,108 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { analyticsApi } from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 type WidgetType = 'table' | 'bar-chart' | 'line-chart' | 'pie-chart' | 'number-card' | 'gauge' | 'funnel' | 'area-chart';
 type DataSourceType = 'leads' | 'campaigns' | 'contacts' | 'tasks';
 
+interface ChartDataPoint {
+  name: string;
+  value: number;
+  [key: string]: string | number;
+}
+
 interface ReportWidget {
   id: string;
   type: WidgetType;
   dataSource: DataSourceType | null;
   label: string;
-  data: any[] | null;
+  data: ChartDataPoint[] | null;
   value?: number;
 }
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#6366F1'];
 
 const ReportBuilder = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
   const [widgets, setWidgets] = useState<ReportWidget[]>([]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [reportName, setReportName] = useState('My Custom Report');
   const [reportCategory, setReportCategory] = useState('Sales');
-  const [dataSources, setDataSources] = useState({
-    leads: 0,
-    campaigns: 0,
-    contacts: 0,
-    tasks: 0,
-  });
-  const [analyticsData, setAnalyticsData] = useState<{
-    leadsByStatus: any[];
-    leadsBySource: any[];
-    campaignPerformance: any[];
-    monthlyTrend: any[];
-    tasksByPriority: any[];
-  }>({
-    leadsByStatus: [],
-    leadsBySource: [],
-    campaignPerformance: [],
-    monthlyTrend: [],
-    tasksByPriority: [],
+
+  const { data: builderResult, isLoading, refetch } = useQuery({
+    queryKey: ['report-builder'],
+    queryFn: async () => {
+      const dateParams = dateRangeRef.current;
+      const [dashboardData, leadData, campaignData] = await Promise.all([
+        analyticsApi.getDashboardStats(dateParams).catch((e: Error) => { console.error('Dashboard stats failed:', e); return null; }),
+        analyticsApi.getLeadAnalytics(dateParams).catch((e: Error) => { console.error('Lead analytics failed:', e); return null; }),
+        analyticsApi.getCampaignAnalytics(dateParams).catch((e: Error) => { console.error('Campaign analytics failed:', e); return null; }),
+      ]);
+      return { dashboardData, leadData, campaignData };
+    },
   });
 
+  const dashboardData = builderResult?.dashboardData ?? null;
+  const leadData = builderResult?.leadData ?? null;
+  const campaignData = builderResult?.campaignData ?? null;
+
+  const dataSources = {
+    leads: leadData?.total || 0,
+    campaigns: campaignData?.total || 0,
+    contacts: dashboardData?.stats?.totalLeads || 0,
+    tasks: dashboardData?.stats?.totalTasks || 0,
+  };
+
+  const analyticsData = {
+    leadsByStatus: [
+      { name: 'New', value: leadData?.byStatus?.NEW || 0 },
+      { name: 'Contacted', value: leadData?.byStatus?.CONTACTED || 0 },
+      { name: 'Qualified', value: leadData?.byStatus?.QUALIFIED || 0 },
+      { name: 'Won', value: leadData?.byStatus?.WON || 0 },
+      { name: 'Lost', value: leadData?.byStatus?.LOST || 0 },
+    ].filter(d => d.value > 0),
+    leadsBySource: Object.entries(leadData?.bySource || {}).map(([name, value]) => ({
+      name,
+      value: value as number,
+    })),
+    campaignPerformance: (campaignData?.campaigns || []).slice(0, 8).map((c: Record<string, unknown>) => ({
+      name: (c.name as string)?.substring(0, 15) || 'Campaign',
+      sent: (c.sent as number) || 0,
+      opened: (c.opened as number) || 0,
+      clicked: (c.clicked as number) || 0,
+    })),
+    monthlyTrend: (dashboardData?.monthlyTrend || []).map((m: Record<string, unknown>) => ({
+      name: (m.month as string) || (m.label as string),
+      leads: (m.leads as number) || (m.count as number) || 0,
+      value: (m.value as number) || 0,
+    })),
+    tasksByPriority: [
+      { name: 'High', value: dashboardData?.stats?.highPriorityTasks || 0 },
+      { name: 'Medium', value: dashboardData?.stats?.mediumPriorityTasks || 0 },
+      { name: 'Low', value: dashboardData?.stats?.lowPriorityTasks || 0 },
+    ].filter(d => d.value > 0),
+  };
+
+  // Refresh widget data when analytics data changes
   useEffect(() => {
-    loadData();
-  }, []);
+    if (builderResult) {
+      setWidgets(prev => prev.map(w => refreshWidgetData(w)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [builderResult]);
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
-    loadData();
+    refetch();
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      const dateParams = dateRangeRef.current;
-      const [dashboardData, leadData, campaignData] = await Promise.all([
-        analyticsApi.getDashboardStats(dateParams),
-        analyticsApi.getLeadAnalytics(dateParams),
-        analyticsApi.getCampaignAnalytics(dateParams),
-      ]);
-
-      setDataSources({
-        leads: leadData?.total || 0,
-        campaigns: campaignData?.total || 0,
-        contacts: dashboardData?.stats?.totalLeads || 0,
-        tasks: dashboardData?.stats?.totalTasks || 0,
-      });
-
-      // Pre-process analytics data for widgets
-      const leadsByStatus = [
-        { name: 'New', value: leadData?.byStatus?.NEW || 0 },
-        { name: 'Contacted', value: leadData?.byStatus?.CONTACTED || 0 },
-        { name: 'Qualified', value: leadData?.byStatus?.QUALIFIED || 0 },
-        { name: 'Won', value: leadData?.byStatus?.WON || 0 },
-        { name: 'Lost', value: leadData?.byStatus?.LOST || 0 },
-      ].filter(d => d.value > 0);
-
-      const leadsBySource = Object.entries(leadData?.bySource || {}).map(([name, value]) => ({
-        name,
-        value: value as number,
-      }));
-
-      const campaignPerformance = (campaignData?.campaigns || []).slice(0, 8).map((c: any) => ({
-        name: c.name?.substring(0, 15) || 'Campaign',
-        sent: c.sent || 0,
-        opened: c.opened || 0,
-        clicked: c.clicked || 0,
-      }));
-
-      const monthlyTrend = (dashboardData?.monthlyTrend || []).map((m: any) => ({
-        name: m.month || m.label,
-        leads: m.leads || m.count || 0,
-        value: m.value || 0,
-      }));
-
-      const tasksByPriority = [
-        { name: 'High', value: dashboardData?.stats?.highPriorityTasks || 0 },
-        { name: 'Medium', value: dashboardData?.stats?.mediumPriorityTasks || 0 },
-        { name: 'Low', value: dashboardData?.stats?.lowPriorityTasks || 0 },
-      ].filter(d => d.value > 0);
-
-      setAnalyticsData({
-        leadsByStatus,
-        leadsBySource,
-        campaignPerformance,
-        monthlyTrend,
-        tasksByPriority,
-      });
-
-      // Refresh widget data
-      setWidgets(prev => prev.map(w => refreshWidgetData(w)));
-    } catch (error) {
-      console.error('Error loading report builder data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getDataForWidget = (dataSource: DataSourceType | null, widgetType: WidgetType): { data: any[]; value?: number } => {
+  const getDataForWidget = (dataSource: DataSourceType | null, widgetType: WidgetType): { data: ChartDataPoint[]; value?: number } => {
     switch (dataSource) {
       case 'leads':
         if (widgetType === 'number-card') return { data: [], value: dataSources.leads };
@@ -186,12 +166,44 @@ const ReportBuilder = () => {
     }));
   };
 
+  // Keyboard-accessible alternative to drag-and-drop
+  const handleSourceDrop = (sourceKey: string) => {
+    const sourceName = sourceKey.charAt(0).toUpperCase() + sourceKey.slice(1);
+    const newWidget: ReportWidget = {
+      id: `widget-${Date.now()}`,
+      type: 'bar-chart' as WidgetType,
+      dataSource: sourceKey as DataSourceType,
+      label: `${sourceName} Overview`,
+      data: null,
+      value: undefined,
+    };
+    const { data, value } = getDataForWidget(newWidget.dataSource, newWidget.type);
+    newWidget.data = data;
+    newWidget.value = value;
+    setWidgets(prev => [...prev, newWidget]);
+    toast.success(`Added ${sourceName} widget to report`);
+  };
+
   const handleWidgetDragStart = (e: React.DragEvent, widget: { name: string; type: string }) => {
     e.dataTransfer.setData('text/plain', JSON.stringify({
       type: widget.type,
       dataSource: null,
       label: widget.name,
     }));
+  };
+
+  // Keyboard-accessible alternative for widget palette
+  const handleWidgetAdd = (widgetType: string, widgetName: string) => {
+    const newWidget: ReportWidget = {
+      id: `widget-${Date.now()}`,
+      type: widgetType as WidgetType,
+      dataSource: null,
+      label: widgetName,
+      data: null,
+      value: undefined,
+    };
+    setWidgets(prev => [...prev, newWidget]);
+    toast.success(`Added ${widgetName} widget to report`);
   };
 
   const removeWidget = (id: string) => {
@@ -270,7 +282,7 @@ const ReportBuilder = () => {
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={chartData} cx="50%" cy="50%" outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                {chartData.map((_: any, i: number) => (
+                {chartData.map((_: ChartDataPoint, i: number) => (
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
               </Pie>
@@ -311,18 +323,18 @@ const ReportBuilder = () => {
             <table className="w-full text-xs">
               <thead><tr className="border-b">{Object.keys(chartData[0] || {}).map(k => <th key={k} className="text-left p-1 font-medium">{k}</th>)}</tr></thead>
               <tbody>
-                {chartData.slice(0, 10).map((row: any, i: number) => (
-                  <tr key={i} className="border-b">{Object.values(row).map((v: any, j: number) => <td key={j} className="p-1">{v}</td>)}</tr>
+                {chartData.slice(0, 10).map((row: ChartDataPoint, i: number) => (
+                  <tr key={i} className="border-b">{Object.values(row).map((v: string | number, j: number) => <td key={j} className="p-1">{v}</td>)}</tr>
                 ))}
               </tbody>
             </table>
           </div>
         );
       case 'funnel':
-        const maxFunnel = Math.max(...chartData.map((d: any) => d.value || 0), 1);
+        const maxFunnel = Math.max(...chartData.map((d: ChartDataPoint) => d.value || 0), 1);
         return (
           <div className="space-y-1 py-2">
-            {chartData.map((d: any, i: number) => (
+            {chartData.map((d: ChartDataPoint, i: number) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="text-xs w-16 truncate">{d.name}</span>
                 <div className="flex-1 h-6 bg-muted rounded overflow-hidden">
@@ -360,7 +372,7 @@ const ReportBuilder = () => {
         </div>
         <div className="flex items-center space-x-2">
           <DateRangePicker onChange={handleDateChange} />
-          <Button variant="outline" onClick={loadData} disabled={isLoading}>
+          <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -368,9 +380,29 @@ const ReportBuilder = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button>Save Report</Button>
+          <Button onClick={() => {
+            if (!reportName.trim()) {
+              toast.error('Please enter a report name')
+              return
+            }
+            const reportData = { name: reportName, widgets, createdAt: new Date().toISOString() }
+            const saved = JSON.parse(localStorage.getItem('saved-reports') || '[]')
+            saved.push(reportData)
+            localStorage.setItem('saved-reports', JSON.stringify(saved))
+            toast.success(`Report "${reportName}" saved successfully`)
+          }}>Save Report</Button>
         </div>
       </div>
+
+      {isLoading && widgets.length === 0 && (
+        <div className="space-y-4">
+          <div className="h-24 bg-muted animate-pulse rounded-lg" />
+          <div className="grid gap-6 md:grid-cols-4">
+            <div className="h-48 bg-muted animate-pulse rounded-lg" />
+            <div className="md:col-span-3 h-48 bg-muted animate-pulse rounded-lg" />
+          </div>
+        </div>
+      )}
 
       {/* Report Configuration */}
       <Card>
@@ -408,7 +440,7 @@ const ReportBuilder = () => {
         <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle className="text-base">Data Sources</CardTitle>
-            <CardDescription>Drag sources to canvas</CardDescription>
+            <CardDescription>Drag or click + to add to canvas</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -422,13 +454,32 @@ const ReportBuilder = () => {
                   key={source.name}
                   className="flex items-center justify-between p-3 border rounded-lg cursor-grab hover:border-primary transition-colors active:cursor-grabbing"
                   draggable
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Add ${source.name} widget to report`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSourceDrop(source.key);
+                    }
+                  }}
                   onDragStart={(e) => handleSourceDragStart(e, source)}
                 >
                   <div className="flex items-center space-x-2">
                     <source.icon className="h-4 w-4" />
                     <span className="text-sm font-medium">{source.name}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{source.count}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">{source.count}</span>
+                    <button
+                      className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent transition-colors"
+                      onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleSourceDrop(source.key); }}
+                      aria-label={`Add ${source.name} to report`}
+                      title={`Add ${source.name}`}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -512,10 +563,27 @@ const ReportBuilder = () => {
                 key={widget.name}
                 className="p-4 border rounded-lg text-center cursor-grab hover:border-primary transition-colors active:cursor-grabbing"
                 draggable
+                tabIndex={0}
+                role="button"
+                aria-label={`Add ${widget.name} widget to report`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleWidgetAdd(widget.type, widget.name);
+                  }
+                }}
                 onDragStart={(e) => handleWidgetDragStart(e, widget)}
               >
                 <div className="text-3xl mb-2">{widget.icon}</div>
                 <p className="text-xs font-medium">{widget.name}</p>
+                <button
+                  className="mt-2 text-xs px-2 py-1 border rounded hover:bg-accent transition-colors"
+                  onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleWidgetAdd(widget.type, widget.name); }}
+                  aria-label={`Add ${widget.name}`}
+                >
+                  <Plus className="h-3 w-3 inline mr-1" />
+                  Add
+                </button>
               </div>
             ))}
           </div>

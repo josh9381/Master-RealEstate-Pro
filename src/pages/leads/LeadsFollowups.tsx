@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -19,6 +20,7 @@ import {
 import { useToast } from '@/hooks/useToast'
 import { leadsApi, activitiesApi } from '@/lib/api'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
+import type { Lead, ActivityRecord } from '@/types'
 
 interface FollowUp {
   id: number
@@ -35,11 +37,8 @@ interface FollowUp {
 
 function LeadsFollowups() {
   const [filter, setFilter] = useState<'all' | 'overdue' | 'today' | 'week'>('all')
-  const [followups, setFollowups] = useState<FollowUp[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [availableLeads, setAvailableLeads] = useState<Array<{id: string; name: string; company: string}>>([])
   const [newFollowup, setNewFollowup] = useState({
     leadId: '',
     type: 'call' as 'call' | 'email' | 'meeting' | 'task',
@@ -49,16 +48,13 @@ function LeadsFollowups() {
     notes: '',
   })
   const [isCreating, setIsCreating] = useState(false)
+  const [followupErrors, setFollowupErrors] = useState<Record<string, string>>({})
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    loadFollowups()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadFollowups = async () => {
-    setIsLoading(true)
-    try {
+  const { data: followupsData, isLoading, refetch: loadFollowups } = useQuery({
+    queryKey: ['followups'],
+    queryFn: async () => {
       // Get recent activities that are pending
       const activitiesResponse = await activitiesApi.getActivities({ limit: 50 })
       const activities = activitiesResponse.data?.activities || []
@@ -67,14 +63,11 @@ function LeadsFollowups() {
       const leadsResponse = await leadsApi.getLeads({ limit: 100 })
       const leads = leadsResponse.data?.leads || []
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const leadMap = new Map(leads.map((l: any) => [l.id, l]))
+      const leadMap = new Map<number, Lead>(leads.map((l: Lead) => [l.id, l]))
       
       // Transform activities to follow-ups
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const followupList: FollowUp[] = activities.map((activity: any, index: number) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const lead: any = leadMap.get(activity.leadId)
+      const followupList: FollowUp[] = activities.map((activity: ActivityRecord, index: number) => {
+        const lead: Lead | undefined = leadMap.get(activity.leadId as number)
         const createdDate = activity.createdAt ? new Date(activity.createdAt) : new Date()
         const isPast = createdDate < new Date()
         
@@ -92,31 +85,32 @@ function LeadsFollowups() {
         }
       })
       
-      setFollowups(followupList)
-      
-      // Store leads for Add Follow-up dropdown
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setAvailableLeads(leads.map((l: any) => ({
+      // Build available leads for Add Follow-up dropdown
+      const availableLeadsList = leads.map((l: Lead) => ({
         id: String(l.id),
         name: `${l.firstName} ${l.lastName}`,
         company: l.company || '',
-      })))
-    } catch (error) {
-      console.error('Error loading follow-ups:', error)
-      toast.error('Failed to load follow-ups')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      }))
+
+      return { followups: followupList, availableLeads: availableLeadsList }
+    },
+  })
+
+  const followups = followupsData?.followups ?? []
+  const availableLeads = followupsData?.availableLeads ?? []
 
   const handleCreateFollowup = async () => {
+    const newErrors: Record<string, string> = {}
     if (!newFollowup.leadId) {
-      toast.error('Please select a lead')
-      return
+      newErrors.leadId = 'Please select a lead'
     }
     const scheduledDate = new Date(`${newFollowup.date}T${newFollowup.time}:00`)
     if (scheduledDate <= new Date()) {
-      toast.error('Please select a future date and time')
+      newErrors.date = 'Please select a future date and time'
+    }
+    setFollowupErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      toast.error('Please fix the validation errors')
       return
     }
     setIsCreating(true)
@@ -171,10 +165,19 @@ function LeadsFollowups() {
   const handleComplete = async (id: number) => {
     const followup = followups.find((f: FollowUp) => f.id === id)
     
+    if (!window.confirm(`Mark follow-up with ${followup?.lead || 'this lead'} as complete?`)) {
+      return
+    }
+
     // Optimistic update
-    setFollowups((prev: FollowUp[]) => 
-      prev.map((f: FollowUp) => f.id === id ? { ...f, status: 'completed' } : f)
-    )
+    const previousData = queryClient.getQueryData<{ followups: FollowUp[]; availableLeads: Array<{id: string; name: string; company: string}> }>(['followups'])
+    queryClient.setQueryData<{ followups: FollowUp[]; availableLeads: Array<{id: string; name: string; company: string}> }>(['followups'], (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        followups: old.followups.map((f: FollowUp) => f.id === id ? { ...f, status: 'completed' as const } : f),
+      }
+    })
     toast.success(`Follow-up with ${followup?.lead} marked as complete`)
 
     // Persist to backend
@@ -183,9 +186,7 @@ function LeadsFollowups() {
     } catch (error) {
       console.error('Failed to update activity status:', error)
       // Revert on failure
-      setFollowups((prev: FollowUp[]) =>
-        prev.map((f: FollowUp) => f.id === id ? { ...f, status: followup?.status || 'pending' } : f)
-      )
+      queryClient.setQueryData(['followups'], previousData)
       toast.error('Failed to mark follow-up as complete')
     }
   }
@@ -232,7 +233,7 @@ function LeadsFollowups() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadFollowups} disabled={isLoading}>
+          <Button variant="outline" onClick={() => loadFollowups()} disabled={isLoading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -299,6 +300,22 @@ function LeadsFollowups() {
       </Card>
 
       {/* Follow-ups List */}
+      {isLoading ? (
+        <div className="grid gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-6 animate-pulse">
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-muted rounded w-1/3" />
+                  <div className="h-3 bg-muted rounded w-2/3" />
+                  <div className="h-3 bg-muted rounded w-1/4" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
       <div className="grid gap-4">
         {filteredFollowups.map((followup) => {
           const statusConfig = getStatusConfig(followup.status)
@@ -383,6 +400,7 @@ function LeadsFollowups() {
           )
         })}
       </div>
+      )}
 
       {/* Empty State */}
       {filteredFollowups.length === 0 && (
@@ -420,15 +438,16 @@ function LeadsFollowups() {
                 <select
                   className="w-full p-2 border rounded-md"
                   value={newFollowup.leadId}
-                  onChange={(e) => setNewFollowup(prev => ({ ...prev, leadId: e.target.value }))}
+                  onChange={(e) => { setNewFollowup(prev => ({ ...prev, leadId: e.target.value })); if (followupErrors.leadId) setFollowupErrors(prev => { const next = {...prev}; delete next.leadId; return next }) }}
                 >
                   <option value="">Select a lead...</option>
-                  {availableLeads.map(lead => (
+                  {availableLeads.map((lead: {id: string; name: string; company: string}) => (
                     <option key={lead.id} value={lead.id}>
                       {lead.name} {lead.company ? `(${lead.company})` : ''}
                     </option>
                   ))}
                 </select>
+                {followupErrors.leadId && <p className="text-sm text-red-500 mt-1">{followupErrors.leadId}</p>}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Type</label>
@@ -451,7 +470,7 @@ function LeadsFollowups() {
                     className="w-full p-2 border rounded-md"
                     min={new Date().toISOString().split('T')[0]}
                     value={newFollowup.date}
-                    onChange={(e) => setNewFollowup(prev => ({ ...prev, date: e.target.value }))}
+                    onChange={(e) => { setNewFollowup(prev => ({ ...prev, date: e.target.value })); if (followupErrors.date) setFollowupErrors(prev => { const next = {...prev}; delete next.date; return next }) }}
                   />
                 </div>
                 <div>
@@ -460,10 +479,11 @@ function LeadsFollowups() {
                     type="time"
                     className="w-full p-2 border rounded-md"
                     value={newFollowup.time}
-                    onChange={(e) => setNewFollowup(prev => ({ ...prev, time: e.target.value }))}
+                    onChange={(e) => { setNewFollowup(prev => ({ ...prev, time: e.target.value })); if (followupErrors.date) setFollowupErrors(prev => { const next = {...prev}; delete next.date; return next }) }}
                   />
                 </div>
               </div>
+              {followupErrors.date && <p className="text-sm text-red-500 mt-1">{followupErrors.date}</p>}
               <div>
                 <label className="text-sm font-medium mb-1 block">Priority</label>
                 <select

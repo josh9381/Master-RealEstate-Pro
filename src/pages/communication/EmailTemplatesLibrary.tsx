@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { Mail, Layout, Type, Image, Link, Code, Eye, RefreshCw, Edit, Trash2, Plus, X, Send } from 'lucide-react';
@@ -8,24 +9,52 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/hooks/useToast'
 import { templatesApi } from '@/lib/api'
+import type { EmailTemplate } from '@/types'
 
 const CATEGORIES = ['Onboarding', 'Marketing', 'Content', 'Ecommerce', 'Transactional', 'Events', 'Custom'];
 
 const EmailTemplatesLibrary = () => {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
-  const [templates, setTemplates] = useState<Array<{ id: string; name: string; category: string; subject: string; body: string; description?: string; thumbnail?: string; usageCount?: number; isActive?: boolean; updatedAt?: string; createdAt?: string }>>([])
   const [activeCategory, setActiveCategory] = useState('All Templates')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+  // Template settings state
+  interface TemplateSettings {
+    defaultFont: string;
+    primaryColor: string;
+    logoUrl: string;
+    includeUnsubscribe: boolean;
+    enableOpenTracking: boolean;
+    enableClickTracking: boolean;
+    includeSocialSharing: boolean;
+  }
+  const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(() => {
+    const defaults = {
+      defaultFont: 'Arial',
+      primaryColor: '#0066cc',
+      logoUrl: '',
+      includeUnsubscribe: true,
+      enableOpenTracking: true,
+      enableClickTracking: true,
+      includeSocialSharing: false
+    }
+    try {
+      const saved = localStorage.getItem('email-template-settings')
+      if (saved) return { ...defaults, ...JSON.parse(saved) }
+    } catch (e) {
+      console.error('Failed to load saved template settings:', e)
+    }
+    return defaults
+  })
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
-  const [editingTemplate, setEditingTemplate] = useState<any>(null)
-  const [previewTemplate, setPreviewTemplate] = useState<any>(null)
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
+  const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null)
 
   // Create/Edit form state
   const [formName, setFormName] = useState('')
@@ -33,35 +62,17 @@ const EmailTemplatesLibrary = () => {
   const [formCategory, setFormCategory] = useState('Marketing')
   const [formBody, setFormBody] = useState('')
 
-  useEffect(() => {
-    loadTemplates()
-  }, [])
-
-  const loadTemplates = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true)
-      } else {
-        setLoading(true)
-      }
-
+  const { data: templates = [], isLoading: loading, isFetching, refetch } = useQuery({
+    queryKey: ['email-templates'],
+    queryFn: async () => {
       const response = await templatesApi.getEmailTemplates()
-      
-      if (response && Array.isArray(response)) {
-        setTemplates(response)
-      }
-    } catch (error) {
-      console.error('Failed to load email templates:', error)
-      toast.error('Failed to load templates, using sample data')
-      // Keep using mock data on error
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+      return (response && Array.isArray(response)) ? response : []
     }
-  }
+  })
+  const refreshing = isFetching && !loading
 
   const handleRefresh = () => {
-    loadTemplates(true)
+    refetch()
   }
 
   const resetForm = () => {
@@ -77,7 +88,7 @@ const EmailTemplatesLibrary = () => {
     setShowCreateModal(true)
   }
 
-  const openEditModal = (template: any) => {
+  const openEditModal = (template: EmailTemplate) => {
     setEditingTemplate(template)
     setFormName(template.name || '')
     setFormSubject(template.subject || '')
@@ -119,10 +130,12 @@ const EmailTemplatesLibrary = () => {
 
       setShowCreateModal(false)
       resetForm()
-      loadTemplates(true)
-    } catch (error: any) {
+      refetch()
+    } catch (error: unknown) {
       console.error('Failed to save template:', error)
-      toast.error(error?.response?.data?.message || 'Failed to save template')
+      const errMsg = error instanceof Error ? error.message : 'Failed to save template'
+      const axiosError = error as { response?: { data?: { message?: string } } }
+      toast.error(axiosError?.response?.data?.message || errMsg)
     } finally {
       setSaving(false)
     }
@@ -133,14 +146,15 @@ const EmailTemplatesLibrary = () => {
       await templatesApi.deleteEmailTemplate(id)
       toast.success('Template deleted successfully')
       setShowDeleteConfirm(null)
-      loadTemplates(true)
-    } catch (error: any) {
+      refetch()
+    } catch (error: unknown) {
       console.error('Failed to delete template:', error)
-      toast.error(error?.response?.data?.message || 'Failed to delete template')
+      const axiosError = error as { response?: { data?: { message?: string } } }
+      toast.error(axiosError?.response?.data?.message || 'Failed to delete template')
     }
   }
 
-  const openPreview = (template: any) => {
+  const openPreview = (template: EmailTemplate) => {
     setPreviewTemplate(template)
     setShowPreviewModal(true)
   }
@@ -259,11 +273,11 @@ const EmailTemplatesLibrary = () => {
               <CardDescription>Browse available templates</CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('grid')}>
                 <Layout className="h-4 w-4 mr-2" />
                 Grid
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('list')}>
                 <Type className="h-4 w-4 mr-2" />
                 List
               </Button>
@@ -284,8 +298,9 @@ const EmailTemplatesLibrary = () => {
               </Button>
             </div>
           ) : (
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className={viewMode === 'grid' ? 'grid gap-4 md:grid-cols-3' : 'space-y-3'}>
             {filteredTemplates.map((template) => (
+              viewMode === 'grid' ? (
               <div key={template.id} className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-center h-48 bg-gradient-to-br from-blue-50 to-purple-50">
                   <div className="text-6xl">{template.thumbnail || '📧'}</div>
@@ -318,6 +333,40 @@ const EmailTemplatesLibrary = () => {
                   </div>
                 </div>
               </div>
+              ) : (
+              <div key={template.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-4">
+                <div className="flex items-center justify-center h-12 w-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg flex-shrink-0">
+                  <span className="text-2xl">{template.thumbnail || '📧'}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-semibold truncate">{template.name}</h4>
+                    <Badge variant="outline">{template.category || 'Uncategorized'}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">{template.subject}</p>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                    <span>{template.usageCount || 0} uses</span>
+                    <span>{template.updatedAt ? `Updated ${new Date(template.updatedAt).toLocaleDateString()}` : ''}</span>
+                  </div>
+                </div>
+                <div className="flex space-x-2 flex-shrink-0">
+                  <Button variant="outline" size="sm" onClick={() => openPreview(template)}>
+                    <Eye className="h-4 w-4 mr-1" />
+                    Preview
+                  </Button>
+                  <Button size="sm" onClick={() => navigate(`/campaigns/create?type=email&templateId=${template.id}&templateName=${encodeURIComponent(template.name)}&templateSubject=${encodeURIComponent(template.subject)}`)}>
+                    <Send className="h-4 w-4 mr-1" />
+                    Use
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openEditModal(template)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(template.id)}>
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+              )
             ))}
           </div>
           )}
@@ -393,7 +442,7 @@ const EmailTemplatesLibrary = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Default Font</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
+              <select className="w-full px-3 py-2 border rounded-lg" value={templateSettings.defaultFont} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultFont: e.target.value }))}>
                 <option>Arial</option>
                 <option>Helvetica</option>
                 <option>Georgia</option>
@@ -403,7 +452,7 @@ const EmailTemplatesLibrary = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Primary Color</label>
-              <input type="color" defaultValue="#0066cc" className="w-full h-10 border rounded-lg" />
+              <input type="color" value={templateSettings.primaryColor} onChange={(e) => setTemplateSettings(s => ({ ...s, primaryColor: e.target.value }))} className="w-full h-10 border rounded-lg" />
             </div>
           </div>
           <div>
@@ -411,36 +460,41 @@ const EmailTemplatesLibrary = () => {
             <input
               type="url"
               placeholder="https://example.com/logo.png"
+              value={templateSettings.logoUrl}
+              onChange={(e) => setTemplateSettings(s => ({ ...s, logoUrl: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" defaultChecked className="rounded" />
+                <input type="checkbox" checked={templateSettings.includeUnsubscribe} onChange={(e) => setTemplateSettings(s => ({ ...s, includeUnsubscribe: e.target.checked }))} className="rounded" />
                 <span className="text-sm">Include unsubscribe link</span>
               </label>
             </div>
             <div>
               <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" defaultChecked className="rounded" />
+                <input type="checkbox" checked={templateSettings.enableOpenTracking} onChange={(e) => setTemplateSettings(s => ({ ...s, enableOpenTracking: e.target.checked }))} className="rounded" />
                 <span className="text-sm">Enable open tracking</span>
               </label>
             </div>
             <div>
               <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" defaultChecked className="rounded" />
+                <input type="checkbox" checked={templateSettings.enableClickTracking} onChange={(e) => setTemplateSettings(s => ({ ...s, enableClickTracking: e.target.checked }))} className="rounded" />
                 <span className="text-sm">Enable click tracking</span>
               </label>
             </div>
             <div>
               <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" className="rounded" />
+                <input type="checkbox" checked={templateSettings.includeSocialSharing} onChange={(e) => setTemplateSettings(s => ({ ...s, includeSocialSharing: e.target.checked }))} className="rounded" />
                 <span className="text-sm">Include social sharing</span>
               </label>
             </div>
           </div>
-          <Button>Save Settings</Button>
+          <Button onClick={() => {
+            localStorage.setItem('email-template-settings', JSON.stringify(templateSettings))
+            toast.success('Template settings saved')
+          }}>Save Settings</Button>
         </CardContent>
       </Card>
         </>

@@ -5,7 +5,8 @@
  * Used across Analytics, Communications, Campaigns, Workflows, and Leads pages.
  */
 
-export interface ExportColumn<T = any> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface ExportColumn<T = Record<string, any>> {
   header: string
   accessor: keyof T | ((row: T) => string | number | boolean | null | undefined)
 }
@@ -35,7 +36,7 @@ function getValue<T>(row: T, accessor: ExportColumn<T>['accessor']): string | nu
   if (typeof accessor === 'function') {
     return accessor(row)
   }
-  return row[accessor] as any
+  return row[accessor] as string | number | boolean | null | undefined
 }
 
 /**
@@ -128,49 +129,49 @@ export const campaignExportColumns: ExportColumn[] = [
   { header: 'Name', accessor: 'name' },
   { header: 'Type', accessor: 'type' },
   { header: 'Status', accessor: 'status' },
-  { header: 'Sent', accessor: (r: any) => r.sent || 0 },
-  { header: 'Delivered', accessor: (r: any) => r.delivered || 0 },
-  { header: 'Opened', accessor: (r: any) => r.opened || 0 },
-  { header: 'Clicked', accessor: (r: any) => r.clicked || 0 },
-  { header: 'Converted', accessor: (r: any) => r.converted || 0 },
-  { header: 'Revenue', accessor: (r: any) => r.revenue || 0 },
-  { header: 'ROI', accessor: (r: any) => r.roi || 0 },
-  { header: 'Budget', accessor: (r: any) => r.budget || 0 },
-  { header: 'Spent', accessor: (r: any) => r.spent || 0 },
+  { header: 'Sent', accessor: (r: Record<string, any>) => r.sent || 0 },
+  { header: 'Delivered', accessor: (r: Record<string, any>) => r.delivered || 0 },
+  { header: 'Opened', accessor: (r: Record<string, any>) => r.opened || 0 },
+  { header: 'Clicked', accessor: (r: Record<string, any>) => r.clicked || 0 },
+  { header: 'Converted', accessor: (r: Record<string, any>) => r.converted || 0 },
+  { header: 'Revenue', accessor: (r: Record<string, any>) => r.revenue || 0 },
+  { header: 'ROI', accessor: (r: Record<string, any>) => r.roi || 0 },
+  { header: 'Budget', accessor: (r: Record<string, any>) => r.budget || 0 },
+  { header: 'Spent', accessor: (r: Record<string, any>) => r.spent || 0 },
 ]
 
 export const leadExportColumns: ExportColumn[] = [
-  { header: 'Name', accessor: (r: any) => `${r.firstName} ${r.lastName}` },
+  { header: 'Name', accessor: (r: Record<string, any>) => `${r.firstName} ${r.lastName}` },
   { header: 'Email', accessor: 'email' },
   { header: 'Company', accessor: 'company' },
   { header: 'Phone', accessor: 'phone' },
-  { header: 'Score', accessor: (r: any) => r.score || 0 },
+  { header: 'Score', accessor: (r: Record<string, any>) => r.score || 0 },
   { header: 'Status', accessor: 'status' },
   { header: 'Source', accessor: 'source' },
-  { header: 'Value', accessor: (r: any) => r.value || 0 },
-  { header: 'Assigned To', accessor: (r: any) => r.assignedTo || 'Unassigned' },
-  { header: 'Tags', accessor: (r: any) => (r.tags || []).join('; ') },
+  { header: 'Value', accessor: (r: Record<string, any>) => r.value || 0 },
+  { header: 'Assigned To', accessor: (r: Record<string, any>) => r.assignedTo || 'Unassigned' },
+  { header: 'Tags', accessor: (r: Record<string, any>) => (r.tags || []).join('; ') },
 ]
 
 export const activityExportColumns: ExportColumn[] = [
-  { header: 'Date', accessor: (r: any) => new Date(r.createdAt).toLocaleString() },
+  { header: 'Date', accessor: (r: Record<string, any>) => new Date(r.createdAt).toLocaleString() },
   { header: 'Type', accessor: 'type' },
   { header: 'Title', accessor: 'title' },
   { header: 'Description', accessor: 'description' },
-  { header: 'User', accessor: (r: any) => r.user ? `${r.user.firstName} ${r.user.lastName}` : '' },
-  { header: 'Lead', accessor: (r: any) => r.lead ? `${r.lead.firstName} ${r.lead.lastName}` : '' },
+  { header: 'User', accessor: (r: Record<string, any>) => r.user ? `${r.user.firstName} ${r.user.lastName}` : '' },
+  { header: 'Lead', accessor: (r: Record<string, any>) => r.lead ? `${r.lead.firstName} ${r.lead.lastName}` : '' },
 ]
 
 export const workflowExportColumns: ExportColumn[] = [
   { header: 'Name', accessor: 'name' },
-  { header: 'Status', accessor: (r: any) => r.isActive ? 'Active' : 'Inactive' },
-  { header: 'Trigger', accessor: (r: any) => r.trigger?.type || '' },
-  { header: 'Actions', accessor: (r: any) => r.actions?.length || 0 },
-  { header: 'Created', accessor: (r: any) => new Date(r.createdAt).toLocaleDateString() },
+  { header: 'Status', accessor: (r: Record<string, any>) => r.isActive ? 'Active' : 'Inactive' },
+  { header: 'Trigger', accessor: (r: Record<string, any>) => r.trigger?.type || '' },
+  { header: 'Actions', accessor: (r: Record<string, any>) => r.actions?.length || 0 },
+  { header: 'Created', accessor: (r: Record<string, any>) => new Date(r.createdAt).toLocaleDateString() },
 ]
 
 export const messageExportColumns: ExportColumn[] = [
-  { header: 'Date', accessor: (r: any) => new Date(r.createdAt).toLocaleString() },
+  { header: 'Date', accessor: (r: Record<string, any>) => new Date(r.createdAt).toLocaleString() },
   { header: 'Type', accessor: 'type' },
   { header: 'Direction', accessor: 'direction' },
   { header: 'From', accessor: 'fromAddress' },

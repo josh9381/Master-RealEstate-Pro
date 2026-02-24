@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { 
   Mail, 
   MessageSquare, 
@@ -44,6 +45,7 @@ import { MockModeBanner } from '@/components/shared/MockModeBanner'
 import { messagesApi, leadsApi, aiApi } from '@/lib/api'
 import { AIComposer } from '@/components/ai/AIComposer'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
+import type { ApiSendResponse } from '@/types'
 
 interface Message {
   id: number
@@ -97,9 +99,26 @@ interface Thread {
 }
 
 // Mock data removed - using real API data
+
+// Configurable message templates – replace with API fetch when backend supports it
+const MESSAGE_TEMPLATES = [
+  { id: 1, name: 'Schedule a call', content: 'Hi {contact},\n\nI\'d like to schedule a call to discuss this further. What times work best for you this week?\n\nBest regards' },
+  { id: 2, name: 'Request more info', content: 'Hi {contact},\n\nThank you for your message. Could you provide some additional information about [specific topic]?\n\nLooking forward to your response.' },
+  { id: 3, name: 'Send pricing', content: 'Hi {contact},\n\nThank you for your interest! I\'ve attached our pricing information. Please let me know if you have any questions.\n\nBest regards' },
+  { id: 4, name: 'Follow-up reminder', content: 'Hi {contact},\n\nI wanted to follow up on our previous conversation. Do you have any updates or questions I can help with?\n\nBest regards' },
+  { id: 5, name: 'Thank you', content: 'Hi {contact},\n\nThank you so much for your time today. I really appreciated our conversation. Please don\'t hesitate to reach out if you need anything.\n\nBest regards' },
+];
+
+const QUICK_REPLIES = [
+  { id: 1, text: 'Thanks! 👍', emoji: '👍' },
+  { id: 2, text: 'Will call you soon 📞', emoji: '📞' },
+  { id: 3, text: 'Received ✅', emoji: '✅' },
+  { id: 4, text: 'Perfect! 🎉', emoji: '🎉' },
+  { id: 5, text: 'Got it 👌', emoji: '👌' },
+  { id: 6, text: 'On my way! 🚗', emoji: '🚗' },
+];
+
 const CommunicationInbox = () => {
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [selectedChannel, setSelectedChannel] = useState<'all' | 'email' | 'sms' | 'call'>('all')
   const [selectedFolder, setSelectedFolder] = useState<'inbox' | 'unread' | 'starred' | 'snoozed' | 'archived' | 'trash'>('inbox')
   const [threads, setThreads] = useState<Thread[]>([])
@@ -130,8 +149,6 @@ const CommunicationInbox = () => {
   const [composeSubject, setComposeSubject] = useState('')
   const [composeBody, setComposeBody] = useState('')
   const [composeLeadId, setComposeLeadId] = useState<string>('')
-  const [leads, setLeads] = useState<Array<{id: string, firstName: string, lastName: string, phone: string, email: string}>>([])
-  const [_loadingLeads, setLoadingLeads] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showAttachmentModal, setShowAttachmentModal] = useState(false)
@@ -148,19 +165,57 @@ const CommunicationInbox = () => {
   const [showReplaceWarning, setShowReplaceWarning] = useState(false)
   const [enhanceTone, setEnhanceTone] = useState('professional')
   const [enhancingMessage, setEnhancingMessage] = useState(false)
-  const [_emailSubject, _setEmailSubject] = useState('')
+  const [emailSubject, setEmailSubject] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
+
+  // Fetch threads via useQuery
+  const { data: threadsData, isLoading: loading, isFetching, refetch: refetchMessages } = useQuery({
+    queryKey: ['communication-threads'],
+    queryFn: async () => {
+      const response = await messagesApi.getMessages()
+      const threadsData = response?.data?.threads || response?.threads || response
+      return (threadsData && Array.isArray(threadsData)) ? threadsData as Thread[] : []
+    },
+    staleTime: 30_000,
+  })
+  const refreshing = isFetching && !loading
+
+  // Fetch leads via useQuery
+  interface InboxLead { id: number; firstName: string; lastName: string; phone: string; email: string }
+  const { data: leads = [] } = useQuery<InboxLead[]>({
+    queryKey: ['communication-leads'],
+    queryFn: async () => {
+      const response = await leadsApi.getLeads({ limit: 100 })
+      const leadsData = response?.data?.leads || response?.leads || response || []
+      return leadsData.map((lead: { id: number; firstName?: string; lastName?: string; phone?: string; email?: string }) => ({
+        id: lead.id,
+        firstName: lead.firstName || '',
+        lastName: lead.lastName || '',
+        phone: lead.phone || '',
+        email: lead.email || ''
+      }))
+    },
+    staleTime: 60_000,
+  })
+
+  // Sync query data to local threads state (kept mutable for optimistic updates)
+  useEffect(() => {
+    if (threadsData) {
+      setThreads(threadsData)
+      if (selectedThread) {
+        const updated = threadsData.find((t: Thread) => t.id === selectedThread.id)
+        if (updated) setSelectedThread(updated)
+      } else if (threadsData.length > 0) {
+        setSelectedThread(threadsData[0])
+      }
+    }
+  }, [threadsData])
 
   // Scroll to bottom of messages (most recent)
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
-
-  useEffect(() => {
-    loadMessages()
-    loadLeads()
-  }, [])
 
   // Auto-scroll to bottom when thread or messages change
   useEffect(() => {
@@ -225,100 +280,13 @@ const CommunicationInbox = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedThread, bulkSelectMode])
 
-  const loadLeads = async () => {
-    try {
-      setLoadingLeads(true)
-      const response = await leadsApi.getLeads({ limit: 100 })
-      const leadsData = response?.data?.leads || response?.leads || response || []
-      const formattedLeads = leadsData.map((lead: any) => ({
-        id: lead.id,
-        firstName: lead.firstName || '',
-        lastName: lead.lastName || '',
-        phone: lead.phone || '',
-        email: lead.email || ''
-      }))
-      setLeads(formattedLeads)
-    } catch (error) {
-      console.error('Failed to load leads:', error)
-      // Fallback: extract leads from existing threads
-      const uniqueLeads = threads
-        .filter(t => t.lead)
-        .map(t => ({
-          id: String(t.lead!.id),
-          firstName: t.lead!.firstName,
-          lastName: t.lead!.lastName,
-          phone: t.lead!.phone || '',
-          email: t.lead!.email || ''
-        }))
-      setLeads(uniqueLeads)
-    } finally {
-      setLoadingLeads(false)
-    }
-  }
-
-  const loadMessages = async (showRefreshState = false, preserveSelection = true) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true)
-      } else {
-        setLoading(true)
-      }
-
-      const response = await messagesApi.getMessages()
-      
-      // Transform API response to thread format if needed
-      const threadsData = response?.data?.threads || response?.threads || response
-      
-      if (threadsData && Array.isArray(threadsData)) {
-        setThreads(threadsData)
-        
-        // Preserve the currently selected thread when refreshing
-        if (preserveSelection && selectedThread) {
-          const updatedSelectedThread = threadsData.find((t: Thread) => t.id === selectedThread.id)
-          if (updatedSelectedThread) {
-            // Update selected thread without triggering auto-mark-as-read
-            setSelectedThread(updatedSelectedThread)
-          }
-        } else if (threadsData.length > 0 && !selectedThread) {
-          // Only auto-select first thread on initial load when nothing is selected
-          // Don't auto-mark as read on initial load
-          setSelectedThread(threadsData[0])
-        }
-      } else {
-        setThreads([])
-        setSelectedThread(null)
-      }
-    } catch (error) {
-      console.error('Failed to load messages:', error)
-      toast.error('Failed to load messages')
-      setThreads([])
-      setSelectedThread(null)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
-
   const handleRefresh = () => {
-    loadMessages(true, true) // Refresh but preserve selection
+    refetchMessages()
   }
 
-  const templates = [
-    { id: 1, name: 'Schedule a call', content: 'Hi {contact},\n\nI\'d like to schedule a call to discuss this further. What times work best for you this week?\n\nBest regards' },
-    { id: 2, name: 'Request more info', content: 'Hi {contact},\n\nThank you for your message. Could you provide some additional information about [specific topic]?\n\nLooking forward to your response.' },
-    { id: 3, name: 'Send pricing', content: 'Hi {contact},\n\nThank you for your interest! I\'ve attached our pricing information. Please let me know if you have any questions.\n\nBest regards' },
-    { id: 4, name: 'Follow-up reminder', content: 'Hi {contact},\n\nI wanted to follow up on our previous conversation. Do you have any updates or questions I can help with?\n\nBest regards' },
-    { id: 5, name: 'Thank you', content: 'Hi {contact},\n\nThank you so much for your time today. I really appreciated our conversation. Please don\'t hesitate to reach out if you need anything.\n\nBest regards' },
-  ]
+  const templates = MESSAGE_TEMPLATES
 
-  const quickReplies = [
-    { id: 1, text: 'Thanks! 👍', emoji: '👍' },
-    { id: 2, text: 'Will call you soon 📞', emoji: '📞' },
-    { id: 3, text: 'Received ✅', emoji: '✅' },
-    { id: 4, text: 'Perfect! 🎉', emoji: '🎉' },
-    { id: 5, text: 'Got it 👌', emoji: '👌' },
-    { id: 6, text: 'On my way! 🚗', emoji: '🚗' },
-  ]
+  const quickReplies = QUICK_REPLIES
 
   const insertTemplate = (templateContent: string) => {
     const personalizedContent = templateContent.replace('{contact}', selectedThread?.contact || 'there')
@@ -373,16 +341,14 @@ const CommunicationInbox = () => {
       ))
       
       // Update selected thread
-      if (selectedThread.id === selectedThread.id) {
-        setSelectedThread(prev => prev ? {
-          ...prev,
-          unread: inboundMessageIds.length,
-          messages: prev.messages.map(m => ({ 
-            ...m, 
-            unread: m.direction === 'INBOUND' 
-          }))
-        } : null)
-      }
+      setSelectedThread(prev => prev ? {
+        ...prev,
+        unread: inboundMessageIds.length,
+        messages: prev.messages.map(m => ({ 
+          ...m, 
+          unread: m.direction === 'INBOUND' 
+        }))
+      } : null)
       
       toast.success('Marked as unread')
     } catch (error) {
@@ -414,13 +380,11 @@ const CommunicationInbox = () => {
       ))
       
       // Update selected thread
-      if (selectedThread.id === selectedThread.id) {
-        setSelectedThread(prev => prev ? {
-          ...prev,
-          unread: 0,
-          messages: prev.messages.map(m => ({ ...m, unread: false }))
-        } : null)
-      }
+      setSelectedThread(prev => prev ? {
+        ...prev,
+        unread: 0,
+        messages: prev.messages.map(m => ({ ...m, unread: false }))
+      } : null)
       
       toast.success('Marked as read')
     } catch (error) {
@@ -452,20 +416,21 @@ const CommunicationInbox = () => {
         if (unreadMessageIds.length > 0) {
           await messagesApi.markAsRead({ messageIds: unreadMessageIds })
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('❌ Error marking thread as read:', error)
-        console.error('Error response:', error.response)
-        console.error('Error data:', JSON.stringify(error.response?.data, null, 2))
+        const axiosError = error as { response?: { status?: number; data?: { error?: string; details?: unknown } }; message?: string }
+        console.error('Error response:', axiosError.response)
+        console.error('Error data:', JSON.stringify(axiosError.response?.data, null, 2))
         console.error('Thread ID:', thread.id)
-        console.error('Status code:', error.response?.status)
+        console.error('Status code:', axiosError.response?.status)
         // Revert local state if API call failed
         setThreads(prev => prev.map(t => 
           t.id === thread.id 
             ? { ...t, unread: thread.unread, messages: thread.messages } 
             : t
         ))
-        const errorMsg = error.response?.data?.error || error.message
-        const details = error.response?.data?.details ? ` (${JSON.stringify(error.response.data.details)})` : ''
+        const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Unknown error'
+        const details = axiosError.response?.data?.details ? ` (${JSON.stringify(axiosError.response.data.details)})` : ''
         toast.error(`Failed to mark as read: ${errorMsg}${details}`)
       }
     }
@@ -498,6 +463,14 @@ const CommunicationInbox = () => {
     if (filters.onlyStarred && !thread.messages.some(m => m.starred)) return false
     if (filters.hasAttachment && !thread.messages.some(m => m.hasAttachment)) return false
     if (filters.sender && !thread.contact.toLowerCase().includes(filters.sender.toLowerCase())) return false
+    if (filters.dateFrom) {
+      const threadDate = new Date(thread.messages[thread.messages.length - 1]?.timestamp || 0)
+      if (threadDate < new Date(filters.dateFrom)) return false
+    }
+    if (filters.dateTo) {
+      const threadDate = new Date(thread.messages[thread.messages.length - 1]?.timestamp || 0)
+      if (threadDate > new Date(filters.dateTo)) return false
+    }
 
     return matchesChannel && matchesSearch
   }).sort((a, b) => {
@@ -583,7 +556,7 @@ const CommunicationInbox = () => {
       
       // Refresh from backend to ensure persistence
       setTimeout(async () => {
-        await loadMessages(true, true) // Refresh and preserve selection
+        await refetchMessages()
       }, 500)
     } catch (error) {
       console.error('Failed to send reply:', error)
@@ -721,8 +694,7 @@ const CommunicationInbox = () => {
   const handleMessageGenerated = (message: string, subject?: string) => {
     setReplyText(message)
     if (subject) {
-      _setEmailSubject(subject)
-      // TODO: Add subject field to email composer UI
+      setEmailSubject(subject)
     }
     setShowAIComposer(false)
     toast.success('AI-generated message has been added to your reply box')
@@ -786,7 +758,7 @@ const CommunicationInbox = () => {
       const result = await messagesApi.markAllAsRead()
       toast.success(result.message || 'All messages marked as read')
       // Reload messages to reflect changes
-      await loadMessages(true)
+      await refetchMessages()
     } catch (error) {
       console.error('Failed to mark all as read:', error)
       toast.error('Failed to mark all as read')
@@ -888,7 +860,7 @@ const CommunicationInbox = () => {
         : composeBody
 
       // Call API based on message type - wait for response to get real IDs
-      let apiResponse: any = null
+      let apiResponse: ApiSendResponse | null = null
       if (composeType === 'email') {
         apiResponse = await messagesApi.sendEmail({
           to: composeTo,
@@ -922,7 +894,7 @@ const CommunicationInbox = () => {
       // Reload messages from backend to show the new conversation
       // This ensures we have the real message with proper ID and persistence
       setTimeout(async () => {
-        await loadMessages(true, false)
+        await refetchMessages()
         
         // If we got a threadId from the response, try to select that thread
         if (apiResponse?.data?.threadId || apiResponse?.threadId) {
@@ -1691,6 +1663,16 @@ const CommunicationInbox = () => {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    {selectedThread?.type === 'email' && emailSubject && (
+                      <Input
+                        placeholder="Subject"
+                        value={emailSubject}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmailSubject(e.target.value)}
+                        className="flex-1 mb-1 text-sm"
+                      />
+                    )}
+                  </div>
+                  <div className="flex gap-2">
                     <Input
                       placeholder="Type your reply..."
                       value={replyText}
@@ -1723,12 +1705,12 @@ const CommunicationInbox = () => {
 
       {/* Advanced Filters Modal */}
       {showFilters && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="filter-dialog-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowFilters(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowFilters(false) }}>
+          <Card className="w-full max-w-md mx-4" tabIndex={-1}>
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Filter Conversations</h3>
+                  <h3 id="filter-dialog-title" className="text-lg font-semibold">Filter Conversations</h3>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -1831,12 +1813,12 @@ const CommunicationInbox = () => {
 
       {/* Signature Editor Modal */}
       {showSignatureEditor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="signature-dialog-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowSignatureEditor(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowSignatureEditor(false) }}>
+          <Card className="w-full max-w-2xl mx-4" tabIndex={-1}>
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Email Signature Editor</h3>
+                  <h3 id="signature-dialog-title" className="text-lg font-semibold">Email Signature Editor</h3>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -1899,12 +1881,12 @@ const CommunicationInbox = () => {
 
       {/* Compose Modal */}
       {showComposeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="compose-dialog-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowComposeModal(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowComposeModal(false) }}>
+          <Card className="w-full max-w-2xl mx-4" tabIndex={-1}>
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Compose New Message</h3>
+                  <h3 id="compose-dialog-title" className="text-lg font-semibold">Compose New Message</h3>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -1953,7 +1935,7 @@ const CommunicationInbox = () => {
                       const leadId = e.target.value
                       setComposeLeadId(leadId)
                       if (leadId) {
-                        const lead = leads.find(l => l.id === leadId)
+                        const lead = leads.find(l => String(l.id) === leadId)
                         if (lead) {
                           if (composeType === 'email') {
                             setComposeTo(lead.email)
@@ -2034,12 +2016,12 @@ const CommunicationInbox = () => {
 
       {/* Attachment Upload Modal */}
       {showAttachmentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="attachment-dialog-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowAttachmentModal(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowAttachmentModal(false) }}>
+          <Card className="w-full max-w-md mx-4" tabIndex={-1}>
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Add Attachment</h3>
+                  <h3 id="attachment-dialog-title" className="text-lg font-semibold">Add Attachment</h3>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -2059,12 +2041,21 @@ const CommunicationInbox = () => {
                     multiple
                     className="hidden"
                     id="file-upload"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         const files = Array.from(e.target.files)
                         setPendingAttachments(prev => [...prev, ...files])
                         const fileNames = files.map(f => f.name).join(', ')
-                        toast.success(`Attached: ${fileNames}`)
+                        // Upload each file to the server
+                        try {
+                          for (const file of files) {
+                            await messagesApi.uploadAttachment(file)
+                          }
+                          toast.success(`Uploaded: ${fileNames}`)
+                        } catch (error) {
+                          console.error('Failed to upload attachments:', error)
+                          toast.error('Failed to upload one or more files')
+                        }
                         setShowAttachmentModal(false)
                       }
                     }}

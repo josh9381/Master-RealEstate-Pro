@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { TestTube2, TrendingUp, Users, Mail, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,22 +17,12 @@ import {
   Legend,
 } from 'recharts';
 import * as abtestService from '@/services/abtestService';
-import type { ABTest, ABTestResult, StatisticalAnalysis } from '@/services/abtestService';
+import type { ABTestResult, StatisticalAnalysis } from '@/services/abtestService';
 
 const ABTesting = () => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [tests, setTests] = useState<ABTest[]>([]);
-  const [testResults, setTestResults] = useState<Record<string, {
-    results: { variantA: ABTestResult; variantB: ABTestResult };
-    analysis: StatisticalAnalysis;
-  }>>({});
-  const [stats, setStats] = useState({
-    activeTests: 0,
-    completedTests: 0,
-    avgImprovement: 0,
-    totalTested: 0,
-  });
+  const [isCreating, setIsCreating] = useState(false);
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
 
   // Create form state
   const [createForm, setCreateForm] = useState({
@@ -42,18 +33,11 @@ const ABTesting = () => {
     duration: '48',
     confidence: '95',
   });
-  const [isCreating, setIsCreating] = useState(false);
 
-  useEffect(() => {
-    loadABTests();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadABTests = async () => {
-    setIsLoading(true);
-    try {
+  const { data: abData, isFetching: isLoading, refetch: loadABTests } = useQuery({
+    queryKey: ['abTests'],
+    queryFn: async () => {
       const allTests = await abtestService.getABTests();
-      setTests(allTests);
 
       // Load results for active and completed tests
       const resultsPromises = allTests
@@ -75,7 +59,6 @@ const ABTesting = () => {
           resultsMap[item.testId] = item.data;
         }
       });
-      setTestResults(resultsMap);
 
       // Calculate stats
       const activeTests = allTests.filter(t => t.status === 'RUNNING').length;
@@ -95,20 +78,21 @@ const ABTesting = () => {
         ? improvements.reduce((sum, imp) => sum + imp, 0) / improvements.length
         : 0;
 
-      setStats({
-        activeTests,
-        completedTests,
-        avgImprovement: Math.round(avgImprovement * 10) / 10,
-        totalTested: totalParticipants,
-      });
-
-    } catch (error) {
-      console.error('Error loading A/B tests:', error);
-      toast.error('Failed to load A/B tests');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return {
+        tests: allTests,
+        testResults: resultsMap,
+        stats: {
+          activeTests,
+          completedTests,
+          avgImprovement: Math.round(avgImprovement * 10) / 10,
+          totalTested: totalParticipants,
+        },
+      };
+    },
+  });
+  const tests = abData?.tests ?? [];
+  const testResults = abData?.testResults ?? {};
+  const stats = abData?.stats ?? { activeTests: 0, completedTests: 0, avgImprovement: 0, totalTested: 0 };
 
   const handleStopTest = async (testId: string) => {
     try {
@@ -152,7 +136,7 @@ const ABTesting = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button onClick={loadABTests} disabled={isLoading} variant="outline" size="sm">
+          <Button onClick={() => { loadABTests(); }} disabled={isLoading} variant="outline" size="sm">
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -253,7 +237,7 @@ const ABTesting = () => {
           const variantBSubject = test.variantB.subject || 'Variant B';
 
           return (
-            <Card key={test.id}>
+            <Card key={test.id} id={`test-${test.id}`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -444,9 +428,13 @@ const ABTesting = () => {
                         <p className="text-sm font-medium text-green-600 mt-1">+{improvement}% improvement</p>
                       </div>
                       <Button variant="outline" size="sm" onClick={() => {
-                        // Scroll to the test card if it's on the page
+                        // Scroll to the test card if it's on the page, or show a toast with details
                         const testCard = document.getElementById(`test-${test.id}`);
-                        if (testCard) testCard.scrollIntoView({ behavior: 'smooth' });
+                        if (testCard) {
+                          testCard.scrollIntoView({ behavior: 'smooth' });
+                        } else {
+                          toast.info(`${test.name}: Variant ${winner} won with +${improvement}% improvement`);
+                        }
                       }}>
                         View Details
                       </Button>
@@ -467,14 +455,15 @@ const ABTesting = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">Test Name</label>
+            <label className="text-sm font-medium mb-2 block">Test Name *</label>
             <input
               type="text"
               placeholder="e.g., Subject Line Test - Spring Campaign"
               className="w-full px-3 py-2 border rounded-lg"
               value={createForm.name}
-              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              onChange={(e) => { setCreateForm({ ...createForm, name: e.target.value }); if (createErrors.name) setCreateErrors(prev => { const next = {...prev}; delete next.name; return next }) }}
             />
+            {createErrors.name && <p className="text-sm text-red-500 mt-1">{createErrors.name}</p>}
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">What to Test</label>
@@ -498,7 +487,7 @@ const ABTesting = () => {
                 placeholder="e.g., Original subject line"
                 className="w-full px-3 py-2 border rounded-lg"
                 value={createForm.variantA}
-                onChange={(e) => setCreateForm({ ...createForm, variantA: e.target.value })}
+                onChange={(e) => { setCreateForm({ ...createForm, variantA: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = {...prev}; delete next.variants; return next }) }}
               />
             </div>
             <div>
@@ -508,10 +497,11 @@ const ABTesting = () => {
                 placeholder="e.g., Alternative subject line"
                 className="w-full px-3 py-2 border rounded-lg"
                 value={createForm.variantB}
-                onChange={(e) => setCreateForm({ ...createForm, variantB: e.target.value })}
+                onChange={(e) => { setCreateForm({ ...createForm, variantB: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = {...prev}; delete next.variants; return next }) }}
               />
             </div>
           </div>
+          {createErrors.variants && <p className="text-sm text-red-500 mt-1">{createErrors.variants}</p>}
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Test Duration</label>
@@ -542,8 +532,16 @@ const ABTesting = () => {
           <Button
             disabled={!createForm.name.trim() || isCreating}
             onClick={async () => {
+              const newErrors: Record<string, string> = {};
               if (!createForm.name.trim()) {
-                toast.error('Please enter a test name');
+                newErrors.name = 'Test name is required';
+              }
+              if (createForm.variantA.trim() && createForm.variantB.trim() && createForm.variantA.trim() === createForm.variantB.trim()) {
+                newErrors.variants = 'Variant A and Variant B must be different';
+              }
+              setCreateErrors(newErrors);
+              if (Object.keys(newErrors).length > 0) {
+                toast.error('Please fix the validation errors');
                 return;
               }
               setIsCreating(true);

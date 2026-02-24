@@ -3,34 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { AlertTriangle, DollarSign, Users, CheckCircle } from 'lucide-react'
 import DOMPurify from 'dompurify'
-
-interface SampleRecipient {
-  id: string
-  name: string
-  email?: string
-  phone?: string
-  status: string
-  tags?: { id: string; name: string; color?: string }[]
-}
-
-interface CampaignPreviewData {
-  campaignId: string
-  campaignName: string
-  campaignType: 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL'
-  recipientCount: number
-  cost: {
-    perRecipient: number
-    total: number
-    currency: string
-  }
-  statusBreakdown: Record<string, number>
-  sampleRecipients: SampleRecipient[]
-  messagePreview: {
-    subject?: string
-    body: string
-  }
-  warnings: string[]
-}
+import type { CampaignPreviewData } from '@/types'
 
 interface CampaignPreviewModalProps {
   isOpen: boolean
@@ -64,8 +37,8 @@ export function CampaignPreviewModal({
   isLoading = false
 }: CampaignPreviewModalProps) {
   const hasWarnings = preview.warnings && preview.warnings.length > 0
-  const isHighCost = preview.cost.total > 50
-  const noRecipients = preview.recipientCount === 0
+  const isHighCost = (preview.cost?.total || 0) > 50
+  const noRecipients = (preview.recipientCount || 0) === 0
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -86,10 +59,10 @@ export function CampaignPreviewModal({
                 <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                    Warning{preview.warnings.length > 1 ? 's' : ''}
+                    Warning{(preview.warnings?.length || 0) > 1 ? 's' : ''}
                   </h4>
                   <ul className="space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
-                    {preview.warnings.map((warning, idx) => (
+                    {(preview.warnings || []).map((warning, idx) => (
                       <li key={idx}>• {warning}</li>
                     ))}
                   </ul>
@@ -106,7 +79,7 @@ export function CampaignPreviewModal({
                 <span className="text-sm font-medium">Recipients</span>
               </div>
               <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                {preview.recipientCount.toLocaleString()}
+                {(preview.recipientCount || 0).toLocaleString()}
               </p>
               <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                 {preview.campaignType === 'EMAIL' && 'Email recipients'}
@@ -121,22 +94,22 @@ export function CampaignPreviewModal({
                 <span className="text-sm font-medium">Estimated Cost</span>
               </div>
               <p className={`text-2xl font-bold ${isHighCost ? 'text-red-600 dark:text-red-400' : 'text-green-900 dark:text-green-100'}`}>
-                ${preview.cost.total.toFixed(2)}
+                ${(preview.cost?.total || 0).toFixed(2)}
               </p>
               <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                ${preview.cost.perRecipient.toFixed(3)} per {preview.campaignType.toLowerCase()}
+                ${(preview.cost?.perRecipient || 0).toFixed(3)} per {(preview.campaignType || '').toLowerCase()}
               </p>
             </div>
           </div>
 
           {/* Status Breakdown */}
-          {Object.keys(preview.statusBreakdown).length > 0 && (
+          {Object.keys(preview.statusBreakdown || {}).length > 0 && (
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
                 Recipients by Status
               </h4>
               <div className="flex flex-wrap gap-2">
-                {Object.entries(preview.statusBreakdown).map(([status, count]) => (
+                {Object.entries(preview.statusBreakdown || {}).map(([status, count]) => (
                   <Badge key={status} variant={getStatusBadgeVariant(status)} className="px-3 py-1">
                     {status}: {count}
                   </Badge>
@@ -151,7 +124,7 @@ export function CampaignPreviewModal({
               Message Preview
             </h4>
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
-              {preview.messagePreview.subject && (
+              {preview.messagePreview?.subject && (
                 <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Subject:</p>
                   <p className="font-medium text-gray-900 dark:text-white">
@@ -163,7 +136,7 @@ export function CampaignPreviewModal({
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Message:</p>
                 <div 
                   className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview.messagePreview.body || '') }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview.messagePreview?.body || '') }}
                 />
               </div>
               <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -175,10 +148,10 @@ export function CampaignPreviewModal({
           </div>
 
           {/* Sample Recipients */}
-          {preview.sampleRecipients.length > 0 && (
+          {(preview.sampleRecipients || []).length > 0 && (
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-                Sample Recipients (showing first {preview.sampleRecipients.length})
+                Sample Recipients (showing first {(preview.sampleRecipients || []).length})
               </h4>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 <div className="max-h-60 overflow-y-auto">
@@ -197,8 +170,8 @@ export function CampaignPreviewModal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {preview.sampleRecipients.map((recipient) => (
-                        <tr key={recipient.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      {(preview.sampleRecipients || []).map((recipient, idx) => (
+                        <tr key={recipient.id || recipient.email || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                           <td className="px-4 py-2 text-gray-900 dark:text-white">
                             {recipient.name}
                           </td>
@@ -208,8 +181,8 @@ export function CampaignPreviewModal({
                             {preview.campaignType === 'PHONE' && recipient.phone}
                           </td>
                           <td className="px-4 py-2">
-                            <Badge variant={getStatusBadgeVariant(recipient.status)}>
-                              {recipient.status}
+                            <Badge variant={getStatusBadgeVariant(recipient.status || 'Unknown')}>
+                              {recipient.status || 'Unknown'}
                             </Badge>
                           </td>
                         </tr>
@@ -222,7 +195,7 @@ export function CampaignPreviewModal({
           )}
 
           {/* Cost Breakdown Detail */}
-          {preview.recipientCount > 0 && (
+          {(preview.recipientCount || 0) > 0 && (
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 text-sm">
               <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
                 Cost Breakdown
@@ -230,15 +203,15 @@ export function CampaignPreviewModal({
               <div className="space-y-1 text-gray-600 dark:text-gray-400">
                 <div className="flex justify-between">
                   <span>Unit cost ({preview.campaignType}):</span>
-                  <span className="font-mono">${preview.cost.perRecipient.toFixed(3)}</span>
+                  <span className="font-mono">${(preview.cost?.perRecipient || 0).toFixed(3)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Recipients:</span>
-                  <span className="font-mono">× {preview.recipientCount.toLocaleString()}</span>
+                  <span className="font-mono">× {(preview.recipientCount || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700 font-semibold text-gray-900 dark:text-white">
                   <span>Total Cost:</span>
-                  <span className="font-mono">${preview.cost.total.toFixed(2)} {preview.cost.currency}</span>
+                  <span className="font-mono">${(preview.cost?.total || 0).toFixed(2)} {preview.cost?.currency}</span>
                 </div>
               </div>
             </div>

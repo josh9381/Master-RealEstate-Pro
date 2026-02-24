@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useToast } from '@/hooks/useToast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -21,7 +22,8 @@ import {
   CheckCircle2,
   ArrowUpRight,
   ArrowRight,
-  Filter
+  Filter,
+  AlertCircle
 } from 'lucide-react'
 import {
   AreaChart,
@@ -42,6 +44,7 @@ import { useNavigate } from 'react-router-dom'
 import { analyticsApi, campaignsApi, tasksApi } from '@/lib/api'
 import { GettingStarted } from '@/components/onboarding/GettingStarted'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
+import type { Campaign, ConversionStage, RevenueMonth, ActivityRecord, DashboardActivity, DashboardTask, DashboardCampaign, DashboardAlert } from '@/types'
 
 // Types
 interface StatCard {
@@ -57,9 +60,13 @@ interface StatCard {
 
 function Dashboard() {
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [dateRange, setDateRange] = useState('30d')
   const [refreshing, setRefreshing] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [filterSource, setFilterSource] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterPriority, setFilterPriority] = useState('all')
 
   // Convert dateRange string to startDate/endDate params
   const dateParams = useMemo(() => {
@@ -85,7 +92,7 @@ function Dashboard() {
   }, [dateRange])
 
   // Fetch dashboard statistics from API
-  const { data: dashboardData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
+  const { data: dashboardData, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard-stats', dateRange],
     queryFn: async () => {
       const response = await analyticsApi.getDashboardStats(dateParams)
@@ -94,7 +101,7 @@ function Dashboard() {
   })
 
   // Fetch lead analytics for charts
-  const { data: leadAnalyticsData, refetch: refetchLeads } = useQuery({
+  const { data: leadAnalyticsData, isLoading: leadsLoading, isError: leadsError, refetch: refetchLeads } = useQuery({
     queryKey: ['lead-analytics', dateRange],
     queryFn: async () => {
       const response = await analyticsApi.getLeadAnalytics(dateParams)
@@ -103,7 +110,7 @@ function Dashboard() {
   })
 
   // Fetch campaign analytics for charts
-  const { data: campaignAnalyticsData, refetch: refetchCampaigns } = useQuery({
+  const { data: campaignAnalyticsData, isLoading: campaignAnalyticsLoading, isError: campaignAnalyticsError, refetch: refetchCampaigns } = useQuery({
     queryKey: ['campaign-analytics', dateRange],
     queryFn: async () => {
       const response = await analyticsApi.getCampaignAnalytics(dateParams)
@@ -112,7 +119,7 @@ function Dashboard() {
   })
 
   // Fetch conversion funnel for charts
-  const { data: conversionFunnelData, refetch: refetchFunnel } = useQuery({
+  const { data: conversionFunnelData, isLoading: funnelLoading, isError: funnelError, refetch: refetchFunnel } = useQuery({
     queryKey: ['conversion-funnel', dateRange],
     queryFn: async () => {
       const response = await analyticsApi.getConversionFunnel(dateParams)
@@ -121,7 +128,7 @@ function Dashboard() {
   })
 
   // Fetch activity feed for recent activities
-  const { data: activityFeedData, refetch: refetchActivity } = useQuery({
+  const { data: activityFeedData, isLoading: activityLoading, isError: activityError, refetch: refetchActivity } = useQuery({
     queryKey: ['activity-feed', dateRange],
     queryFn: async () => {
       const response = await analyticsApi.getActivityFeed({ limit: 6 })
@@ -130,7 +137,7 @@ function Dashboard() {
   })
 
   // Fetch recent tasks
-  const { data: tasksData, refetch: refetchTasks } = useQuery({
+  const { data: tasksData, isLoading: tasksLoading, isError: tasksError, refetch: refetchTasks } = useQuery({
     queryKey: ['recent-tasks', dateRange],
     queryFn: async () => {
       const response = await tasksApi.getTasks({ page: 1, limit: 5 })
@@ -139,7 +146,7 @@ function Dashboard() {
   })
 
   // Fetch top campaigns
-  const { data: topCampaignsData, refetch: refetchTopCampaigns } = useQuery({
+  const { data: topCampaignsData, isLoading: topCampaignsLoading, isError: topCampaignsError, refetch: refetchTopCampaigns } = useQuery({
     queryKey: ['top-campaigns'],
     queryFn: async () => {
       const response = await campaignsApi.getCampaigns({ page: 1, limit: 3, sortBy: 'converted', sortOrder: 'desc' })
@@ -191,7 +198,7 @@ function Dashboard() {
 
   // Conversion funnel data
   const conversionData = conversionFunnelData?.stages 
-    ? conversionFunnelData.stages.map((stage: any) => ({
+    ? conversionFunnelData.stages.map((stage: ConversionStage) => ({
         stage: stage.name,
         count: stage.count || 0,
         rate: stage.percentage || 0
@@ -209,17 +216,17 @@ function Dashboard() {
     : []
 
   // Recent activities from API
-  const recentActivities = activityFeedData?.activities?.slice(0, 6).map((activity: any) => ({
+  const recentActivities: DashboardActivity[] = activityFeedData?.activities?.slice(0, 6).map((activity: ActivityRecord) => ({
     id: activity.id,
     type: (activity.type || 'note').toLowerCase(),
-    action: activity.title,
-    lead: activity.lead?.name || activity.description,
+    action: activity.title || '',
+    lead: activity.lead?.name || activity.description || '',
     time: new Date(activity.createdAt).toLocaleString(),
     icon: Users // Default icon
   })) || []
 
   // Upcoming tasks from API
-  const upcomingTasks = tasksData?.tasks?.slice(0, 5).map((task: any) => ({
+  const upcomingTasks: DashboardTask[] = tasksData?.tasks?.slice(0, 5).map((task: { id: string; title: string; dueDate?: string; priority?: string; status?: string }) => ({
     id: task.id,
     title: task.title,
     due: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date',
@@ -228,7 +235,7 @@ function Dashboard() {
   })) || []
 
   // Top campaigns from API
-  const topCampaigns = topCampaignsData?.campaigns?.slice(0, 3).map((campaign: any) => ({
+  const topCampaigns: DashboardCampaign[] = topCampaignsData?.campaigns?.slice(0, 3).map((campaign: Campaign) => ({
     id: campaign.id,
     name: campaign.name,
     type: campaign.type,
@@ -240,7 +247,7 @@ function Dashboard() {
 
   // Revenue data from API
   const revenueData = revenueTimelineData?.monthly
-    ? revenueTimelineData.monthly.map((m: any) => ({
+    ? revenueTimelineData.monthly.map((m: RevenueMonth) => ({
         month: m.month,
         revenue: m.totalRevenue || 0,
         leads: m.deals || 0,
@@ -255,6 +262,12 @@ function Dashboard() {
     { label: 'Tasks Completed', value: `${dashboardData?.tasks?.completed || 0}/${dashboardData?.tasks?.total || 0}`, change: `${dashboardData?.tasks?.completionRate || 0}%` },
   ]
 
+  // Dashboard performance targets (can be customized per organization)
+  const DEFAULT_LEADS_TARGET = 3000
+  const DEFAULT_CAMPAIGNS_TARGET = 15
+  const DEFAULT_CONVERSION_RATE_TARGET = 20
+  const DEFAULT_TASK_COMPLETION_TARGET = 100
+
   // Transform API data into UI format
   const stats = dashboardData ? [
     {
@@ -263,8 +276,8 @@ function Dashboard() {
       change: dashboardData.leads?.new ? `+${dashboardData.leads.new}` : '+0',
       trend: 'up' as const,
       icon: Users,
-      target: '3,000',
-      progress: Math.min(Math.round((dashboardData.overview?.totalLeads / 3000) * 100), 100) || 0,
+      target: DEFAULT_LEADS_TARGET.toLocaleString(),
+      progress: Math.min(Math.round((dashboardData.overview?.totalLeads / DEFAULT_LEADS_TARGET) * 100), 100) || 0,
       helpText: 'Total number of leads in your CRM. Includes all statuses (new, contacted, qualified, won, lost).',
     },
     {
@@ -273,18 +286,22 @@ function Dashboard() {
       change: `+${dashboardData.campaigns?.active || 0}`,
       trend: 'up' as const,
       icon: Megaphone,
-      target: '15',
-      progress: Math.min(Math.round((dashboardData.overview?.activeCampaigns / 15) * 100), 100) || 0,
+      target: DEFAULT_CAMPAIGNS_TARGET.toString(),
+      progress: Math.min(Math.round((dashboardData.overview?.activeCampaigns / DEFAULT_CAMPAIGNS_TARGET) * 100), 100) || 0,
       helpText: 'Campaigns currently running or scheduled to send. Completed and draft campaigns are not counted.',
     },
     {
       name: 'Conversion Rate',
-      value: `${dashboardData.leads?.conversionRate?.toFixed(1) || '0.0'}%`,
-      change: '-2.4%',
-      trend: 'down' as const,
+      value: `${dashboardData.leads?.conversionRate?.toFixed(1) ?? '0.0'}%`,
+      change: dashboardData.leads?.previousConversionRate != null
+        ? `${((dashboardData.leads?.conversionRate ?? 0) - dashboardData.leads.previousConversionRate).toFixed(1)}%`
+        : '—',
+      trend: dashboardData.leads?.previousConversionRate != null
+        ? ((dashboardData.leads?.conversionRate ?? 0) >= dashboardData.leads.previousConversionRate ? 'up' as const : 'down' as const)
+        : 'up' as const,
       icon: Target,
-      target: '20%',
-      progress: Math.min(Math.round((dashboardData.leads?.conversionRate / 20) * 100), 100) || 0,
+      target: `${DEFAULT_CONVERSION_RATE_TARGET}%`,
+      progress: Math.min(Math.round((dashboardData.leads?.conversionRate / DEFAULT_CONVERSION_RATE_TARGET) * 100), 100) || 0,
       helpText: 'Percentage of total leads that reached "Won" status. Calculated as (Won leads ÷ Total leads) × 100. Higher is better — aim for 15-25% in real estate.',
     },
     {
@@ -293,8 +310,8 @@ function Dashboard() {
       change: `${dashboardData.tasks?.completionRate || 0}%`,
       trend: 'up' as const,
       icon: CheckCircle2,
-      target: '100%',
-      progress: dashboardData.tasks?.completionRate || 0,
+      target: `${DEFAULT_TASK_COMPLETION_TARGET}%`,
+      progress: dashboardData.tasks?.completionRate ?? 0,
       helpText: 'Tasks marked as completed out of all assigned tasks. The percentage shows your completion rate for the selected time period.',
     },
   ] as StatCard[] : [
@@ -304,7 +321,7 @@ function Dashboard() {
       change: '+0',
       trend: 'up' as const,
       icon: Users,
-      target: '3,000',
+      target: DEFAULT_LEADS_TARGET.toLocaleString(),
       progress: 0
     },
     {
@@ -313,16 +330,16 @@ function Dashboard() {
       change: '+0',
       trend: 'up' as const,
       icon: Megaphone,
-      target: '15',
+      target: DEFAULT_CAMPAIGNS_TARGET.toString(),
       progress: 0
     },
     {
       name: 'Conversion Rate',
       value: '0.0%',
-      change: '+0%',
+      change: '—',
       trend: 'up' as const,
       icon: Target,
-      target: '20%',
+      target: `${DEFAULT_CONVERSION_RATE_TARGET}%`,
       progress: 0
     },
     {
@@ -331,7 +348,7 @@ function Dashboard() {
       change: '0%',
       trend: 'up' as const,
       icon: CheckCircle2,
-      target: '100%',
+      target: `${DEFAULT_TASK_COMPLETION_TARGET}%`,
       progress: 0
     },
   ] as StatCard[]
@@ -362,7 +379,7 @@ function Dashboard() {
     try {
       if (currentStatus === 'completed') {
         // Mark as incomplete by updating status back to pending
-        await tasksApi.updateTask(taskId, { status: 'PENDING' } as any)
+        await tasksApi.updateTask(taskId, { status: 'pending' })
       } else {
         // Mark as complete
         await tasksApi.completeTask(taskId)
@@ -372,8 +389,9 @@ function Dashboard() {
       refetchStats()
     } catch (error) {
       console.error('Error updating task:', error)
+      toast.error('Failed to update task. Please try again.')
     }
-  }, [refetchTasks, refetchStats])
+  }, [refetchTasks, refetchStats, toast])
 
   const handleExport = () => {
     // Mock export functionality
@@ -439,6 +457,7 @@ function Dashboard() {
             className="px-3 py-2 text-sm border rounded-md"
             value={dateRange}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDateRange(e.target.value)}
+            aria-label="Select date range for dashboard data"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
@@ -447,6 +466,72 @@ function Dashboard() {
           </select>
         </div>
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block" htmlFor="filter-source">Lead Source</label>
+                <select
+                  id="filter-source"
+                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  value={filterSource}
+                  onChange={(e) => setFilterSource(e.target.value)}
+                  aria-label="Filter by lead source"
+                >
+                  <option value="all">All Sources</option>
+                  <option value="website">Website</option>
+                  <option value="referral">Referral</option>
+                  <option value="social">Social Media</option>
+                  <option value="direct">Direct</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block" htmlFor="filter-status">Status</label>
+                <select
+                  id="filter-status"
+                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  aria-label="Filter by status"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="qualified">Qualified</option>
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block" htmlFor="filter-priority">Priority</label>
+                <select
+                  id="filter-priority"
+                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  value={filterPriority}
+                  onChange={(e) => setFilterPriority(e.target.value)}
+                  aria-label="Filter by priority"
+                >
+                  <option value="all">All Priorities</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button size="sm" onClick={() => { refetchStats(); refetchLeads(); refetchCampaigns(); }}>
+                Apply Filters
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { setFilterSource('all'); setFilterStatus('all'); setFilterPriority('all'); }}>
+                Reset
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Getting Started Wizard — shows when user has no data */}
       <GettingStarted
@@ -476,6 +561,14 @@ function Dashboard() {
       </div>
 
       {/* Main Stats Cards with Progress */}
+      {statsError ? (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-red-500 mb-2">Failed to load dashboard stats</p>
+            <Button variant="outline" size="sm" onClick={() => refetchStats()}>Retry</Button>
+          </CardContent>
+        </Card>
+      ) : (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.name} className="hover:shadow-lg transition-shadow">
@@ -512,6 +605,7 @@ function Dashboard() {
           </Card>
         ))}
       </div>
+      )}
 
       {/* Secondary Quick Stats */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
@@ -537,11 +631,18 @@ function Dashboard() {
               <CardTitle>Revenue & Leads Trend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">6-month overview</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/analytics')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/analytics')} aria-label="View full analytics">
               <ArrowUpRight className="h-4 w-4" />
             </Button>
           </CardHeader>
           <CardContent>
+            {leadsLoading ? (
+              <div className="h-[300px] bg-muted rounded animate-pulse" />
+            ) : leadsError ? (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                <p>Failed to load chart data. <Button variant="link" size="sm" onClick={() => refetchLeads()}>Retry</Button></p>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={revenueData}>
                 <defs>
@@ -563,6 +664,7 @@ function Dashboard() {
                 <Area type="monotone" dataKey="leads" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -579,6 +681,13 @@ function Dashboard() {
             <Badge>{conversionFunnelData?.overallConversionRate ? `${conversionFunnelData.overallConversionRate}%` : '—'} Overall</Badge>
           </CardHeader>
           <CardContent>
+            {funnelLoading ? (
+              <div className="h-[300px] bg-muted rounded animate-pulse" />
+            ) : funnelError ? (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                <p>Failed to load funnel data. <Button variant="link" size="sm" onClick={() => refetchFunnel()}>Retry</Button></p>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={conversionData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
@@ -588,6 +697,7 @@ function Dashboard() {
                 <Bar dataKey="count" fill="#3b82f6" />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -601,6 +711,17 @@ function Dashboard() {
             <p className="text-sm text-muted-foreground mt-1">Distribution by channel</p>
           </CardHeader>
           <CardContent>
+            {leadsLoading ? (
+              <div className="space-y-4">
+                <div className="h-[250px] bg-muted animate-pulse rounded" />
+              </div>
+            ) : leadsError ? (
+              <div className="flex flex-col items-center justify-center h-[250px] text-muted-foreground">
+                <AlertCircle className="h-8 w-8 mb-2" />
+                <p>Failed to load lead sources</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => refetchLeads()}>Retry</Button>
+              </div>
+            ) : (
             <div className="flex items-center gap-6">
               <ResponsiveContainer width="50%" height={250}>
                 <PieChart>
@@ -632,6 +753,7 @@ function Dashboard() {
                 ))}
               </div>
             </div>
+            )}
           </CardContent>
         </Card>
 
@@ -642,6 +764,15 @@ function Dashboard() {
             <p className="text-sm text-muted-foreground mt-1">By channel</p>
           </CardHeader>
           <CardContent>
+            {campaignAnalyticsLoading ? (
+              <div className="h-[250px] bg-muted animate-pulse rounded" />
+            ) : campaignAnalyticsError ? (
+              <div className="flex flex-col items-center justify-center h-[250px] text-muted-foreground">
+                <AlertCircle className="h-8 w-8 mb-2" />
+                <p>Failed to load campaign data</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => refetchCampaigns()}>Retry</Button>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={campaignPerformance}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -654,6 +785,7 @@ function Dashboard() {
                 <Bar dataKey="conversions" fill="#f59e0b" />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -670,8 +802,25 @@ function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent>
+            {activityLoading ? (
+              <div className="space-y-4">
+                {[1,2,3].map(i => (
+                  <div key={i} className="flex items-start gap-3 animate-pulse">
+                    <div className="h-10 w-10 bg-muted rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : activityError ? (
+              <div className="flex items-center justify-center py-6 text-muted-foreground">
+                <p>Failed to load activities. <Button variant="link" size="sm" onClick={() => refetchActivity()}>Retry</Button></p>
+              </div>
+            ) : (
             <div className="space-y-4">
-              {recentActivities.map((activity: any) => (
+              {recentActivities.map((activity) => (
                 <div key={activity.id} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0">
                   <div className="mt-1 p-2 rounded-full bg-primary/10">
                     <activity.icon className="h-4 w-4 text-primary" />
@@ -684,6 +833,7 @@ function Dashboard() {
                 </div>
               ))}
             </div>
+            )}
           </CardContent>
         </Card>
 
@@ -697,14 +847,32 @@ function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent>
+            {tasksLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg border animate-pulse">
+                    <div className="h-4 w-4 bg-muted rounded mt-1" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : tasksError ? (
+              <div className="flex items-center justify-center py-6 text-muted-foreground">
+                <p>Failed to load tasks. <Button variant="link" size="sm" onClick={() => refetchTasks()}>Retry</Button></p>
+              </div>
+            ) : (
             <div className="space-y-3">
-              {upcomingTasks.map((task: any) => (
+              {upcomingTasks.map((task) => (
                 <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer">
                   <input
                     type="checkbox"
                     className="mt-1 cursor-pointer"
                     checked={task.status === 'completed'}
                     onChange={() => handleTaskComplete(task.id, task.status)}
+                    aria-label={`Mark task "${task.title}" as ${task.status === 'completed' ? 'incomplete' : 'complete'}`}
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -725,6 +893,7 @@ function Dashboard() {
                 </div>
               ))}
             </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -741,6 +910,17 @@ function Dashboard() {
           </Button>
         </CardHeader>
         <CardContent>
+          {topCampaignsLoading ? (
+            <div className="space-y-4 animate-pulse">
+              {[1,2,3].map(i => (
+                <div key={i} className="h-12 bg-muted rounded" />
+              ))}
+            </div>
+          ) : topCampaignsError ? (
+            <div className="flex items-center justify-center py-6 text-muted-foreground">
+              <p>Failed to load campaigns. <Button variant="link" size="sm" onClick={() => refetchTopCampaigns()}>Retry</Button></p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -755,7 +935,7 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {topCampaigns.map((campaign: any) => (
+                {topCampaigns.map((campaign) => (
                   <tr key={campaign.id} className="border-b last:border-0 hover:bg-accent/50">
                     <td className="py-4 text-sm font-medium">{campaign.name}</td>
                     <td className="py-4">
@@ -778,6 +958,7 @@ function Dashboard() {
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
 
@@ -792,7 +973,7 @@ function Dashboard() {
         <CardContent>
           {alertsData?.alerts && alertsData.alerts.length > 0 ? (
             <div className="space-y-3">
-              {alertsData.alerts.map((alert: any, index: number) => (
+              {alertsData.alerts.map((alert: DashboardAlert, index: number) => (
                 <div
                   key={index}
                   className={`flex items-start gap-3 rounded-lg border p-3 ${

@@ -24,17 +24,96 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Zap,
 };
 
+// Type definitions for AI Hub data
+interface AIStats {
+  activeModels: number;
+  modelsInTraining: number;
+  avgAccuracy: number;
+  accuracyChange: number;
+  predictionsToday?: number;
+  predictionsChange?: number;
+  activeInsights?: number;
+  highPriorityInsights?: number;
+  totalPredictions?: number;
+  insightsGenerated?: number;
+  insightsChange?: number;
+}
+
+interface AIFeature {
+  id: number;
+  title: string;
+  description: string;
+  accuracy?: string | number;
+  status?: string;
+  leadsScored?: number;
+  segments?: number;
+  predictions?: number;
+  models?: number;
+  insights?: number;
+}
+
+interface ModelPerformanceEntry {
+  month: string;
+  accuracy: number;
+  predictions: number;
+}
+
+interface FeatureImportanceEntry {
+  name: string;
+  value: number;
+  color?: string;
+  importance?: number;
+}
+
+interface TrainingModel {
+  id?: string;
+  name: string;
+  status: string;
+  accuracy?: number;
+  lastTrained?: string;
+  progress?: number;
+  eta?: string;
+}
+
+interface DataQualityEntry {
+  metric: string;
+  score: number;
+  status: string;
+}
+
+interface AIInsight {
+  id: string | number;
+  title: string;
+  description: string;
+  type?: string;
+  priority?: string;
+  date?: string;
+  category?: string;
+  impact?: string;
+  timestamp?: string;
+}
+
+interface AIRecommendation {
+  id: string | number;
+  title: string;
+  description: string;
+  priority?: string;
+  impact?: string;
+  action?: string;
+  icon?: React.ComponentType<{ className?: string }> | string;
+}
+
 const AIHub = () => {
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<any>(null)
-  const [aiFeatures, setAiFeatures] = useState<any[]>([])
-  const [modelPerformance, setModelPerformance] = useState<any[]>([])
-  const [featureImportance, setFeatureImportance] = useState<any[]>([])
-  const [trainingModels, setTrainingModels] = useState<any[]>([])
-  const [dataQuality, setDataQuality] = useState<any[]>([])
-  const [recentInsights, setRecentInsights] = useState<any[]>([])
-  const [recommendations, setRecommendations] = useState<any[]>([])
+  const [stats, setStats] = useState<AIStats | null>(null)
+  const [aiFeatures, setAiFeatures] = useState<AIFeature[]>([])
+  const [modelPerformance, setModelPerformance] = useState<ModelPerformanceEntry[]>([])
+  const [featureImportance, setFeatureImportance] = useState<FeatureImportanceEntry[]>([])
+  const [trainingModels, setTrainingModels] = useState<TrainingModel[]>([])
+  const [dataQuality, setDataQuality] = useState<DataQualityEntry[]>([])
+  const [recentInsights, setRecentInsights] = useState<AIInsight[]>([])
+  const [recommendations, setRecommendations] = useState<AIRecommendation[]>([])
   const { toast } = useToast()
   
   // Load all AI Hub data
@@ -252,19 +331,30 @@ const AIHub = () => {
   ]
   
   const handleUploadData = async () => {
-    setUploading(true)
-    try {
-      await aiApi.uploadTrainingData({
-        modelType: 'lead-scoring',
-        data: [] // In production, this would be actual data
-      })
-      toast.success('Success', 'Training data uploaded successfully!')
-      loadAIData() // Reload data
-    } catch (error) {
-      toast.error('Error', 'Failed to upload training data')
-    } finally {
-      setUploading(false)
+    // Create file input for user to select training data file
+    const fileInput = document.createElement('input')
+    fileInput.type = 'file'
+    fileInput.accept = '.csv,.json'
+    fileInput.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      setUploading(true)
+      try {
+        const text = await file.text()
+        const data = file.name.endsWith('.json') ? JSON.parse(text) : text
+        await aiApi.uploadTrainingData({
+          modelType: 'lead-scoring',
+          data: Array.isArray(data) ? data : [data]
+        })
+        toast.success('Success', 'Training data uploaded successfully!')
+        loadAIData()
+      } catch (error) {
+        toast.error('Error', 'Failed to upload training data')
+      } finally {
+        setUploading(false)
+      }
     }
+    fileInput.click()
   }
 
   // Show loading state
@@ -290,7 +380,7 @@ const AIHub = () => {
     'Performance Analytics': '/ai/analytics',
   };
   const comingSoonFeatureIds = [2, 4] // Customer Segmentation, Model Training
-  const aiFeaturesData = (aiFeatures.length > 0 ? aiFeatures : getMockFeatures()).map(feature => ({
+  const aiFeaturesData = aiFeatures.length > 0 ? aiFeatures.map(feature => ({
     ...feature,
     icon: feature.id === 1 ? Target :
           feature.id === 2 ? Users :
@@ -300,7 +390,7 @@ const AIHub = () => {
           BarChart3,
     path: routeMap[feature.title] || `/ai/${feature.title.toLowerCase().replace(/\s+/g, '-')}`,
     comingSoon: comingSoonFeatureIds.includes(feature.id as number),
-  }))
+  })) : []
 
   return (
     <div className="space-y-6">
@@ -319,8 +409,8 @@ const AIHub = () => {
             <Brain className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeModels ?? 0}</div>
-            <p className="text-xs text-muted-foreground">+{stats?.modelsInTraining ?? 0} in training</p>
+            <div className="text-2xl font-bold">{stats?.activeModels ?? '—'}</div>
+            <p className="text-xs text-muted-foreground">{stats?.modelsInTraining != null ? `+${stats.modelsInTraining} in training` : 'No data'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -329,8 +419,8 @@ const AIHub = () => {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.avgAccuracy ?? 0}%</div>
-            <p className="text-xs text-muted-foreground">+{stats?.accuracyChange ?? 0}% from last month</p>
+            <div className="text-2xl font-bold">{stats?.avgAccuracy != null ? `${stats.avgAccuracy}%` : '—'}</div>
+            <p className="text-xs text-muted-foreground">{stats?.accuracyChange != null ? `+${stats.accuracyChange}% from last month` : 'No data'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -339,8 +429,8 @@ const AIHub = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.predictionsToday?.toLocaleString() ?? '0'}</div>
-            <p className="text-xs text-muted-foreground">+{stats?.predictionsChange ?? 0}% from yesterday</p>
+            <div className="text-2xl font-bold">{stats?.predictionsToday != null ? stats.predictionsToday.toLocaleString() : '—'}</div>
+            <p className="text-xs text-muted-foreground">{stats?.predictionsChange != null ? `+${stats.predictionsChange}% from yesterday` : 'No data'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -349,8 +439,8 @@ const AIHub = () => {
             <Sparkles className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeInsights ?? 0}</div>
-            <p className="text-xs text-muted-foreground">{stats?.highPriorityInsights ?? 0} high priority</p>
+            <div className="text-2xl font-bold">{stats?.activeInsights ?? '—'}</div>
+            <p className="text-xs text-muted-foreground">{stats?.highPriorityInsights != null ? `${stats.highPriorityInsights} high priority` : 'No data'}</p>
           </CardContent>
         </Card>
       </div>

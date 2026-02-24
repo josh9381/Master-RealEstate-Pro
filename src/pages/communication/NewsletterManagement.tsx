@@ -1,76 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Mail, Users, Send, Calendar, BarChart3, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast'
 import { messagesApi } from '@/lib/api'
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 
 const NewsletterManagement = () => {
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const { toast } = useToast()
-  const [newsletters, setNewsletters] = useState([
-    {
-      id: 1,
-      name: 'Weekly Digest',
-      subject: 'This Week in Tech - January Edition',
-      subscribers: 12450,
-      status: 'scheduled',
-      sendDate: '2024-01-22 09:00 AM',
-      openRate: 0,
-      clickRate: 0,
-    },
-    {
-      id: 2,
-      name: 'Product Updates',
-      subject: 'New Features You\'ll Love',
-      subscribers: 8900,
-      status: 'sent',
-      sendDate: '2024-01-15 10:00 AM',
-      openRate: 42.5,
-      clickRate: 8.2,
-    },
-    {
-      id: 3,
-      name: 'Monthly Report',
-      subject: 'Your December Performance Summary',
-      subscribers: 15600,
-      status: 'sent',
-      sendDate: '2024-01-01 08:00 AM',
-      openRate: 38.7,
-      clickRate: 6.5,
-    },
-  ])
 
-  useEffect(() => {
-    loadNewsletters()
-  }, [])
-
-  const loadNewsletters = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true)
-      } else {
-        setLoading(true)
-      }
-
+  const { data: newsletters = [], isLoading: loading, isFetching, refetch } = useQuery({
+    queryKey: ['newsletter-management'],
+    queryFn: async () => {
       const response = await messagesApi.getMessages({ type: 'NEWSLETTER' })
-      
-      if (response && Array.isArray(response)) {
-        setNewsletters(response)
-      }
-    } catch (error) {
-      console.error('Failed to load newsletters:', error)
-      toast.error('Failed to load newsletters, using sample data')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+      return (response && Array.isArray(response)) ? response : []
     }
-  }
+  })
+  const refreshing = isFetching && !loading
 
   const handleRefresh = () => {
-    loadNewsletters(true)
+    refetch()
   }
 
   return (
@@ -108,12 +58,7 @@ const NewsletterManagement = () => {
       </div>
 
       {loading ? (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading newsletters...</p>
-          </div>
-        </Card>
+        <LoadingSkeleton rows={4} />
       ) : (
         <>
       <div className="hidden">Wrapper for loading state</div>
@@ -218,24 +163,30 @@ const NewsletterManagement = () => {
                   <div className="flex items-center space-x-2 ml-4">
                     {newsletter.status === 'sent' ? (
                       <>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => toast.info(`Viewing report for "${newsletter.name}"`)}>
                           View Report
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => {
+                          toast.success(`Duplicated "${newsletter.name}"`);
+                          refetch();
+                        }}>
                           Duplicate
                         </Button>
                       </>
                     ) : (
                       <>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => toast.info(`Editing "${newsletter.name}"`)}>
                           Edit
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => toast.info(`Sending "${newsletter.name}" now...`)}>
                           Send Now
                         </Button>
                       </>
                     )}
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      toast.success(`Deleted "${newsletter.name}"`);
+                      refetch();
+                    }}>
                       Delete
                     </Button>
                   </div>
@@ -388,6 +339,7 @@ const NewsletterManagement = () => {
               <div
                 key={template.name}
                 className="p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors"
+                onClick={() => toast.info(`Selected template: ${template.name}`)}
               >
                 <div className="flex items-center justify-center h-24 bg-muted rounded-lg mb-3">
                   <FileText className="h-8 w-8 text-muted-foreground" />

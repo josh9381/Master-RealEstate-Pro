@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Users, Target, Calendar, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -13,38 +14,25 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
-import { useToast } from '@/hooks/useToast';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const LeadAnalytics = () => {
-  const [loading, setLoading] = useState(true);
-  const [leadData, setLeadData] = useState<any>(null);
-  const toast = useToast();
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadLeadAnalytics();
-  }, []);
+  const { data: leadData = null, isLoading: loading, refetch } = useQuery({
+    queryKey: ['lead-analytics'],
+    queryFn: async () => {
+      const response = await analyticsApi.getLeadAnalytics(dateRangeRef.current).catch(() => ({ data: null }));
+      return response.data;
+    },
+  });
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
-    loadLeadAnalytics();
-  };
-
-  const loadLeadAnalytics = async () => {
-    try {
-      setLoading(true);
-      const response = await analyticsApi.getLeadAnalytics(dateRangeRef.current).catch(() => ({ data: null }));
-      setLeadData(response.data);
-    } catch (error) {
-      console.error('Error loading lead analytics:', error);
-      toast.toast.warning('Error loading lead analytics', 'Using fallback data');
-    } finally {
-      setLoading(false);
-    }
+    refetch();
   };
 
   if (loading) {
@@ -96,11 +84,19 @@ const LeadAnalytics = () => {
         </div>
         <div className="flex items-center space-x-2">
           <DateRangePicker onChange={handleDateChange} />
-          <Button variant="outline" onClick={loadLeadAnalytics}>
+          <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => {
+            const blob = new Blob([JSON.stringify({ topPerformers, leadData, topLeads }, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `lead-analytics-${new Date().toISOString().split('T')[0]}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+          }}>
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </Button>
@@ -266,7 +262,7 @@ const LeadAnalytics = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-green-600">{performer.rate}</p>
-                    <p className="text-xs text-muted-foreground">Conv. rate</p>
+                    <p className="text-xs text-muted-foreground">Lead score</p>
                   </div>
                 </div>
               )) : (

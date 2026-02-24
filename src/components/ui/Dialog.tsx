@@ -1,5 +1,8 @@
-import React from 'react'
+import React, { useEffect, useRef, useCallback, useId } from 'react'
 import { Button } from './Button'
+
+// Context for passing dialog label id from DialogContent to DialogTitle
+const DialogLabelContext = React.createContext<string | undefined>(undefined)
 
 interface DialogProps {
   open: boolean
@@ -29,6 +32,16 @@ interface DialogFooterProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onOpenChange]);
+
   if (!open) return null
 
   return (
@@ -37,6 +50,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
       <div
         className="fixed inset-0 bg-black/50 z-50"
         onClick={() => onOpenChange(false)}
+        aria-hidden="true"
       />
       {/* Dialog */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -47,13 +61,49 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
 }
 
 export function DialogContent({ children, className = '' }: DialogContentProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const labelId = useId();
+
+  // Focus trap: keep focus within dialog
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab' || !contentRef.current) return;
+    const focusable = contentRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, []);
+
+  // Auto-focus the dialog on mount
+  useEffect(() => {
+    if (contentRef.current) {
+      const firstFocusable = contentRef.current.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      firstFocusable?.focus();
+    }
+  }, []);
+
   return (
-    <div
-      className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6 ${className}`}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {children}
-    </div>
+    <DialogLabelContext.Provider value={labelId}>
+      <div
+        ref={contentRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelId}
+        className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6 ${className}`}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
+      >
+        {children}
+      </div>
+    </DialogLabelContext.Provider>
   )
 }
 
@@ -62,7 +112,8 @@ export function DialogHeader({ children }: DialogHeaderProps) {
 }
 
 export function DialogTitle({ children }: DialogTitleProps) {
-  return <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{children}</h2>
+  const labelId = React.useContext(DialogLabelContext);
+  return <h2 id={labelId} className="text-xl font-semibold text-gray-900 dark:text-white">{children}</h2>
 }
 
 export function DialogDescription({ children }: DialogDescriptionProps) {

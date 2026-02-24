@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Target, TrendingUp, AlertCircle, Settings, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { leadsApi, aiApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import {
   Table,
   TableBody,
@@ -18,111 +19,6 @@ import {
 const LeadScoring = () => {
   const { toast } = useToast()
   const navigate = useNavigate()
-  const [modelStatus] = useState('active');
-  const [loading, setLoading] = useState(true)
-  const [scoringStats, setScoringStats] = useState({
-    accuracy: 0,
-    leadsScored: 0,
-    highQuality: 0,
-  })
-  const [recentScores, setRecentScores] = useState<Array<{
-    id: string | number;
-    name: string;
-    email: string;
-    company: string;
-    score: number;
-    grade: string;
-    confidence: number;
-    trend: string;
-  }>>([])
-  const [scoreFactors, setScoreFactors] = useState<Array<{
-    factor: string;
-    weight: number;
-    impact: string;
-  }>>([
-    { factor: 'Email Engagement', weight: 25, impact: 'High' },
-    { factor: 'Company Size', weight: 20, impact: 'High' },
-    { factor: 'Budget Indicated', weight: 18, impact: 'High' },
-    { factor: 'Website Visits', weight: 15, impact: 'Medium' },
-    { factor: 'Industry Match', weight: 12, impact: 'Medium' },
-    { factor: 'Job Title', weight: 10, impact: 'Low' },
-  ])
-
-  useEffect(() => {
-    const fetchData = async () => {
-      await loadScoringData()
-    }
-    fetchData()
-  }, [])
-
-  const loadScoringData = async () => {
-    setLoading(true)
-    try {
-      // Fetch leads sorted by score
-      const leadsResponse = await leadsApi.getLeads({ 
-        sortBy: 'score',
-        sortOrder: 'desc',
-        limit: 10
-      })
-      
-      // Transform leads data for display
-      const scoredLeads = leadsResponse.data?.leads?.map((lead: { id: string; firstName?: string; lastName?: string; email: string; company?: string; score?: number }) => {
-        const score = lead.score || 0
-        const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'
-        return {
-          id: lead.id,
-          name: fullName,
-          email: lead.email,
-          company: lead.company || 'N/A',
-          score,
-          grade: getScoreGrade(score),
-          confidence: score, // Use the score itself as confidence indicator
-          trend: score >= 80 ? 'up' : score >= 60 ? 'stable' : 'down'
-        }
-      }) || []
-      const totalLeads = leadsResponse.data?.total || scoredLeads.length
-      
-      // Compute real stats from data
-      const highQualityCount = scoredLeads.filter((l: any) => l.score >= 80).length
-      setScoringStats({
-        accuracy: 0, // Will be populated when model performance API returns data
-        leadsScored: totalLeads,
-        highQuality: highQualityCount,
-      })
-      
-      // Try to get model accuracy from AI API
-      try {
-        const perfData = await aiApi.getModelPerformance()
-        if (perfData?.accuracy) {
-          setScoringStats(prev => ({ ...prev, accuracy: Math.floor(perfData.accuracy * 100) }))
-        }
-      } catch {
-        // Model performance not available
-      }
-      
-      setRecentScores(scoredLeads)
-      
-      // Try to fetch feature importance for score factors
-      try {
-        const featureData = await aiApi.getFeatureImportance()
-        if (featureData?.features) {
-          const factors = featureData.features.map((f: { name: string; importance: number }) => ({
-            factor: f.name,
-            weight: Math.round(f.importance * 100),
-            impact: f.importance > 0.20 ? 'High' : f.importance > 0.10 ? 'Medium' : 'Low'
-          }))
-          setScoreFactors(factors)
-        }
-      } catch (err) {
-        // Keep default factors if API fails
-      }
-    } catch (error) {
-      const err = error as Error
-      toast.error(err.message || 'Failed to load scoring data')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const getScoreGrade = (score: number): string => {
     if (score >= 90) return 'A+'
@@ -133,17 +29,101 @@ const LeadScoring = () => {
     return 'F'
   }
 
+  const defaultScoreFactors = [
+    { factor: 'Email Engagement', weight: 25, impact: 'High' },
+    { factor: 'Company Size', weight: 20, impact: 'High' },
+    { factor: 'Budget Indicated', weight: 18, impact: 'High' },
+    { factor: 'Website Visits', weight: 15, impact: 'Medium' },
+    { factor: 'Industry Match', weight: 12, impact: 'Medium' },
+    { factor: 'Job Title', weight: 10, impact: 'Low' },
+  ]
+
+  const defaultScoringData = {
+    scoringStats: { accuracy: 0, leadsScored: 0, highQuality: 0 },
+    recentScores: [] as Array<{ id: string | number; name: string; email: string; company: string; score: number; grade: string; confidence: number | null; trend: string }>,
+    scoreFactors: defaultScoreFactors,
+    modelStatus: 'active',
+  }
+
+  const { data: scoringData = defaultScoringData, isLoading: loading, refetch } = useQuery({
+    queryKey: ['lead-scoring'],
+    queryFn: async () => {
+      try {
+        const leadsResponse = await leadsApi.getLeads({ 
+          sortBy: 'score',
+          sortOrder: 'desc',
+          limit: 100
+        })
+        
+        const scoredLeads = leadsResponse.data?.leads?.map((lead: { id: string; firstName?: string; lastName?: string; email: string; company?: string; score?: number }) => {
+          const score = lead.score || 0
+          const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'
+          return {
+            id: lead.id,
+            name: fullName,
+            email: lead.email,
+            company: lead.company || 'N/A',
+            score,
+            grade: getScoreGrade(score),
+            confidence: null as number | null, // No distinct confidence field from API
+            trend: score >= 80 ? 'up' : score >= 60 ? 'stable' : 'down'
+          }
+        }) || []
+        const totalLeads = leadsResponse.data?.total || scoredLeads.length
+        
+        const highQualityCount = scoredLeads.filter((l: any) => l.score >= 80).length
+        let scoringStats = {
+          accuracy: 0,
+          leadsScored: totalLeads,
+          highQuality: highQualityCount,
+        }
+        
+        let modelStatus = 'active'
+        try {
+          const perfData = await aiApi.getModelPerformance()
+          if (perfData?.accuracy) {
+            scoringStats = { ...scoringStats, accuracy: Math.floor(perfData.accuracy * 100) }
+          }
+          if (perfData?.status) {
+            modelStatus = perfData.status
+          }
+        } catch {
+          // Model performance not available
+        }
+        
+        let scoreFactors = defaultScoreFactors
+        try {
+          const featureData = await aiApi.getFeatureImportance()
+          if (featureData?.features) {
+            scoreFactors = featureData.features.map((f: { name: string; importance: number }) => ({
+              factor: f.name,
+              weight: Math.round(f.importance * 100),
+              impact: f.importance > 0.20 ? 'High' : f.importance > 0.10 ? 'Medium' : 'Low'
+            }))
+          }
+        } catch {
+          // Keep default factors if API fails
+        }
+
+        return { scoringStats, recentScores: scoredLeads, scoreFactors, modelStatus }
+      } catch (error) {
+        const err = error as Error
+        toast.error(err.message || 'Failed to load scoring data')
+        return defaultScoringData
+      }
+    }
+  })
+  const { scoringStats, recentScores, scoreFactors, modelStatus } = scoringData
+
   const handleRecalculateScores = async () => {
     try {
-      setLoading(true)
       await aiApi.recalculateScores()
       toast.success('Score recalculation initiated')
       // Reload data after a short delay
-      setTimeout(() => loadScoringData(), 2000)
+      setTimeout(() => refetch(), 2000)
     } catch (error) {
       const err = error as Error
       toast.error(err.message || 'Failed to recalculate scores')
-      setLoading(false)
     }
   }
 
@@ -152,6 +132,10 @@ const LeadScoring = () => {
     if (score >= 60) return 'warning';
     return 'destructive';
   };
+
+  if (loading) {
+    return <LoadingSkeleton rows={5} showChart />;
+  }
 
   return (
     <div className="space-y-6">
@@ -268,7 +252,7 @@ const LeadScoring = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentScores.map((lead) => (
+                {recentScores.map((lead: { id: string | number; name: string; email: string; company: string; score: number; grade: string; confidence: number | null; trend: string }) => (
                   <TableRow key={lead.id}>
                     <TableCell>
                       <div>
@@ -283,7 +267,7 @@ const LeadScoring = () => {
                     <TableCell>
                       <span className="font-semibold">{lead.grade}</span>
                     </TableCell>
-                    <TableCell>{lead.confidence}%</TableCell>
+                    <TableCell>{lead.confidence != null ? `${lead.confidence}%` : '—'}</TableCell>
                     <TableCell>
                       <div className="flex items-center">
                         {lead.trend === 'up' && (
@@ -321,10 +305,10 @@ const LeadScoring = () => {
               if (total === 0) {
                 return <p className="text-sm text-muted-foreground">No scored leads yet.</p>
               }
-              const aCount = recentScores.filter(l => l.score >= 80).length
-              const bCount = recentScores.filter(l => l.score >= 60 && l.score < 80).length
-              const cCount = recentScores.filter(l => l.score >= 40 && l.score < 60).length
-              const dCount = recentScores.filter(l => l.score < 40).length
+              const aCount = recentScores.filter((l: { score: number }) => l.score >= 80).length
+              const bCount = recentScores.filter((l: { score: number }) => l.score >= 60 && l.score < 80).length
+              const cCount = recentScores.filter((l: { score: number }) => l.score >= 40 && l.score < 60).length
+              const dCount = recentScores.filter((l: { score: number }) => l.score < 40).length
               const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0
               const grades = [
                 { label: 'A Grade (80-100)', count: aCount, color: 'bg-green-500' },

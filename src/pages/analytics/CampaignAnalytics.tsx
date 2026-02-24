@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Send, Eye, MousePointer, Users, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -25,31 +26,18 @@ import {
   TableRow,
 } from '@/components/ui/Table';
 import { analyticsApi } from '@/lib/api';
-import { useToast } from '@/hooks/useToast';
 import { exportToCSV, campaignExportColumns } from '@/lib/exportService';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const CampaignAnalytics = () => {
-  const [loading, setLoading] = useState(true);
-  const [campaignData, setCampaignData] = useState<any>(null);
-  const toast = useToast();
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadCampaignAnalytics();
-  }, []);
-
-  const handleDateChange = (range: DateRange) => {
-    dateRangeRef.current = range;
-    loadCampaignAnalytics();
-  };
-
-  const loadCampaignAnalytics = async () => {
-    try {
-      setLoading(true);
+  const { data: campaignData = null, isLoading: loading, refetch } = useQuery({
+    queryKey: ['campaign-analytics'],
+    queryFn: async () => {
       const [campaignResponse, monthlyResponse, hourlyResponse] = await Promise.all([
         analyticsApi.getCampaignAnalytics(dateRangeRef.current).catch(() => ({ data: null })),
         analyticsApi.getMonthlyPerformance({ months: 12 }).catch(() => ({ data: null })),
@@ -57,18 +45,17 @@ const CampaignAnalytics = () => {
       ]);
       
       // Merge monthly and hourly data into the campaign data object
-      const mergedData = {
+      return {
         ...(campaignResponse.data || {}),
         dailyStats: monthlyResponse.data || [],
         hourlyStats: hourlyResponse.data?.hourly || [],
       };
-      setCampaignData(mergedData);
-    } catch (error) {
-      console.error('Error loading campaign analytics:', error);
-      toast.toast.warning('Error loading campaign analytics', 'Using fallback data');
-    } finally {
-      setLoading(false);
-    }
+    },
+  });
+
+  const handleDateChange = (range: DateRange) => {
+    dateRangeRef.current = range;
+    refetch();
   };
 
   if (loading) {
@@ -114,7 +101,7 @@ const CampaignAnalytics = () => {
         </div>
         <div className="flex items-center space-x-2">
           <DateRangePicker onChange={handleDateChange} />
-          <Button variant="outline" onClick={loadCampaignAnalytics}>
+          <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>

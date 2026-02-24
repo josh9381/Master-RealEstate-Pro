@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { aiApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import type { AIModelEntry } from '@/types';
 import {
   LineChart,
   Line,
@@ -20,109 +22,84 @@ import {
 
 const PredictiveAnalytics = () => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [predictions, setPredictions] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    activePredictions: 0,
-    avgConfidence: 0,
-    highImpactAlerts: 0,
-    accuracy: 0,
-  });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [revenueForcast, setRevenueForcast] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [conversionPredictions, setConversionPredictions] = useState<any[]>([]);
 
-  const loadPredictions = async () => {
-    setIsLoading(true);
-    try {
-      const performanceData = await aiApi.getModelPerformance();
+  const defaultPredictiveData = {
+    predictions: [] as Array<{ id: number; title: string; prediction: string; confidence: number; impact: string; status: string; details: string }>,
+    stats: { activePredictions: 0, avgConfidence: 0, highImpactAlerts: 0, accuracy: 0 },
+    revenueForecast: [] as Array<{ month: string; predicted: number; actual?: number }>,
+    conversionPredictions: [] as Array<{ month: string; predicted?: number; actual?: number; rate?: number }>,
+  }
 
-      // Use real model performance data if available
-      const accuracy = performanceData?.accuracy ? Math.floor(performanceData.accuracy * 100) : 0;
+  const { data: predictiveData = defaultPredictiveData, isLoading, refetch } = useQuery({
+    queryKey: ['predictive-analytics'],
+    queryFn: async () => {
+      try {
+        const performanceData = await aiApi.getModelPerformance();
 
-      // If we got real performance data, build predictions from it
-      if (performanceData && (performanceData.accuracy || performanceData.models)) {
-        const models = performanceData.models || [];
-        const transformedPredictions = models.map((model: any, idx: number) => ({
-          id: idx + 1,
-          title: model.name || model.type || 'Model',
-          prediction: model.accuracy ? `${(model.accuracy * 100).toFixed(1)}% accuracy` : 'No data',
-          confidence: model.accuracy ? Math.floor(model.accuracy * 100) : 0,
-          impact: model.accuracy > 0.8 ? 'high' : model.accuracy > 0.6 ? 'medium' : 'low',
-          status: model.accuracy > 0.7 ? 'positive' : model.accuracy > 0.5 ? 'neutral' : 'warning',
-          details: `Based on ${model.dataPoints || 0} data points`,
-        }));
-        setPredictions(transformedPredictions);
+        // Use real model performance data if available
+        const accuracy = performanceData?.accuracy ? Math.floor(performanceData.accuracy * 100) : 0;
 
-        const avgConf = transformedPredictions.length > 0
-          ? transformedPredictions.reduce((sum: number, p: any) => sum + p.confidence, 0) / transformedPredictions.length
-          : 0;
-        const highImpact = transformedPredictions.filter((p: any) => p.impact === 'high').length;
+        let predictions = defaultPredictiveData.predictions;
+        let stats = defaultPredictiveData.stats;
+        let revenueForecast = defaultPredictiveData.revenueForecast;
+        let conversionPredictions = defaultPredictiveData.conversionPredictions;
 
-        setStats({
-          activePredictions: transformedPredictions.length,
-          avgConfidence: Math.floor(avgConf),
-          highImpactAlerts: highImpact,
-          accuracy,
-        });
-      } else {
-        // No model data available — show empty state
-        setPredictions([]);
-        setStats({
-          activePredictions: 0,
-          avgConfidence: 0,
-          highImpactAlerts: 0,
-          accuracy: 0,
-        });
+        // If we got real performance data, build predictions from it
+        if (performanceData && (performanceData.accuracy || performanceData.models)) {
+          const models = performanceData.models || [];
+          predictions = models.map((model: AIModelEntry, idx: number) => ({
+            id: idx + 1,
+            title: model.name || model.type || 'Model',
+            prediction: model.accuracy ? `${(model.accuracy * 100).toFixed(1)}% accuracy` : 'No data',
+            confidence: model.accuracy ? Math.floor(model.accuracy * 100) : 0,
+            impact: (model.accuracy ?? 0) > 0.8 ? 'high' : (model.accuracy ?? 0) > 0.6 ? 'medium' : 'low',
+            status: (model.accuracy ?? 0) > 0.7 ? 'positive' : (model.accuracy ?? 0) > 0.5 ? 'neutral' : 'warning',
+            details: `Based on ${model.dataPoints || 0} data points`,
+          }));
+
+          const avgConf = predictions.length > 0
+            ? predictions.reduce((sum: number, p: { confidence: number }) => sum + p.confidence, 0) / predictions.length
+            : 0;
+          const highImpact = predictions.filter((p: { impact: string }) => p.impact === 'high').length;
+
+          stats = {
+            activePredictions: predictions.length,
+            avgConfidence: Math.floor(avgConf),
+            highImpactAlerts: highImpact,
+            accuracy,
+          };
+        }
+
+        // Revenue forecast and conversion predictions derived from model data
+        if (performanceData && performanceData.models) {
+          const models = performanceData.models || [];
+          // Generate forecast points from model metrics
+          revenueForecast = models.slice(0, 6).map((model: AIModelEntry, idx: number) => ({
+            month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][idx] || `M${idx + 1}`,
+            actual: model.dataPoints ? Math.round(model.dataPoints * (model.accuracy || 0.5) * 100) : 0,
+            predicted: model.dataPoints ? Math.round(model.dataPoints * (model.accuracy || 0.5) * 110) : 0,
+          }));
+
+          conversionPredictions = models.slice(0, 6).map((model: AIModelEntry, idx: number) => ({
+            month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][idx] || `M${idx + 1}`,
+            rate: model.accuracy ? Math.round(model.accuracy * 100) : 0,
+            predicted: model.accuracy ? Math.round(model.accuracy * 100 * 1.05) : 0,
+          }));
+        }
+
+        return { predictions, stats, revenueForecast, conversionPredictions }
+      } catch (error) {
+        console.error('Failed to load predictions:', error);
+        toast.error('Failed to load predictions');
+        return defaultPredictiveData
       }
-
-      // Revenue forecast and conversion predictions derived from model data
-      if (performanceData && performanceData.models) {
-        const models = performanceData.models || [];
-        // Generate forecast points from model metrics
-        const forecastData = models.slice(0, 6).map((model: any, idx: number) => ({
-          month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][idx] || `M${idx + 1}`,
-          actual: model.dataPoints ? Math.round(model.dataPoints * (model.accuracy || 0.5) * 100) : 0,
-          predicted: model.dataPoints ? Math.round(model.dataPoints * (model.accuracy || 0.5) * 110) : 0,
-        }));
-        setRevenueForcast(forecastData);
-        
-        const convData = models.slice(0, 6).map((model: any, idx: number) => ({
-          month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][idx] || `M${idx + 1}`,
-          rate: model.accuracy ? Math.round(model.accuracy * 100) : 0,
-          predicted: model.accuracy ? Math.round(model.accuracy * 100 * 1.05) : 0,
-        }));
-        setConversionPredictions(convData);
-      } else {
-        setRevenueForcast([]);
-        setConversionPredictions([]);
-      }
-
-    } catch (error) {
-      console.error('Failed to load predictions:', error);
-      toast.error('Failed to load predictions');
-
-      // On error, show empty state — no fake data
-      setPredictions([]);
-      setStats({
-        activePredictions: 0,
-        avgConfidence: 0,
-        highImpactAlerts: 0,
-        accuracy: 0,
-      });
-      setRevenueForcast([]);
-      setConversionPredictions([]);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  })
+  const { predictions, stats, revenueForecast, conversionPredictions } = predictiveData
 
-  useEffect(() => {
-    loadPredictions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  if (isLoading) {
+    return <LoadingSkeleton rows={5} showChart />;
+  }
 
   return (
     <div className="space-y-6">
@@ -135,7 +112,7 @@ const PredictiveAnalytics = () => {
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" disabled title="Model configuration coming soon">Configure Models</Button>
-          <Button onClick={() => loadPredictions()} disabled={isLoading}>
+          <Button onClick={() => refetch()} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             {isLoading ? 'Loading...' : 'Run Predictions'}
           </Button>
@@ -195,9 +172,9 @@ const PredictiveAnalytics = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {revenueForcast.length > 0 ? (
+          {revenueForecast.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
-            <AreaChart data={revenueForcast}>
+            <AreaChart data={revenueForecast}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />

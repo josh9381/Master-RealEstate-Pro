@@ -2,37 +2,21 @@ import { Phone, PhoneCall, Clock, TrendingUp, RefreshCw, AlertTriangle } from 'l
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { campaignsApi } from '@/lib/api';
-import { useToast } from '@/hooks/useToast';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
+import type { Campaign } from '@/types';
 
 const PhoneCampaigns = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState({
-    total: 0,
-    answerRate: 0,
-    avgDuration: '0m 0s',
-    conversions: 0
-  });
-  const { toast } = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadCampaigns();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadCampaigns = async () => {
-    setIsLoading(true);
-    try {
+  const { data: phoneData, isFetching: isLoading, refetch: loadCampaigns } = useQuery({
+    queryKey: ['phoneCampaigns'],
+    queryFn: async () => {
       const response = await campaignsApi.getCampaigns({ type: 'PHONE', limit: 50 });
       const phoneCampaigns = response.data?.campaigns || response.campaigns || [];
       
-      setCampaigns(phoneCampaigns);
       // Compute real stats from campaign data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const totalCalls = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.sent || 0), 0);
@@ -40,19 +24,20 @@ const PhoneCampaigns = () => {
       const totalAnswered = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.opened || 0), 0);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const totalConversions = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.converted || 0), 0);
-      setStats({
-        total: response.data?.pagination?.total || phoneCampaigns.length,
-        answerRate: totalCalls > 0 ? parseFloat(((totalAnswered / totalCalls) * 100).toFixed(1)) : 0,
-        avgDuration: totalCalls > 0 ? 'N/A' : 'N/A', // Voice integration coming soon
-        conversions: totalConversions
-      });
-    } catch (error) {
-      console.error('Error loading phone campaigns:', error);
-      toast.error('Failed to load campaigns');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+      return {
+        campaigns: phoneCampaigns,
+        stats: {
+          total: response.data?.pagination?.total || phoneCampaigns.length,
+          answerRate: totalCalls > 0 ? parseFloat(((totalAnswered / totalCalls) * 100).toFixed(1)) : 0,
+          avgDuration: totalCalls > 0 ? 'N/A' : 'N/A', // Voice integration coming soon
+          conversions: totalConversions,
+        },
+      };
+    },
+  });
+  const campaigns = phoneData?.campaigns ?? [];
+  const stats = phoneData?.stats ?? { total: 0, answerRate: 0, avgDuration: '0m 0s', conversions: 0 };
 
   return (
     <div className="space-y-6">
@@ -72,6 +57,18 @@ const PhoneCampaigns = () => {
         <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
       </div>
 
+      {isLoading && campaigns.length === 0 && (
+        <div className="space-y-4">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          <div className="grid gap-4 md:grid-cols-3">
+            {[1,2,3].map(i => <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Phone Campaigns</h1>
@@ -80,7 +77,7 @@ const PhoneCampaigns = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadCampaigns} disabled={isLoading}>
+          <Button variant="outline" onClick={() => { loadCampaigns(); }} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -185,7 +182,7 @@ const PhoneCampaigns = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {campaigns.map((campaign) => (
+            {campaigns.map((campaign: Campaign) => (
               <div
                 key={campaign.id}
                 className="flex items-center justify-between p-4 border rounded-lg"

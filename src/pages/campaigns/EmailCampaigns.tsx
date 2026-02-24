@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Send, Calendar, Users, FileText, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -6,36 +7,19 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { campaignsApi } from '@/lib/api';
-import { useToast } from '@/hooks/useToast';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
+import type { Campaign } from '@/types';
 
 const EmailCampaigns = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState({
-    total: 0,
-    openRate: 0,
-    clickRate: 0,
-    scheduled: 0
-  });
-  const { toast } = useToast();
 
-  useEffect(() => {
-    loadCampaigns();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadCampaigns = async () => {
-    setIsLoading(true);
-    try {
+  const { data: emailData, isFetching: isLoading, refetch: loadCampaigns } = useQuery({
+    queryKey: ['emailCampaigns'],
+    queryFn: async () => {
       const response = await campaignsApi.getCampaigns({ type: 'EMAIL', limit: 50 });
       const emailCampaigns = response.data?.campaigns || response.campaigns || [];
-      
-      setCampaigns(emailCampaigns);
       
       // Calculate stats from real data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,24 +30,37 @@ const EmailCampaigns = () => {
       const totalOpened = emailCampaigns.reduce((sum: number, c: any) => sum + (c.opens || c.opened || 0), 0);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const totalClicked = emailCampaigns.reduce((sum: number, c: any) => sum + (c.clicks || c.clicked || 0), 0);
-      setStats({
-        total: response.data?.pagination?.total || emailCampaigns.length,
-        openRate: totalSent > 0 ? parseFloat(((totalOpened / totalSent) * 100).toFixed(1)) : 0,
-        clickRate: totalSent > 0 ? parseFloat(((totalClicked / totalSent) * 100).toFixed(1)) : 0,
-        scheduled
-      });
-    } catch (error) {
-      console.error('Error loading email campaigns:', error);
-      toast.error('Failed to load campaigns');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+      return {
+        campaigns: emailCampaigns,
+        stats: {
+          total: response.data?.pagination?.total || emailCampaigns.length,
+          openRate: totalSent > 0 ? parseFloat(((totalOpened / totalSent) * 100).toFixed(1)) : 0,
+          clickRate: totalSent > 0 ? parseFloat(((totalClicked / totalSent) * 100).toFixed(1)) : 0,
+          scheduled,
+        },
+      };
+    },
+  });
+  const campaigns = emailData?.campaigns ?? [];
+  const stats = emailData?.stats ?? { total: 0, openRate: 0, clickRate: 0, scheduled: 0 };
 
   return (
     <div className="space-y-6">
       {/* Sub Navigation */}
       <CampaignsSubNav />
+
+      {isLoading && campaigns.length === 0 && (
+        <div className="space-y-4">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          <div className="grid gap-4 md:grid-cols-3">
+            {[1,2,3].map(i => <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <div>
@@ -71,7 +68,7 @@ const EmailCampaigns = () => {
           <p className="text-muted-foreground mt-2">Create and manage email marketing campaigns</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadCampaigns} disabled={isLoading}>
+          <Button variant="outline" onClick={() => { loadCampaigns(); }} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -171,7 +168,7 @@ const EmailCampaigns = () => {
         <CardContent>
           <div className="space-y-3">
             {campaigns
-              .filter((campaign) => {
+              .filter((campaign: Campaign) => {
                 if (activeTab === 'all') return true;
                 const status = (campaign.status || '').toUpperCase();
                 if (activeTab === 'sent') return status === 'COMPLETED' || status === 'ACTIVE';
@@ -179,13 +176,13 @@ const EmailCampaigns = () => {
                 if (activeTab === 'draft') return status === 'DRAFT';
                 return true;
               })
-              .filter((campaign) => {
+              .filter((campaign: Campaign) => {
                 if (!searchQuery.trim()) return true;
                 const q = searchQuery.toLowerCase();
                 return (campaign.name || '').toLowerCase().includes(q) ||
                        (campaign.subject || '').toLowerCase().includes(q);
               })
-              .map((campaign) => (
+              .map((campaign: Campaign) => (
               <div
                 key={campaign.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer"

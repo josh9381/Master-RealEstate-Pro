@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { BarChart3, TrendingUp, Filter, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -6,19 +7,17 @@ import { Badge } from '@/components/ui/Badge';
 import { analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import type { ReportConfig, SavedReport } from '@/types';
 
 const CustomReports = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [leadData, setLeadData] = useState<any>(null);
-  const [campaignData, setCampaignData] = useState<any>(null);
 
   const [_showReportBuilder, setShowReportBuilder] = useState(false);
-  const [reportConfig, _setReportConfig] = useState<any>({ name: '', type: 'leads', groupBy: 'none', metrics: [] });
+  const [reportConfig, setReportConfig] = useState<ReportConfig>({ name: '', type: 'leads', groupBy: 'none', metrics: [], dateRange: '30d' });
+  const [filterCategory, setFilterCategory] = useState<string>('all');
 
   // Persist saved reports in localStorage
-  const [savedReports, setSavedReports] = useState<any[]>(() => {
+  const [savedReports, setSavedReports] = useState<SavedReport[]>(() => {
     try {
       const stored = localStorage.getItem('customReports');
       return stored ? JSON.parse(stored) : [];
@@ -27,42 +26,32 @@ const CustomReports = () => {
     }
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      await loadReportsData();
-    };
-    fetchData();
-  }, []);
-
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+
+  const { data: reportsResult, isLoading: loading, refetch } = useQuery({
+    queryKey: ['custom-reports'],
+    queryFn: async () => {
+      const params = dateRangeRef.current;
+      const [dashboard, leads, campaigns] = await Promise.all([
+        analyticsApi.getDashboardStats(params).catch((e: Error) => { console.error('Dashboard stats failed:', e); return null; }),
+        analyticsApi.getLeadAnalytics(params).catch((e: Error) => { console.error('Lead analytics failed:', e); return null; }),
+        analyticsApi.getCampaignAnalytics(params).catch((e: Error) => { console.error('Campaign analytics failed:', e); return null; }),
+      ]);
+      return { dashboardData: dashboard, leadData: leads, campaignData: campaigns };
+    },
+  });
+
+  const dashboardData = reportsResult?.dashboardData ?? null;
+  const leadData = reportsResult?.leadData ?? null;
+  const campaignData = reportsResult?.campaignData ?? null;
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
-    loadReportsData();
-  };
-
-  const loadReportsData = async () => {
-    setLoading(true);
-    try {
-      const params = dateRangeRef.current;
-      const [dashboard, leads, campaigns] = await Promise.all([
-        analyticsApi.getDashboardStats(params),
-        analyticsApi.getLeadAnalytics(params),
-        analyticsApi.getCampaignAnalytics(params),
-      ]);
-      setDashboardData(dashboard);
-      setLeadData(leads);
-      setCampaignData(campaigns);
-    } catch (error) {
-      const err = error as Error;
-      toast.error(err.message || 'Failed to load reports data');
-    } finally {
-      setLoading(false);
-    }
+    refetch();
   };
 
   const deleteReport = (id: number) => {
-    const updated = savedReports.filter((r: any) => r.id !== id);
+    const updated = savedReports.filter((r) => r.id !== id);
     setSavedReports(updated);
     localStorage.setItem('customReports', JSON.stringify(updated));
   };
@@ -78,7 +67,7 @@ const CustomReports = () => {
         </div>
         <div className="flex items-center gap-2">
           <DateRangePicker onChange={handleDateChange} />
-          <Button variant="outline" onClick={loadReportsData} disabled={loading}>
+          <Button variant="outline" onClick={() => refetch()} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
@@ -92,6 +81,17 @@ const CustomReports = () => {
           </Button>
         </div>
       </div>
+
+      {loading && !dashboardData && (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -146,16 +146,20 @@ const CustomReports = () => {
               <CardDescription>Your custom report templates</CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => {
+                const next = filterCategory === 'all' ? 'Sales Reports' : filterCategory === 'Sales Reports' ? 'Marketing Reports' : 'all';
+                setFilterCategory(next);
+                toast.info(next === 'all' ? 'Showing all reports' : `Filtered: ${next}`);
+              }}>
                 <Filter className="h-4 w-4 mr-2" />
-                Filter
+                {filterCategory === 'all' ? 'Filter' : filterCategory}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {savedReports.length > 0 ? savedReports.map((report: any) => (
+            {savedReports.length > 0 ? savedReports.map((report) => (
               <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
@@ -217,7 +221,15 @@ const CustomReports = () => {
             ].map((category) => (
               <div
                 key={category.name}
-                className="p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors"
+                className={`p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors ${filterCategory === category.name ? 'border-primary bg-primary/5' : ''}`}
+                onClick={() => {
+                  setFilterCategory(category.name);
+                  setReportConfig((prev) => ({ ...prev, type: category.name.split(' ')[0].toLowerCase() }));
+                  toast.info(`Category: ${category.name}`);
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilterCategory(category.name); } }}
               >
                 <h4 className="font-semibold">{category.name}</h4>
                 <p className="text-sm text-muted-foreground mt-1">{category.count} reports</p>
@@ -240,27 +252,29 @@ const CustomReports = () => {
               type="text"
               placeholder="Enter report name"
               className="w-full px-3 py-2 border rounded-lg"
+              value={reportConfig.name}
+              onChange={(e) => setReportConfig((prev) => ({ ...prev, name: e.target.value }))}
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Report Type</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>Sales Report</option>
-                <option>Marketing Report</option>
-                <option>Analytics Report</option>
-                <option>Financial Report</option>
-                <option>Activity Report</option>
+              <select className="w-full px-3 py-2 border rounded-lg" value={reportConfig.type} onChange={(e) => setReportConfig((prev) => ({ ...prev, type: e.target.value }))}>
+                <option value="sales">Sales Report</option>
+                <option value="marketing">Marketing Report</option>
+                <option value="analytics">Analytics Report</option>
+                <option value="financial">Financial Report</option>
+                <option value="activity">Activity Report</option>
               </select>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Date Range</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>Last 7 days</option>
-                <option>Last 30 days</option>
-                <option>Last 90 days</option>
-                <option>This year</option>
-                <option>Custom range</option>
+              <select className="w-full px-3 py-2 border rounded-lg" value={reportConfig.dateRange} onChange={(e) => setReportConfig((prev) => ({ ...prev, dateRange: e.target.value }))}>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="1y">This year</option>
+                <option value="custom">Custom range</option>
               </select>
             </div>
           </div>
@@ -279,7 +293,19 @@ const CustomReports = () => {
                 'Contact Growth',
               ].map((metric) => (
                 <label key={metric} className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" className="rounded" />
+                  <input
+                    type="checkbox"
+                    className="rounded"
+                    checked={reportConfig.metrics?.includes(metric) || false}
+                    onChange={(e) => {
+                      setReportConfig((prev) => ({
+                        ...prev,
+                        metrics: e.target.checked
+                          ? [...(prev.metrics || []), metric]
+                          : (prev.metrics || []).filter((m: string) => m !== metric)
+                      }));
+                    }}
+                  />
                   <span className="text-sm">{metric}</span>
                 </label>
               ))}
@@ -287,13 +313,13 @@ const CustomReports = () => {
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Group By</label>
-            <select className="w-full px-3 py-2 border rounded-lg">
-              <option>No grouping</option>
-              <option>By Day</option>
-              <option>By Week</option>
-              <option>By Month</option>
-              <option>By User</option>
-              <option>By Status</option>
+            <select className="w-full px-3 py-2 border rounded-lg" value={reportConfig.groupBy} onChange={(e) => setReportConfig((prev) => ({ ...prev, groupBy: e.target.value }))}>
+              <option value="none">No grouping</option>
+              <option value="day">By Day</option>
+              <option value="week">By Week</option>
+              <option value="month">By Month</option>
+              <option value="user">By User</option>
+              <option value="status">By Status</option>
             </select>
           </div>
           <div className="flex space-x-2">

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Phone, PhoneIncoming, PhoneOutgoing, Clock, Mic, PhoneMissed, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,41 +9,23 @@ import { useToast } from '@/hooks/useToast'
 import { messagesApi } from '@/lib/api'
 
 const CallCenter = () => {
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [dialNumber, setDialNumber] = useState('')
-  const [_showNewCallModal, setShowNewCallModal] = useState(false)
+  const [showNewCallModal, setShowNewCallModal] = useState(false)
+  const [newCallNumber, setNewCallNumber] = useState('')
+  const [newCallNotes, setNewCallNotes] = useState('')
   const { toast } = useToast()
-  const [recentCalls, setRecentCalls] = useState<Array<{ id: number; contact: string; phone: string; type: string; duration: string; status: string; time: string; notes: string }>>([])
 
-  useEffect(() => {
-    loadCalls()
-  }, [])
-
-  const loadCalls = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true)
-      } else {
-        setLoading(true)
-      }
-
+  const { data: recentCalls = [], isLoading: loading, isFetching, refetch } = useQuery({
+    queryKey: ['call-center-calls'],
+    queryFn: async () => {
       const response = await messagesApi.getMessages({ type: 'CALL' })
-      
-      if (response && Array.isArray(response)) {
-        setRecentCalls(response)
-      }
-    } catch (error) {
-      console.error('Failed to load call logs:', error)
-      toast.error('Failed to load calls, using sample data')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+      return (response && Array.isArray(response)) ? response : []
     }
-  }
+  })
+  const refreshing = isFetching && !loading
 
   const handleRefresh = () => {
-    loadCalls(true)
+    refetch()
   }
 
   return (
@@ -148,9 +131,13 @@ const CallCenter = () => {
             <Button
               className="flex-1"
               disabled={!dialNumber.trim()}
-              onClick={() => {
-                toast.success(`Initiating call to ${dialNumber}...`);
-                // In production, this would initiate a VoIP/telephony call
+              onClick={async () => {
+                try {
+                  await messagesApi.makeCall({ phone: dialNumber, notes: 'Quick dial call' })
+                  toast.success(`Call initiated to ${dialNumber}`)
+                } catch {
+                  toast.error('Failed to initiate call')
+                }
               }}
             >
               <Phone className="h-4 w-4 mr-2" />
@@ -239,7 +226,10 @@ const CallCenter = () => {
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setDialNumber(call.phone)
+                    toast.info(`Dialing ${call.phone}`)
+                  }}>
                     <Phone className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="sm">
@@ -280,6 +270,66 @@ const CallCenter = () => {
         </CardContent>
       </Card>
         </>
+      )}
+
+      {/* Make Call Modal */}
+      {showNewCallModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Make a new call">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Make a Call</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => setShowNewCallModal(false)}>×</Button>
+              </div>
+              <CardDescription>Enter the number and optional notes</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Phone Number</label>
+                <Input
+                  placeholder="Enter phone number..."
+                  value={newCallNumber}
+                  onChange={(e) => setNewCallNumber(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Notes (optional)</label>
+                <textarea
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                  rows={3}
+                  placeholder="Call purpose or notes..."
+                  value={newCallNotes}
+                  onChange={(e) => setNewCallNotes(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1"
+                  disabled={!newCallNumber.trim()}
+                  onClick={async () => {
+                    try {
+                      await messagesApi.makeCall({ phone: newCallNumber, notes: newCallNotes })
+                      toast.success(`Call initiated to ${newCallNumber}`)
+                      setShowNewCallModal(false)
+                      setNewCallNumber('')
+                      setNewCallNotes('')
+                      refetch()
+                    } catch (error) {
+                      console.error('Failed to make call:', error)
+                      toast.error('Failed to initiate call')
+                    }
+                  }}
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Call Now
+                </Button>
+                <Button variant="outline" onClick={() => setShowNewCallModal(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

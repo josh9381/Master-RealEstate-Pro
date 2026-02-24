@@ -12,6 +12,7 @@ import { mockCampaigns } from '@/data/mockData'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { CampaignExecutionStatus } from '@/components/campaigns/CampaignExecutionStatus'
+import type { TimelineDataPoint, HourlyEngagementEntry, DeviceBreakdownEntry, GeoBreakdownEntry, ABTestResultEntry } from '@/types'
 import {
   LineChart,
   Line,
@@ -131,7 +132,7 @@ function CampaignDetail() {
   const performanceData = useMemo(() => {
     // Use real timeline data from the campaign analytics API
     if (timelineData && Array.isArray(timelineData) && timelineData.length > 0) {
-      return timelineData.map((d: any) => ({
+      return timelineData.map((d: TimelineDataPoint) => ({
         date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         sent: d.sent || 0,
         opened: d.opened || 0,
@@ -176,7 +177,7 @@ function CampaignDetail() {
 
   const hourlyEngagementData = useMemo((): { hour: string; opens: number; clicks: number }[] => {
     if (hourlyResponse?.hourly && Array.isArray(hourlyResponse.hourly)) {
-      return hourlyResponse.hourly.map((h: any) => ({
+      return hourlyResponse.hourly.map((h: HourlyEngagementEntry) => ({
         hour: h.label,
         opens: h.opens || 0,
         clicks: h.clicks || 0,
@@ -223,7 +224,7 @@ function CampaignDetail() {
   const realDeviceData = useMemo(() => {
     if (!deviceBreakdownData?.devices || deviceBreakdownData.devices.length === 0) return deviceData
     const colorMap: Record<string, string> = { Desktop: '#3b82f6', Mobile: '#10b981', Tablet: '#f59e0b', Unknown: '#94a3b8' }
-    return deviceBreakdownData.devices.map((d: any) => ({
+    return deviceBreakdownData.devices.map((d: DeviceBreakdownEntry) => ({
       name: d.name,
       value: d.count,
       color: colorMap[d.name] || '#8b5cf6',
@@ -232,7 +233,7 @@ function CampaignDetail() {
 
   const realGeoData = useMemo(() => {
     if (!geoBreakdownData?.countries || geoBreakdownData.countries.length === 0) return geoData
-    return geoBreakdownData.countries.map((c: any) => ({
+    return geoBreakdownData.countries.map((c: GeoBreakdownEntry) => ({
       location: c.name,
       opens: c.count,
       clicks: 0,
@@ -247,13 +248,10 @@ function CampaignDetail() {
       try {
         // Check if this campaign has A/B test data
         if (!campaignData?.isABTest) return null
-        // Try to find related A/B tests via the ab-tests API
-        const abRes = await fetch(`/api/ab-tests?campaignId=${id}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-        })
-        if (abRes.ok) {
-          const data = await abRes.json()
-          return Array.isArray(data) ? data : data?.data || null
+        // Try to find related A/B tests via the campaigns API client
+        const abRes = await campaignsApi.getCampaignAnalytics(id!)
+        if (abRes?.data?.abTests) {
+          return Array.isArray(abRes.data.abTests) ? abRes.data.abTests : null
         }
         return null
       } catch {
@@ -328,12 +326,26 @@ function CampaignDetail() {
   }
 
   const handleSaveEdit = () => {
+    if (!editForm.name?.trim()) {
+      toast.error('Campaign name is required')
+      return
+    }
+    if (editForm.type === 'email' || editForm.type === 'EMAIL') {
+      if (!editForm.subject?.trim()) {
+        toast.error('Email subject is required')
+        return
+      }
+    }
+    if (editForm.scheduledDate && new Date(editForm.scheduledDate) < new Date()) {
+      toast.error('Schedule date must be in the future')
+      return
+    }
     updateCampaignMutation.mutate({
       name: editForm.name,
       type: (editForm.type || '').toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL',
       status: (editForm.status || '').toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED',
       subject: editForm.subject || undefined,
-      body: editForm.fullContent || undefined,
+      body: editForm.fullContent || editForm.content || undefined,
     })
     setShowEditModal(false)
   }
@@ -691,7 +703,7 @@ function CampaignDetail() {
           <CardContent>
             {abTestResults && abTestResults.length > 0 ? (
               <div className="space-y-4">
-                {abTestResults.map((test: any) => (
+                {abTestResults.map((test: ABTestResultEntry) => (
                   <div key={test.id} className="grid gap-4 md:grid-cols-2">
                     <div className="p-4 border rounded-lg">
                       <Badge variant="secondary" className="mb-2">Variant A</Badge>

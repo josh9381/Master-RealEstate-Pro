@@ -164,6 +164,13 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     setZoom(prev => Math.max(prev - 0.1, 0.5));
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    if (mode !== 'drag') return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 2));
+  };
+
   const handleResetView = () => {
     setCanvasOffset({ x: 0, y: 0 });
     setZoom(1);
@@ -223,6 +230,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onMouseDown={mode === 'drag' ? handleCanvasMouseDown : undefined}
+      onWheel={handleWheel}
     >
       {nodes.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full py-12 px-6">

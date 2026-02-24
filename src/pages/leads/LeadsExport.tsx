@@ -1,10 +1,12 @@
 import { Download, FileSpreadsheet, FileJson, FileText, Calendar, Table } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { leadsApi, usersApi, exportApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
+import type { Lead, TeamMember } from '@/types';
 
 const ALL_FIELDS = [
   'Name', 'Email', 'Phone', 'Company', 'Status', 'Source',
@@ -20,8 +22,7 @@ function escapeCsvField(value: string | number | undefined | null): string {
 }
 
 const LeadsExport = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [totalLeads, setTotalLeads] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
   const [exportHistory, setExportHistory] = useState<Array<{id: number; name: string; format: string; records: number; date: string; blob?: Blob; filename?: string}>>([])
   const [exportFilters, setExportFilters] = useState({
     status: 'all',
@@ -30,31 +31,23 @@ const LeadsExport = () => {
     dateTo: '',
   })
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(ALL_FIELDS))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [teamMembers, setTeamMembers] = useState<any[]>([])
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadLeadCount();
-    loadTeamMembers();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadLeadCount = async () => {
-    try {
+  const { data: totalLeads = 0 } = useQuery({
+    queryKey: ['leads', 'count'],
+    queryFn: async () => {
       const response = await leadsApi.getLeads({ limit: 1 });
-      setTotalLeads(response.data?.pagination?.total || response.data?.total || 0);
-    } catch (error) {
-      console.error('Error loading lead count:', error);
-    }
-  };
+      return response.data?.pagination?.total || response.data?.total || 0;
+    },
+  });
 
-  const loadTeamMembers = async () => {
-    try {
+  const { data: teamMembers = [] } = useQuery<TeamMember[]>({
+    queryKey: ['team-members'],
+    queryFn: async () => {
       const members = await usersApi.getTeamMembers();
-      setTeamMembers(Array.isArray(members) ? members : []);
-    } catch { /* optional */ }
-  };
+      return Array.isArray(members) ? members : [];
+    },
+  });
 
   const toggleField = (field: string) => {
     setSelectedFields(prev => {
@@ -66,11 +59,10 @@ const LeadsExport = () => {
   };
 
   const handleExport = async (format: string) => {
-    setIsLoading(true);
+    setIsExporting(true);
     try {
       // Build query params from filters
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const params: any = { limit: 1000 };
+      const params: Record<string, string | number> = { limit: 1000 };
       if (exportFilters.status !== 'all') params.status = exportFilters.status.toUpperCase();
       if (exportFilters.assignedTo !== 'all') params.assignedTo = exportFilters.assignedTo;
       if (exportFilters.dateFrom) params.dateFrom = exportFilters.dateFrom;
@@ -80,8 +72,7 @@ const LeadsExport = () => {
       const leads = response.data?.leads || [];
 
       // Filter by date client-side as well in case backend doesn't support these filters
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const filteredLeads = leads.filter((lead: any) => {
+      const filteredLeads = leads.filter((lead: Lead) => {
         if (exportFilters.dateFrom && lead.createdAt && new Date(lead.createdAt) < new Date(exportFilters.dateFrom)) return false;
         if (exportFilters.dateTo && lead.createdAt && new Date(lead.createdAt) > new Date(exportFilters.dateTo + 'T23:59:59')) return false;
         return true;
@@ -97,8 +88,7 @@ const LeadsExport = () => {
         mimeType = 'application/json';
       } else {
         // CSV (and Excel fallback)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const buildRow = (lead: any): string[] => {
+        const buildRow = (lead: Lead): string[] => {
           const row: string[] = [];
           if (selectedFields.has('Name')) row.push(escapeCsvField(`${lead.firstName || ''} ${lead.lastName || ''}`.trim()));
           if (selectedFields.has('Email')) row.push(escapeCsvField(lead.email));
@@ -150,7 +140,7 @@ const LeadsExport = () => {
       console.error('Error exporting leads:', error);
       toast.error('Failed to export leads');
     } finally {
-      setIsLoading(false);
+      setIsExporting(false);
     }
   };
 
@@ -180,9 +170,9 @@ const LeadsExport = () => {
           </CardHeader>
           <CardContent>
             <Button className="w-full" onClick={async () => {
-              setIsLoading(true);
+              setIsExporting(true);
               try {
-                const filters: any = {};
+                const filters: Record<string, string> = {};
                 if (exportFilters.status !== 'all') filters.status = exportFilters.status;
                 if (exportFilters.assignedTo !== 'all') filters.assignedTo = exportFilters.assignedTo;
                 if (exportFilters.dateFrom) filters.dateFrom = exportFilters.dateFrom;
@@ -193,9 +183,9 @@ const LeadsExport = () => {
                 console.error('Error exporting:', error);
                 toast.error('Failed to export as Excel');
               } finally {
-                setIsLoading(false);
+                setIsExporting(false);
               }
-            }} disabled={isLoading}>
+            }} disabled={isExporting}>
               <Download className="h-4 w-4 mr-2" />
               Export as Excel
             </Button>
@@ -214,7 +204,7 @@ const LeadsExport = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" onClick={() => handleExport('excel')} disabled={isLoading}>
+            <Button className="w-full" onClick={() => handleExport('excel')} disabled={isExporting}>
               <Download className="h-4 w-4 mr-2" />
               Export for Excel (CSV)
             </Button>
@@ -232,7 +222,7 @@ const LeadsExport = () => {
             <CardDescription>Simple comma-separated values for easy import</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" onClick={() => handleExport('csv')} disabled={isLoading}>
+            <Button className="w-full" onClick={() => handleExport('csv')} disabled={isExporting}>
               <Download className="h-4 w-4 mr-2" />
               Export as CSV
             </Button>
@@ -250,7 +240,7 @@ const LeadsExport = () => {
             <CardDescription>Structured data for developers and integrations</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" onClick={() => handleExport('json')} disabled={isLoading}>
+            <Button className="w-full" onClick={() => handleExport('json')} disabled={isExporting}>
               <Download className="h-4 w-4 mr-2" />
               Export as JSON
             </Button>
@@ -414,7 +404,7 @@ const LeadsExport = () => {
                 Download all {totalLeads.toLocaleString()} leads as CSV with all fields
               </p>
             </div>
-            <Button onClick={() => handleExport('csv')} disabled={isLoading}>
+            <Button onClick={() => handleExport('csv')} disabled={isExporting}>
               <Download className="h-4 w-4 mr-2" />
               Quick Export
             </Button>

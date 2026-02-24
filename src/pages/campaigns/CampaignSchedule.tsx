@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Send, Users, TrendingUp, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -8,23 +9,31 @@ import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 
+interface CampaignRecord {
+  id: string | number;
+  name: string;
+  type: string;
+  status: string;
+  startDate?: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  audience?: number;
+  sent?: number;
+  opened?: number;
+  clicked?: number;
+  isRecurring?: boolean;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  sentDate?: string;
+  sentTime?: string;
+  recipients?: number;
+  [key: string]: unknown;
+}
+
 const CampaignSchedule = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [scheduledCampaigns, setScheduledCampaigns] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [sentCampaigns, setSentCampaigns] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [recurringCampaigns, setRecurringCampaigns] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState({
-    scheduled: 0,
-    totalRecipients: 0,
-    recurring: 0,
-    nextCampaign: '',
-  });
-
   // Reschedule modal state
   const [rescheduleModal, setRescheduleModal] = useState<{
     isOpen: boolean;
@@ -38,26 +47,19 @@ const CampaignSchedule = () => {
     currentDate: '',
   });
   const [newScheduleDate, setNewScheduleDate] = useState('');
+  const [confirmAction, setConfirmAction] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
   const [newScheduleTime, setNewScheduleTime] = useState('');
 
-  useEffect(() => {
-    loadCampaigns();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadCampaigns = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch all campaigns
+  const { data: campaignData, isFetching: isLoading, refetch: loadCampaigns } = useQuery({
+    queryKey: ['campaignSchedule'],
+    queryFn: async () => {
       const response = await campaignsApi.getCampaigns();
-      const campaigns = response.data?.campaigns || [];
+      const campaigns: CampaignRecord[] = response.data?.campaigns || [];
 
       // Filter scheduled campaigns (status: SCHEDULED or PAUSED - uppercase from backend)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const scheduled = campaigns.filter((c: any) => 
+      const scheduled = campaigns.filter((c: CampaignRecord) => 
         c.status === 'SCHEDULED' || c.status === 'PAUSED'
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ).map((c: any) => ({
+      ).map((c: CampaignRecord) => ({
         ...c,
         type: c.type, // Already uppercase from backend
         scheduledDate: c.startDate ? new Date(c.startDate).toLocaleDateString() : new Date(c.createdAt).toLocaleDateString(),
@@ -66,11 +68,9 @@ const CampaignSchedule = () => {
       }));
 
       // Filter completed campaigns
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sent = campaigns.filter((c: any) => 
+      const sent = campaigns.filter((c: CampaignRecord) => 
         c.status === 'COMPLETED' || c.status === 'ACTIVE'
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ).map((c: any) => ({
+      ).map((c: CampaignRecord) => ({
         ...c,
         type: c.type,
         sentDate: c.endDate ? new Date(c.endDate).toLocaleDateString() : new Date(c.updatedAt).toLocaleDateString(),
@@ -81,85 +81,79 @@ const CampaignSchedule = () => {
       })).slice(0, 5);
 
       // Recurring campaigns (use isRecurring field from backend)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const recurring = campaigns.filter((c: any) => 
+      const recurring = campaigns.filter((c: CampaignRecord) => 
         c.isRecurring === true || 
         ((c.name.toLowerCase().includes('weekly') || c.name.toLowerCase().includes('monthly')) && 
         (c.status === 'SCHEDULED' || c.status === 'ACTIVE'))
       ).slice(0, 3);
 
-      setScheduledCampaigns(scheduled);
-      setSentCampaigns(sent);
-      setRecurringCampaigns(recurring);
-
       // Calculate stats
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalRecipients = scheduled.reduce((sum: number, c: any) => sum + (c.recipients || 0), 0);
+      const totalRecipients = scheduled.reduce((sum: number, c: CampaignRecord) => sum + (c.recipients || 0), 0);
       const nextCampaign = scheduled.length > 0 ? scheduled[0] : null;
 
-      setStats({
-        scheduled: scheduled.length,
-        totalRecipients,
-        recurring: recurring.length,
-        nextCampaign: nextCampaign ? `${nextCampaign.scheduledDate} at ${nextCampaign.scheduledTime}` : 'None',
-      });
-    } catch (error) {
-      console.error('Error loading campaigns:', error);
-      toast.error('Failed to load campaign schedule');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return {
+        scheduledCampaigns: scheduled,
+        sentCampaigns: sent,
+        recurringCampaigns: recurring,
+        stats: {
+          scheduled: scheduled.length,
+          totalRecipients,
+          recurring: recurring.length,
+          nextCampaign: nextCampaign ? `${nextCampaign.scheduledDate} at ${nextCampaign.scheduledTime}` : 'None',
+        },
+      };
+    },
+  });
+  const scheduledCampaigns = campaignData?.scheduledCampaigns ?? [];
+  const sentCampaigns = campaignData?.sentCampaigns ?? [];
+  const recurringCampaigns = campaignData?.recurringCampaigns ?? [];
+  const stats = campaignData?.stats ?? { scheduled: 0, totalRecipients: 0, recurring: 0, nextCampaign: '' };
 
   const handleSendNow = async (campaignId: string, campaignName: string) => {
-    if (!confirm(`Send "${campaignName}" immediately to all recipients?`)) {
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const result = await campaignsApi.sendCampaignNow(campaignId);
-      
-      toast.success(`Campaign "${campaignName}" sent successfully! Sent to ${result.data.sent} recipients.`);
-      
-      // Reload campaigns to update UI
-      await loadCampaigns();
-    } catch (error: any) {
-      console.error('Error sending campaign:', error);
-      toast.error(error.response?.data?.message || 'Failed to send campaign');
-    } finally {
-      setIsLoading(false);
-    }
+    setConfirmAction({
+      isOpen: true,
+      title: 'Send Now',
+      message: `Send "${campaignName}" immediately to all recipients?`,
+      onConfirm: async () => {
+        setConfirmAction(prev => ({ ...prev, isOpen: false }));
+        try {
+          const result = await campaignsApi.sendCampaignNow(campaignId);
+          toast.success(`Campaign "${campaignName}" sent successfully! Sent to ${result.data.sent} recipients.`);
+          await loadCampaigns();
+        } catch (error: any) {
+          console.error('Error sending campaign:', error);
+          toast.error(error.response?.data?.message || 'Failed to send campaign');
+        }
+      }
+    });
   };
 
   const handleCancelCampaign = async (campaignId: string, campaignName: string) => {
-    if (!confirm(`Cancel scheduled campaign "${campaignName}"?`)) {
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      await campaignsApi.updateCampaign(campaignId, { status: 'CANCELLED' });
-      
-      toast.success(`Campaign "${campaignName}" cancelled`);
-      
-      // Reload campaigns to update UI
-      await loadCampaigns();
-    } catch (error: any) {
-      console.error('Error cancelling campaign:', error);
-      toast.error(error.response?.data?.message || 'Failed to cancel campaign');
-    } finally {
-      setIsLoading(false);
-    }
+    setConfirmAction({
+      isOpen: true,
+      title: 'Cancel Campaign',
+      message: `Cancel scheduled campaign "${campaignName}"?`,
+      onConfirm: async () => {
+        setConfirmAction(prev => ({ ...prev, isOpen: false }));
+        try {
+          await campaignsApi.updateCampaign(campaignId, { status: 'CANCELLED' });
+          toast.success(`Campaign "${campaignName}" cancelled`);
+          await loadCampaigns();
+        } catch (error: any) {
+          console.error('Error cancelling campaign:', error);
+          toast.error(error.response?.data?.message || 'Failed to cancel campaign');
+        }
+      }
+    });
   };
 
-  const openRescheduleModal = (campaign: any) => {
+  const openRescheduleModal = (campaign: CampaignRecord) => {
     const currentDate = campaign.startDate || campaign.createdAt;
     const dateObj = new Date(currentDate);
     
     setRescheduleModal({
       isOpen: true,
-      campaignId: campaign.id,
+      campaignId: String(campaign.id),
       campaignName: campaign.name,
       currentDate: dateObj.toLocaleString(),
     });
@@ -194,7 +188,6 @@ const CampaignSchedule = () => {
     }
 
     try {
-      setIsLoading(true);
       await campaignsApi.rescheduleCampaign(
         rescheduleModal.campaignId,
         newStartDate.toISOString()
@@ -207,8 +200,6 @@ const CampaignSchedule = () => {
     } catch (error: any) {
       console.error('Error rescheduling campaign:', error);
       toast.error(error.response?.data?.message || 'Failed to reschedule campaign');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -216,6 +207,18 @@ const CampaignSchedule = () => {
     <div className="space-y-6">
       {/* Sub Navigation */}
       <CampaignsSubNav />
+
+      {isLoading && scheduledCampaigns.length === 0 && (
+        <div className="space-y-4">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          <div className="grid gap-4 md:grid-cols-4">
+            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <div>
@@ -225,7 +228,7 @@ const CampaignSchedule = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button onClick={loadCampaigns} disabled={isLoading} variant="outline" size="sm">
+          <Button onClick={() => { loadCampaigns(); }} disabled={isLoading} variant="outline" size="sm">
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -306,7 +309,7 @@ const CampaignSchedule = () => {
                         {campaign.scheduledDate} at {campaign.scheduledTime}
                       </span>
                       <span>•</span>
-                      <span>{campaign.recipients.toLocaleString()} recipients</span>
+                      <span>{(campaign.recipients || 0).toLocaleString()} recipients</span>
                     </div>
                   </div>
                 </div>
@@ -329,7 +332,7 @@ const CampaignSchedule = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => handleSendNow(campaign.id, campaign.name)}
+                    onClick={() => handleSendNow(String(campaign.id), campaign.name)}
                     disabled={isLoading}
                   >
                     Send Now
@@ -337,7 +340,7 @@ const CampaignSchedule = () => {
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => handleCancelCampaign(campaign.id, campaign.name)}
+                    onClick={() => handleCancelCampaign(String(campaign.id), campaign.name)}
                     disabled={isLoading}
                   >
                     Cancel
@@ -374,7 +377,7 @@ const CampaignSchedule = () => {
                       <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-1">
                         <Badge variant="secondary">{schedule.type}</Badge>
                         <span>•</span>
-                        <span>{schedule.recipientCount || 0} recipients</span>
+                        <span>{Number(schedule.recipients || 0)} recipients</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         Next send: {new Date(schedule.scheduledDate || schedule.createdAt).toLocaleDateString()}
@@ -383,7 +386,7 @@ const CampaignSchedule = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button variant="outline" size="sm" onClick={() => {
-                      setRescheduleModal({ isOpen: true, campaignId: schedule.id, campaignName: schedule.name, currentDate: schedule.scheduledDate || schedule.startDate || '' });
+                      setRescheduleModal({ isOpen: true, campaignId: String(schedule.id), campaignName: schedule.name, currentDate: schedule.scheduledDate || schedule.startDate || '' });
                     }}>
                       Edit Schedule
                     </Button>
@@ -435,16 +438,16 @@ const CampaignSchedule = () => {
                           {campaign.sentDate} at {campaign.sentTime}
                         </span>
                         <span>•</span>
-                        <span>{campaign.recipients.toLocaleString()} sent</span>
+                        <span>{(campaign.recipients || 0).toLocaleString()} sent</span>
                       </div>
                       <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
                         <span>
-                          Opened: {campaign.opened} (
-                          {campaign.recipients > 0 ? ((campaign.opened / campaign.recipients) * 100).toFixed(1) : '0.0'}%)
+                          Opened: {campaign.opened || 0} (
+                          {(campaign.recipients || 0) > 0 ? (((campaign.opened || 0) / (campaign.recipients || 1)) * 100).toFixed(1) : '0.0'}%)
                         </span>
                         <span>
-                          Clicked: {campaign.clicked} (
-                          {campaign.recipients > 0 ? ((campaign.clicked / campaign.recipients) * 100).toFixed(1) : '0.0'}%)
+                          Clicked: {campaign.clicked || 0} (
+                          {(campaign.recipients || 0) > 0 ? (((campaign.clicked || 0) / (campaign.recipients || 1)) * 100).toFixed(1) : '0.0'}%)
                         </span>
                       </div>
                     </div>
@@ -475,9 +478,9 @@ const CampaignSchedule = () => {
 
       {/* Reschedule Modal */}
       {rescheduleModal.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="reschedule-title" onKeyDown={(e) => { if (e.key === 'Escape') closeRescheduleModal() }} onClick={(e) => { if (e.target === e.currentTarget) closeRescheduleModal() }}>
           <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">Reschedule Campaign</h3>
+            <h3 id="reschedule-title" className="text-lg font-semibold mb-4">Reschedule Campaign</h3>
             
             <div className="space-y-4">
               <div>
@@ -525,6 +528,20 @@ const CampaignSchedule = () => {
               >
                 Cancel
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Action Dialog */}
+      {confirmAction.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onKeyDown={(e) => { if (e.key === 'Escape') setConfirmAction(prev => ({ ...prev, isOpen: false })) }}>
+          <div className="bg-background rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <h3 id="confirm-title" className="text-lg font-semibold mb-2">{confirmAction.title}</h3>
+            <p className="text-sm text-muted-foreground mb-6">{confirmAction.message}</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirmAction(prev => ({ ...prev, isOpen: false }))}>Cancel</Button>
+              <Button onClick={confirmAction.onConfirm}>Confirm</Button>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/useToast'
 import { leadsApi, usersApi, notesApi, messagesApi, CreateLeadData, UpdateLeadData, BulkUpdateData } from '@/lib/api'
 import { exportToCSV, leadExportColumns } from '@/lib/exportService'
 import { Lead } from '@/types'
+import type { AssignedUser, TeamMember } from '@/types'
 import { mockLeads } from '@/data/mockData'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
@@ -92,10 +93,24 @@ function LeadsList() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showRowMenu, setShowRowMenu] = useState<number | null>(null)
+  const rowMenuRef = useRef<HTMLDivElement>(null)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [isSending, setIsSending] = useState(false)
   const [deletingLeadId, setDeletingLeadId] = useState<number | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
+
+  // Close row menu on outside click
+  useEffect(() => {
+    if (!showRowMenu) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (rowMenuRef.current && !rowMenuRef.current.contains(e.target as Node)) {
+        setShowRowMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showRowMenu])
 
   const queryClient = useQueryClient()
 
@@ -580,11 +595,33 @@ function LeadsList() {
 
   const handleEditLead = (lead: Lead) => {
     setEditingLead(lead)
+    setEditErrors({})
     setShowEditModal(true)
+  }
+
+  const validateEditForm = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {}
+    if (!editingLead) return newErrors
+    if (!editingLead.firstName?.trim()) newErrors.firstName = 'First name is required'
+    if (!editingLead.lastName?.trim()) newErrors.lastName = 'Last name is required'
+    if (editingLead.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editingLead.email)) {
+      newErrors.email = 'Please enter a valid email address'
+    }
+    if (editingLead.phone && !/^[+\d\s()-]{7,20}$/.test(editingLead.phone)) {
+      newErrors.phone = 'Please enter a valid phone number'
+    }
+    return newErrors
   }
 
   const handleSaveEdit = () => {
     if (editingLead) {
+      const newErrors = validateEditForm()
+      setEditErrors(newErrors)
+      if (Object.keys(newErrors).length > 0) {
+        toast.error('Please fix the validation errors')
+        return
+      }
+
       // Filter out null values and convert to UpdateLeadData
       const updateData: UpdateLeadData = {
         firstName: editingLead.firstName,
@@ -596,7 +633,7 @@ function LeadsList() {
         source: editingLead.source,
         score: editingLead.score,
         assignedToId: typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null
-          ? String((editingLead.assignedTo as any).id || (editingLead.assignedTo as any)._id)
+          ? String((editingLead.assignedTo as AssignedUser).id || (editingLead.assignedTo as AssignedUser)._id)
           : editingLead.assignedTo || undefined,
         tags: editingLead.tags,
       }
@@ -621,7 +658,7 @@ function LeadsList() {
       status: lead.status,
       source: lead.source,
       assignedToId: typeof lead.assignedTo === 'object' && lead.assignedTo !== null
-        ? String((lead.assignedTo as any).id || (lead.assignedTo as any)._id)
+        ? String((lead.assignedTo as AssignedUser).id || (lead.assignedTo as AssignedUser)._id)
         : lead.assignedTo || undefined,
       tags: lead.tags,
     }
@@ -860,10 +897,10 @@ function LeadsList() {
 
       {/* Mass Email Modal */}
       {showMassEmail && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="mass-email-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowMassEmail(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowMassEmail(false) }}>
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Send Mass Email</h2>
+              <h2 id="mass-email-title" className="text-2xl font-bold">Send Mass Email</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowMassEmail(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -946,10 +983,10 @@ function LeadsList() {
 
       {/* Tags Modal */}
       {showTagsModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="tags-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowTagsModal(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowTagsModal(false) }}>
           <Card className="w-full max-w-md p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Add Tags</h2>
+              <h2 id="tags-title" className="text-xl font-bold">Add Tags</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowTagsModal(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -1014,10 +1051,10 @@ function LeadsList() {
 
       {/* Status Change Modal */}
       {showStatusModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="status-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowStatusModal(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowStatusModal(false) }}>
           <Card className="w-full max-w-md p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Change Status</h2>
+              <h2 id="status-title" className="text-xl font-bold">Change Status</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowStatusModal(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -1057,10 +1094,10 @@ function LeadsList() {
 
       {/* Assign To Modal */}
       {showAssignModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="assign-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowAssignModal(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowAssignModal(false) }}>
           <Card className="w-full max-w-md p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Assign Leads</h2>
+              <h2 id="assign-title" className="text-xl font-bold">Assign Leads</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowAssignModal(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -1076,7 +1113,7 @@ function LeadsList() {
                 >
                   <option value="">Select user...</option>
                   {teamMembers.length > 0 ? (
-                    teamMembers.map((member: any) => (
+                    teamMembers.map((member: TeamMember) => (
                       <option key={member.id} value={member.id}>
                         {member.firstName} {member.lastName}
                       </option>
@@ -1102,10 +1139,10 @@ function LeadsList() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="delete-title" onKeyDown={(e) => { if (e.key === 'Escape') setShowDeleteModal(false) }} onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}>
           <Card className="w-full max-w-md p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-red-600">Delete Leads</h2>
+              <h2 id="delete-title" className="text-xl font-bold text-red-600">Delete Leads</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowDeleteModal(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -1131,10 +1168,10 @@ function LeadsList() {
 
       {/* Edit Lead Modal */}
       {showEditModal && editingLead && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="edit-lead-title" onKeyDown={(e) => { if (e.key === 'Escape') { setShowEditModal(false); setEditingLead(null) } }} onClick={(e) => { if (e.target === e.currentTarget) { setShowEditModal(false); setEditingLead(null) } }}>
           <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Edit Lead</h2>
+              <h2 id="edit-lead-title" className="text-2xl font-bold">Edit Lead</h2>
               <Button variant="ghost" size="icon" onClick={() => {
                 setShowEditModal(false)
                 setEditingLead(null)
@@ -1157,6 +1194,7 @@ function LeadsList() {
                         className="mt-1"
                         placeholder="John"
                       />
+                      {editErrors.firstName && <p className="text-sm text-red-500 mt-1">{editErrors.firstName}</p>}
                     </div>
                     <div>
                       <label className="text-sm font-medium">Last Name *</label>
@@ -1166,6 +1204,7 @@ function LeadsList() {
                         className="mt-1"
                         placeholder="Doe"
                       />
+                      {editErrors.lastName && <p className="text-sm text-red-500 mt-1">{editErrors.lastName}</p>}
                     </div>
                   </div>
                   <div>
@@ -1186,6 +1225,7 @@ function LeadsList() {
                       className="mt-1"
                       placeholder="john@example.com"
                     />
+                    {editErrors.email && <p className="text-sm text-red-500 mt-1">{editErrors.email}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium">Phone</label>
@@ -1195,6 +1235,7 @@ function LeadsList() {
                       className="mt-1"
                       placeholder="+1 (555) 123-4567"
                     />
+                    {editErrors.phone && <p className="text-sm text-red-500 mt-1">{editErrors.phone}</p>}
                   </div>
                 </div>
               </div>
@@ -1391,7 +1432,7 @@ function LeadsList() {
                     >
                       <option value="">Unassigned</option>
                       {teamMembers.length > 0 ? (
-                        teamMembers.map((member: any) => (
+                        teamMembers.map((member: TeamMember) => (
                           <option key={member.id} value={member.id}>
                             {member.firstName} {member.lastName}
                           </option>
@@ -1484,7 +1525,7 @@ function LeadsList() {
           <div className="flex gap-2">
             <select
               value={scoreFilter}
-              onChange={(e) => setScoreFilter(e.target.value as any)}
+              onChange={(e) => setScoreFilter(e.target.value as typeof scoreFilter)}
               className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
             >
               <option value="ALL">All Scores</option>
@@ -1714,9 +1755,29 @@ function LeadsList() {
                       </Button>
                       
                       {showRowMenu === lead.id && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border z-50">
+                        <div
+                          ref={rowMenuRef}
+                          className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border z-50"
+                          role="menu"
+                          aria-label="Lead actions"
+                          onKeyDown={(e: React.KeyboardEvent) => {
+                            const items = Array.from(e.currentTarget.querySelectorAll('[role="menuitem"]:not([disabled])')) as HTMLElement[]
+                            const idx = items.indexOf(e.target as HTMLElement)
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault()
+                              items[(idx + 1) % items.length]?.focus()
+                            } else if (e.key === 'ArrowUp') {
+                              e.preventDefault()
+                              items[(idx - 1 + items.length) % items.length]?.focus()
+                            } else if (e.key === 'Escape') {
+                              e.preventDefault()
+                              setShowRowMenu(null)
+                            }
+                          }}
+                        >
                           <div className="py-1">
                             <button
+                              role="menuitem"
                               className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
                               onClick={() => {
                                 handleEditLead(lead)
@@ -1727,6 +1788,7 @@ function LeadsList() {
                               Edit
                             </button>
                             <button
+                              role="menuitem"
                               className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
                               onClick={() => {
                                 handleDuplicateLead(lead)
@@ -1737,6 +1799,7 @@ function LeadsList() {
                               Duplicate
                             </button>
                             <button
+                              role="menuitem"
                               className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
                               onClick={() => {
                                 setSelectedLeads([lead.id])
@@ -1749,6 +1812,7 @@ function LeadsList() {
                             </button>
                             {lead.phone ? (
                               <a
+                                role="menuitem"
                                 href={`tel:${lead.phone}`}
                                 className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
                                 onClick={() => setShowRowMenu(null)}
@@ -1758,8 +1822,10 @@ function LeadsList() {
                               </a>
                             ) : (
                               <button
+                                role="menuitem"
                                 className="w-full px-4 py-2 text-sm text-left text-muted-foreground cursor-not-allowed flex items-center gap-2"
                                 disabled
+                                aria-disabled="true"
                               >
                                 <Phone className="h-4 w-4" />
                                 No phone number
@@ -1767,6 +1833,7 @@ function LeadsList() {
                             )}
                             <div className="border-t my-1"></div>
                             <button
+                              role="menuitem"
                               className="w-full px-4 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
                               onClick={() => {
                                 handleDeleteSingle(lead.id)
@@ -1874,9 +1941,29 @@ function LeadsList() {
                   </Button>
                   
                   {showRowMenu === lead.id && (
-                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border z-50">
+                    <div
+                      ref={rowMenuRef}
+                      className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border z-50"
+                      role="menu"
+                      aria-label="Lead actions"
+                      onKeyDown={(e: React.KeyboardEvent) => {
+                        const items = Array.from(e.currentTarget.querySelectorAll('[role="menuitem"]:not([disabled])')) as HTMLElement[]
+                        const idx = items.indexOf(e.target as HTMLElement)
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          items[(idx + 1) % items.length]?.focus()
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          items[(idx - 1 + items.length) % items.length]?.focus()
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault()
+                          setShowRowMenu(null)
+                        }
+                      }}
+                    >
                       <div className="py-1">
                         <button
+                          role="menuitem"
                           className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
                           onClick={() => {
                             handleEditLead(lead)
@@ -1887,6 +1974,7 @@ function LeadsList() {
                           Edit
                         </button>
                         <button
+                          role="menuitem"
                           className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
                           onClick={() => {
                             handleDuplicateLead(lead)
@@ -1897,6 +1985,7 @@ function LeadsList() {
                           Duplicate
                         </button>
                         <button
+                          role="menuitem"
                           className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
                           onClick={() => {
                             setSelectedLeads([lead.id])
@@ -1909,6 +1998,7 @@ function LeadsList() {
                         </button>
                         {lead.phone ? (
                           <a
+                            role="menuitem"
                             href={`tel:${lead.phone}`}
                             className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
                             onClick={() => setShowRowMenu(null)}
@@ -1918,8 +2008,10 @@ function LeadsList() {
                           </a>
                         ) : (
                           <button
+                            role="menuitem"
                             className="w-full px-4 py-2 text-sm text-left text-muted-foreground cursor-not-allowed flex items-center gap-2"
                             disabled
+                            aria-disabled="true"
                           >
                             <Phone className="h-4 w-4" />
                             No phone number
@@ -1927,6 +2019,7 @@ function LeadsList() {
                         )}
                         <div className="border-t my-1"></div>
                         <button
+                          role="menuitem"
                           className="w-full px-4 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
                           onClick={() => {
                             handleDeleteSingle(lead.id)

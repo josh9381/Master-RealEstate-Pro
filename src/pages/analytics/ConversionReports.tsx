@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Activity, TrendingUp, Users, Target, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { analyticsApi } from '@/lib/api';
-import { useToast } from '@/hooks/useToast';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
@@ -22,58 +22,46 @@ import {
 } from 'recharts';
 
 const ConversionReports = () => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [leadData, setLeadData] = useState<{
-    total?: number;
-    byStatus?: Record<string, number>;
-    bySource?: Record<string, number>;
-    conversionRate?: number;
-  } | null>(null);
-  const [campaignData, setCampaignData] = useState<{
-    performance?: {
-      openRate?: number;
-      clickRate?: number;
-      conversionRate?: number;
-    };
-  } | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      await loadConversionData();
-    };
-    fetchData();
-  }, []);
-
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+
+  const { data: conversionResult, isLoading: loading, refetch } = useQuery({
+    queryKey: ['conversion-reports'],
+    queryFn: async () => {
+      const params = dateRangeRef.current;
+      const [leads, campaigns] = await Promise.all([
+        analyticsApi.getLeadAnalytics(params).catch((e: Error) => { console.error('Lead analytics failed:', e); return null; }),
+        analyticsApi.getCampaignAnalytics(params).catch((e: Error) => { console.error('Campaign analytics failed:', e); return null; }),
+      ]);
+      // Also try to get conversion funnel for time-to-convert data
+      let funnelData = null;
+      try {
+        funnelData = await analyticsApi.getConversionFunnel(params);
+      } catch {
+        // Conversion funnel is optional
+      }
+      const leadResult = leads?.data || leads;
+      if (funnelData?.data?.timeToConvert) {
+        leadResult.timeToConvert = funnelData.data.timeToConvert;
+      }
+      return {
+        leadData: leadResult,
+        campaignData: campaigns?.data || campaigns,
+      };
+    },
+  });
+
+  const leadData = conversionResult?.leadData ?? null;
+  const campaignData = conversionResult?.campaignData ?? null;
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
-    loadConversionData();
-  };
-
-  const loadConversionData = async () => {
-    setLoading(true);
-    try {
-      const params = dateRangeRef.current;
-      const [leads, campaigns] = await Promise.all([
-        analyticsApi.getLeadAnalytics(params),
-        analyticsApi.getCampaignAnalytics(params),
-      ]);
-      setLeadData(leads);
-      setCampaignData(campaigns);
-    } catch (error) {
-      const err = error as Error;
-      toast.error(err.message || 'Failed to load conversion data');
-    } finally {
-      setLoading(false);
-    }
+    refetch();
   };
 
   // Build conversion funnel from lead status data
   const conversionFunnel = leadData?.byStatus
-    ? Object.entries(leadData.byStatus).map(([stage, count]: [string, number]) => ({
+    ? (Object.entries(leadData.byStatus) as [string, number][]).map(([stage, count]) => ({
         stage: stage.charAt(0).toUpperCase() + stage.slice(1),
         count: count,
         percentage: (leadData.total && leadData.total > 0) ? ((count / leadData.total) * 100).toFixed(1) : 0,
@@ -91,7 +79,7 @@ const ConversionReports = () => {
   const overallConversionRate = leadData?.conversionRate || 0;
   const totalLeadCount = leadData?.total || 0;
   const sourceConversion = leadData?.bySource
-    ? Object.entries(leadData.bySource).map(([source, count]: [string, number]) => {
+    ? (Object.entries(leadData.bySource) as [string, number][]).map(([source, count]) => {
         const convRate = totalLeadCount > 0 ? (totalConversions / totalLeadCount) : 0;
         const converted = Math.round(count * convRate);
         return {
@@ -104,14 +92,14 @@ const ConversionReports = () => {
     : [];
 
 
-  // Time to convert — derive from lead data if possible
-  const timeToConvert: { days: string; count: number; color: string }[] = leadData?.total
-    ? [
-        { days: '0-7', count: Math.round((leadData.byStatus?.WON || 0) * 0.2), color: '#3b82f6' },
-        { days: '8-14', count: Math.round((leadData.byStatus?.WON || 0) * 0.35), color: '#10b981' },
-        { days: '15-30', count: Math.round((leadData.byStatus?.WON || 0) * 0.25), color: '#f59e0b' },
-        { days: '30+', count: Math.round((leadData.byStatus?.WON || 0) * 0.2), color: '#ef4444' },
-      ].filter(d => d.count > 0)
+  // Time to convert — use real API data if available
+  const COLORS_TTC = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+  const timeToConvert: { days: string; count: number; color: string }[] = leadData?.timeToConvert
+    ? leadData.timeToConvert.map((item: { days: string; count: number }, i: number) => ({
+        days: item.days,
+        count: item.count,
+        color: COLORS_TTC[i % COLORS_TTC.length],
+      })).filter((d: { count: number }) => d.count > 0)
     : [];
 
   if (loading) {
@@ -138,11 +126,20 @@ const ConversionReports = () => {
         </div>
         <div className="flex items-center gap-2">
           <DateRangePicker onChange={handleDateChange} />
-          <Button variant="outline" onClick={loadConversionData} disabled={loading}>
+          <Button variant="outline" onClick={() => refetch()} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
-          <Button variant="outline">Export Report</Button>
+          <Button variant="outline" onClick={() => {
+            const data = JSON.stringify({ conversionFunnel, sourceConversion, timeToConvert }, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'conversion-report.json';
+            a.click();
+            URL.revokeObjectURL(url);
+          }}>Export Report</Button>
         </div>
       </div>
 
@@ -217,7 +214,7 @@ const ConversionReports = () => {
                       <p className="font-medium">{stage.stage}</p>
                       <p className="text-sm text-muted-foreground">
                         {stage.count.toLocaleString()} leads
-                        {index > 0 && ` • ${stage.percentage}% conversion`}
+                        {index > 0 && ` • ${stage.percentage}% of total`}
                       </p>
                     </div>
                   </div>

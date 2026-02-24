@@ -16,6 +16,7 @@ import { DaysOfWeekPicker } from '@/components/ui/DaysOfWeekPicker'
 import { AdvancedAudienceFilters } from '@/components/campaigns/AdvancedAudienceFilters'
 import { MockModeBanner } from '@/components/shared/MockModeBanner'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
+import type { CampaignPreviewData, EmailTemplateResponse } from '@/types'
 
 const campaignTypes = [
   {
@@ -76,7 +77,7 @@ function CampaignCreate() {
         subject: templateSubject || prev.subject,
       }))
       // Load template body from API
-      templatesApi.getEmailTemplate(templateId).then((res: any) => {
+      templatesApi.getEmailTemplate(templateId).then((res: EmailTemplateResponse) => {
         const body = res?.body || res?.data?.body || ''
         if (body) {
           setFormData(prev => ({ ...prev, content: body }))
@@ -89,7 +90,7 @@ function CampaignCreate() {
   
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false)
-  const [previewData, setPreviewData] = useState<any>(null)
+  const [previewData, setPreviewData] = useState<CampaignPreviewData | null>(null)
   const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
   
@@ -148,6 +149,7 @@ function CampaignCreate() {
     // Advanced audience filters
     audienceFilters: [] as Array<{ field: string; operator: string; value: string | number | string[] }>,
   })
+  const [campaignErrors, setCampaignErrors] = useState<Record<string, string>>({})
   
   // Track filtered lead count
   const [filteredLeadCount, setFilteredLeadCount] = useState(totalLeads)
@@ -257,16 +259,36 @@ function CampaignCreate() {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
       toast.success(`Draft campaign "${formData.name}" saved`)
       navigate('/campaigns')
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save draft')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save draft')
     } finally {
       setIsCreating(false)
     }
   }
 
+  const validateCampaignForm = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {}
+    if (!formData.name.trim()) newErrors.name = 'Campaign name is required'
+    if (selectedType === 'email' && !formData.subject?.trim()) {
+      newErrors.subject = 'Email subject is required'
+    }
+    if (formData.schedule === 'scheduled' && formData.scheduleDate) {
+      const scheduleDateTime = new Date(`${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00`)
+      if (scheduleDateTime <= new Date()) {
+        newErrors.scheduleDate = 'Schedule date must be in the future'
+      }
+    }
+    if (formData.budget && Number(formData.budget) <= 0) {
+      newErrors.budget = 'Budget must be greater than 0'
+    }
+    return newErrors
+  }
+
   const handleCreate = async () => {
-    if (!formData.name.trim()) {
-      toast.error('Please enter a campaign name')
+    const newErrors = validateCampaignForm()
+    setCampaignErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      toast.error('Please fix the validation errors')
       return
     }
     
@@ -295,8 +317,8 @@ function CampaignCreate() {
       
       // Show preview modal
       setShowPreview(true)
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create campaign preview')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create campaign preview')
     } finally {
       setIsCreating(false)
     }
@@ -323,8 +345,8 @@ function CampaignCreate() {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
       toast.success(`Campaign "${formData.name}" ${formData.schedule === 'immediate' ? 'sent' : 'scheduled'} successfully!`)
       navigate('/campaigns')
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to send campaign')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send campaign')
     } finally {
       setIsSending(false)
       setShowPreview(false)
@@ -483,14 +505,15 @@ function CampaignCreate() {
             {selectedType === 'email' && (
               <div className="space-y-2">
                 <label htmlFor="subject" className="text-sm font-medium">
-                  Email Subject
+                  Email Subject *
                 </label>
                 <Input
                   id="subject"
                   placeholder="e.g., Exclusive Summer Offer - 50% Off!"
                   value={formData.subject}
-                  onChange={(e) => updateFormData({ subject: e.target.value })}
+                  onChange={(e) => { updateFormData({ subject: e.target.value }); if (campaignErrors.subject) setCampaignErrors(prev => { const next = {...prev}; delete next.subject; return next }) }}
                 />
+                {campaignErrors.subject && <p className="text-sm text-red-500 mt-1">{campaignErrors.subject}</p>}
               </div>
             )}
 
@@ -525,12 +548,13 @@ function CampaignCreate() {
                 <>
                   {/* Subject line editable in step 3 too */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Email Subject</label>
+                    <label className="text-sm font-medium">Email Subject *</label>
                     <Input
                       placeholder="e.g., Exclusive Summer Offer - 50% Off!"
                       value={formData.subject}
-                      onChange={(e) => updateFormData({ subject: e.target.value })}
+                      onChange={(e) => { updateFormData({ subject: e.target.value }); if (campaignErrors.subject) setCampaignErrors(prev => { const next = {...prev}; delete next.subject; return next }) }}
                     />
+                    {campaignErrors.subject && <p className="text-sm text-red-500 mt-1">{campaignErrors.subject}</p>}
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -854,9 +878,10 @@ function CampaignCreate() {
                       <Input
                         type="date"
                         value={formData.scheduleDate}
-                        onChange={(e) => updateFormData({ scheduleDate: e.target.value })}
+                        onChange={(e) => { updateFormData({ scheduleDate: e.target.value }); if (campaignErrors.scheduleDate) setCampaignErrors(prev => { const next = {...prev}; delete next.scheduleDate; return next }) }}
                         min={new Date().toISOString().split('T')[0]}
                       />
+                      {campaignErrors.scheduleDate && <p className="text-sm text-red-500 mt-1">{campaignErrors.scheduleDate}</p>}
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Time</label>
@@ -1030,8 +1055,9 @@ function CampaignCreate() {
                   type="number"
                   placeholder="Enter budget amount"
                   value={formData.budget}
-                  onChange={(e) => updateFormData({ budget: e.target.value })}
+                  onChange={(e) => { updateFormData({ budget: e.target.value }); if (campaignErrors.budget) setCampaignErrors(prev => { const next = {...prev}; delete next.budget; return next }) }}
                 />
+                {campaignErrors.budget && <p className="text-sm text-red-500 mt-1">{campaignErrors.budget}</p>}
                 <p className="text-xs text-muted-foreground">
                   Set a budget limit for this campaign
                 </p>

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { activitiesApi } from '@/lib/api'
+import type { ActivityRecord } from '@/types'
 
 export default function ActivityPage() {
   const [filter, setFilter] = useState('all')
@@ -17,7 +18,7 @@ export default function ActivityPage() {
     queryFn: () => activitiesApi.getActivities({ limit: 50 }),
   })
 
-  const iconMap: Record<string, any> = {
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     email: Mail,
     call: Phone,
     meeting: Calendar,
@@ -56,12 +57,12 @@ export default function ActivityPage() {
   const activities = useMemo(() => {
     const raw = activitiesResponse?.data?.activities || activitiesResponse?.activities || activitiesResponse || []
     if (!Array.isArray(raw)) return []
-    return raw.map((a: any) => ({
+    return raw.map((a: ActivityRecord) => ({
       id: a.id || a._id,
       type: a.type || 'note',
       title: a.title || a.description || 'Activity',
       description: a.description || '',
-      user: a.user?.name || a.userName || a.user || 'System',
+      user: (typeof a.user === 'object' ? a.user?.name : a.user) || a.userName || 'System',
       timestamp: a.createdAt ? getRelativeTime(a.createdAt) : 'Unknown',
       icon: iconMap[a.type] || Activity,
       color: colorMap[a.type] || 'text-gray-500',
@@ -96,15 +97,15 @@ export default function ActivityPage() {
           <div className="text-sm text-muted-foreground">Total Activities</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'EMAIL' || a.type === 'email').length}</div>
+          <div className="text-2xl font-bold">{activities.filter((a) => a.type === 'EMAIL' || a.type === 'email').length}</div>
           <div className="text-sm text-muted-foreground">Emails Sent</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'CALL' || a.type === 'call').length}</div>
+          <div className="text-2xl font-bold">{activities.filter((a) => a.type === 'CALL' || a.type === 'call').length}</div>
           <div className="text-sm text-muted-foreground">Calls Made</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'MEETING' || a.type === 'meeting').length}</div>
+          <div className="text-2xl font-bold">{activities.filter((a) => a.type === 'MEETING' || a.type === 'meeting').length}</div>
           <div className="text-sm text-muted-foreground">Meetings</div>
         </Card>
       </div>

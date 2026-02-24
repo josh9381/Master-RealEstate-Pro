@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Workflow, Play, Plus, TrendingUp, Save, TestTube2, 
   CheckCircle2, XCircle, Activity, Download, Upload,
@@ -18,14 +19,156 @@ import { WorkflowCanvas } from '@/components/workflows/WorkflowCanvas';
 import { WorkflowNodeData } from '@/components/workflows/WorkflowNode';
 import { WorkflowComponentLibrary, WorkflowComponent } from '@/components/workflows/WorkflowComponentLibrary';
 import { NodeConfigPanel } from '@/components/workflows/NodeConfigPanel';
+import type { WorkflowAction, WorkflowExecution } from '@/types';
 
 interface ExecutionLog {
   id: string;
   timestamp: string;
-  status: 'success' | 'failed' | 'running';
+  nodeId?: string;
+  nodeName?: string;
+  status: 'success' | 'failed' | 'running' | 'info';
+  message?: string;
   duration: number;
-  details: string;
+  details?: string;
 }
+
+interface WorkflowTemplate {
+  name: string;
+  desc: string;
+  icon: React.ComponentType<{ className?: string }>;
+  uses: number;
+  category: string;
+  workflow: string;
+  nodes: WorkflowNodeData[];
+}
+
+const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
+  {
+    name: 'New Lead Welcome Series',
+    desc: 'Automatically welcome and nurture new leads with personalized emails',
+    icon: Mail,
+    uses: 0,
+    category: 'email',
+    workflow: '1. Trigger: New lead created → 2. Wait 1 hour → 3. Send welcome email',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'New Lead Created', config: {} },
+      { id: 'delay-1', type: 'delay', label: 'Wait 1 hour', config: { duration: 3600 } },
+      { id: 'action-1', type: 'action', label: 'Send Welcome Email', config: {} },
+    ],
+  },
+  {
+    name: 'Lead Score & Notify',
+    desc: 'Score leads based on activity and notify sales team when hot',
+    icon: TrendingUp,
+    uses: 0,
+    category: 'lead',
+    workflow: '1. Trigger: Lead activity → 2. Check score > 80 → 3. Add hot tag → 4. Notify team',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'Lead Activity', config: {} },
+      { id: 'condition-1', type: 'condition', label: 'Check Lead Score > 80', config: {} },
+      { id: 'action-1', type: 'action', label: 'Add Hot Lead Tag', config: {} },
+      { id: 'action-2', type: 'action', label: 'Notify Sales Team', config: {} },
+    ],
+  },
+  {
+    name: 'Follow-up Automation',
+    desc: 'Auto follow-up after property showing with feedback requests',
+    icon: Calendar,
+    uses: 0,
+    category: 'email',
+    workflow: '1. Viewing complete → 2. Wait 2 hours → 3. Feedback email → 4. Wait 2 days → 5. Create task',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'Property Viewing Complete', config: {} },
+      { id: 'delay-1', type: 'delay', label: 'Wait 2 hours', config: { duration: 7200 } },
+      { id: 'action-1', type: 'action', label: 'Send Feedback Email', config: {} },
+      { id: 'delay-2', type: 'delay', label: 'Wait 2 days', config: { duration: 172800 } },
+      { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {} },
+    ],
+  },
+  {
+    name: 'Task Assignment',
+    desc: 'Auto-assign tasks to team members based on lead status',
+    icon: CheckCircle2,
+    uses: 0,
+    category: 'task',
+    workflow: '1. Lead status changed → 2. If qualified → 3. Assign to sales rep',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'Lead Status Changed', config: {} },
+      { id: 'condition-1', type: 'condition', label: 'If Status = Qualified', config: {} },
+      { id: 'action-1', type: 'action', label: 'Assign to Sales Rep', config: {} },
+    ],
+  },
+  {
+    name: 'SMS Drip Campaign',
+    desc: 'Multi-step SMS nurture sequence with timing controls',
+    icon: MessageSquare,
+    uses: 0,
+    category: 'sms',
+    workflow: '1. Lead opts in → 2. Send welcome SMS → 3. Wait 3 days → 4. Send value SMS',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'Lead Opts In', config: {} },
+      { id: 'action-1', type: 'action', label: 'Send Welcome SMS', config: {} },
+      { id: 'delay-1', type: 'delay', label: 'Wait 3 days', config: { duration: 259200 } },
+      { id: 'action-2', type: 'action', label: 'Send Value SMS', config: {} },
+    ],
+  },
+  {
+    name: 'Email Re-engagement',
+    desc: 'Re-engage cold leads with strategic emails',
+    icon: Zap,
+    uses: 0,
+    category: 'email',
+    workflow: '1. No activity 30 days → 2. Re-engagement email → 3. Wait 7 days → 4. Check if engaged',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'No Activity 30 Days', config: {} },
+      { id: 'action-1', type: 'action', label: 'Send Re-engagement Email', config: {} },
+      { id: 'delay-1', type: 'delay', label: 'Wait 7 days', config: { duration: 604800 } },
+      { id: 'condition-1', type: 'condition', label: 'Check if Engaged', config: {} },
+    ],
+  },
+  {
+    name: 'Property Viewing Follow-up',
+    desc: 'Automated follow-up after viewings with scheduling',
+    icon: Calendar,
+    uses: 0,
+    category: 'task',
+    workflow: '1. Viewing completed → 2. Thank you email → 3. Create follow-up task',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'Viewing Completed', config: {} },
+      { id: 'action-1', type: 'action', label: 'Send Thank You Email', config: {} },
+      { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {} },
+    ],
+  },
+  {
+    name: 'Contract Milestones',
+    desc: 'Alert team at key contract stages and deadlines',
+    icon: FileText,
+    uses: 0,
+    category: 'task',
+    workflow: '1. Contract stage change → 2. Check milestone → 3. Notify team → 4. Create reminder → 5. Update CRM',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'Contract Stage Change', config: {} },
+      { id: 'condition-1', type: 'condition', label: 'Check Milestone Type', config: {} },
+      { id: 'action-1', type: 'action', label: 'Notify Team', config: {} },
+      { id: 'action-2', type: 'action', label: 'Create Reminder Task', config: {} },
+      { id: 'action-3', type: 'action', label: 'Update CRM', config: {} },
+    ],
+  },
+  {
+    name: 'Lead Qualification',
+    desc: 'Automatically qualify and route leads to right team',
+    icon: Filter,
+    uses: 0,
+    category: 'lead',
+    workflow: '1. New lead → 2. Check budget & timeline → 3. Add qualified tag → 4. Assign to agent',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', label: 'New Lead', config: {} },
+      { id: 'condition-1', type: 'condition', label: 'Check Budget & Timeline', config: {} },
+      { id: 'action-1', type: 'action', label: 'Add Qualified Tag', config: {} },
+      { id: 'action-2', type: 'action', label: 'Assign to Agent', config: {} },
+    ],
+  },
+];
 
 const WorkflowBuilder = () => {
   const { toast } = useToast();
@@ -41,31 +184,90 @@ const WorkflowBuilder = () => {
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateFilter, setTemplateFilter] = useState('all');
   const [isTestRunning, setIsTestRunning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'active' | 'paused' | 'running'>('idle');
   const [activeExecutions, setActiveExecutions] = useState<number>(0);
   const [interactionMode, setInteractionMode] = useState<'click' | 'drag'>('drag');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  // Execution logs - empty until real data flows
-  const [executionLogs] = useState<ExecutionLog[]>([]);
+  // Execution logs
+  const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const workflowId = urlParams.get('id');
+
+  // Load workflow data via useQuery when ID is present
+  useQuery({
+    queryKey: ['workflow', workflowId],
+    queryFn: async () => {
+      const response = await workflowsApi.getWorkflow(workflowId!);
+
+      if (response?.data?.workflow) {
+        const workflow = response.data.workflow;
+        setWorkflowName(workflow.name || 'Workflow');
+        setWorkflowStatus(workflow.isActive ? 'active' : 'idle');
+
+        // Reconstruct nodes from workflow data
+        const reconstructedNodes: WorkflowNodeData[] = [];
+
+        // Add trigger node
+        if (workflow.triggerType) {
+          const triggerLabel = workflow.triggerType.replace(/_/g, ' ')
+            .toLowerCase()
+            .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+          reconstructedNodes.push({
+            id: 'trigger-node',
+            type: 'trigger',
+            label: `Trigger: ${triggerLabel}`,
+            description: 'Workflow trigger',
+            config: {
+              triggerType: workflow.triggerType,
+              ...(workflow.triggerData || {})
+            },
+            position: { x: 400, y: 100 }
+          });
+        }
+
+        // Add action nodes with proper spacing
+        if (workflow.actions && Array.isArray(workflow.actions)) {
+          workflow.actions.forEach((action: WorkflowAction, index: number) => {
+            const actionType = action.type || 'action';
+            const actionLabel = actionType.replace(/_/g, ' ')
+              .toLowerCase()
+              .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+            reconstructedNodes.push({
+              id: String(action.id || `action-${index}`),
+              type: 'action',
+              label: actionLabel,
+              description: String(action.description || ''),
+              config: (action.config || {}) as Record<string, unknown>,
+              position: { x: 400, y: 100 + ((index + 1) * 180) }
+            });
+          });
+        }
+
+        setNodes(reconstructedNodes);
+        toast.success(`Workflow loaded: ${workflow.name}`);
+      }
+
+      return response;
+    },
+    enabled: !!workflowId,
+  });
+
+  // Kick off initial polling when workflow ID is present
   useEffect(() => {
-    // Load workflow if ID is in URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    const workflowId = urlParams.get('id');
     if (workflowId) {
-      loadWorkflow(workflowId);
-      // Start polling for workflow status
       fetchWorkflowStatus(workflowId);
     }
-  }, []);
+  }, [workflowId]);
 
   // Poll workflow status every 5 seconds
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const workflowId = urlParams.get('id');
-    
     if (!workflowId) return;
 
     const interval = setInterval(() => {
@@ -73,7 +275,7 @@ const WorkflowBuilder = () => {
     }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [workflowId]);
 
   const fetchWorkflowStatus = async (workflowId: string) => {
     try {
@@ -87,79 +289,31 @@ const WorkflowBuilder = () => {
         setWorkflowStatus(workflowData.isActive ? 'active' : 'idle');
       }
 
-      // Check for running executions
+      // Check for running executions and populate logs
       if (executionsData?.executions) {
         const runningCount = executionsData.executions.filter(
-          (exec: any) => exec.status === 'IN_PROGRESS' || exec.status === 'RUNNING'
+          (exec: WorkflowExecution) => exec.status === 'IN_PROGRESS' || exec.status === 'RUNNING'
         ).length;
         setActiveExecutions(runningCount);
         if (runningCount > 0) {
           setWorkflowStatus('running');
         }
+        setExecutionLogs(executionsData.executions.map((exec: WorkflowExecution) => ({
+          id: exec.id,
+          timestamp: exec.startedAt || exec.createdAt || new Date().toISOString(),
+          nodeId: exec.nodeId || '',
+          nodeName: exec.nodeName || exec.workflowName || 'Unknown',
+          status: exec.status === 'COMPLETED' || exec.status === 'SUCCESS' ? 'success' : exec.status === 'FAILED' ? 'failed' : exec.status === 'IN_PROGRESS' || exec.status === 'RUNNING' ? 'running' : 'info',
+          message: exec.result || exec.error || `Execution ${exec.status?.toLowerCase() || 'unknown'}`,
+          duration: exec.duration || 0
+        })));
       }
     } catch (error) {
       console.error('Failed to fetch workflow status:', error);
     }
   };
 
-  const loadWorkflow = async (workflowId: string) => {
-    try {
-      const response = await workflowsApi.getWorkflow(workflowId);
-      
-      if (response?.data?.workflow) {
-        const workflow = response.data.workflow;
-        setWorkflowName(workflow.name || 'Workflow');
-        setWorkflowStatus(workflow.isActive ? 'active' : 'idle');
-        
-        // Reconstruct nodes from workflow data
-        const reconstructedNodes: WorkflowNodeData[] = [];
-        
-        // Add trigger node
-        if (workflow.triggerType) {
-          const triggerLabel = workflow.triggerType.replace(/_/g, ' ')
-            .toLowerCase()
-            .replace(/\b\w/g, (l: string) => l.toUpperCase());
-            
-          reconstructedNodes.push({
-            id: 'trigger-node',
-            type: 'trigger',
-            label: `Trigger: ${triggerLabel}`,
-            description: 'Workflow trigger',
-            config: {
-              triggerType: workflow.triggerType,
-              ...(workflow.triggerData || {})
-            },
-            position: { x: 400, y: 100 } // Set initial position
-          });
-        }
-        
-        // Add action nodes with proper spacing
-        if (workflow.actions && Array.isArray(workflow.actions)) {
-          workflow.actions.forEach((action: any, index: number) => {
-            const actionType = action.type || 'action';
-            const actionLabel = actionType.replace(/_/g, ' ')
-              .toLowerCase()
-              .replace(/\b\w/g, (l: string) => l.toUpperCase());
-            
-            reconstructedNodes.push({
-              id: action.id || `action-${index}`,
-              type: 'action',
-              label: actionLabel,
-              description: action.description || '',
-              config: action.config || {},
-              position: { x: 400, y: 100 + ((index + 1) * 180) } // Space nodes 180px apart
-            });
-          });
-        }
-        
-        setNodes(reconstructedNodes);
-        toast.success(`Workflow loaded: ${workflow.name}`);
-      }
-    } catch (error) {
-      console.error('Failed to load workflow:', error);
-      toast.error('Failed to load workflow');
-    }
-  };
+
 
   const addNodeFromComponent = (component: WorkflowComponent) => {
     const newNode: WorkflowNodeData = {
@@ -285,12 +439,22 @@ const WorkflowBuilder = () => {
   };
 
   const handleNodeDelete = (nodeId: string) => {
-    setNodes(nodes.filter(n => n.id !== nodeId));
-    if (selectedNode?.id === nodeId) {
-      setSelectedNode(null);
-      setShowConfigPanel(false);
+    if (showDeleteConfirm === nodeId) {
+      // Second click confirms deletion
+      setNodes(nodes.filter(n => n.id !== nodeId));
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode(null);
+        setShowConfigPanel(false);
+      }
+      setShowDeleteConfirm(null);
+      toast.success('Node removed from workflow');
+    } else {
+      // First click shows confirmation
+      setShowDeleteConfirm(nodeId);
+      toast.warning('Click delete again to confirm removal');
+      // Auto-reset confirmation after 3 seconds
+      setTimeout(() => setShowDeleteConfirm(null), 3000);
     }
-    toast.success('Node removed from workflow');
   };
 
   const handleNodeEdit = (node: WorkflowNodeData) => {
@@ -307,6 +471,7 @@ const WorkflowBuilder = () => {
   };
 
   const saveWorkflow = async () => {
+    setIsSaving(true);
     try {
       // Map nodes to the format the backend expects
       const triggerNode = nodes.find(n => n.type === 'trigger');
@@ -315,7 +480,7 @@ const WorkflowBuilder = () => {
       const workflowData = {
         name: workflowName,
         description: `Workflow with ${nodes.length} nodes`,
-        triggerType: triggerNode?.label?.toLowerCase().replace(/\s+/g, '_') || 'manual',
+        triggerType: triggerNode?.config?.triggerType || triggerNode?.label?.toLowerCase().replace(/\s+/g, '_') || 'manual',
         triggerData: triggerNode?.config || {},
         actions: actionNodes.map(n => ({
           type: n.type,
@@ -342,6 +507,8 @@ const WorkflowBuilder = () => {
     } catch (error) {
       console.error('Failed to save workflow:', error);
       toast.error('Failed to save workflow');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -368,100 +535,7 @@ const WorkflowBuilder = () => {
   };
 
   const importTemplate = (templateName: string) => {
-    // Template definitions with actual workflow nodes
-    const templates: Record<string, { nodes: WorkflowNodeData[], name: string, description: string }> = {
-      'New Lead Welcome Series': {
-        name: 'New Lead Welcome Series',
-        description: 'Welcome sequence for new leads',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'New Lead Created', config: {} },
-          { id: 'delay-1', type: 'delay', label: 'Wait 1 hour', config: { duration: 3600 } },
-          { id: 'action-1', type: 'action', label: 'Send Welcome Email', config: {} },
-        ]
-      },
-      'Lead Score & Notify': {
-        name: 'Lead Score & Notify',
-        description: 'Score leads and notify team',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Lead Activity', config: {} },
-          { id: 'condition-1', type: 'condition', label: 'Check Lead Score > 80', config: {} },
-          { id: 'action-1', type: 'action', label: 'Add Hot Lead Tag', config: {} },
-          { id: 'action-2', type: 'action', label: 'Notify Sales Team', config: {} },
-        ]
-      },
-      'Follow-up Automation': {
-        name: 'Follow-up Automation',
-        description: 'Automated follow-up sequence',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Property Viewing Complete', config: {} },
-          { id: 'delay-1', type: 'delay', label: 'Wait 2 hours', config: { duration: 7200 } },
-          { id: 'action-1', type: 'action', label: 'Send Feedback Email', config: {} },
-          { id: 'delay-2', type: 'delay', label: 'Wait 2 days', config: { duration: 172800 } },
-          { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {} },
-        ]
-      },
-      'Task Assignment': {
-        name: 'Task Assignment',
-        description: 'Auto-assign tasks by status',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Lead Status Changed', config: {} },
-          { id: 'condition-1', type: 'condition', label: 'If Status = Qualified', config: {} },
-          { id: 'action-1', type: 'action', label: 'Assign to Sales Rep', config: {} },
-        ]
-      },
-      'SMS Drip Campaign': {
-        name: 'SMS Drip Campaign',
-        description: 'Multi-step SMS sequence',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Lead Opts In', config: {} },
-          { id: 'action-1', type: 'action', label: 'Send Welcome SMS', config: {} },
-          { id: 'delay-1', type: 'delay', label: 'Wait 3 days', config: { duration: 259200 } },
-          { id: 'action-2', type: 'action', label: 'Send Value SMS', config: {} },
-        ]
-      },
-      'Email Re-engagement': {
-        name: 'Email Re-engagement',
-        description: 'Re-engage dormant leads',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'No Activity 30 Days', config: {} },
-          { id: 'action-1', type: 'action', label: 'Send Re-engagement Email', config: {} },
-          { id: 'delay-1', type: 'delay', label: 'Wait 7 days', config: { duration: 604800 } },
-          { id: 'condition-1', type: 'condition', label: 'Check if Engaged', config: {} },
-        ]
-      },
-      'Property Viewing Follow-up': {
-        name: 'Property Viewing Follow-up',
-        description: 'Follow-up after viewings',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Viewing Completed', config: {} },
-          { id: 'action-1', type: 'action', label: 'Send Thank You Email', config: {} },
-          { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {} },
-        ]
-      },
-      'Contract Milestones': {
-        name: 'Contract Milestones',
-        description: 'Alert at key contract stages',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'Contract Stage Change', config: {} },
-          { id: 'condition-1', type: 'condition', label: 'Check Milestone Type', config: {} },
-          { id: 'action-1', type: 'action', label: 'Notify Team', config: {} },
-          { id: 'action-2', type: 'action', label: 'Create Reminder Task', config: {} },
-          { id: 'action-3', type: 'action', label: 'Update CRM', config: {} },
-        ]
-      },
-      'Lead Qualification': {
-        name: 'Lead Qualification',
-        description: 'Qualify and route leads',
-        nodes: [
-          { id: 'trigger-1', type: 'trigger', label: 'New Lead', config: {} },
-          { id: 'condition-1', type: 'condition', label: 'Check Budget & Timeline', config: {} },
-          { id: 'action-1', type: 'action', label: 'Add Qualified Tag', config: {} },
-          { id: 'action-2', type: 'action', label: 'Assign to Agent', config: {} },
-        ]
-      },
-    };
-
-    const template = templates[templateName];
+    const template = WORKFLOW_TEMPLATES.find(t => t.name === templateName);
     if (template) {
       setNodes(template.nodes);
       setWorkflowName(template.name);
@@ -510,13 +584,13 @@ const WorkflowBuilder = () => {
             <Upload className="h-4 w-4 mr-2" />
             Templates
           </Button>
-          <Button variant="outline" onClick={runTest}>
+          <Button variant="outline" onClick={runTest} disabled={isTestRunning}>
             <TestTube2 className="h-4 w-4 mr-2" />
-            Test Run
+            {isTestRunning ? 'Running...' : 'Test Run'}
           </Button>
-          <Button onClick={saveWorkflow}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Workflow
+          <Button onClick={saveWorkflow} disabled={isSaving}>
+            <Save className={`h-4 w-4 mr-2 ${isSaving ? 'animate-spin' : ''}`} />
+            {isSaving ? 'Saving...' : 'Save Workflow'}
           </Button>
         </div>
       </div>
@@ -613,89 +687,7 @@ const WorkflowBuilder = () => {
           
           <div className="overflow-y-auto flex-1 pr-2 -mr-2 mt-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-4">
-              {[
-                { 
-                  name: 'New Lead Welcome Series', 
-                  desc: 'Automatically welcome and nurture new leads with personalized emails', 
-                  icon: Mail, 
-                  uses: 0, 
-                  nodes: 3,
-                  category: 'email',
-                  workflow: '1. Trigger: New lead created → 2. Wait 1 hour → 3. Send welcome email'
-                },
-                { 
-                  name: 'Lead Score & Notify', 
-                  desc: 'Score leads based on activity and notify sales team when hot', 
-                  icon: TrendingUp, 
-                  uses: 0, 
-                  nodes: 4,
-                  category: 'lead',
-                  workflow: '1. Trigger: Lead activity → 2. Check score > 80 → 3. Add hot tag → 4. Notify team'
-                },
-                { 
-                  name: 'Follow-up Automation', 
-                  desc: 'Auto follow-up after property showing with feedback requests', 
-                  icon: Calendar, 
-                  uses: 0, 
-                  nodes: 5,
-                  category: 'email',
-                  workflow: '1. Viewing complete → 2. Wait 2 hours → 3. Feedback email → 4. Wait 2 days → 5. Create task'
-                },
-                { 
-                  name: 'Task Assignment', 
-                  desc: 'Auto-assign tasks to team members based on lead status', 
-                  icon: CheckCircle2, 
-                  uses: 0, 
-                  nodes: 3,
-                  category: 'task',
-                  workflow: '1. Lead status changed → 2. If qualified → 3. Assign to sales rep'
-                },
-                { 
-                  name: 'SMS Drip Campaign', 
-                  desc: 'Multi-step SMS nurture sequence with timing controls', 
-                  icon: MessageSquare, 
-                  uses: 0, 
-                  nodes: 4,
-                  category: 'sms',
-                  workflow: '1. Lead opts in → 2. Send welcome SMS → 3. Wait 3 days → 4. Send value SMS'
-                },
-                { 
-                  name: 'Email Re-engagement', 
-                  desc: 'Re-engage cold leads with strategic emails', 
-                  icon: Zap, 
-                  uses: 0, 
-                  nodes: 4,
-                  category: 'email',
-                  workflow: '1. No activity 30 days → 2. Re-engagement email → 3. Wait 7 days → 4. Check if engaged'
-                },
-                { 
-                  name: 'Property Viewing Follow-up', 
-                  desc: 'Automated follow-up after viewings with scheduling', 
-                  icon: Calendar, 
-                  uses: 0, 
-                  nodes: 3,
-                  category: 'task',
-                  workflow: '1. Viewing completed → 2. Thank you email → 3. Create follow-up task'
-                },
-                { 
-                  name: 'Contract Milestones', 
-                  desc: 'Alert team at key contract stages and deadlines', 
-                  icon: FileText, 
-                  uses: 0, 
-                  nodes: 5,
-                  category: 'task',
-                  workflow: '1. Contract stage change → 2. Check milestone → 3. Notify team → 4. Create reminder → 5. Update CRM'
-                },
-                { 
-                  name: 'Lead Qualification', 
-                  desc: 'Automatically qualify and route leads to right team', 
-                  icon: Filter, 
-                  uses: 0, 
-                  nodes: 4,
-                  category: 'lead',
-                  workflow: '1. New lead → 2. Check budget & timeline → 3. Add qualified tag → 4. Assign to agent'
-                },
-              ]
+              {WORKFLOW_TEMPLATES
                 .filter(template => {
                   const matchesSearch = templateSearch === '' || 
                     template.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
@@ -725,7 +717,7 @@ const WorkflowBuilder = () => {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-muted-foreground">{template.nodes} nodes</span>
+                      <span className="text-xs text-muted-foreground">{template.nodes.length} nodes</span>
                       <Badge variant="outline" className="text-xs capitalize">{template.category}</Badge>
                     </div>
                     <Button 
@@ -742,17 +734,7 @@ const WorkflowBuilder = () => {
             </div>
             
             {/* No Results */}
-            {[
-                { name: 'New Lead Welcome Series', desc: 'Automatically welcome and nurture new leads with personalized emails', icon: Mail, uses: 0, nodes: 3, category: 'email', workflow: '' },
-                { name: 'Lead Score & Notify', desc: 'Score leads based on activity and notify sales team when hot', icon: TrendingUp, uses: 0, nodes: 4, category: 'lead', workflow: '' },
-                { name: 'Follow-up Automation', desc: 'Auto follow-up after property showing with feedback requests', icon: Calendar, uses: 0, nodes: 5, category: 'email', workflow: '' },
-                { name: 'Task Assignment', desc: 'Auto-assign tasks to team members based on lead status', icon: CheckCircle2, uses: 0, nodes: 3, category: 'task', workflow: '' },
-                { name: 'SMS Drip Campaign', desc: 'Multi-step SMS nurture sequence with timing controls', icon: MessageSquare, uses: 0, nodes: 4, category: 'sms', workflow: '' },
-                { name: 'Email Re-engagement', desc: 'Re-engage cold leads with strategic emails', icon: Zap, uses: 0, nodes: 4, category: 'email', workflow: '' },
-                { name: 'Property Viewing Follow-up', desc: 'Automated follow-up after viewings with scheduling', icon: Calendar, uses: 0, nodes: 3, category: 'task', workflow: '' },
-                { name: 'Contract Milestones', desc: 'Alert team at key contract stages and deadlines', icon: FileText, uses: 0, nodes: 5, category: 'task', workflow: '' },
-                { name: 'Lead Qualification', desc: 'Automatically qualify and route leads to right team', icon: Filter, uses: 0, nodes: 4, category: 'lead', workflow: '' },
-              ].filter(template => {
+            {WORKFLOW_TEMPLATES.filter(template => {
                 const matchesSearch = templateSearch === '' || 
                   template.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
                   template.desc.toLowerCase().includes(templateSearch.toLowerCase());
@@ -1067,11 +1049,45 @@ const WorkflowBuilder = () => {
                 )}
                 <div className="pt-4 border-t space-y-2">
                   <p className="text-sm font-medium">Quick Actions</p>
-                  <Button variant="outline" size="sm" className="w-full">
+                  <Button variant="outline" size="sm" className="w-full" onClick={async () => {
+                    try {
+                      const duplicatedNodes = nodes.map(n => ({ ...n, id: `${n.id}-copy-${Date.now()}` }))
+                      const triggerNodes = duplicatedNodes.filter(n => n.type === 'trigger')
+                      const conditionNodes = duplicatedNodes.filter(n => n.type === 'condition')
+                      const actionNodes = duplicatedNodes.filter(n => n.type === 'action')
+                      const workflowData = {
+                        name: `${workflowName} (Copy)`,
+                        trigger: triggerNodes.length > 0 ? { type: triggerNodes[0].type, config: { ...triggerNodes[0].config, label: triggerNodes[0].label } } : { type: 'manual', config: {} },
+                        conditions: conditionNodes.map(n => ({ field: n.label, operator: 'equals', value: '', ...n.config })),
+                        actions: actionNodes.map(n => ({ type: n.type, config: { ...n.config, label: n.label } })),
+                        nodes: duplicatedNodes,
+                        status: 'draft' as const
+                      }
+                      const response = await workflowsApi.createWorkflow(workflowData)
+                      const newId = response?.data?.id || response?.id
+                      toast.success('Workflow duplicated successfully')
+                      if (newId) {
+                        window.location.search = `?id=${newId}`
+                      }
+                    } catch (error) {
+                      console.error('Failed to duplicate workflow:', error)
+                      toast.error('Failed to duplicate workflow')
+                    }
+                  }}>
                     <Copy className="h-4 w-4 mr-2" />
                     Duplicate Workflow
                   </Button>
-                  <Button variant="outline" size="sm" className="w-full">
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => {
+                    const exportData = { name: workflowName, nodes, status: workflowStatus, totalNodes: nodes.length, exportedAt: new Date().toISOString() }
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}.json`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                    toast.success('Workflow exported as JSON')
+                  }}>
                     <Download className="h-4 w-4 mr-2" />
                     Export JSON
                   </Button>
@@ -1084,19 +1100,16 @@ const WorkflowBuilder = () => {
           {selectedNode && !showConfigPanel && (
             <Card className="border-primary">
               <CardHeader>
-                <CardTitle className="text-base">Node Configuration</CardTitle>
+                <CardTitle className="text-base">Configure Node</CardTitle>
                 <CardDescription className="text-xs">{selectedNode.label}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Selected: <span className="font-medium">{selectedNode.label}</span> ({selectedNode.type})
-                </p>
                 <Button
                   className="w-full"
                   onClick={() => setShowConfigPanel(true)}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Configure Node
+                  Open Configuration
                 </Button>
                 <Button
                   variant="outline"
@@ -1151,7 +1164,10 @@ const WorkflowBuilder = () => {
                 </div>
               ))}
             </div>
-            <Button variant="outline" className="w-full mt-4">
+            <Button variant="outline" className="w-full mt-4" onClick={() => {
+              setShowLogsPanel(!showLogsPanel);
+              toast.info('Debug console expanded — check execution logs above');
+            }}>
               <Terminal className="h-4 w-4 mr-2" />
               View Full Debug Console
             </Button>

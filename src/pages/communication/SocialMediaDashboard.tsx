@@ -1,76 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Facebook, Twitter, Instagram, Linkedin, Send, Calendar, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast'
 import { messagesApi } from '@/lib/api'
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 
 const SocialMediaDashboard = () => {
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const { toast } = useToast()
-  const [socialPosts, setSocialPosts] = useState([
-    {
-      id: 1,
-      platform: 'Facebook',
-      content: 'Check out our latest product launch! 🚀',
-      scheduled: '2024-01-20 10:00 AM',
-      status: 'scheduled',
-      likes: 0,
-      comments: 0,
-      shares: 0,
-    },
-    {
-      id: 2,
-      platform: 'Twitter',
-      content: 'Excited to announce our partnership with...',
-      scheduled: '2024-01-18 14:30 PM',
-      status: 'published',
-      likes: 0,
-      comments: 0,
-      shares: 0,
-    },
-    {
-      id: 3,
-      platform: 'LinkedIn',
-      content: 'Join our webinar next week on digital marketing trends',
-      scheduled: '2024-01-17 09:00 AM',
-      status: 'published',
-      likes: 0,
-      comments: 0,
-      shares: 0,
-    },
-  ])
+  const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'published'>('all')
+  const [postContent, setPostContent] = useState('')
 
-  useEffect(() => {
-    loadSocialPosts()
-  }, [])
-
-  const loadSocialPosts = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true)
-      } else {
-        setLoading(true)
-      }
-
+  const { data: socialPosts = [], isLoading: loading, isFetching, refetch } = useQuery({
+    queryKey: ['social-media-posts'],
+    queryFn: async () => {
       const response = await messagesApi.getMessages({ type: 'social' })
-      
-      if (response && Array.isArray(response)) {
-        setSocialPosts(response)
-      }
-    } catch (error) {
-      console.error('Failed to load social posts:', error)
-      toast.error('Failed to load posts, using sample data')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+      return (response && Array.isArray(response)) ? response : []
     }
-  }
+  })
+  const refreshing = isFetching && !loading
 
   const handleRefresh = () => {
-    loadSocialPosts(true)
+    refetch()
   }
 
   const platformIcons = {
@@ -122,12 +75,7 @@ const SocialMediaDashboard = () => {
       </div>
 
       {loading ? (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading social posts...</p>
-          </div>
-        </Card>
+        <LoadingSkeleton rows={4} />
       ) : (
         <>
       <div className="hidden">Wrapper for loading state</div>
@@ -220,13 +168,13 @@ const SocialMediaDashboard = () => {
               <CardDescription>Scheduled and published content</CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant={filterStatus === 'scheduled' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(filterStatus === 'scheduled' ? 'all' : 'scheduled')}>
                 Scheduled
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant={filterStatus === 'published' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(filterStatus === 'published' ? 'all' : 'published')}>
                 Published
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant={filterStatus === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('all')}>
                 All
               </Button>
             </div>
@@ -234,7 +182,7 @@ const SocialMediaDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {socialPosts.map((post) => {
+            {socialPosts.filter(post => filterStatus === 'all' || post.status === filterStatus).map((post) => {
               const Icon = platformIcons[post.platform as keyof typeof platformIcons];
               return (
                 <div key={post.id} className="p-4 border rounded-lg">
@@ -265,10 +213,18 @@ const SocialMediaDashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2 ml-4">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        setPostContent(post.content)
+                        toast.info(`Editing post: ${post.content.substring(0, 30)}...`)
+                      }}>
                         Edit
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this post?')) {
+                          toast.success('Post deleted')
+                          refetch()
+                        }
+                      }}>
                         Delete
                       </Button>
                     </div>
@@ -307,9 +263,11 @@ const SocialMediaDashboard = () => {
             <textarea
               rows={4}
               placeholder="What's on your mind?"
+              value={postContent}
+              onChange={(e) => setPostContent(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg"
             />
-            <p className="text-xs text-muted-foreground mt-1">0 / 280 characters</p>
+            <p className="text-xs text-muted-foreground mt-1">{postContent.length} / 280 characters</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>

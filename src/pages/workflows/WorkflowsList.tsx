@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Workflow as WorkflowIcon, Plus, Play, Pause, Edit, Trash2, BarChart3, RefreshCw, LayoutGrid, LayoutList, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
@@ -8,6 +9,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/useToast';
 import { workflowsApi } from '@/lib/api';
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import type { WorkflowAction, WorkflowExecution, WorkflowTriggerData } from '@/types';
 
 interface Workflow {
   id: string;
@@ -15,14 +18,14 @@ interface Workflow {
   description: string | null;
   isActive: boolean;
   triggerType: string;
-  triggerData: any;
-  actions: any[];
+  triggerData: WorkflowTriggerData;
+  actions: WorkflowAction[];
   executions: number;
   successRate: number | null;
   lastRunAt: string | null;
   createdAt: string;
   updatedAt: string;
-  workflowExecutions?: any[];
+  workflowExecutions?: WorkflowExecution[];
 }
 
 interface WorkflowStats {
@@ -38,12 +41,39 @@ interface WorkflowStats {
 const WorkflowsList = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [analyticsWorkflow, setAnalyticsWorkflow] = useState<Workflow | null>(null);
-  const [stats, setStats] = useState<WorkflowStats>({
+
+  const { data, isLoading: loading, refetch } = useQuery({
+    queryKey: ['workflows'],
+    queryFn: async () => {
+      const [workflowsResponse, statsResponse] = await Promise.all([
+        workflowsApi.getWorkflows(),
+        workflowsApi.getStats(),
+      ]);
+
+      const wfList = workflowsResponse?.data?.workflows
+        || workflowsResponse?.workflows
+        || (Array.isArray(workflowsResponse?.data) ? workflowsResponse.data : null)
+        || (Array.isArray(workflowsResponse) ? workflowsResponse : []);
+
+      const stats: WorkflowStats = statsResponse?.data ? statsResponse.data : {
+        totalWorkflows: 0,
+        activeWorkflows: 0,
+        inactiveWorkflows: 0,
+        totalExecutions: 0,
+        successfulExecutions: 0,
+        failedExecutions: 0,
+        successRate: 0,
+      };
+
+      return { workflows: wfList as Workflow[], stats };
+    },
+  });
+
+  const workflows = data?.workflows ?? [];
+  const stats = data?.stats ?? {
     totalWorkflows: 0,
     activeWorkflows: 0,
     inactiveWorkflows: 0,
@@ -51,44 +81,11 @@ const WorkflowsList = () => {
     successfulExecutions: 0,
     failedExecutions: 0,
     successRate: 0,
-  });
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      // Load workflows and stats in parallel
-      const [workflowsResponse, statsResponse] = await Promise.all([
-        workflowsApi.getWorkflows(),
-        workflowsApi.getStats(),
-      ]);
-      
-      if (workflowsResponse?.data?.workflows) {
-        setWorkflows(workflowsResponse.data.workflows);
-      }
-
-      if (statsResponse?.data) {
-        setStats(statsResponse.data);
-      }
-    } catch (error) {
-      console.error('Failed to load workflows:', error);
-      toast.error('Failed to load workflows');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
   };
 
   const handleRefresh = () => {
-    loadData(true);
+    setRefreshing(true);
+    refetch().finally(() => setRefreshing(false));
   };
 
   const toggleWorkflowStatus = async (workflowId: string) => {
@@ -108,10 +105,10 @@ const WorkflowsList = () => {
       await workflowsApi.toggleWorkflow(workflowId, newActiveState);
       
       toast.success(`Workflow ${newActiveState ? 'activated' : 'paused'} successfully`);
-      await loadData(true);
+      await refetch();
     } catch (error: unknown) {
       console.error('Failed to toggle workflow:', error);
-      const errorMessage = (error as any)?.response?.data?.message || 'Failed to toggle workflow status';
+      const errorMessage = (error as Error & { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to toggle workflow status';
       toast.error(errorMessage);
     }
   };
@@ -132,10 +129,10 @@ const WorkflowsList = () => {
     try {
       await workflowsApi.deleteWorkflow(workflowId);
       toast.success('Workflow deleted successfully');
-      await loadData(true);
+      await refetch();
     } catch (error: unknown) {
       console.error('Failed to delete workflow:', error);
-      const errorMessage = (error as any)?.response?.data?.message || 'Failed to delete workflow';
+      const errorMessage = (error as Error & { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete workflow';
       toast.error(errorMessage);
     }
   };
@@ -202,12 +199,7 @@ const WorkflowsList = () => {
       </div>
 
       {loading ? (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading workflows...</p>
-          </div>
-        </Card>
+        <LoadingSkeleton rows={4} />
       ) : (
         <>
       {/* Quick Tips Banner */}
@@ -349,15 +341,16 @@ const WorkflowsList = () => {
                   <p className="text-xs text-muted-foreground">Choose from pre-built automation rules</p>
                 </div>
               </Link>
-              <a href="/workflows/builder" className="block">
-                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
+              <div className="block" title="Documentation coming soon">
+                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left opacity-60 cursor-default h-full">
                   <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-3">
                     <ChevronRight className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <h4 className="font-semibold mb-1">Follow a Guide</h4>
                   <p className="text-xs text-muted-foreground">Step-by-step workflow creation tutorial</p>
+                  <Badge variant="secondary" className="mt-2 text-xs">Coming Soon</Badge>
                 </div>
-              </a>
+              </div>
             </div>
             
             <Link to="/workflows/builder">
@@ -430,7 +423,7 @@ const WorkflowsList = () => {
                             <span className="font-bold text-blue-700 dark:text-blue-300 capitalize px-2.5 py-1 bg-white/60 dark:bg-gray-800/60 rounded-md shadow-sm">
                               When {workflow.triggerType.replace(/_/g, ' ').toLowerCase()}
                             </span>
-                            {workflow.actions.map((action: any, idx: number) => (
+                            {workflow.actions.map((action, idx: number) => (
                               <div key={idx} className="flex items-center gap-2">
                                 <ChevronRight className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                                 <span className="text-gray-700 dark:text-gray-300 capitalize font-medium px-2.5 py-1 bg-white/40 dark:bg-gray-800/40 rounded-md shadow-sm">
@@ -560,7 +553,7 @@ const WorkflowsList = () => {
                         <span className="font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap capitalize">
                           {workflow.triggerType.replace(/_/g, ' ').toLowerCase()}
                         </span>
-                        {workflow.actions.map((action: any, idx: number) => (
+                        {workflow.actions.map((action, idx: number) => (
                           <div key={idx} className="flex items-center gap-1.5">
                             <ChevronRight className="h-3 w-3 text-blue-400 flex-shrink-0" />
                             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap capitalize">
@@ -756,7 +749,7 @@ const WorkflowsList = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {analyticsWorkflow.workflowExecutions.slice(0, 5).map((execution: any) => (
+                      {analyticsWorkflow.workflowExecutions.slice(0, 5).map((execution) => (
                         <div key={execution.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center gap-3">
                             <Badge variant={execution.status === 'COMPLETED' ? 'default' : 'destructive'}>

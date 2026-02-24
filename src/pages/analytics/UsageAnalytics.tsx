@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Activity, Clock, Users, Zap, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { analyticsApi } from '@/lib/api';
-import { useToast } from '@/hooks/useToast';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import {
@@ -19,40 +19,29 @@ import {
 } from 'recharts';
 
 const UsageAnalytics = () => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [activityData, setActivityData] = useState<any[]>([]);
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+
+  const { data: usageResult, isLoading: loading, refetch } = useQuery({
+    queryKey: ['usage-analytics'],
+    queryFn: async () => {
+      const dateParams = dateRangeRef.current;
+      const [dashboard, activity] = await Promise.all([
+        analyticsApi.getDashboardStats(dateParams).catch((e: Error) => { console.error('Dashboard stats failed:', e); return null; }),
+        analyticsApi.getActivityFeed().catch((e: Error) => { console.error('Activity feed failed:', e); return null; }),
+      ]);
+      return {
+        dashboardData: dashboard,
+        activityData: activity?.activities || [],
+      };
+    },
+  });
+
+  const dashboardData = usageResult?.dashboardData ?? null;
+  const activityData = usageResult?.activityData ?? [];
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
-    loadUsageData();
-  };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      await loadUsageData();
-    };
-    fetchData();
-  }, []);
-
-  const loadUsageData = async () => {
-    setLoading(true);
-    try {
-      const dateParams = dateRangeRef.current;
-      const [dashboard, activity] = await Promise.all([
-        analyticsApi.getDashboardStats(dateParams),
-        analyticsApi.getActivityFeed(),
-      ]);
-      setDashboardData(dashboard);
-      setActivityData(activity?.activities || []);
-    } catch (error) {
-      const err = error as Error;
-      toast.error(err.message || 'Failed to load usage data');
-    } finally {
-      setLoading(false);
-    }
+    refetch();
   };
 
   // Usage data derived from activity feed
@@ -127,7 +116,7 @@ const UsageAnalytics = () => {
         </div>
         <div className="flex items-center space-x-2">
           <DateRangePicker onChange={handleDateChange} />
-          <Button variant="outline" onClick={loadUsageData} disabled={loading}>
+          <Button variant="outline" onClick={() => refetch()} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
             {loading ? 'Loading...' : 'Refresh'}
           </Button>

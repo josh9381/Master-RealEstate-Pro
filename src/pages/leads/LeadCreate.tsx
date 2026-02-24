@@ -34,6 +34,7 @@ export default function LeadCreate() {
     notes: ''
   })
   const [newTagInput, setNewTagInput] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Fetch team members for assigned-to dropdown
   const { data: teamMembers = [] } = useQuery({
@@ -65,12 +66,28 @@ export default function LeadCreate() {
     }
   })
 
+  const validateForm = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {}
+    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required'
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required'
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address'
+    }
+    if (formData.phone && !/^[+]?[\d\s()-]{7,}$/.test(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number (digits, +, -, (, ), spaces)'
+    }
+    return newErrors
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validate required fields
-    if (!formData.firstName || !formData.lastName || !formData.email) {
-      toast.error('Please fill in all required fields')
+    const newErrors = validateForm()
+    setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      toast.error('Please fix the validation errors')
       return
     }
     
@@ -103,6 +120,9 @@ export default function LeadCreate() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors(prev => { const next = { ...prev }; delete next[name]; return next })
+    }
   }
 
   return (
@@ -141,8 +161,9 @@ export default function LeadCreate() {
               
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-medium">First Name *</label>
+                  <label htmlFor="lead-firstName" className="text-sm font-medium">First Name *</label>
                   <Input
+                    id="lead-firstName"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
@@ -150,11 +171,13 @@ export default function LeadCreate() {
                     required
                     className="mt-1"
                   />
+                  {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName}</p>}
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Last Name *</label>
+                  <label htmlFor="lead-lastName" className="text-sm font-medium">Last Name *</label>
                   <Input
+                    id="lead-lastName"
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
@@ -162,13 +185,15 @@ export default function LeadCreate() {
                     required
                     className="mt-1"
                   />
+                  {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName}</p>}
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Email *</label>
+                  <label htmlFor="lead-email" className="text-sm font-medium">Email *</label>
                   <div className="relative mt-1">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
+                      id="lead-email"
                       type="email"
                       name="email"
                       value={formData.email}
@@ -178,13 +203,15 @@ export default function LeadCreate() {
                       className="pl-10"
                     />
                   </div>
+                  {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Phone</label>
+                  <label htmlFor="lead-phone" className="text-sm font-medium">Phone</label>
                   <div className="relative mt-1">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
+                      id="lead-phone"
                       type="tel"
                       name="phone"
                       value={formData.phone}
@@ -193,6 +220,7 @@ export default function LeadCreate() {
                       className="pl-10"
                     />
                   </div>
+                  {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
                 </div>
               </div>
             </Card>
@@ -206,8 +234,9 @@ export default function LeadCreate() {
               
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-medium">Company Name</label>
+                  <label htmlFor="lead-company" className="text-sm font-medium">Company Name</label>
                   <Input
+                    id="lead-company"
                     name="company"
                     value={formData.company}
                     onChange={handleInputChange}
@@ -217,8 +246,9 @@ export default function LeadCreate() {
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Job Title</label>
+                  <label htmlFor="lead-jobTitle" className="text-sm font-medium">Job Title</label>
                   <Input
+                    id="lead-jobTitle"
                     name="jobTitle"
                     value={formData.jobTitle}
                     onChange={handleInputChange}
@@ -228,10 +258,11 @@ export default function LeadCreate() {
                 </div>
                 
                 <div className="sm:col-span-2">
-                  <label className="text-sm font-medium">Deal Value</label>
+                  <label htmlFor="lead-dealValue" className="text-sm font-medium">Deal Value</label>
                   <div className="relative mt-1">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
+                      id="lead-dealValue"
                       type="number"
                       name="dealValue"
                       value={formData.dealValue}
@@ -253,8 +284,9 @@ export default function LeadCreate() {
               
               <div className="grid gap-4">
                 <div>
-                  <label className="text-sm font-medium">Street Address</label>
+                  <label htmlFor="lead-address" className="text-sm font-medium">Street Address</label>
                   <Input
+                    id="lead-address"
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
@@ -265,8 +297,9 @@ export default function LeadCreate() {
                 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div>
-                    <label className="text-sm font-medium">City</label>
+                    <label htmlFor="lead-city" className="text-sm font-medium">City</label>
                     <Input
+                      id="lead-city"
                       name="city"
                       value={formData.city}
                       onChange={handleInputChange}
@@ -276,8 +309,9 @@ export default function LeadCreate() {
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium">State</label>
+                    <label htmlFor="lead-state" className="text-sm font-medium">State</label>
                     <Input
+                      id="lead-state"
                       name="state"
                       value={formData.state}
                       onChange={handleInputChange}
@@ -287,8 +321,9 @@ export default function LeadCreate() {
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium">ZIP Code</label>
+                    <label htmlFor="lead-zipCode" className="text-sm font-medium">ZIP Code</label>
                     <Input
+                      id="lead-zipCode"
                       name="zipCode"
                       value={formData.zipCode}
                       onChange={handleInputChange}
@@ -299,8 +334,9 @@ export default function LeadCreate() {
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Country</label>
+                  <label htmlFor="lead-country" className="text-sm font-medium">Country</label>
                   <Input
+                    id="lead-country"
                     name="country"
                     value={formData.country}
                     onChange={handleInputChange}
@@ -314,7 +350,9 @@ export default function LeadCreate() {
             {/* Additional Notes */}
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">Additional Notes</h2>
+              <label htmlFor="lead-notes" className="sr-only">Notes</label>
               <textarea
+                id="lead-notes"
                 name="notes"
                 value={formData.notes}
                 onChange={handleInputChange}
@@ -332,8 +370,9 @@ export default function LeadCreate() {
               
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Source *</label>
+                  <label htmlFor="lead-source" className="text-sm font-medium">Source *</label>
                   <select
+                    id="lead-source"
                     name="source"
                     value={formData.source}
                     onChange={handleInputChange}
@@ -353,8 +392,9 @@ export default function LeadCreate() {
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Status *</label>
+                  <label htmlFor="lead-status" className="text-sm font-medium">Status *</label>
                   <select
+                    id="lead-status"
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
@@ -372,8 +412,9 @@ export default function LeadCreate() {
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Assigned To</label>
+                  <label htmlFor="lead-assignedTo" className="text-sm font-medium">Assigned To</label>
                   <select
+                    id="lead-assignedTo"
                     name="assignedTo"
                     value={formData.assignedTo}
                     onChange={handleInputChange}

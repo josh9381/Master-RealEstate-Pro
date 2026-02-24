@@ -25,6 +25,7 @@ import { PredictionBadge } from '@/components/ai/PredictionBadge'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import intelligenceService, { type LeadPrediction, type EngagementAnalysis, type NextActionSuggestion } from '@/services/intelligenceService'
 import { Lead } from '@/types'
+import type { AssignedUser, TeamMember, LeadNote } from '@/types'
 import { useToast } from '@/hooks/useToast'
 import { leadsApi, notesApi, usersApi, UpdateLeadData } from '@/lib/api'
 import { mockLeads } from '@/data/mockData'
@@ -42,6 +43,7 @@ function LeadDetail() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [showAddNote, setShowAddNote] = useState(false)
   const [newNoteText, setNewNoteText] = useState('')
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
   
   // AI Intelligence state
   const [aiPrediction, setAiPrediction] = useState<LeadPrediction | null>(null)
@@ -259,11 +261,32 @@ function LeadDetail() {
       score: lead.score || 0,
       notes: lead.notes || ''
     })
+    setEditErrors({})
     setShowEditModal(true)
+  }
+
+  const validateEditForm = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {}
+    if (!editingLead) return newErrors
+    if (!editingLead.firstName?.trim()) newErrors.firstName = 'First name is required'
+    if (!editingLead.lastName?.trim()) newErrors.lastName = 'Last name is required'
+    if (editingLead.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editingLead.email)) {
+      newErrors.email = 'Please enter a valid email address'
+    }
+    if (editingLead.phone && !/^[+\d\s()-]{7,20}$/.test(editingLead.phone)) {
+      newErrors.phone = 'Please enter a valid phone number'
+    }
+    return newErrors
   }
 
   const handleSaveEdit = () => {
     if (editingLead && id) {
+      const newErrors = validateEditForm()
+      setEditErrors(newErrors)
+      if (Object.keys(newErrors).length > 0) {
+        toast.error('Please fix the validation errors')
+        return
+      }
       const updateData: UpdateLeadData = {
         firstName: editingLead.firstName,
         lastName: editingLead.lastName,
@@ -274,7 +297,7 @@ function LeadDetail() {
         source: editingLead.source,
         score: editingLead.score,
         assignedToId: typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null 
-          ? (editingLead.assignedTo as any).id 
+          ? (editingLead.assignedTo as AssignedUser).id 
           : editingLead.assignedTo || undefined,
         tags: editingLead.tags,
       }
@@ -488,7 +511,7 @@ function LeadDetail() {
                     </Button>
                   </div>
                 ) : (
-                  notes.map((note: any) => (
+                  notes.map((note: LeadNote) => (
                     <div key={note.id} className="rounded-lg border p-4 hover:bg-muted/30 transition-colors">
                       <p className="text-sm whitespace-pre-wrap">{note.content}</p>
                       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -705,7 +728,7 @@ function LeadDetail() {
                 <p className="text-sm font-medium">Assigned To</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {typeof lead?.assignedTo === 'object' && lead?.assignedTo !== null
-                    ? `${(lead.assignedTo as any).firstName || ''} ${(lead.assignedTo as any).lastName || ''}`.trim()
+                    ? `${(lead.assignedTo as AssignedUser).firstName || ''} ${(lead.assignedTo as AssignedUser).lastName || ''}`.trim()
                     : lead?.assignedTo || 'Unassigned'}
                 </p>
               </div>
@@ -714,7 +737,7 @@ function LeadDetail() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {Array.isArray(lead?.tags) && lead.tags.length > 0 ? (
                     lead.tags.map((tag, index) => {
-                      const tagName = typeof tag === 'object' && tag !== null ? (tag as any).name : tag
+                      const tagName = typeof tag === 'object' && tag !== null ? (tag as { name: string }).name : tag
                       return <Badge key={`${tagName}-${index}`} variant="secondary">{tagName}</Badge>
                     })
                   ) : (
@@ -790,6 +813,7 @@ function LeadDetail() {
                           className="mt-1"
                           placeholder="John"
                         />
+                        {editErrors.firstName && <p className="text-sm text-red-500 mt-1">{editErrors.firstName}</p>}
                       </div>
                       <div>
                         <label className="text-sm font-medium">Last Name *</label>
@@ -799,6 +823,7 @@ function LeadDetail() {
                           className="mt-1"
                           placeholder="Doe"
                         />
+                        {editErrors.lastName && <p className="text-sm text-red-500 mt-1">{editErrors.lastName}</p>}
                       </div>
                     </div>
                   </div>
@@ -820,6 +845,7 @@ function LeadDetail() {
                       className="mt-1"
                       placeholder="john@example.com"
                     />
+                    {editErrors.email && <p className="text-sm text-red-500 mt-1">{editErrors.email}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium">Phone</label>
@@ -829,6 +855,7 @@ function LeadDetail() {
                       className="mt-1"
                       placeholder="+1 (555) 123-4567"
                     />
+                    {editErrors.phone && <p className="text-sm text-red-500 mt-1">{editErrors.phone}</p>}
                   </div>
                 </div>
               </div>
@@ -1020,12 +1047,12 @@ function LeadDetail() {
                     <label className="text-sm font-medium">Assigned To</label>
                     <select 
                       className="w-full mt-1 p-2 border rounded-md"
-                      value={typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null ? (editingLead.assignedTo as any).id : editingLead.assignedTo || ''}
+                      value={typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null ? (editingLead.assignedTo as AssignedUser).id : editingLead.assignedTo || ''}
                       onChange={(e) => setEditingLead({...editingLead, assignedTo: e.target.value || null})}
                     >
                       <option value="">Unassigned</option>
                       {teamMembers.length > 0 ? (
-                        teamMembers.map((member: any) => (
+                        teamMembers.map((member: TeamMember) => (
                           <option key={member.id} value={member.id}>
                             {member.firstName} {member.lastName}
                           </option>

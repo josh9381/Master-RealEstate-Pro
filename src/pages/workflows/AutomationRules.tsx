@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Zap, Plus, Clock, Target, CheckCircle, X, Edit2, Trash2, Pause, Play, Filter as FilterIcon, ArrowUpDown, Download, RefreshCw, Mail, Bell, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,14 +9,16 @@ import { Input } from '@/components/ui/Input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
 import { useToast } from '@/hooks/useToast';
 import { workflowsApi } from '@/lib/api';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import type { AutomationRule, RawWorkflow, WorkflowAction } from '@/types';
 
 const AutomationRules = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'executions' | 'lastRun'>('name');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'paused'>('all');
   const [newRuleName, setNewRuleName] = useState('');
@@ -26,25 +29,11 @@ const AutomationRules = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   
   // Bulk actions state
-  const [selectedRules, setSelectedRules] = useState<number[]>([]);
+  const [selectedRules, setSelectedRules] = useState<(number | string)[]>([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkAction, setBulkAction] = useState<'activate' | 'pause' | 'delete'>('activate');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteRuleId, setDeleteRuleId] = useState<number | null>(null);
-
-  // Stats state
-  const [stats, setStats] = useState({
-    activeWorkflows: 0,
-    totalExecutions: 0,
-    successRate: 0,
-    timeSaved: 0
-  });
-
-  const [automationRules, setAutomationRules] = useState<any[]>([]);
-
-  useEffect(() => {
-    loadRules();
-  }, []);
+  const [deleteRuleId, setDeleteRuleId] = useState<number | string | null>(null);
 
   // Debounce search input
   useEffect(() => {
@@ -55,23 +44,33 @@ const AutomationRules = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Reload when debounced search or filters change
-  useEffect(() => {
-    if (debouncedSearch !== '' || filterStatus !== 'all') {
-      loadRules();
-    }
-  }, [debouncedSearch, filterStatus]);
+  const triggerLabelsMap: Record<string, string> = {
+    'LEAD_CREATED': 'Lead Created',
+    'LEAD_STATUS_CHANGED': 'Status Changed',
+    'LEAD_ASSIGNED': 'Lead Assigned',
+    'CAMPAIGN_COMPLETED': 'Campaign Completed',
+    'EMAIL_OPENED': 'Email Opened',
+    'TIME_BASED': 'Schedule',
+    'SCORE_THRESHOLD': 'Score Threshold',
+    'TAG_ADDED': 'Tag Added',
+    'MANUAL': 'Manual',
+  };
+  const actionLabelsMap: Record<string, string> = {
+    'SEND_EMAIL': 'Send Email',
+    'SEND_SMS': 'Send SMS',
+    'UPDATE_LEAD': 'Update Lead',
+    'ADD_TAG': 'Add Tag',
+    'REMOVE_TAG': 'Remove Tag',
+    'CREATE_TASK': 'Create Task',
+    'ASSIGN_LEAD': 'Assign Lead',
+    'UPDATE_SCORE': 'Update Score',
+  };
 
-  const loadRules = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
+  const { data: rulesData, isLoading: loading, refetch } = useQuery({
+    queryKey: ['automationRules', debouncedSearch, filterStatus],
+    queryFn: async () => {
       // Build query params
-      const params: any = { type: 'automation' };
+      const params: Record<string, string | boolean> = { type: 'automation' };
       if (debouncedSearch) {
         params.search = debouncedSearch;
       }
@@ -83,94 +82,77 @@ const AutomationRules = () => {
         workflowsApi.getWorkflows(params),
         workflowsApi.getStats()
       ]);
-      
+
       // API returns { success, data: { workflows: [...], total } }
       const workflows = workflowsResponse?.data?.workflows || workflowsResponse?.workflows || (Array.isArray(workflowsResponse) ? workflowsResponse : []);
+      let mapped: AutomationRule[] = [];
       if (Array.isArray(workflows)) {
-        // Map backend shape to UI shape
-        const triggerLabels: Record<string, string> = {
-          'LEAD_CREATED': 'Lead Created',
-          'LEAD_STATUS_CHANGED': 'Status Changed',
-          'LEAD_ASSIGNED': 'Lead Assigned',
-          'CAMPAIGN_COMPLETED': 'Campaign Completed',
-          'EMAIL_OPENED': 'Email Opened',
-          'TIME_BASED': 'Schedule',
-          'SCORE_THRESHOLD': 'Score Threshold',
-          'TAG_ADDED': 'Tag Added',
-          'MANUAL': 'Manual',
-        };
-        const actionLabels: Record<string, string> = {
-          'SEND_EMAIL': 'Send Email',
-          'SEND_SMS': 'Send SMS',
-          'UPDATE_LEAD': 'Update Lead',
-          'ADD_TAG': 'Add Tag',
-          'REMOVE_TAG': 'Remove Tag',
-          'CREATE_TASK': 'Create Task',
-          'ASSIGN_LEAD': 'Assign Lead',
-          'UPDATE_SCORE': 'Update Score',
-        };
-        const mapped = workflows.map((w: any) => ({
+        mapped = workflows.map((w: RawWorkflow) => ({
           id: w.id,
           name: w.name,
           description: w.description || '',
-          trigger: triggerLabels[w.triggerType] || w.triggerType || w.trigger || '',
+          trigger: triggerLabelsMap[w.triggerType || ''] || w.triggerType || w.trigger || '',
           actions: Array.isArray(w.actions)
-            ? w.actions.map((a: any) => typeof a === 'string' ? a : (actionLabels[a.type] || a.type || 'Action'))
+            ? w.actions.map((a: WorkflowAction | string) => typeof a === 'string' ? a : (actionLabelsMap[a.type] || a.type || 'Action'))
             : [],
-          status: w.isActive === true ? 'active' as const : w.isActive === false ? 'paused' as const : (w.status || 'paused'),
+          status: w.isActive === true ? 'active' as const : w.isActive === false ? 'paused' as const : ((w.status || 'paused') as 'active' | 'paused'),
           executions: w.workflowExecutions?.length || w.executions || 0,
           lastRun: w.workflowExecutions?.[0]?.startedAt
             ? new Date(w.workflowExecutions[0].startedAt).toLocaleDateString()
             : (w.lastRun || 'Never'),
         }));
-        setAutomationRules(mapped);
       }
 
-      if (statsResponse?.data) {
-        setStats({
-          activeWorkflows: statsResponse.data.activeWorkflows || 0,
-          totalExecutions: statsResponse.data.totalExecutions || 0,
-          successRate: statsResponse.data.successRate || 0,
-          timeSaved: Math.round((statsResponse.data.successfulExecutions || 0) * 0.05) // Estimate 3 min saved per execution
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load automation rules:', error);
-      toast.error('Failed to load rules, using sample data');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      const stats = statsResponse?.data ? {
+        activeWorkflows: statsResponse.data.activeWorkflows || 0,
+        totalExecutions: statsResponse.data.totalExecutions || 0,
+        successRate: statsResponse.data.successRate || 0,
+        timeSaved: Math.round((statsResponse.data.successfulExecutions || 0) * 0.05)
+      } : {
+        activeWorkflows: 0,
+        totalExecutions: 0,
+        successRate: 0,
+        timeSaved: 0
+      };
+
+      return { automationRules: mapped, stats };
+    },
+  });
+
+  // Local override for client-side sorting / optimistic inserts (cleared on refetch)
+  const [automationRulesLocal, setAutomationRulesLocal] = useState<AutomationRule[] | null>(null);
+  const automationRules = automationRulesLocal ?? rulesData?.automationRules ?? [];
+  const stats = rulesData?.stats ?? { activeWorkflows: 0, totalExecutions: 0, successRate: 0, timeSaved: 0 };
+
+  // Clear local override when query data changes (refetch completes)
+  useEffect(() => {
+    setAutomationRulesLocal(null);
+  }, [rulesData]);
 
   const handleRefresh = () => {
-    loadRules(true);
+    setRefreshing(true);
+    refetch().finally(() => setRefreshing(false));
   };
 
-  const toggleRuleStatus = async (ruleId: number) => {
+  const toggleRuleStatus = async (ruleId: number | string) => {
     try {
       const currentRule = automationRules.find(rule => rule.id === ruleId);
       const newActiveState = currentRule?.status !== 'active';
       await workflowsApi.toggleWorkflow(ruleId.toString(), newActiveState);
       
-      setAutomationRules(automationRules.map(rule => 
-        rule.id === ruleId 
-          ? { ...rule, status: rule.status === 'active' ? 'paused' as const : 'active' as const }
-          : rule
-      ));
       const rule = automationRules.find(r => r.id === ruleId);
       if (rule) {
         toast.success(`Rule ${rule.status === 'active' ? 'paused' : 'activated'}`);
       }
       
-      await loadRules(true);
+      await refetch();
     } catch (error) {
       console.error('Failed to toggle rule:', error);
       toast.error('Failed to toggle rule status');
     }
   };
 
-  const deleteRule = async (ruleId: number) => {
+  const deleteRule = async (ruleId: number | string) => {
     setDeleteRuleId(ruleId);
     setShowDeleteConfirm(true);
   };
@@ -179,11 +161,10 @@ const AutomationRules = () => {
     if (deleteRuleId === null) return;
     try {
       await workflowsApi.deleteWorkflow(deleteRuleId.toString());
-      setAutomationRules(automationRules.filter(rule => rule.id !== deleteRuleId));
       toast.success('Rule deleted successfully');
       setShowDeleteConfirm(false);
       setDeleteRuleId(null);
-      await loadRules(true);
+      await refetch();
     } catch (error) {
       console.error('Failed to delete rule:', error);
       toast.error('Failed to delete rule');
@@ -199,7 +180,7 @@ const AutomationRules = () => {
     }
   };
 
-  const toggleSelectRule = (ruleId: number) => {
+  const toggleSelectRule = (ruleId: number | string) => {
     if (selectedRules.includes(ruleId)) {
       setSelectedRules(selectedRules.filter(id => id !== ruleId));
     } else {
@@ -225,31 +206,25 @@ const AutomationRules = () => {
         await Promise.all(
           selectedRules.map(ruleId => workflowsApi.deleteWorkflow(ruleId.toString()))
         );
-        setAutomationRules(automationRules.filter(rule => !selectedRules.includes(rule.id)));
       } else {
         // Activate or pause workflows
         const isActive = bulkAction === 'activate';
         await Promise.all(
           selectedRules.map(ruleId => workflowsApi.toggleWorkflow(ruleId.toString(), isActive))
         );
-        setAutomationRules(automationRules.map(rule => 
-          selectedRules.includes(rule.id) 
-            ? { ...rule, status: isActive ? 'active' as const : 'paused' as const }
-            : rule
-        ));
       }
       
       toast.success(`${selectedRules.length} workflow(s) ${actionLabel} successfully`);
       setSelectedRules([]);
       setShowBulkConfirm(false);
-      await loadRules(true);
+      await refetch();
     } catch (error) {
       console.error('Bulk action failed:', error);
       toast.error('Failed to perform bulk action');
     }
   };
 
-  const editRule = (ruleId: number) => {
+  const editRule = (ruleId: number | string) => {
     // Navigate to workflow builder with the rule ID
     navigate(`/workflows/builder?id=${ruleId}`);
   };
@@ -260,6 +235,7 @@ const AutomationRules = () => {
       return;
     }
     
+    setIsCreating(true);
     try {
       const triggerLabels: Record<string, string> = {
         'LEAD_CREATED': 'Lead Created',
@@ -294,7 +270,7 @@ const AutomationRules = () => {
       await workflowsApi.createWorkflow(newRuleData);
       
       const newRule = {
-        id: Math.max(...automationRules.map(r => r.id), 0) + 1,
+        id: Math.max(...automationRules.map(r => Number(r.id)), 0) + 1,
         name: newRuleName,
         description: newRuleDescription || 'No description',
         trigger: triggerLabels[newRuleTrigger] || newRuleTrigger,
@@ -304,7 +280,7 @@ const AutomationRules = () => {
         lastRun: 'Never',
       };
       
-      setAutomationRules([...automationRules, newRule]);
+      setAutomationRulesLocal([...automationRules, newRule]);
       toast.success('Rule created successfully');
       setShowCreateModal(false);
       setNewRuleName('');
@@ -312,10 +288,12 @@ const AutomationRules = () => {
       setNewRuleTrigger('LEAD_CREATED');
       setNewRuleAction('SEND_EMAIL');
       
-      await loadRules(true);
+      await refetch();
     } catch (error) {
       console.error('Failed to create rule:', error);
       toast.error('Failed to create rule');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -356,7 +334,7 @@ const AutomationRules = () => {
         return String(b.lastRun).localeCompare(String(a.lastRun));
       }
     });
-    setAutomationRules(sorted);
+    setAutomationRulesLocal(sorted);
     toast.info(`Sorted by: ${nextSort}`);
   };
 
@@ -396,37 +374,24 @@ const AutomationRules = () => {
   return (
     <div className="space-y-6">
       {loading ? (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading automation rules...</p>
-          </div>
-        </Card>
+        <LoadingSkeleton rows={5} />
       ) : (
         <>
       {/* Create Rule Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Create New Rule</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setNewRuleName('');
-                    setNewRuleDescription('');
-                    setNewRuleTrigger('LEAD_CREATED');
-                    setNewRuleAction('SEND_EMAIL');
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      <Dialog open={showCreateModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowCreateModal(false);
+          setNewRuleName('');
+          setNewRuleDescription('');
+          setNewRuleTrigger('LEAD_CREATED');
+          setNewRuleAction('SEND_EMAIL');
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Rule</DialogTitle>
+          </DialogHeader>
+            <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Rule Name</label>
                 <Input 
@@ -481,11 +446,7 @@ const AutomationRules = () => {
               <p className="text-xs text-muted-foreground">
                 For advanced multi-step workflows with conditions, use the <a href="/workflows/builder" className="text-primary underline">Workflow Builder</a>.
               </p>
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={createRule}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Rule
-                </Button>
+              <DialogFooter>
                 <Button 
                   variant="outline" 
                   onClick={() => {
@@ -498,11 +459,14 @@ const AutomationRules = () => {
                 >
                   Cancel
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                <Button onClick={createRule} disabled={isCreating}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {isCreating ? 'Creating...' : 'Create Rule'}
+                </Button>
+              </DialogFooter>
+            </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex items-center justify-between">
         <div className="flex-1">
@@ -927,8 +891,22 @@ const AutomationRules = () => {
                 className="group p-5 border rounded-lg cursor-pointer hover:border-primary hover:shadow-lg transition-all bg-white dark:bg-gray-800"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className={`p-2.5 bg-${template.color}-100 dark:bg-${template.color}-900 rounded-lg group-hover:scale-110 transition-transform`}>
-                    <template.icon className={`h-5 w-5 text-${template.color}-600 dark:text-${template.color}-400`} />
+                  <div className={`p-2.5 ${{
+                    blue: 'bg-blue-100 dark:bg-blue-900',
+                    green: 'bg-green-100 dark:bg-green-900',
+                    purple: 'bg-purple-100 dark:bg-purple-900',
+                    orange: 'bg-orange-100 dark:bg-orange-900',
+                    pink: 'bg-pink-100 dark:bg-pink-900',
+                    indigo: 'bg-indigo-100 dark:bg-indigo-900'
+                  }[template.color] || 'bg-gray-100 dark:bg-gray-900'} rounded-lg group-hover:scale-110 transition-transform`}>
+                    <template.icon className={`h-5 w-5 ${{
+                    blue: 'text-blue-600 dark:text-blue-400',
+                    green: 'text-green-600 dark:text-green-400',
+                    purple: 'text-purple-600 dark:text-purple-400',
+                    orange: 'text-orange-600 dark:text-orange-400',
+                    pink: 'text-pink-600 dark:text-pink-400',
+                    indigo: 'text-indigo-600 dark:text-indigo-400'
+                  }[template.color] || 'text-gray-600 dark:text-gray-400'}`} />
                   </div>
                   <Badge variant="secondary" className="text-xs">
                     {template.uses} uses

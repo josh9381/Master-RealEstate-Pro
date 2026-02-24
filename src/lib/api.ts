@@ -456,7 +456,7 @@ export const campaignsApi = {
     return response.data
   },
 
-  sendCampaign: async (id: string, options?: { leadIds?: string[], filters?: any }) => {
+  sendCampaign: async (id: string, options?: { leadIds?: string[], filters?: Record<string, unknown> }) => {
     const response = await api.post(`/campaigns/${id}/send`, options || {})
     return response.data
   },
@@ -772,7 +772,7 @@ export interface SuggestActionsPayload {
 
 export interface UploadTrainingDataPayload {
   modelType: string
-  data: any
+  data: Record<string, unknown> | unknown[]
 }
 
 export const aiApi = {
@@ -881,7 +881,7 @@ export const aiApi = {
 
 // Messages & Communication API
 export const messagesApi = {
-  getMessages: async (params?: any) => {
+  getMessages: async (params?: Record<string, unknown>) => {
     const response = await api.get('/messages', { params })
     return response.data
   },
@@ -891,17 +891,17 @@ export const messagesApi = {
     return response.data
   },
 
-  sendEmail: async (data: any) => {
+  sendEmail: async (data: Record<string, unknown>) => {
     const response = await api.post('/messages/email', data)
     return response.data
   },
 
-  sendSMS: async (data: any) => {
+  sendSMS: async (data: Record<string, unknown>) => {
     const response = await api.post('/messages/sms', data)
     return response.data
   },
 
-  makeCall: async (data: any) => {
+  makeCall: async (data: Record<string, unknown>) => {
     const response = await api.post('/messages/call', data)
     return response.data
   },
@@ -955,12 +955,21 @@ export const messagesApi = {
     const response = await api.get('/messages/stats', { params: params || {} })
     return response.data
   },
+
+  uploadAttachment: async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post('/messages/attachments', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
 }
 
 // Templates API
 export const templatesApi = {
   // Email Templates (dedicated endpoints)
-  getEmailTemplates: async (params?: any) => {
+  getEmailTemplates: async (params?: Record<string, unknown>) => {
     const response = await api.get('/email-templates', { params })
     return response.data
   },
@@ -970,12 +979,12 @@ export const templatesApi = {
     return response.data
   },
 
-  createEmailTemplate: async (data: any) => {
+  createEmailTemplate: async (data: Record<string, unknown>) => {
     const response = await api.post('/email-templates', data)
     return response.data
   },
 
-  updateEmailTemplate: async (id: string, data: any) => {
+  updateEmailTemplate: async (id: string, data: Record<string, unknown>) => {
     const response = await api.put(`/email-templates/${id}`, data)
     return response.data
   },
@@ -986,7 +995,7 @@ export const templatesApi = {
   },
 
   // SMS Templates (dedicated endpoints)
-  getSMSTemplates: async (params?: any) => {
+  getSMSTemplates: async (params?: Record<string, unknown>) => {
     const response = await api.get('/sms-templates', { params })
     return response.data
   },
@@ -996,12 +1005,12 @@ export const templatesApi = {
     return response.data
   },
 
-  createSMSTemplate: async (data: any) => {
+  createSMSTemplate: async (data: Record<string, unknown>) => {
     const response = await api.post('/sms-templates', data)
     return response.data
   },
 
-  updateSMSTemplate: async (id: string, data: any) => {
+  updateSMSTemplate: async (id: string, data: Record<string, unknown>) => {
     const response = await api.put(`/sms-templates/${id}`, data)
     return response.data
   },
@@ -1015,7 +1024,7 @@ export const templatesApi = {
 
 // Workflows API
 export const workflowsApi = {
-  getWorkflows: async (params?: any) => {
+  getWorkflows: async (params?: Record<string, unknown>) => {
     const response = await api.get('/workflows', { params })
     return response.data
   },
@@ -1025,12 +1034,12 @@ export const workflowsApi = {
     return response.data
   },
 
-  createWorkflow: async (data: any) => {
+  createWorkflow: async (data: Record<string, unknown>) => {
     const response = await api.post('/workflows', data)
     return response.data
   },
 
-  updateWorkflow: async (id: string, data: any) => {
+  updateWorkflow: async (id: string, data: Record<string, unknown>) => {
     const response = await api.put(`/workflows/${id}`, data)
     return response.data
   },
@@ -1045,12 +1054,12 @@ export const workflowsApi = {
     return response.data
   },
 
-  testWorkflow: async (id: string, testData?: any) => {
+  testWorkflow: async (id: string, testData?: Record<string, unknown>) => {
     const response = await api.post(`/workflows/${id}/test`, { testData })
     return response.data
   },
 
-  getExecutions: async (workflowId: string, params?: any) => {
+  getExecutions: async (workflowId: string, params?: Record<string, unknown>) => {
     const response = await api.get(`/workflows/${workflowId}/executions`, { params })
     return response.data
   },
@@ -1081,7 +1090,7 @@ export const settingsApi = {
     return response.data
   },
 
-  updateProfile: async (data: any) => {
+  updateProfile: async (data: Record<string, unknown>) => {
     const response = await api.put('/settings/profile', data)
     return response.data
   },
@@ -1095,7 +1104,7 @@ export const settingsApi = {
     return response.data
   },
 
-  changePassword: async (data: any) => {
+  changePassword: async (data: Record<string, unknown>) => {
     const response = await api.put('/settings/password', data)
     return response.data
   },
@@ -1106,7 +1115,7 @@ export const settingsApi = {
     return response.data
   },
 
-  updateBusinessSettings: async (data: any) => {
+  updateBusinessSettings: async (data: Record<string, unknown>) => {
     const response = await api.put('/settings/business', data)
     return response.data
   },
@@ -1117,12 +1126,12 @@ export const settingsApi = {
     return response.data.data // Unwrap { success, data: { config } }
   },
 
-  updateEmailConfig: async (data: any) => {
+  updateEmailConfig: async (data: Record<string, unknown>) => {
     const response = await api.put('/settings/email', data)
     return response.data.data
   },
 
-  testEmail: async (data: any) => {
+  testEmail: async (data: Record<string, unknown>) => {
     const response = await api.post('/settings/email/test', data)
     return response.data.data
   },
@@ -1133,7 +1142,7 @@ export const settingsApi = {
     return response.data.data // Unwrap { success, data: { config } }
   },
 
-  updateSMSConfig: async (data: any) => {
+  updateSMSConfig: async (data: Record<string, unknown>) => {
     const response = await api.put('/settings/sms', data)
     return response.data.data
   },
@@ -1143,7 +1152,7 @@ export const settingsApi = {
     return response.data.data
   },
 
-  testSMS: async (data: any) => {
+  testSMS: async (data: Record<string, unknown>) => {
     const response = await api.post('/settings/sms/test', data)
     return response.data.data
   },
@@ -1154,7 +1163,7 @@ export const settingsApi = {
     return response.data
   },
 
-  updateNotificationSettings: async (data: any) => {
+  updateNotificationSettings: async (data: Record<string, unknown>) => {
     const response = await api.put('/settings/notifications', data)
     return response.data
   },
@@ -1165,17 +1174,17 @@ export const settingsApi = {
     return response.data
   },
 
-  enable2FA: async (data: any) => {
+  enable2FA: async (data: Record<string, unknown>) => {
     const response = await api.post('/settings/2fa/enable', data)
     return response.data
   },
 
-  disable2FA: async (data: any) => {
+  disable2FA: async (data: Record<string, unknown>) => {
     const response = await api.post('/settings/2fa/disable', data)
     return response.data
   },
 
-  verify2FA: async (data: any) => {
+  verify2FA: async (data: Record<string, unknown>) => {
     const response = await api.post('/settings/2fa/verify', data)
     return response.data
   },
@@ -1186,7 +1195,7 @@ export const settingsApi = {
     return response.data
   },
 
-  connectIntegration: async (provider: string, data: any) => {
+  connectIntegration: async (provider: string, data: Record<string, unknown>) => {
     const response = await api.post(`/integrations/${provider}/connect`, data)
     return response.data
   },
@@ -1201,17 +1210,17 @@ export const settingsApi = {
     return response.data
   },
 
-  updateIntegrationSettings: async (provider: string, data: any) => {
+  updateIntegrationSettings: async (provider: string, data: Record<string, unknown>) => {
     const response = await api.put(`/integrations/${provider}/settings`, data)
     return response.data
   },
 
-  updateServiceConfig: async (service: string, data: any) => {
+  updateServiceConfig: async (service: string, data: Record<string, unknown>) => {
     const response = await api.put(`/settings/services/${service}`, data)
     return response.data
   },
 
-  testServiceConnection: async (service: string, data?: any) => {
+  testServiceConnection: async (service: string, data?: Record<string, unknown>) => {
     const response = await api.post(`/settings/services/${service}/test`, data || {})
     return response.data
   },
@@ -1224,7 +1233,7 @@ export const settingsApi = {
 
 // Team Management API
 export const teamsApi = {
-  getTeams: async (params?: any) => {
+  getTeams: async (params?: Record<string, unknown>) => {
     const response = await api.get('/teams', { params })
     return response.data
   },
@@ -1234,12 +1243,12 @@ export const teamsApi = {
     return response.data
   },
 
-  createTeam: async (data: any) => {
+  createTeam: async (data: Record<string, unknown>) => {
     const response = await api.post('/teams', data)
     return response.data
   },
 
-  updateTeam: async (id: string, data: any) => {
+  updateTeam: async (id: string, data: Record<string, unknown>) => {
     const response = await api.put(`/teams/${id}`, data)
     return response.data
   },
@@ -1249,12 +1258,12 @@ export const teamsApi = {
     return response.data
   },
 
-  getMembers: async (teamId: string, params?: any) => {
+  getMembers: async (teamId: string, params?: Record<string, unknown>) => {
     const response = await api.get(`/teams/${teamId}/members`, { params })
     return response.data
   },
 
-  inviteMember: async (teamId: string, data: any) => {
+  inviteMember: async (teamId: string, data: Record<string, unknown>) => {
     const response = await api.post(`/teams/${teamId}/invite`, data)
     return response.data
   },
@@ -1465,7 +1474,7 @@ export const adminApi = {
     return response.data
   },
 
-  updateSystemSettings: async (data: any) => {
+  updateSystemSettings: async (data: Record<string, unknown>) => {
     const response = await api.put('/admin/system-settings', data)
     return response.data
   },
@@ -1477,7 +1486,7 @@ export const adminApi = {
   },
 
   // Database Maintenance
-  runMaintenance: async (operation: string, options?: any) => {
+  runMaintenance: async (operation: string, options?: Record<string, unknown>) => {
     const response = await api.post('/admin/maintenance', { operation, ...options })
     return response.data
   },
@@ -1537,12 +1546,12 @@ export const segmentsApi = {
     return response.data
   },
 
-  createSegment: async (data: { name: string; description?: string; rules: any[]; matchType?: string; color?: string }) => {
+  createSegment: async (data: { name: string; description?: string; rules: Array<Record<string, unknown> | { field: string; operator: string; value: string }>; matchType?: string; color?: string }) => {
     const response = await api.post('/segments', data)
     return response.data
   },
 
-  updateSegment: async (id: string, data: Partial<{ name: string; description?: string; rules: any[]; matchType?: string; color?: string; isActive?: boolean }>) => {
+  updateSegment: async (id: string, data: Partial<{ name: string; description?: string; rules: Array<Record<string, unknown> | { field: string; operator: string; value: string }>; matchType?: string; color?: string; isActive?: boolean }>) => {
     const response = await api.patch(`/segments/${id}`, data)
     return response.data
   },
@@ -1586,7 +1595,7 @@ export const exportApi = {
       fields?: string[];
     }
   ) => {
-    const params: any = { format };
+    const params: Record<string, unknown> = { format };
     if (filters?.status) params.status = filters.status;
     if (filters?.source) params.source = filters.source;
     if (filters?.assignedTo) params.assignedTo = filters.assignedTo;

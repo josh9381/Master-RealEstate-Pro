@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Smartphone, Send, Users, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,45 +9,25 @@ import { useToast } from '@/hooks/useToast'
 import { messagesApi } from '@/lib/api'
 
 const SMSCenter = () => {
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [sending, setSending] = useState(false)
   const { toast } = useToast()
-  const [recentMessages, setRecentMessages] = useState<Array<{ id: number; contact: string; phone: string; message: string; time: string; status: string; direction: string }>>([])
   
   // Quick Send form state
   const [smsRecipient, setSmsRecipient] = useState('')
   const [smsMessage, setSmsMessage] = useState('')
   const [smsSearch, setSmsSearch] = useState('')
 
-  useEffect(() => {
-    loadMessages()
-  }, [])
-
-  const loadMessages = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true)
-      } else {
-        setLoading(true)
-      }
-
+  const { data: recentMessages = [], isLoading: loading, isFetching, refetch } = useQuery({
+    queryKey: ['sms-center-messages'],
+    queryFn: async () => {
       const response = await messagesApi.getMessages({ type: 'SMS' })
-      
-      if (response && Array.isArray(response)) {
-        setRecentMessages(response)
-      }
-    } catch (error) {
-      console.error('Failed to load SMS messages:', error)
-      toast.error('Failed to load messages, using sample data')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+      return (response && Array.isArray(response)) ? response : []
     }
-  }
+  })
+  const refreshing = isFetching && !loading
 
   const handleRefresh = () => {
-    loadMessages(true)
+    refetch()
   }
 
   const handleSendSMS = async () => {
@@ -68,7 +49,7 @@ const SMSCenter = () => {
       setSmsRecipient('')
       setSmsMessage('')
       // Refresh messages list to show the new message
-      loadMessages(true)
+      refetch()
     } catch (error: any) {
       console.error('Failed to send SMS:', error)
       toast.error(error?.response?.data?.message || 'Failed to send SMS')

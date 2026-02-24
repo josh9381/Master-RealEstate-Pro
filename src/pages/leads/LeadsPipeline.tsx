@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -45,19 +46,14 @@ interface Stage {
 }
 
 function LeadsPipeline() {
-  const [pipelineStages, setPipelineStages] = useState<Stage[]>([])
   const [draggedLead, setDraggedLead] = useState<{ lead: Lead; fromStage: string } | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [keyboardMoveLead, setKeyboardMoveLead] = useState<{ lead: Lead; fromStage: string } | null>(null)
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    loadPipelineData()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadPipelineData = async () => {
-    setIsLoading(true)
-    try {
+  const { data: pipelineStages = [], isLoading, refetch: loadPipelineData } = useQuery({
+    queryKey: ['pipeline-stages'],
+    queryFn: async () => {
       const response = await leadsApi.getLeads({ limit: 100 })
       const leads = response.data?.leads || []
       
@@ -181,14 +177,9 @@ function LeadsPipeline() {
         },
       ]
 
-      setPipelineStages(stages)
-    } catch (error) {
-      console.error('Error loading pipeline data:', error)
-      toast.error('Failed to load pipeline data')
-    } finally {
-      setIsLoading(false)
+      return stages
     }
-  }
+  })
 
   const calculateTotalValue = (leads: Lead[]): string => {
     const total = leads.reduce((sum, lead) => {
@@ -228,7 +219,8 @@ function LeadsPipeline() {
     const previousStages = pipelineStages
 
     // Optimistic local state update
-    setPipelineStages((prev: Stage[]) => {
+    queryClient.setQueryData(['pipeline-stages'], (prev: Stage[] | undefined) => {
+      if (!prev) return prev
       return prev.map((stage: Stage) => {
         if (stage.id === fromStage) {
           // Remove from old stage
@@ -259,7 +251,39 @@ function LeadsPipeline() {
     } catch (error) {
       // Revert optimistic update on failure
       console.error('Failed to update lead status:', error)
-      setPipelineStages(previousStages)
+      queryClient.setQueryData(['pipeline-stages'], previousStages)
+      toast.error('Failed to save status change. Reverted.')
+    }
+  }
+
+  // Keyboard-accessible stage move
+  const handleKeyboardMove = async (lead: Lead, fromStageId: string, toStageId: string) => {
+    if (fromStageId === toStageId) return
+
+    const previousStages = pipelineStages
+
+    queryClient.setQueryData(['pipeline-stages'], (prev: Stage[] | undefined) => {
+      if (!prev) return prev
+      return prev.map((stage: Stage) => {
+        if (stage.id === fromStageId) {
+          return { ...stage, leads: stage.leads.filter((l: Lead) => l.id !== lead.id), count: stage.count - 1 }
+        }
+        if (stage.id === toStageId) {
+          return { ...stage, leads: [...stage.leads, lead], count: stage.count + 1 }
+        }
+        return stage
+      })
+    })
+
+    const targetName = pipelineStages.find((s: Stage) => s.id === toStageId)?.name
+    toast.success(`${lead.firstName} ${lead.lastName} moved to ${targetName}`)
+    setKeyboardMoveLead(null)
+
+    try {
+      await leadsApi.updateLead(String(lead.id), { status: toStageId.toUpperCase() })
+    } catch (error) {
+      console.error('Failed to update lead status:', error)
+      queryClient.setQueryData(['pipeline-stages'], previousStages)
       toast.error('Failed to save status change. Reverted.')
     }
   }
@@ -290,7 +314,7 @@ function LeadsPipeline() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadPipelineData} disabled={isLoading}>
+          <Button variant="outline" onClick={() => { loadPipelineData(); }} disabled={isLoading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -361,8 +385,38 @@ function LeadsPipeline() {
                       key={lead.id}
                       draggable
                       onDragStart={() => handleDragStart(lead, stage.id)}
-                      className="group cursor-move rounded-lg border bg-card p-3 hover:shadow-lg hover:border-primary/50 transition-all duration-200"
+                      tabIndex={0}
+                      role="button"
+                      aria-roledescription="draggable lead card"
+                      aria-label={`${lead.firstName} ${lead.lastName} in ${stage.name} stage. Press Enter to move to another stage.`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setKeyboardMoveLead({ lead, fromStage: stage.id })
+                        } else if (e.key === 'Escape') {
+                          setKeyboardMoveLead(null)
+                        }
+                      }}
+                      className={`group cursor-move rounded-lg border bg-card p-3 hover:shadow-lg hover:border-primary/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${keyboardMoveLead?.lead.id === lead.id ? 'ring-2 ring-primary' : ''}`}
                     >
+                      {/* Keyboard move stage selector */}
+                      {keyboardMoveLead?.lead.id === lead.id && (
+                        <div className="mb-2 p-2 bg-primary/5 rounded border border-primary/20">
+                          <p className="text-xs font-medium mb-1">Move to stage:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {pipelineStages.filter(s => s.id !== stage.id).map(s => (
+                              <button
+                                key={s.id}
+                                className="px-2 py-1 text-xs rounded border hover:bg-primary hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                                onClick={() => handleKeyboardMove(lead, stage.id, s.id)}
+                                onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setKeyboardMoveLead(null); } }}
+                              >
+                                {s.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {/* Lead Card Header */}
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -387,6 +441,24 @@ function LeadsPipeline() {
                         <span>{lead.value}</span>
                         <span>{lead.lastContact}</span>
                       </div>
+
+                      {/* Keyboard-accessible move dropdown */}
+                      <select
+                        className="mt-2 w-full text-xs border rounded px-2 py-1 bg-background cursor-pointer"
+                        value=""
+                        aria-label={`Move ${lead.firstName} ${lead.lastName} to another stage`}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleKeyboardMove(lead, stage.id, e.target.value)
+                          }
+                        }}
+                      >
+                        <option value="">Move to…</option>
+                        {pipelineStages.filter(s => s.id !== stage.id).map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
 
                       {/* Quick Actions (Show on Hover) */}
                       <div className="mt-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

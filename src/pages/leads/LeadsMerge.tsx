@@ -2,10 +2,12 @@ import { Merge, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { leadsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
+import type { Lead } from '@/types';
 
 interface LeadData {
   id: number | string;
@@ -25,13 +27,6 @@ interface DuplicatePair {
 }
 
 const LeadsMerge = () => {
-  const [duplicates, setDuplicates] = useState<DuplicatePair[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState({
-    potential: 0,
-    mergedMonth: 0,
-    autoMerged: 0,
-  });
   const [mergeSettings, setMergeSettings] = useState({
     matchEmail: true,
     matchPhone: true,
@@ -40,31 +35,22 @@ const LeadsMerge = () => {
     threshold: 80,
   });
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    loadDuplicates();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadDuplicates = async () => {
-    setIsLoading(true);
-    try {
+  const { data: duplicatesData, isLoading, refetch: loadDuplicates } = useQuery({
+    queryKey: ['lead-duplicates'],
+    queryFn: async () => {
       const response = await leadsApi.getLeads({ limit: 200 });
       const leads = response.data?.leads || response.data || [];
       
       // Find potential duplicates based on merge settings
       const duplicatePairs: DuplicatePair[] = [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const emailMap = new Map<string, any>();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const phoneMap = new Map<string, any>();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const nameMap = new Map<string, any>();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const companyMap = new Map<string, any>();
+      const emailMap = new Map<string, Lead>();
+      const phoneMap = new Map<string, Lead>();
+      const nameMap = new Map<string, Lead>();
+      const companyMap = new Map<string, Lead>();
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      leads.forEach((lead: any) => {
+      leads.forEach((lead: Lead) => {
         const email = lead.email?.toLowerCase();
         const phone = lead.phone?.replace(/\D/g, '');
         const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim().toLowerCase();
@@ -72,7 +58,7 @@ const LeadsMerge = () => {
         
         // Check for email duplicates
         if (mergeSettings.matchEmail && email && emailMap.has(email)) {
-          const existing = emailMap.get(email);
+          const existing = emailMap.get(email)!;
           duplicatePairs.push({
             id: duplicatePairs.length + 1,
             lead1: {
@@ -100,7 +86,7 @@ const LeadsMerge = () => {
         
         // Check for phone duplicates
         if (mergeSettings.matchPhone && phone && phone.length >= 10 && phoneMap.has(phone)) {
-          const existing = phoneMap.get(phone);
+          const existing = phoneMap.get(phone)!;
           // Only add if not already added by email match
           const alreadyMatched = duplicatePairs.some(
             d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
@@ -136,7 +122,7 @@ const LeadsMerge = () => {
 
         // Check for name duplicates
         if (mergeSettings.matchName && fullName.length > 1 && nameMap.has(fullName)) {
-          const existing = nameMap.get(fullName);
+          const existing = nameMap.get(fullName)!;
           const alreadyMatched = duplicatePairs.some(
             d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
                  (d.lead1.id === lead.id && d.lead2.id === existing.id)
@@ -156,7 +142,7 @@ const LeadsMerge = () => {
 
         // Check for company duplicates
         if (mergeSettings.matchCompany && company && company.length > 1 && companyMap.has(company)) {
-          const existing = companyMap.get(company);
+          const existing = companyMap.get(company)!;
           const alreadyMatched = duplicatePairs.some(
             d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
                  (d.lead1.id === lead.id && d.lead2.id === existing.id)
@@ -177,19 +163,19 @@ const LeadsMerge = () => {
 
       // Filter by similarity threshold
       const filteredPairs = duplicatePairs.filter(d => d.similarity >= mergeSettings.threshold);
-      setDuplicates(filteredPairs);
-      setStats({
-        potential: filteredPairs.length,
-        mergedMonth: 0,
-        autoMerged: 0,
-      });
-    } catch (error) {
-      console.error('Error loading duplicates:', error);
-      toast.error('Failed to load duplicate leads');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return {
+        duplicates: filteredPairs,
+        stats: {
+          potential: filteredPairs.length,
+          mergedMonth: 0,
+          autoMerged: 0,
+        },
+      };
+    },
+  });
+
+  const duplicates = duplicatesData?.duplicates ?? [];
+  const stats = duplicatesData?.stats ?? { potential: 0, mergedMonth: 0, autoMerged: 0 };
 
   const handleMerge = async (duplicateId: number) => {
     const duplicate = duplicates.find(d => d.id === duplicateId);
@@ -205,11 +191,15 @@ const LeadsMerge = () => {
       toast.success(`Merged leads #${duplicate.lead1.id} and #${duplicate.lead2.id}`);
       
       // Remove from list
-      setDuplicates(prev => prev.filter(d => d.id !== duplicateId));
-      setStats(prev => ({ ...prev, potential: prev.potential - 1, mergedMonth: prev.mergedMonth + 1 }));
-    } catch (error: any) {
+      queryClient.setQueryData(['lead-duplicates'], (old: typeof duplicatesData) => {
+        if (!old) return old;
+        const updated = old.duplicates.filter(d => d.id !== duplicateId);
+        return { duplicates: updated, stats: { ...old.stats, potential: old.stats.potential - 1, mergedMonth: old.stats.mergedMonth + 1 } };
+      });
+    } catch (error: unknown) {
       // Handle 404 gracefully — merge endpoint may not be deployed yet
-      if (error?.response?.status === 404) {
+      const err = error as { response?: { status?: number } }
+      if (err?.response?.status === 404) {
         toast.error('Merge endpoint not available yet. Please try again later.');
       } else {
         console.error('Error merging leads:', error);
@@ -219,13 +209,20 @@ const LeadsMerge = () => {
   };
 
   const handleDismiss = (duplicateId: number) => {
-    setDuplicates(prev => prev.filter(d => d.id !== duplicateId));
-    setStats(prev => ({ ...prev, potential: prev.potential - 1 }));
+    queryClient.setQueryData(['lead-duplicates'], (old: typeof duplicatesData) => {
+      if (!old) return old;
+      const updated = old.duplicates.filter(d => d.id !== duplicateId);
+      return { duplicates: updated, stats: { ...old.stats, potential: old.stats.potential - 1 } };
+    });
     toast.info('Marked as not duplicate');
   };
 
   const handleSkip = (duplicateId: number) => {
-    setDuplicates(prev => prev.filter(d => d.id !== duplicateId));
+    queryClient.setQueryData(['lead-duplicates'], (old: typeof duplicatesData) => {
+      if (!old) return old;
+      const updated = old.duplicates.filter(d => d.id !== duplicateId);
+      return { duplicates: updated, stats: old.stats };
+    });
     toast.info('Skipped for now');
   };
 
@@ -241,7 +238,7 @@ const LeadsMerge = () => {
             Find and merge duplicate lead records
           </p>
         </div>
-        <Button onClick={loadDuplicates} disabled={isLoading}>
+        <Button onClick={() => { loadDuplicates(); }} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Scan for Duplicates
         </Button>
@@ -340,7 +337,7 @@ const LeadsMerge = () => {
               <span className="text-sm font-medium">{mergeSettings.threshold}%</span>
             </div>
           </div>
-          <Button onClick={loadDuplicates}>Run Duplicate Scan</Button>
+          <Button onClick={() => { loadDuplicates(); }}>Run Duplicate Scan</Button>
         </CardContent>
       </Card>
 

@@ -2,76 +2,54 @@ import { History, Clock, User, Tag, FileText, Calendar, RefreshCw } from 'lucide
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { activitiesApi } from '@/lib/api';
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
+import type { ActivityRecord } from '@/types';
 
 const LeadHistory = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [timeline, setTimeline] = useState<any[]>([]);
-  const [allTimeline, setAllTimeline] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [stats, setStats] = useState({
-    total: 0,
-    statusChanges: 0,
-    emails: 0,
-    notes: 0,
-    tasks: 0,
-    calls: 0
-  });
 
-  useEffect(() => {
-    loadActivities();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadActivities = async () => {
-    setIsLoading(true);
-    try {
+  const { data: activitiesData, isLoading, refetch: loadActivities } = useQuery({
+    queryKey: ['lead-activity-history'],
+    queryFn: async () => {
       const response = await activitiesApi.getActivities({ limit: 50 });
       const activities = response.data?.activities || [];
-      
-      // Transform activities to timeline format
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const timelineItems = activities.map((activity: any, index: number) => ({
+
+      const timelineItems = activities.map((activity: ActivityRecord, index: number) => ({
         id: activity.id || index,
         type: activity.type || 'activity',
         title: formatTitle(activity.type),
         description: activity.description || 'No description',
-        user: activity.user 
+        user: activity.user && typeof activity.user !== 'string'
           ? `${activity.user.firstName || ''} ${activity.user.lastName || ''}`.trim() || 'System'
-          : 'System',
+          : typeof activity.user === 'string' ? activity.user : 'System',
         timestamp: activity.createdAt ? new Date(activity.createdAt).toLocaleString() : 'Unknown',
         icon: getIconForType(activity.type),
         color: getColorForType(activity.type),
       }));
 
-      setTimeline(timelineItems);
-      setAllTimeline(timelineItems);
-
-      // Calculate stats
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const newStats = {
+      const stats = {
         total: activities.length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        statusChanges: activities.filter((a: any) => a.type === 'status_change').length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        emails: activities.filter((a: any) => a.type === 'email').length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        notes: activities.filter((a: any) => a.type === 'note').length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        tasks: activities.filter((a: any) => a.type === 'task').length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        calls: activities.filter((a: any) => a.type === 'call').length,
+        statusChanges: activities.filter((a: ActivityRecord) => a.type === 'status_change').length,
+        emails: activities.filter((a: ActivityRecord) => a.type === 'email').length,
+        notes: activities.filter((a: ActivityRecord) => a.type === 'note').length,
+        tasks: activities.filter((a: ActivityRecord) => a.type === 'task').length,
+        calls: activities.filter((a: ActivityRecord) => a.type === 'call').length,
       };
-      setStats(newStats);
-    } catch (error) {
-      console.error('Error loading activities:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+      return { timeline: timelineItems, stats };
+    },
+  });
+
+  const allTimeline = useMemo(() => activitiesData?.timeline ?? [], [activitiesData?.timeline]);
+  const stats = activitiesData?.stats ?? { total: 0, statusChanges: 0, emails: 0, notes: 0, tasks: 0, calls: 0 };
+
+  const timeline = useMemo(() => {
+    if (activeFilter === 'all') return allTimeline;
+    return allTimeline.filter((item: { type: string; [k: string]: unknown }) => item.type === activeFilter);
+  }, [allTimeline, activeFilter]);
 
   const formatTitle = (type: string): string => {
     const titles: { [key: string]: string } = {
@@ -86,8 +64,7 @@ const LeadHistory = () => {
   };
 
   const getIconForType = (type: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const icons: { [key: string]: any } = {
+    const icons: Record<string, React.ElementType> = {
       'status_change': Tag,
       'email': FileText,
       'note': FileText,
@@ -112,11 +89,6 @@ const LeadHistory = () => {
 
   const handleFilterChange = (filterType: string) => {
     setActiveFilter(filterType);
-    if (filterType === 'all') {
-      setTimeline(allTimeline);
-    } else {
-      setTimeline(allTimeline.filter(item => item.type === filterType));
-    }
   };
 
   const displayStats = [
@@ -140,7 +112,7 @@ const LeadHistory = () => {
             Complete timeline of all lead interactions and changes
           </p>
         </div>
-        <Button onClick={loadActivities} disabled={isLoading}>
+        <Button onClick={() => { loadActivities(); }} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
@@ -171,12 +143,26 @@ const LeadHistory = () => {
           <CardDescription>Chronological history of all lead activities</CardDescription>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <div className="space-y-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex gap-4 animate-pulse">
+                  <div className="w-12 h-12 rounded-full bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-1/3" />
+                    <div className="h-3 bg-muted rounded w-2/3" />
+                    <div className="h-3 bg-muted rounded w-1/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="relative">
             {/* Timeline line */}
             <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border"></div>
 
             <div className="space-y-6">
-              {timeline.map((event) => {
+              {timeline.map((event: { id: string | number; type: string; title: string; description: string; user: string; timestamp: string; icon: React.ElementType; color: string }) => {
                 const IconComponent = event.icon;
                 return (
                   <div key={event.id} className="relative flex items-start space-x-4">
@@ -228,10 +214,9 @@ const LeadHistory = () => {
               })}
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Filter Options */}
       <Card>
         <CardHeader>
           <CardTitle>Filter Activities</CardTitle>

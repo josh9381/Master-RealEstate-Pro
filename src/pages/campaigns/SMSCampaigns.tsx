@@ -3,66 +3,61 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { campaignsApi, CreateCampaignData } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
+import type { Campaign } from '@/types';
 
 const SMSCampaigns = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [smsCampaigns, setSmsCampaigns] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [smsMessage, setSmsMessage] = useState('');
   const [smsRecipients, setSmsRecipients] = useState('');
-  const [stats, setStats] = useState({
-    total: 0,
-    deliveryRate: 0,
-    clickRate: 0,
-    scheduled: 0
-  });
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadCampaigns();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadCampaigns = async () => {
-    setIsLoading(true);
-    try {
+  const { data: smsData, isFetching: isLoading, refetch: loadCampaigns } = useQuery({
+    queryKey: ['smsCampaigns'],
+    queryFn: async () => {
       const response = await campaignsApi.getCampaigns({ type: 'SMS', limit: 50 });
       const campaigns = response.data?.campaigns || response.campaigns || [];
       
-      setSmsCampaigns(campaigns);
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const scheduled = campaigns.filter((c: any) => c.status === 'SCHEDULED').length;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalSent = campaigns.reduce((sum: number, c: any) => sum + (c.sent || c.recipientCount || 0), 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalDelivered = campaigns.reduce((sum: number, c: any) => sum + (c.delivered || c.sent || 0), 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalClicked = campaigns.reduce((sum: number, c: any) => sum + (c.clicks || c.clicked || 0), 0);
-      setStats({
-        total: response.data?.pagination?.total || campaigns.length,
-        deliveryRate: totalSent > 0 ? parseFloat(((totalDelivered / totalSent) * 100).toFixed(1)) : 0,
-        clickRate: totalSent > 0 ? parseFloat(((totalClicked / totalSent) * 100).toFixed(1)) : 0,
-        scheduled
-      });
-    } catch (error) {
-      console.error('Error loading SMS campaigns:', error);
-      toast.error('Failed to load campaigns');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const scheduled = campaigns.filter((c: Campaign) => c.status === 'SCHEDULED').length;
+      const totalSent = campaigns.reduce((sum: number, c: Campaign) => sum + (c.sent || c.recipientCount || 0), 0);
+      const totalDelivered = campaigns.reduce((sum: number, c: Campaign) => sum + (c.delivered || c.sent || 0), 0);
+      const totalClicked = campaigns.reduce((sum: number, c: Campaign) => sum + (c.clicks || c.clicked || 0), 0);
+
+      return {
+        smsCampaigns: campaigns,
+        stats: {
+          total: response.data?.pagination?.total || campaigns.length,
+          deliveryRate: totalSent > 0 ? parseFloat(((totalDelivered / totalSent) * 100).toFixed(1)) : 0,
+          clickRate: totalSent > 0 ? parseFloat(((totalClicked / totalSent) * 100).toFixed(1)) : 0,
+          scheduled,
+        },
+      };
+    },
+  });
+  const smsCampaigns = smsData?.smsCampaigns ?? [];
+  const stats = smsData?.stats ?? { total: 0, deliveryRate: 0, clickRate: 0, scheduled: 0 };
 
   return (
     <div className="space-y-6">
       {/* Sub Navigation */}
       <CampaignsSubNav />
+
+      {isLoading && smsCampaigns.length === 0 && (
+        <div className="space-y-4">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          <div className="grid gap-4 md:grid-cols-3">
+            {[1,2,3].map(i => <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <div>
@@ -70,7 +65,7 @@ const SMSCampaigns = () => {
           <p className="text-muted-foreground mt-2">Send targeted SMS messages to your contacts</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadCampaigns} disabled={isLoading}>
+          <Button variant="outline" onClick={() => { loadCampaigns(); }} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -185,6 +180,7 @@ const SMSCampaigns = () => {
                       type: 'SMS',
                       body: smsMessage,
                       status: 'SCHEDULED',
+                      recipients: smsRecipients.split(',').map(r => r.trim()).filter(Boolean),
                     } as CreateCampaignData);
                     toast.success('SMS campaign scheduled!');
                     setSmsMessage('');
@@ -204,6 +200,7 @@ const SMSCampaigns = () => {
                       type: 'SMS',
                       body: smsMessage,
                       status: 'DRAFT',
+                      recipients: smsRecipients.split(',').map(r => r.trim()).filter(Boolean),
                     } as CreateCampaignData);
                     toast.success('SMS draft saved!');
                     setSmsMessage('');
@@ -226,7 +223,7 @@ const SMSCampaigns = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {smsCampaigns.map((campaign) => (
+            {smsCampaigns.map((campaign: Campaign) => (
               <div
                 key={campaign.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent"

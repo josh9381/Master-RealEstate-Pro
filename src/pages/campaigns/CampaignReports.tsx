@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { BarChart3, TrendingUp, Users, Mail, MousePointer, RefreshCw, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/Badge';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import type { EnrichedCampaign } from '@/types';
 import {
   LineChart,
   Line,
@@ -28,44 +30,28 @@ const TYPE_DISPLAY: Record<string, string> = {
 const CampaignReports = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    totalSent: 0,
-    deliveryRate: 0,
-    openRate: 0,
-    clickRate: 0,
-    revenue: 0,
-  });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [performanceData, setPerformanceData] = useState<any[]>([]);
 
-  useEffect(() => {
-    loadReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadReports = async () => {
-    setIsLoading(true);
-    try {
+  const { data: reportData, isFetching: isLoading, refetch: loadReports } = useQuery({
+    queryKey: ['campaignReports'],
+    queryFn: async () => {
       const response = await campaignsApi.getCampaigns();
       const allCampaigns = response.data?.campaigns || response.campaigns || [];
 
       // Transform campaigns to include calculated metrics from real data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const enrichedCampaigns = allCampaigns.map((c: any) => {
-        const sent = c.recipientCount || c.sent || 0;
-        const delivered = c.delivered || 0;
-        const opened = c.opens || c.opened || 0;
-        const clicked = c.clicks || c.clicked || 0;
-        const bounced = c.bounced || 0;
-        const unsubscribed = c.unsubscribed || 0;
-        const revenue = c.revenue || 0;
+      const enrichedCampaigns: EnrichedCampaign[] = allCampaigns.map((c: Record<string, unknown>) => {
+        const sent = (c.recipientCount as number) || (c.sent as number) || 0;
+        const delivered = (c.delivered as number) || 0;
+        const opened = (c.opens as number) || (c.opened as number) || 0;
+        const clicked = (c.clicks as number) || (c.clicked as number) || 0;
+        const bounced = (c.bounced as number) || 0;
+        const unsubscribed = (c.unsubscribed as number) || 0;
+        const revenue = (c.revenue as number) || 0;
 
         return {
           ...c,
-          type: TYPE_DISPLAY[(c.type || '').toUpperCase()] || c.type || 'Unknown',
+          id: c.id as string,
+          name: c.name as string,
+          type: TYPE_DISPLAY[((c.type as string) || '').toUpperCase()] || (c.type as string) || 'Unknown',
           sent,
           delivered,
           opened,
@@ -76,49 +62,45 @@ const CampaignReports = () => {
         };
       });
 
-      setCampaigns(enrichedCampaigns);
-
       // Calculate overall stats
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalSent = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.sent, 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalDelivered = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.delivered, 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalOpened = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.opened, 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalClicked = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.clicked, 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalRevenue = enrichedCampaigns.reduce((sum: number, c: any) => sum + c.revenue, 0);
-
-      setStats({
-        totalSent,
-        deliveryRate: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0,
-        openRate: totalDelivered > 0 ? (totalOpened / totalDelivered) * 100 : 0,
-        clickRate: totalOpened > 0 ? (totalClicked / totalOpened) * 100 : 0,
-        revenue: totalRevenue,
-      });
+      const totalSent = enrichedCampaigns.reduce((sum: number, c) => sum + c.sent, 0);
+      const totalDelivered = enrichedCampaigns.reduce((sum: number, c) => sum + c.delivered, 0);
+      const totalOpened = enrichedCampaigns.reduce((sum: number, c) => sum + c.opened, 0);
+      const totalClicked = enrichedCampaigns.reduce((sum: number, c) => sum + c.clicked, 0);
+      const totalRevenue = enrichedCampaigns.reduce((sum: number, c) => sum + c.revenue, 0);
 
       // Generate performance trend data sorted by campaign creation date
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const trend = [...enrichedCampaigns]
-        .filter((c: any) => c.sent > 0)
-        .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-        .map((c: any) => ({
-          date: new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        .filter((c) => c.sent > 0)
+        .sort((a, b) => new Date(a.createdAt || '').getTime() - new Date(b.createdAt || '').getTime())
+        .map((c) => ({
+          date: new Date(c.createdAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           sent: c.sent,
           delivered: c.delivered,
           opened: c.opened,
           clicked: c.clicked,
         }));
-      setPerformanceData(trend);
 
-    } catch (error) {
-      console.error('Error loading campaign reports:', error);
-      toast.error('Failed to load campaign reports');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return {
+        campaigns: enrichedCampaigns,
+        stats: {
+          totalSent,
+          deliveryRate: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0,
+          openRate: totalDelivered > 0 ? (totalOpened / totalDelivered) * 100 : 0,
+          clickRate: totalOpened > 0 ? (totalClicked / totalOpened) * 100 : 0,
+          revenue: totalRevenue,
+        },
+        performanceData: trend,
+      };
+    },
+  });
+  const campaigns = reportData?.campaigns ?? [];
+  const stats = reportData?.stats ?? { totalSent: 0, deliveryRate: 0, openRate: 0, clickRate: 0, revenue: 0 };
+  const performanceData = reportData?.performanceData ?? [];
+
+  if (isLoading) {
+    return <LoadingSkeleton rows={5} showChart />;
+  }
 
   return (
     <div className="space-y-6">
@@ -133,7 +115,7 @@ const CampaignReports = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button onClick={loadReports} disabled={isLoading} variant="outline" size="sm">
+          <Button onClick={() => { loadReports(); }} disabled={isLoading} variant="outline" size="sm">
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -331,7 +313,7 @@ const CampaignReports = () => {
                       ${campaign.revenue.toLocaleString()}
                     </p>
                     <p className="text-xs text-green-600">
-                      ROI: {(campaign.spent || 0) > 0 && campaign.revenue > 0 ? `${((campaign.revenue / campaign.spent) * 100).toFixed(0)}%` : campaign.revenue > 0 ? 'Positive' : 'N/A'}
+                      ROI: {(campaign.spent || 0) > 0 && campaign.revenue > 0 ? `${((campaign.revenue / (campaign.spent || 1)) * 100).toFixed(0)}%` : campaign.revenue > 0 ? 'Positive' : 'N/A'}
                     </p>
                   </div>
                 </div>
