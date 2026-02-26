@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Users, Plus, Filter, Trash2, Edit, RefreshCw, Eye, X, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { segmentsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface SegmentRule {
   field: string;
@@ -67,8 +68,7 @@ const COLOR_OPTIONS = [
 
 const Segmentation = () => {
   const { toast } = useToast();
-  const [segments, setSegments] = useState<Segment[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [editingSegment, setEditingSegment] = useState<Segment | null>(null);
@@ -83,22 +83,42 @@ const Segmentation = () => {
   const [formMatchType, setFormMatchType] = useState('all');
   const [formColor, setFormColor] = useState('#3B82F6');
 
-  useEffect(() => {
-    loadSegments();
-  }, []);
-
-  const loadSegments = async () => {
-    setIsLoading(true);
-    try {
+  const { data: segments = [], isLoading, refetch: refetchSegments } = useQuery({
+    queryKey: ['segments'],
+    queryFn: async () => {
       const response = await segmentsApi.getSegments();
-      setSegments(response.data || response.segments || []);
-    } catch (error) {
-      console.error('Error loading segments:', error);
-      toast.error('Failed to load segments');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return response.data || response.segments || [];
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ id, data }: { id?: string; data: { name: string; description?: string; rules: Array<Record<string, unknown> | { field: string; operator: string; value: string }>; matchType?: string; color?: string } }) => {
+      if (id) {
+        return segmentsApi.updateSegment(id, data);
+      }
+      return segmentsApi.createSegment(data);
+    },
+    onSuccess: (_, variables) => {
+      toast.success(variables.id ? 'Segment updated' : 'Segment created');
+      setShowCreateDialog(false);
+      resetForm();
+      queryClient.invalidateQueries({ queryKey: ['segments'] });
+    },
+    onError: () => {
+      toast.error('Failed to save segment');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => segmentsApi.deleteSegment(id),
+    onSuccess: () => {
+      toast.success('Segment deleted');
+      queryClient.invalidateQueries({ queryKey: ['segments'] });
+    },
+    onError: () => {
+      toast.error('Failed to delete segment');
+    },
+  });
 
   const resetForm = () => {
     setFormName('');
@@ -136,42 +156,20 @@ const Segmentation = () => {
       return;
     }
 
-    try {
-      const data = {
-        name: formName,
-        description: formDescription || undefined,
-        rules: validRules,
-        matchType: formMatchType,
-        color: formColor,
-      };
+    const data = {
+      name: formName,
+      description: formDescription || undefined,
+      rules: validRules,
+      matchType: formMatchType,
+      color: formColor,
+    };
 
-      if (editingSegment) {
-        await segmentsApi.updateSegment(editingSegment.id, data);
-        toast.success('Segment updated');
-      } else {
-        await segmentsApi.createSegment(data);
-        toast.success('Segment created');
-      }
-
-      setShowCreateDialog(false);
-      resetForm();
-      loadSegments();
-    } catch (error) {
-      console.error('Error saving segment:', error);
-      toast.error('Failed to save segment');
-    }
+    saveMutation.mutate({ id: editingSegment?.id, data });
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this segment?')) return;
-    try {
-      await segmentsApi.deleteSegment(id);
-      toast.success('Segment deleted');
-      loadSegments();
-    } catch (error) {
-      console.error('Error deleting segment:', error);
-      toast.error('Failed to delete segment');
-    }
+    deleteMutation.mutate(id);
   };
 
   const viewMembers = async (segment: Segment) => {
@@ -188,16 +186,13 @@ const Segmentation = () => {
   };
 
   const handleRefresh = async () => {
-    setIsLoading(true);
     try {
       await segmentsApi.refreshCounts();
-      await loadSegments();
+      await refetchSegments();
       toast.success('Segment counts refreshed');
     } catch (error) {
       console.error('Error refreshing:', error);
       toast.error('Failed to refresh');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -213,7 +208,7 @@ const Segmentation = () => {
     setFormRules(formRules.map((r, i) => (i === index ? { ...r, ...updates } : r)));
   };
 
-  const totalMembers = segments.reduce((sum, s) => sum + s.memberCount, 0);
+  const totalMembers = segments.reduce((sum: number, s: Segment) => sum + s.memberCount, 0);
 
   return (
     <div className="space-y-6">
@@ -264,7 +259,7 @@ const Segmentation = () => {
             <Check className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{segments.filter(s => s.isActive).length}</div>
+            <div className="text-2xl font-bold">{segments.filter((s: Segment) => s.isActive).length}</div>
             <p className="text-xs text-muted-foreground">Currently active</p>
           </CardContent>
         </Card>
@@ -299,7 +294,7 @@ const Segmentation = () => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {segments.map((segment) => (
+          {segments.map((segment: Segment) => (
             <Card key={segment.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">

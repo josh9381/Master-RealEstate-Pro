@@ -42,8 +42,9 @@ export default function PasswordSecurityPage() {
       setConfirmPassword('')
       
       toast.success('Password updated successfully');
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.response?.data?.error || 'Failed to update password';
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string; error?: string } } }
+      const message = err.response?.data?.message || err.response?.data?.error || 'Failed to update password';
       toast.error(message);
     } finally {
       setLoading(false)

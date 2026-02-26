@@ -29,7 +29,7 @@ const AIAnalytics = () => {
         }
         // Derive model comparison from real API data
         if (data?.models && Array.isArray(data.models)) {
-          modelComparison = data.models.map((m: any) => ({
+          modelComparison = data.models.map((m: { name?: string; model?: string; accuracy?: number; speed?: number; latency?: number; reliability?: number; uptime?: number }) => ({
             model: m.name || m.model || 'Unknown',
             accuracy: m.accuracy || 0,
             speed: m.speed || m.latency ? Math.max(0, 100 - (m.latency || 0)) : 0,
@@ -37,9 +37,9 @@ const AIAnalytics = () => {
           }))
         } else if (data?.performance && data.performance.length > 0) {
           // Derive from performance data if models not available
-          const avgAcc = data.performance.reduce((s: number, p: any) => s + (p.accuracy || 0), 0) / data.performance.length
-          const avgLat = data.performance.reduce((s: number, p: any) => s + (p.latency || 0), 0) / data.performance.length
-          const avgThr = data.performance.reduce((s: number, p: any) => s + (p.throughput || 0), 0) / data.performance.length
+          const avgAcc = data.performance.reduce((s: number, p: { accuracy?: number }) => s + (p.accuracy || 0), 0) / data.performance.length
+          const avgLat = data.performance.reduce((s: number, p: { latency?: number }) => s + (p.latency || 0), 0) / data.performance.length
+          const avgThr = data.performance.reduce((s: number, p: { throughput?: number }) => s + (p.throughput || 0), 0) / data.performance.length
           modelComparison = [
             { model: 'Lead Scoring', accuracy: Math.round(avgAcc), speed: Math.round(Math.max(0, 100 - avgLat / 10)), reliability: Math.min(100, Math.round(avgThr / 10)) },
             { model: 'Segmentation', accuracy: Math.round(avgAcc * 0.95), speed: Math.round(Math.max(0, 100 - avgLat / 8)), reliability: Math.min(100, Math.round(avgThr / 10 * 0.98)) },

@@ -113,10 +113,10 @@ export default function CalendarPage() {
   const events: CalendarEvent[] = useMemo(() => {
     const appts = appointmentsResponse?.data?.appointments || appointmentsResponse?.appointments || appointmentsResponse || []
     if (!Array.isArray(appts)) return []
-    return appts.map((appt: any) => {
-      const date = new Date(appt.scheduledAt || appt.date || appt.startTime)
+    return appts.map((appt: { id?: string; _id?: string; scheduledAt?: string; date?: string; startTime?: string; title?: string; type?: string; description?: string; location?: string; duration?: number; leadId?: string; status?: string }) => {
+      const date = new Date(appt.scheduledAt || appt.date || appt.startTime || new Date())
       return {
-        id: appt.id || appt._id,
+        id: appt.id || appt._id || '',
         title: appt.title || 'Appointment',
         time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         type: appt.type || 'meeting',

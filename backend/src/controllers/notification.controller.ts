@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { UnauthorizedError } from '../middleware/errorHandler';
+import { pushNotification } from '../config/socket';
 
 /**
  * Get user notifications
@@ -155,6 +156,17 @@ export async function createNotification(req: Request, res: Response): Promise<v
       message,
       link
     }
+  });
+
+  // Push real-time notification via Socket.io
+  pushNotification(notification.userId, {
+    id: notification.id,
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
+    read: false,
+    createdAt: notification.createdAt.toISOString(),
+    data: link ? { link } : undefined,
   });
 
   res.status(201).json({

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Mail, MessageSquare, Plug, CheckCircle, AlertCircle, ArrowRight, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,37 +8,29 @@ import { Link } from 'react-router-dom';
 import { settingsApi } from '@/lib/api';
 
 const Integrations = () => {
-  const [loading, setLoading] = useState(true);
-  const [emailConfigured, setEmailConfigured] = useState(false);
-  const [smsConfigured, setSmsConfigured] = useState(false);
+  const { data: integrationStatus, isLoading: loading } = useQuery({
+    queryKey: ['settings', 'integrations', 'status'],
+    queryFn: async () => {
+      let emailConfigured = false;
+      let smsConfigured = false;
+      try {
+        const emailConfig = await settingsApi.getEmailConfig();
+        emailConfigured = !!(emailConfig?.config?.isActive && emailConfig?.config?.apiKey !== null);
+      } catch (error) {
+        console.error('Failed to load email config:', error);
+      }
+      try {
+        const smsConfig = await settingsApi.getSMSConfig();
+        smsConfigured = !!(smsConfig?.config?.isActive && smsConfig?.config?.accountSid !== null && smsConfig?.config?.authToken !== null);
+      } catch (error) {
+        console.error('Failed to load SMS config:', error);
+      }
+      return { emailConfigured, smsConfigured };
+    },
+  });
 
-  useEffect(() => {
-    loadIntegrationStatus();
-  }, []);
-
-  const loadIntegrationStatus = async () => {
-    setLoading(true);
-    try {
-      // Check email configuration
-      const emailConfig = await settingsApi.getEmailConfig();
-      setEmailConfigured(
-        emailConfig?.config?.isActive && 
-        emailConfig?.config?.apiKey !== null
-      );
-
-      // Check SMS configuration
-      const smsConfig = await settingsApi.getSMSConfig();
-      setSmsConfigured(
-        smsConfig?.config?.isActive && 
-        smsConfig?.config?.accountSid !== null &&
-        smsConfig?.config?.authToken !== null
-      );
-    } catch (error) {
-      console.error('Failed to load integration status:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const emailConfigured = integrationStatus?.emailConfigured ?? false;
+  const smsConfigured = integrationStatus?.smsConfigured ?? false;
 
   const integrations = [
     {

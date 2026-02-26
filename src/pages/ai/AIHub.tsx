@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Brain, Target, Users, TrendingUp, Sparkles, BarChart3, Upload, RefreshCw, Activity, AlertCircle, CheckCircle, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { aiApi, tasksApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { useQuery } from '@tanstack/react-query';
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config';
 
 // Icon mapping for API responses (which return icon names as strings)
@@ -106,16 +108,53 @@ interface AIRecommendation {
 const AIHub = () => {
   const navigate = useNavigate()
   const [uploading, setUploading] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<AIStats | null>(null)
-  const [aiFeatures, setAiFeatures] = useState<AIFeature[]>([])
-  const [modelPerformance, setModelPerformance] = useState<ModelPerformanceEntry[]>([])
-  const [featureImportance, setFeatureImportance] = useState<FeatureImportanceEntry[]>([])
-  const [trainingModels, setTrainingModels] = useState<TrainingModel[]>([])
-  const [dataQuality, setDataQuality] = useState<DataQualityEntry[]>([])
-  const [recentInsights, setRecentInsights] = useState<AIInsight[]>([])
-  const [recommendations, setRecommendations] = useState<AIRecommendation[]>([])
   const { toast } = useToast()
+
+  // Fetch all AI Hub data via useQuery
+  const { data: aiData, isLoading: loading, refetch } = useQuery({
+    queryKey: ['ai', 'hub'],
+    queryFn: async () => {
+      const [
+        statsData,
+        featuresData,
+        performanceData,
+        trainingData,
+        qualityData,
+        insightsData,
+        recommendationsData,
+        importanceData,
+      ] = await Promise.all([
+        aiApi.getStats(),
+        aiApi.getFeatures(),
+        aiApi.getModelPerformance(6),
+        aiApi.getTrainingModels(),
+        aiApi.getDataQuality(),
+        aiApi.getInsights({ limit: 3 }),
+        aiApi.getRecommendations({ limit: 3 }),
+        aiApi.getFeatureImportance('lead-scoring'),
+      ])
+      return {
+        stats: statsData.data as AIStats | null,
+        aiFeatures: (featuresData.data || []) as AIFeature[],
+        modelPerformance: (performanceData.data || []) as ModelPerformanceEntry[],
+        trainingModels: (trainingData.data || []) as TrainingModel[],
+        dataQuality: (qualityData.data || []) as DataQualityEntry[],
+        recentInsights: (insightsData.data || []) as AIInsight[],
+        recommendations: (recommendationsData.data || []) as AIRecommendation[],
+        featureImportance: (importanceData.data || []) as FeatureImportanceEntry[],
+      }
+    },
+    meta: { useMockOnError: MOCK_DATA_CONFIG.USE_MOCK_DATA },
+  })
+
+  const stats = aiData?.stats ?? null
+  const aiFeatures = aiData?.aiFeatures ?? []
+  const modelPerformance = aiData?.modelPerformance ?? []
+  const featureImportance = aiData?.featureImportance ?? []
+  const trainingModels = aiData?.trainingModels ?? []
+  const dataQuality = aiData?.dataQuality ?? []
+  const recentInsights = aiData?.recentInsights ?? []
+  const recommendations = aiData?.recommendations ?? []
 
   // Handle recommendation action buttons — execute real actions where possible
   const handleRecommendationAction = async (rec: AIRecommendation) => {
@@ -154,219 +193,7 @@ const AIHub = () => {
     }
   }
   
-  // Load all AI Hub data
-  useEffect(() => {
-    loadAIData()
-  }, [])
 
-  const loadAIData = async () => {
-    try {
-      setLoading(true)
-      
-      // Fetch all data in parallel
-      const [
-        statsData,
-        featuresData,
-        performanceData,
-        trainingData,
-        qualityData,
-        insightsData,
-        recommendationsData,
-        importanceData,
-      ] = await Promise.all([
-        aiApi.getStats(),
-        aiApi.getFeatures(),
-        aiApi.getModelPerformance(6),
-        aiApi.getTrainingModels(),
-        aiApi.getDataQuality(),
-        aiApi.getInsights({ limit: 3 }),
-        aiApi.getRecommendations({ limit: 3 }),
-        aiApi.getFeatureImportance('lead-scoring'),
-      ])
-
-      setStats(statsData.data)
-      setAiFeatures(featuresData.data)
-      setModelPerformance(performanceData.data)
-      setTrainingModels(trainingData.data)
-      setDataQuality(qualityData.data)
-      setRecentInsights(insightsData.data)
-      setRecommendations(recommendationsData.data)
-      setFeatureImportance(importanceData.data)
-    } catch (error) {
-      console.error('Error loading AI data:', error)
-      if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
-        toast.warning('Error loading AI data', 'Using fallback data')
-        // Use fallback mock data
-        setStats(getMockStats())
-        setAiFeatures(getMockFeatures())
-        setModelPerformance(getMockPerformance())
-        setTrainingModels(getMockTrainingModels())
-        setDataQuality(getMockDataQuality())
-        setRecentInsights(getMockInsights())
-        setRecommendations(getMockRecommendations())
-        setFeatureImportance(getMockFeatureImportance())
-      } else {
-        toast.error('Error loading AI data')
-        // Set empty/zero values
-        setStats(null)
-        setAiFeatures([])
-        setModelPerformance([])
-        setTrainingModels([])
-        setDataQuality([])
-        setRecentInsights([])
-        setRecommendations([])
-        setFeatureImportance([])
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Mock data functions (fallback)
-  const getMockStats = () => ({
-    activeModels: 6,
-    modelsInTraining: 2,
-    avgAccuracy: 91.2,
-    accuracyChange: 2.3,
-    predictionsToday: 2547,
-    predictionsChange: 12,
-    activeInsights: 23,
-    highPriorityInsights: 3
-  })
-
-  const getMockFeatures = () => [
-    {
-      id: 1,
-      title: 'Lead Scoring',
-      description: 'AI-powered lead quality prediction',
-      status: 'active',
-      accuracy: '94%',
-      leadsScored: 1247,
-    },
-    {
-      id: 2,
-      title: 'Customer Segmentation',
-      description: 'Intelligent customer grouping',
-      status: 'active',
-      accuracy: '89%',
-      segments: 12,
-    },
-    {
-      id: 3,
-      title: 'Predictive Analytics',
-      description: 'Forecast outcomes and trends',
-      status: 'training',
-      accuracy: '91%',
-      predictions: 856,
-    },
-    {
-      id: 4,
-      title: 'Model Training',
-      description: 'Train and optimize AI models',
-      status: 'active',
-      accuracy: '87%',
-      models: 5,
-    },
-    {
-      id: 5,
-      title: 'Intelligence Insights',
-      description: 'Automated business insights',
-      status: 'active',
-      insights: 23,
-    },
-    {
-      id: 6,
-      title: 'Performance Analytics',
-      description: 'AI model performance metrics',
-      status: 'active',
-      accuracy: '92%',
-    },
-  ]
-
-  const getMockPerformance = () => [
-    { month: 'Jan', accuracy: 85, predictions: 450 },
-    { month: 'Feb', accuracy: 87, predictions: 520 },
-    { month: 'Mar', accuracy: 89, predictions: 610 },
-    { month: 'Apr', accuracy: 91, predictions: 680 },
-    { month: 'May', accuracy: 92, predictions: 750 },
-    { month: 'Jun', accuracy: 94, predictions: 820 },
-  ]
-
-  const getMockFeatureImportance = () => [
-    { name: 'Email Engagement', value: 28, color: '#3b82f6' },
-    { name: 'Response Time', value: 22, color: '#10b981' },
-    { name: 'Budget Range', value: 18, color: '#f59e0b' },
-    { name: 'Company Size', value: 15, color: '#8b5cf6' },
-    { name: 'Lead Source', value: 12, color: '#ec4899' },
-    { name: 'Other', value: 5, color: '#6b7280' },
-  ]
-
-  const getMockTrainingModels = () => [
-    { name: 'Lead Scoring v2', progress: 85, eta: '2 hours', status: 'training' },
-    { name: 'Churn Prediction', progress: 45, eta: '6 hours', status: 'training' },
-    { name: 'Email Optimization', progress: 100, eta: 'Complete', status: 'complete' },
-  ]
-
-  const getMockDataQuality = () => [
-    { metric: 'Completeness', score: 92, status: 'good' },
-    { metric: 'Accuracy', score: 88, status: 'good' },
-    { metric: 'Consistency', score: 75, status: 'warning' },
-    { metric: 'Timeliness', score: 95, status: 'excellent' },
-  ]
-
-  const getMockRecommendations = () => [
-    {
-      id: 1,
-      title: 'Focus on high-value leads',
-      description: 'Prioritize 15 leads with >85% conversion probability',
-      impact: 'High',
-      action: 'View Leads',
-      icon: Target,
-    },
-    {
-      id: 2,
-      title: 'Optimize email send times',
-      description: 'Best engagement at 10 AM and 3 PM on Tuesdays',
-      impact: 'Medium',
-      action: 'Schedule Campaign',
-      icon: Sparkles,
-    },
-    {
-      id: 3,
-      title: 'Re-engage dormant leads',
-      description: '23 qualified leads inactive for 30+ days',
-      impact: 'Medium',
-      action: 'Create Workflow',
-      icon: RefreshCw,
-    },
-  ]
-
-  const getMockInsights = () => [
-    {
-      id: 1,
-      type: 'opportunity',
-      title: 'High-value leads detected',
-      description: '12 leads have >80% conversion probability',
-      priority: 'high',
-      date: '2 hours ago',
-    },
-    {
-      id: 2,
-      type: 'warning',
-      title: 'Engagement dropping',
-      description: 'Email open rates down 15% this week',
-      priority: 'medium',
-      date: '5 hours ago',
-    },
-    {
-      id: 3,
-      type: 'success',
-      title: 'Model accuracy improved',
-      description: 'Lead scoring model now at 94% accuracy',
-      priority: 'low',
-      date: '1 day ago',
-    },
-  ]
   
   const handleUploadData = async () => {
     // Create file input for user to select training data file
@@ -385,7 +212,7 @@ const AIHub = () => {
           data: Array.isArray(data) ? data : [data]
         })
         toast.success('Success', 'Training data uploaded successfully!')
-        loadAIData()
+        refetch()
       } catch (error) {
         toast.error('Error', 'Failed to upload training data')
       } finally {
@@ -397,11 +224,7 @@ const AIHub = () => {
 
   // Show loading state
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+    return <LoadingSkeleton rows={3} showChart={true} />;
   }
   
   // Recent insights — no mock fallback (show empty if no data)

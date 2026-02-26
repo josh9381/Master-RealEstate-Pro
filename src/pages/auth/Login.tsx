@@ -25,8 +25,9 @@ function Login() {
       await login({ email, password })
       toast.success('Login successful!', 'Redirecting to dashboard...')
       setTimeout(() => navigate('/'), 500)
-    } catch (error: any) {
-      toast.error('Login failed', error.response?.data?.message || 'Invalid email or password')
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } }
+      toast.error('Login failed', err.response?.data?.message || 'Invalid email or password')
     }
   }
 

@@ -3,73 +3,72 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
 import { settingsApi } from '@/lib/api';
 
 const ServiceConfiguration = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [, setRefreshing] = useState(false);
-  const [, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const [testingConnection, setTestingConnection] = useState(false);
   const [storageProvider, setStorageProvider] = useState('s3');
   const [accessKeyId, setAccessKeyId] = useState('');
   const [secretAccessKey, setSecretAccessKey] = useState('');
   const [bucketName, setBucketName] = useState('');
   const [region, setRegion] = useState('us-east-1');
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    try {
+  const { data: serviceData } = useQuery({
+    queryKey: ['settings', 'serviceConfig'],
+    queryFn: async () => {
       const settings = await settingsApi.getBusinessSettings();
-      if (settings) {
-        const data = settings.data || settings;
-        if (data.storageProvider) setStorageProvider(data.storageProvider);
-        if (data.accessKeyId) setAccessKeyId(data.accessKeyId);
-        if (data.secretAccessKey) setSecretAccessKey(data.secretAccessKey);
-        if (data.bucketName) setBucketName(data.bucketName);
-        if (data.region) setRegion(data.region);
-      }
-      if (isRefresh) toast.success('Settings refreshed');
-    } catch (error) {
-      console.error('Failed to load settings:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      const data = settings?.data || settings;
+      return data;
+    },
+  });
 
-  const handleSaveSettings = async () => {
-    setSaving(true);
-    try {
-      await settingsApi.updateServiceConfig('storage', {
-        storageProvider,
-        accessKeyId,
-        secretAccessKey,
-        bucketName,
-        region,
-      });
-      toast.success('Settings Saved', 'Service configuration has been updated successfully.');
-    } catch (error) {
-      toast.error('Error', 'Failed to save service configuration.');
-    } finally {
-      setSaving(false);
+  // Sync fetched data into form state
+  useEffect(() => {
+    if (serviceData) {
+      if (serviceData.storageProvider) setStorageProvider(serviceData.storageProvider);
+      if (serviceData.accessKeyId) setAccessKeyId(serviceData.accessKeyId);
+      if (serviceData.secretAccessKey) setSecretAccessKey(serviceData.secretAccessKey);
+      if (serviceData.bucketName) setBucketName(serviceData.bucketName);
+      if (serviceData.region) setRegion(serviceData.region);
     }
+  }, [serviceData]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: { storageProvider: string; accessKeyId: string; secretAccessKey: string; bucketName: string; region: string }) => {
+      return await settingsApi.updateServiceConfig('storage', data);
+    },
+    onSuccess: () => {
+      toast.success('Settings Saved', 'Service configuration has been updated successfully.');
+      queryClient.invalidateQueries({ queryKey: ['settings', 'serviceConfig'] });
+    },
+    onError: () => {
+      toast.error('Error', 'Failed to save service configuration.');
+    },
+  });
+
+  const handleSaveSettings = () => {
+    saveMutation.mutate({
+      storageProvider,
+      accessKeyId,
+      secretAccessKey,
+      bucketName,
+      region,
+    });
   };
 
   const handleTestConnection = async (service: string) => {
-    setLoading(true);
+    setTestingConnection(true);
     try {
       await settingsApi.testServiceConnection(service.toLowerCase());
       toast.success('Connection Successful', `Successfully connected to ${service}.`);
     } catch (error) {
       toast.error('Connection Failed', `Unable to connect to ${service}.`);
     } finally {
-      setLoading(false);
+      setTestingConnection(false);
     }
   };
 
@@ -199,8 +198,8 @@ const ServiceConfiguration = () => {
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button onClick={handleSaveSettings} loading={loading}>Save Storage Settings</Button>
-            <Button variant="outline" onClick={() => handleTestConnection('Storage')} loading={loading}>Test Connection</Button>
+            <Button onClick={handleSaveSettings} loading={saveMutation.isPending}>Save Storage Settings</Button>
+            <Button variant="outline" onClick={() => handleTestConnection('Storage')} loading={testingConnection}>Test Connection</Button>
           </div>
         </CardContent>
       </Card>

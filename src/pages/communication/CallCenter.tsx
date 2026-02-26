@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Phone, PhoneIncoming, PhoneOutgoing, Clock, Mic, PhoneMissed, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -49,12 +50,7 @@ const CallCenter = () => {
       </div>
 
       {loading ? (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading call logs...</p>
-          </div>
-        </Card>
+        <LoadingSkeleton rows={4} />
       ) : (
         <>
       <div className="hidden">Wrapper for loading state</div>

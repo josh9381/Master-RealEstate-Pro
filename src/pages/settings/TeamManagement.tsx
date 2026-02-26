@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Users, UserPlus, Mail, MoreVertical, Crown, X, Trash2, Edit2, Upload, Activity, Award, CheckCircle2, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -9,8 +11,7 @@ import { teamsApi } from '@/lib/api';
 
 const TeamManagement = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPermissionEditor, setShowPermissionEditor] = useState(false);
@@ -73,40 +74,23 @@ const TeamManagement = () => {
     },
   ]);
 
-  useEffect(() => {
-    loadTeamData();
-  }, []);
-
-  const loadTeamData = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
+  const { data: teamData, isLoading: loading, isFetching, refetch } = useQuery({
+    queryKey: ['team', 'members'],
+    queryFn: async () => {
       const response = await teamsApi.getTeams();
       const membersResponse = await teamsApi.getMembers(response.teams[0]?.id || 1);
-      
-      if (membersResponse.members) {
-        setTeamMembers(membersResponse.members);
-      }
-      
-      if (isRefresh) {
-        toast.success('Team data refreshed');
-      }
-    } catch (error) {
-      console.error('Failed to load team data:', error);
-      toast.error('Failed to load team data, using mock data');
-      // Keep using mock data on error
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      return membersResponse.members || [];
+    },
+  });
+
+  useEffect(() => {
+    if (teamData) {
+      setTeamMembers(teamData);
     }
-  };
+  }, [teamData]);
 
   const handleRefresh = () => {
-    loadTeamData(true);
+    refetch();
   };
 
   const activityLogs = [
@@ -147,7 +131,7 @@ const TeamManagement = () => {
       toast.success(`Invitation sent to ${inviteEmail}`);
       setShowInviteModal(false);
       setInviteEmail('');
-      loadTeamData(); // Reload from API
+      queryClient.invalidateQueries({ queryKey: ['team', 'members'] });
     } catch (error) {
       console.error('Failed to invite member:', error);
       toast.error('Failed to send invitation');
@@ -216,14 +200,7 @@ const TeamManagement = () => {
   return (
     <div className="space-y-6">
       {loading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Loading team data...</p>
-            </div>
-          </CardContent>
-        </Card>
+        <LoadingSkeleton rows={5} />
       ) : (
         <>
       {/* Invite Modal */}
@@ -319,9 +296,9 @@ const TeamManagement = () => {
           <Button 
             variant="outline" 
             onClick={handleRefresh}
-            disabled={refreshing}
+            disabled={isFetching}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching && !loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button variant="outline" onClick={() => setShowBulkImport(true)}>

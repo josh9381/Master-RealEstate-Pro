@@ -1,4 +1,5 @@
-import { CreditCard, Building2, Plus, Trash2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { CreditCard, Building2, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -45,12 +46,7 @@ const PaymentMethods = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">Loading payment methods...</span>
-      </div>
-    );
+    return <LoadingSkeleton rows={3} />;
   }
 
   return (

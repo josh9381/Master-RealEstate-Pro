@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Building, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -8,9 +10,7 @@ import { settingsApi } from '@/lib/api';
 
 const BusinessSettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
   
   // Company Information
   const [companyName, setCompanyName] = useState('Acme Corporation');
@@ -33,100 +33,84 @@ const BusinessSettings = () => {
   const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
   const [currency, setCurrency] = useState('USD');
   
-  useEffect(() => {
-    loadBusinessSettings();
-  }, []);
-
-  const loadBusinessSettings = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
+  const { data: businessData, isLoading: loading, isFetching: refreshing, refetch } = useQuery({
+    queryKey: ['settings', 'business'],
+    queryFn: async () => {
       const response = await settingsApi.getBusinessSettings();
-      
-      if (response) {
-        setCompanyName(response.companyName || 'Acme Corporation');
-        setIndustry(response.industry || 'Technology');
-        setCompanySize(response.companySize || '11-50 employees');
-        setTaxId(response.taxId || '');
-        setWebsite(response.website || '');
-        setEmail(response.email || '');
-        setPhone(response.phone || '');
-        setAddress(response.address || '');
-        setCity(response.city || '');
-        setState(response.state || '');
-        setZipCode(response.zipCode || '');
-        setCountry(response.country || 'United States');
-        setTimezone(response.timezone || 'America/Los_Angeles');
-        setDateFormat(response.dateFormat || 'MM/DD/YYYY');
-        setCurrency(response.currency || 'USD');
-      }
-    } catch (error) {
-      console.error('Failed to load business settings:', error);
-      toast.error('Failed to load settings, using default data');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      return response;
+    },
+  });
+
+  // Sync fetched data into form state
+  useEffect(() => {
+    if (businessData) {
+      setCompanyName(businessData.companyName || 'Acme Corporation');
+      setIndustry(businessData.industry || 'Technology');
+      setCompanySize(businessData.companySize || '11-50 employees');
+      setTaxId(businessData.taxId || '');
+      setWebsite(businessData.website || '');
+      setEmail(businessData.email || '');
+      setPhone(businessData.phone || '');
+      setAddress(businessData.address || '');
+      setCity(businessData.city || '');
+      setState(businessData.state || '');
+      setZipCode(businessData.zipCode || '');
+      setCountry(businessData.country || 'United States');
+      setTimezone(businessData.timezone || 'America/Los_Angeles');
+      setDateFormat(businessData.dateFormat || 'MM/DD/YYYY');
+      setCurrency(businessData.currency || 'USD');
     }
-  };
+  }, [businessData]);
 
   const handleRefresh = () => {
-    loadBusinessSettings(true);
+    refetch();
   };
   
   const handleLogoUpload = () => {
     toast.info('Logo upload feature coming soon!');
   };
   
-  const handleSave = async () => {
+  const saveMutation = useMutation({
+    mutationFn: async (data: Record<string, string>) => {
+      return await settingsApi.updateBusinessSettings(data);
+    },
+    onSuccess: () => {
+      toast.success('Business settings saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['settings', 'business'] });
+    },
+    onError: (error) => {
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings');
+    },
+  });
+
+  const handleSave = () => {
     if (!companyName || !email) {
       toast.error('Please fill in required fields');
       return;
     }
     
-    setSaving(true);
-    try {
-      await settingsApi.updateBusinessSettings({
-        companyName,
-        industry,
-        companySize,
-        taxId,
-        website,
-        email,
-        phone,
-        address,
-        city,
-        state,
-        zipCode,
-        country,
-        timezone,
-        dateFormat,
-        currency
-      });
-      toast.success('Business settings saved successfully');
-      await loadBusinessSettings(true);
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      toast.error('Failed to save settings');
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({
+      companyName,
+      industry,
+      companySize,
+      taxId,
+      website,
+      email,
+      phone,
+      address,
+      city,
+      state,
+      zipCode,
+      country,
+      timezone,
+      dateFormat,
+      currency,
+    });
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6 max-w-4xl">
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading business settings...</p>
-          </div>
-        </Card>
-      </div>
-    );
+    return <LoadingSkeleton rows={3} />;
   }
 
   return (
@@ -334,8 +318,8 @@ const BusinessSettings = () => {
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline">Cancel</Button>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Changes'}
+        <Button onClick={handleSave} disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </div>

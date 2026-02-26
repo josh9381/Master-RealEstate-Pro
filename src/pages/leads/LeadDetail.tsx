@@ -569,7 +569,11 @@ function LeadDetail() {
                         <>
                           <p className="text-sm whitespace-pre-wrap">{note.content}</p>
                           <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{note.user?.firstName || note.author || 'You'}</span>
+                            <span>{note.user?.firstName
+                              ? `${note.user.firstName}${note.user.lastName ? ' ' + note.user.lastName : ''}`
+                              : (typeof note.author === 'object' && note.author !== null
+                                ? `${(note.author as { firstName?: string; lastName?: string }).firstName || ''} ${(note.author as { firstName?: string; lastName?: string }).lastName || ''}`.trim()
+                                : note.author || 'You')}</span>
                             <div className="flex items-center gap-3">
                               <span>{note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-US', {
                                 month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
@@ -804,8 +808,8 @@ function LeadDetail() {
                 <p className="text-sm font-medium">Assigned To</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {typeof lead?.assignedTo === 'object' && lead?.assignedTo !== null
-                    ? `${(lead.assignedTo as AssignedUser).firstName || ''} ${(lead.assignedTo as AssignedUser).lastName || ''}`.trim()
-                    : lead?.assignedTo || 'Unassigned'}
+                    ? `${(lead.assignedTo as AssignedUser).firstName || ''} ${(lead.assignedTo as AssignedUser).lastName || ''}`.trim() || 'Unassigned'
+                    : (typeof lead?.assignedTo === 'string' ? lead.assignedTo : 'Unassigned')}
                 </p>
               </div>
               <div>

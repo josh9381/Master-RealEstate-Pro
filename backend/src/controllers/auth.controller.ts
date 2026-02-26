@@ -5,6 +5,8 @@ import { prisma } from '../config/database';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { ConflictError, UnauthorizedError, NotFoundError } from '../middleware/errorHandler';
 import { sendEmail } from '../services/email.service';
+import { parseUserAgent } from '../utils/useragent';
+import { lookupGeo } from '../utils/geoip';
 
 /**
  * Store a refresh token in the database for revocation support.
@@ -213,6 +215,23 @@ export async function login(req: Request, res: Response): Promise<void> {
   await prisma.user.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date(), lastLoginIp: req.ip }
+  });
+
+  // Record login history for session management
+  const ua = parseUserAgent(req.headers['user-agent'] || '');
+  const geo = lookupGeo(req.ip || '');
+  await prisma.loginHistory.create({
+    data: {
+      userId: user.id,
+      organizationId: user.organizationId,
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
+      deviceType: ua.deviceType,
+      browser: ua.browser,
+      os: ua.os,
+      country: geo?.country || null,
+      city: geo?.city || null,
+    },
   });
 
   res.status(200).json({
@@ -516,4 +535,75 @@ export async function logout(req: Request, res: Response): Promise<void> {
   }
 
   res.json({ success: true, message: 'Logged out successfully' });
+}
+
+/**
+ * Get active sessions for the current user
+ * GET /api/auth/sessions
+ * Returns all active login sessions (devices) for the authenticated user.
+ */
+export async function getActiveSessions(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  const sessions = await prisma.loginHistory.findMany({
+    where: {
+      userId: req.user.userId,
+      isActive: true,
+    },
+    orderBy: { lastActiveAt: 'desc' },
+    select: {
+      id: true,
+      ipAddress: true,
+      deviceType: true,
+      browser: true,
+      os: true,
+      country: true,
+      city: true,
+      isActive: true,
+      lastActiveAt: true,
+      createdAt: true,
+    },
+  });
+
+  res.json({
+    success: true,
+    data: { sessions },
+  });
+}
+
+/**
+ * Terminate a specific session
+ * DELETE /api/auth/sessions/:sessionId
+ * Marks the session as inactive. Only the session owner can terminate their sessions.
+ */
+export async function terminateSession(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  const { sessionId } = req.params;
+
+  // Ensure session belongs to the current user
+  const session = await prisma.loginHistory.findFirst({
+    where: {
+      id: sessionId,
+      userId: req.user.userId,
+    },
+  });
+
+  if (!session) {
+    throw new NotFoundError('Session not found');
+  }
+
+  await prisma.loginHistory.update({
+    where: { id: sessionId },
+    data: {
+      isActive: false,
+      loggedOutAt: new Date(),
+    },
+  });
+
+  res.json({ success: true, message: 'Session terminated successfully' });
 }

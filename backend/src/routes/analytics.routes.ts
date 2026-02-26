@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { authenticate } from '../middleware/auth'
 import { asyncHandler } from '../utils/asyncHandler'
+import { cacheResponse } from '../middleware/cache'
 import {
   getDashboardStats,
   getLeadAnalytics,
@@ -23,22 +24,24 @@ const router = Router()
 // All routes require authentication
 router.use(authenticate)
 
-// Existing analytics routes
-router.get('/dashboard', asyncHandler(getDashboardStats))
-router.get('/leads', asyncHandler(getLeadAnalytics))
-router.get('/campaigns', asyncHandler(getCampaignAnalytics))
-router.get('/tasks', asyncHandler(getTaskAnalytics))
-router.get('/activity-feed', asyncHandler(getActivityFeed))
-router.get('/conversion-funnel', asyncHandler(getConversionFunnel))
+// Dashboard & overview (cache 2 min)
+router.get('/dashboard', cacheResponse(120), asyncHandler(getDashboardStats))
+router.get('/dashboard-alerts', cacheResponse(120), asyncHandler(getDashboardAlerts))
 
-// Phase 5: New analytics endpoints
-router.get('/monthly-performance', asyncHandler(getMonthlyPerformance))
-router.get('/hourly-engagement', asyncHandler(getHourlyEngagement))
-router.get('/team-performance', asyncHandler(getTeamPerformance))
-router.get('/revenue-timeline', asyncHandler(getRevenueTimeline))
-router.get('/dashboard-alerts', asyncHandler(getDashboardAlerts))
-router.get('/pipeline-metrics', asyncHandler(getPipelineMetrics))
-router.get('/device-breakdown', asyncHandler(getDeviceBreakdown))
-router.get('/geographic', asyncHandler(getGeographicBreakdown))
+// Lead & campaign analytics (cache 3 min)
+router.get('/leads', cacheResponse(180), asyncHandler(getLeadAnalytics))
+router.get('/campaigns', cacheResponse(180), asyncHandler(getCampaignAnalytics))
+router.get('/tasks', cacheResponse(180), asyncHandler(getTaskAnalytics))
+router.get('/activity-feed', asyncHandler(getActivityFeed))
+router.get('/conversion-funnel', cacheResponse(180), asyncHandler(getConversionFunnel))
+
+// Performance analytics (cache 5 min — heavy queries, infrequently changing)
+router.get('/monthly-performance', cacheResponse(300), asyncHandler(getMonthlyPerformance))
+router.get('/hourly-engagement', cacheResponse(300), asyncHandler(getHourlyEngagement))
+router.get('/team-performance', cacheResponse(300), asyncHandler(getTeamPerformance))
+router.get('/revenue-timeline', cacheResponse(300), asyncHandler(getRevenueTimeline))
+router.get('/pipeline-metrics', cacheResponse(300), asyncHandler(getPipelineMetrics))
+router.get('/device-breakdown', cacheResponse(300), asyncHandler(getDeviceBreakdown))
+router.get('/geographic', cacheResponse(300), asyncHandler(getGeographicBreakdown))
 
 export default router

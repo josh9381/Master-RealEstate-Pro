@@ -1,0 +1,1926 @@
+# ═══════════════════════════════════════════════════════════════════
+# Master RealEstate Pro — OpenAPI 3.0 Path Definitions
+# ═══════════════════════════════════════════════════════════════════
+
+# ─── Auth ────────────────────────────────────────────────────────
+paths:
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already in use
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and get JWT tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid or expired refresh token
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      responses:
+        '200':
+          description: Current user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /api/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent (always returns 200 for security)
+
+  /api/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password reset successfully
+        '400':
+          description: Invalid or expired token
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and invalidate tokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Logged out
+
+  /api/auth/sessions:
+    get:
+      tags: [Auth]
+      summary: Get active sessions
+      responses:
+        '200':
+          description: List of active sessions
+
+  /api/auth/sessions/{sessionId}:
+    delete:
+      tags: [Auth]
+      summary: Terminate a session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session terminated
+
+  # ─── Leads ──────────────────────────────────────────────────────
+  /api/leads:
+    get:
+      tags: [Leads]
+      summary: List leads with filtering & pagination
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 25 }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: source
+          schema: { type: string }
+        - in: query
+          name: assignedToId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: sortBy
+          schema: { type: string }
+        - in: query
+          name: sortOrder
+          schema: { type: string, enum: [asc, desc] }
+      responses:
+        '200':
+          description: Paginated lead list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lead'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+    post:
+      tags: [Leads]
+      summary: Create a new lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeadInput'
+      responses:
+        '201':
+          description: Lead created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/Lead'
+
+  /api/leads/stats:
+    get:
+      tags: [Leads]
+      summary: Get lead statistics
+      responses:
+        '200':
+          description: Lead stats (counts by status, source, etc.)
+
+  /api/leads/count-filtered:
+    post:
+      tags: [Leads]
+      summary: Count leads matching advanced filters
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Filtered count
+
+  /api/leads/import:
+    post:
+      tags: [Leads]
+      summary: Import leads from CSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import results
+
+  /api/leads/merge:
+    post:
+      tags: [Leads]
+      summary: Merge multiple leads into one
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [primaryLeadId, secondaryLeadIds]
+              properties:
+                primaryLeadId: { type: string, format: uuid }
+                secondaryLeadIds:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Merged lead
+
+  /api/leads/{id}:
+    get:
+      tags: [Leads]
+      summary: Get a single lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Lead details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/Lead'
+        '404':
+          description: Lead not found
+    put:
+      tags: [Leads]
+      summary: Update a lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeadInput'
+      responses:
+        '200':
+          description: Lead updated
+    delete:
+      tags: [Leads]
+      summary: Delete a lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Lead deleted
+
+  /api/leads/bulk-delete:
+    post:
+      tags: [Leads]
+      summary: Bulk delete leads
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Leads deleted
+
+  /api/leads/bulk-update:
+    patch:
+      tags: [Leads]
+      summary: Bulk update leads
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, data]
+              properties:
+                ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Leads updated
+
+  /api/leads/{id}/score/recalculate:
+    post:
+      tags: [Leads]
+      summary: Recalculate score for a single lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Score recalculated
+
+  /api/leads/by-score:
+    get:
+      tags: [Leads]
+      summary: Get leads sorted by score
+      parameters:
+        - in: query
+          name: minScore
+          schema: { type: integer }
+        - in: query
+          name: maxScore
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Scored leads
+
+  # ─── Campaigns ──────────────────────────────────────────────────
+  /api/campaigns:
+    get:
+      tags: [Campaigns]
+      summary: List campaigns with filtering
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: type
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated campaign list
+    post:
+      tags: [Campaigns]
+      summary: Create a new campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name: { type: string }
+                type: { type: string, enum: [EMAIL, SMS, MULTI_CHANNEL] }
+                subject: { type: string }
+                content: { type: string }
+                scheduledAt: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Campaign created
+
+  /api/campaigns/stats:
+    get:
+      tags: [Campaigns]
+      summary: Get campaign statistics
+      responses:
+        '200':
+          description: Campaign stats
+
+  /api/campaigns/templates:
+    get:
+      tags: [Campaigns]
+      summary: Get campaign templates
+      responses:
+        '200':
+          description: Template list
+
+  /api/campaigns/templates/{templateId}:
+    get:
+      tags: [Campaigns]
+      summary: Get a campaign template
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Template details
+
+  /api/campaigns/from-template/{templateId}:
+    post:
+      tags: [Campaigns]
+      summary: Create campaign from template
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema: { type: string }
+      responses:
+        '201':
+          description: Campaign created
+
+  /api/campaigns/top-performers:
+    get:
+      tags: [Campaigns]
+      summary: Get top performing campaigns
+      responses:
+        '200':
+          description: Top campaigns
+
+  /api/campaigns/compare:
+    post:
+      tags: [Campaigns]
+      summary: Compare multiple campaigns
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                campaignIds:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Comparison data
+
+  /api/campaigns/{id}:
+    get:
+      tags: [Campaigns]
+      summary: Get a campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Campaign details
+    put:
+      tags: [Campaigns]
+      summary: Update a campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Campaign updated
+    delete:
+      tags: [Campaigns]
+      summary: Delete a campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Campaign deleted
+
+  /api/campaigns/{id}/send:
+    post:
+      tags: [Campaigns]
+      summary: Send a campaign (schedule)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Campaign scheduled for sending
+
+  /api/campaigns/{id}/send-now:
+    post:
+      tags: [Campaigns]
+      summary: Send a campaign immediately
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Campaign sending started
+
+  /api/campaigns/{id}/pause:
+    post:
+      tags: [Campaigns]
+      summary: Pause a running campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Campaign paused
+
+  /api/campaigns/{id}/archive:
+    post:
+      tags: [Campaigns]
+      summary: Archive a campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Campaign archived
+
+  /api/campaigns/{id}/duplicate:
+    post:
+      tags: [Campaigns]
+      summary: Duplicate a campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Duplicated campaign
+
+  /api/campaigns/{id}/analytics:
+    get:
+      tags: [Campaigns]
+      summary: Get campaign analytics
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Campaign analytics data
+
+  # ─── Tasks ──────────────────────────────────────────────────────
+  /api/tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks with filtering & pagination
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: priority
+          schema: { type: string }
+        - in: query
+          name: assignedToId
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Paginated task list
+    post:
+      tags: [Tasks]
+      summary: Create a new task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                priority: { type: string, enum: [LOW, MEDIUM, HIGH, URGENT] }
+                dueDate: { type: string, format: date-time }
+                leadId: { type: string, format: uuid }
+                assignedToId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Task created
+
+  /api/tasks/stats:
+    get:
+      tags: [Tasks]
+      summary: Get task statistics
+      responses:
+        '200':
+          description: Task stats
+
+  /api/tasks/user:
+    get:
+      tags: [Tasks]
+      summary: Get current user's tasks
+      responses:
+        '200':
+          description: User tasks
+
+  /api/tasks/{id}:
+    get:
+      tags: [Tasks]
+      summary: Get a task
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Task details
+    put:
+      tags: [Tasks]
+      summary: Update a task
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Task updated
+    delete:
+      tags: [Tasks]
+      summary: Delete a task
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Task deleted
+
+  /api/tasks/{id}/complete:
+    patch:
+      tags: [Tasks]
+      summary: Mark a task as complete
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Task completed
+
+  # ─── Notes ──────────────────────────────────────────────────────
+  /api/notes:
+    get:
+      tags: [Notes]
+      summary: List notes
+      responses:
+        '200':
+          description: Notes list
+    post:
+      tags: [Notes]
+      summary: Create a note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, leadId]
+              properties:
+                content: { type: string }
+                leadId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Note created
+
+  /api/notes/{id}:
+    put:
+      tags: [Notes]
+      summary: Update a note
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Note updated
+    delete:
+      tags: [Notes]
+      summary: Delete a note
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Note deleted
+
+  # ─── Tags ───────────────────────────────────────────────────────
+  /api/tags:
+    get:
+      tags: [Tags]
+      summary: List all tags
+      responses:
+        '200':
+          description: Tag list
+    post:
+      tags: [Tags]
+      summary: Create a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                color: { type: string }
+      responses:
+        '201':
+          description: Tag created
+
+  /api/tags/{id}:
+    put:
+      tags: [Tags]
+      summary: Update a tag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Tag updated
+    delete:
+      tags: [Tags]
+      summary: Delete a tag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Tag deleted
+
+  # ─── Activities ─────────────────────────────────────────────────
+  /api/activities:
+    get:
+      tags: [Activities]
+      summary: List activities with filtering
+      parameters:
+        - in: query
+          name: leadId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: type
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Activity list
+    post:
+      tags: [Activities]
+      summary: Log an activity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, description]
+              properties:
+                type: { type: string }
+                description: { type: string }
+                leadId: { type: string, format: uuid }
+                metadata: { type: object }
+      responses:
+        '201':
+          description: Activity logged
+
+  # ─── Analytics ──────────────────────────────────────────────────
+  /api/analytics/dashboard:
+    get:
+      tags: [Analytics]
+      summary: Get dashboard analytics
+      responses:
+        '200':
+          description: Dashboard data (lead counts, campaign metrics, task stats)
+
+  /api/analytics/alerts:
+    get:
+      tags: [Analytics]
+      summary: Get active alerts & anomalies
+      responses:
+        '200':
+          description: Alert list
+
+  /api/analytics/leads:
+    get:
+      tags: [Analytics]
+      summary: Lead analytics (conversion rates, funnel)
+      responses:
+        '200':
+          description: Lead analytics data
+
+  /api/analytics/campaigns:
+    get:
+      tags: [Analytics]
+      summary: Campaign performance analytics
+      responses:
+        '200':
+          description: Campaign analytics data
+
+  /api/analytics/tasks:
+    get:
+      tags: [Analytics]
+      summary: Task completion analytics
+      responses:
+        '200':
+          description: Task analytics data
+
+  /api/analytics/funnel:
+    get:
+      tags: [Analytics]
+      summary: Sales funnel analytics
+      responses:
+        '200':
+          description: Funnel data
+
+  /api/analytics/performance:
+    get:
+      tags: [Analytics]
+      summary: Performance metrics & KPIs
+      responses:
+        '200':
+          description: Performance data
+
+  /api/analytics/team:
+    get:
+      tags: [Analytics]
+      summary: Team performance analytics
+      responses:
+        '200':
+          description: Team performance data
+
+  /api/analytics/revenue:
+    get:
+      tags: [Analytics]
+      summary: Revenue analytics
+      responses:
+        '200':
+          description: Revenue data
+
+  /api/analytics/pipeline:
+    get:
+      tags: [Analytics]
+      summary: Pipeline analytics
+      responses:
+        '200':
+          description: Pipeline data
+
+  /api/analytics/activity:
+    get:
+      tags: [Analytics]
+      summary: Activity feed analytics
+      responses:
+        '200':
+          description: Activity analytics
+
+  # ─── AI ─────────────────────────────────────────────────────────
+  /api/ai/generate:
+    post:
+      tags: [AI]
+      summary: Generate AI content (email, SMS, scripts)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, prompt]
+              properties:
+                type: { type: string, enum: [email, sms, script, followup] }
+                prompt: { type: string }
+                context: { type: object }
+      responses:
+        '200':
+          description: Generated content
+
+  /api/ai/suggest:
+    post:
+      tags: [AI]
+      summary: Get AI suggestions for leads
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                leadId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: AI suggestions
+
+  /api/ai/chat:
+    post:
+      tags: [AI]
+      summary: AI chatbot conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                conversationId: { type: string }
+      responses:
+        '200':
+          description: Chatbot reply
+
+  # ─── Intelligence ───────────────────────────────────────────────
+  /api/intelligence/predictions:
+    get:
+      tags: [Intelligence]
+      summary: Get lead conversion predictions
+      responses:
+        '200':
+          description: Prediction data
+
+  /api/intelligence/engagement:
+    get:
+      tags: [Intelligence]
+      summary: Get engagement analysis
+      responses:
+        '200':
+          description: Engagement metrics
+
+  /api/intelligence/next-actions:
+    get:
+      tags: [Intelligence]
+      summary: Get recommended next actions
+      responses:
+        '200':
+          description: Next action recommendations
+
+  /api/intelligence/dashboard:
+    get:
+      tags: [Intelligence]
+      summary: Intelligence dashboard insights
+      responses:
+        '200':
+          description: Dashboard insights
+
+  /api/intelligence/trends:
+    get:
+      tags: [Intelligence]
+      summary: Trend analysis
+      responses:
+        '200':
+          description: Trend data
+
+  # ─── Workflows ──────────────────────────────────────────────────
+  /api/workflows:
+    get:
+      tags: [Workflows]
+      summary: List workflows
+      responses:
+        '200':
+          description: Workflow list
+    post:
+      tags: [Workflows]
+      summary: Create a workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, trigger]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                trigger: { type: string }
+                steps: { type: array, items: { type: object } }
+      responses:
+        '201':
+          description: Workflow created
+
+  /api/workflows/{id}:
+    get:
+      tags: [Workflows]
+      summary: Get a workflow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Workflow details
+    put:
+      tags: [Workflows]
+      summary: Update a workflow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Workflow updated
+    delete:
+      tags: [Workflows]
+      summary: Delete a workflow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Workflow deleted
+
+  /api/workflows/{id}/activate:
+    post:
+      tags: [Workflows]
+      summary: Activate a workflow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Workflow activated
+
+  /api/workflows/{id}/pause:
+    post:
+      tags: [Workflows]
+      summary: Pause a workflow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Workflow paused
+
+  # ─── Notifications ──────────────────────────────────────────────
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: Get user notifications
+      responses:
+        '200':
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+    post:
+      tags: [Notifications]
+      summary: Create a notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, title, message, userId]
+              properties:
+                type: { type: string }
+                title: { type: string }
+                message: { type: string }
+                userId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Notification created
+
+  /api/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      count: { type: integer }
+
+  /api/notifications/mark-all-read:
+    patch:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      responses:
+        '200':
+          description: All marked as read
+
+  /api/notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Notification marked as read
+
+  /api/notifications/{id}:
+    delete:
+      tags: [Notifications]
+      summary: Delete a notification
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Notification deleted
+
+  # ─── Messages ───────────────────────────────────────────────────
+  /api/messages:
+    get:
+      tags: [Messages]
+      summary: List messages
+      responses:
+        '200':
+          description: Message list
+    post:
+      tags: [Messages]
+      summary: Send a message (email or SMS)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, to, content]
+              properties:
+                type: { type: string, enum: [EMAIL, SMS] }
+                to: { type: string }
+                subject: { type: string }
+                content: { type: string }
+                leadId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Message sent
+
+  # ─── Email Templates ───────────────────────────────────────────
+  /api/email-templates:
+    get:
+      tags: [Templates]
+      summary: List email templates
+      responses:
+        '200':
+          description: Email template list
+    post:
+      tags: [Templates]
+      summary: Create email template
+      responses:
+        '201':
+          description: Template created
+
+  /api/email-templates/{id}:
+    get:
+      tags: [Templates]
+      summary: Get email template
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template details
+    put:
+      tags: [Templates]
+      summary: Update email template
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template updated
+    delete:
+      tags: [Templates]
+      summary: Delete email template
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template deleted
+
+  # ─── SMS Templates ─────────────────────────────────────────────
+  /api/sms-templates:
+    get:
+      tags: [Templates]
+      summary: List SMS templates
+      responses:
+        '200':
+          description: SMS template list
+    post:
+      tags: [Templates]
+      summary: Create SMS template
+      responses:
+        '201':
+          description: Template created
+
+  /api/sms-templates/{id}:
+    get:
+      tags: [Templates]
+      summary: Get SMS template
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template details
+    put:
+      tags: [Templates]
+      summary: Update SMS template
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template updated
+    delete:
+      tags: [Templates]
+      summary: Delete SMS template
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template deleted
+
+  # ─── Users ──────────────────────────────────────────────────────
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List users in organization
+      responses:
+        '200':
+          description: User list
+
+  /api/users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user profile
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: User details
+    put:
+      tags: [Users]
+      summary: Update user profile
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: User updated
+
+  # ─── Teams ──────────────────────────────────────────────────────
+  /api/teams:
+    get:
+      tags: [Teams]
+      summary: List teams
+      responses:
+        '200':
+          description: Team list
+    post:
+      tags: [Teams]
+      summary: Create a team
+      responses:
+        '201':
+          description: Team created
+
+  /api/teams/{id}:
+    get:
+      tags: [Teams]
+      summary: Get team details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Team details
+    put:
+      tags: [Teams]
+      summary: Update team
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Team updated
+    delete:
+      tags: [Teams]
+      summary: Delete team
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Team deleted
+
+  # ─── Settings ───────────────────────────────────────────────────
+  /api/settings:
+    get:
+      tags: [Settings]
+      summary: Get organization settings
+      responses:
+        '200':
+          description: Settings object
+    put:
+      tags: [Settings]
+      summary: Update organization settings
+      responses:
+        '200':
+          description: Settings updated
+
+  # ─── Integrations ──────────────────────────────────────────────
+  /api/integrations:
+    get:
+      tags: [Integrations]
+      summary: List configured integrations
+      responses:
+        '200':
+          description: Integration list
+    post:
+      tags: [Integrations]
+      summary: Create / connect an integration
+      responses:
+        '201':
+          description: Integration created
+
+  /api/integrations/{id}:
+    put:
+      tags: [Integrations]
+      summary: Update an integration
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Integration updated
+    delete:
+      tags: [Integrations]
+      summary: Disconnect an integration
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Integration removed
+
+  # ─── Appointments ───────────────────────────────────────────────
+  /api/appointments:
+    get:
+      tags: [Appointments]
+      summary: List appointments
+      responses:
+        '200':
+          description: Appointment list
+    post:
+      tags: [Appointments]
+      summary: Create an appointment
+      responses:
+        '201':
+          description: Appointment created
+
+  /api/appointments/{id}:
+    get:
+      tags: [Appointments]
+      summary: Get appointment details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Appointment details
+    put:
+      tags: [Appointments]
+      summary: Update appointment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Appointment updated
+    delete:
+      tags: [Appointments]
+      summary: Cancel / delete appointment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Appointment deleted
+
+  # ─── AB Tests ───────────────────────────────────────────────────
+  /api/ab-tests:
+    get:
+      tags: [AB Tests]
+      summary: List A/B tests
+      responses:
+        '200':
+          description: AB test list
+    post:
+      tags: [AB Tests]
+      summary: Create an A/B test
+      responses:
+        '201':
+          description: AB test created
+
+  /api/ab-tests/{id}:
+    get:
+      tags: [AB Tests]
+      summary: Get A/B test details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: AB test details
+    put:
+      tags: [AB Tests]
+      summary: Update A/B test
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: AB test updated
+    delete:
+      tags: [AB Tests]
+      summary: Delete A/B test
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: AB test deleted
+
+  # ─── Webhooks ───────────────────────────────────────────────────
+  /api/webhooks:
+    get:
+      tags: [Webhooks]
+      summary: List webhooks
+      responses:
+        '200':
+          description: Webhook list
+    post:
+      tags: [Webhooks]
+      summary: Create a webhook
+      responses:
+        '201':
+          description: Webhook created
+
+  /api/webhooks/{id}:
+    put:
+      tags: [Webhooks]
+      summary: Update webhook
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Webhook updated
+    delete:
+      tags: [Webhooks]
+      summary: Delete webhook
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Webhook deleted
+
+  # ─── Custom Fields ─────────────────────────────────────────────
+  /api/custom-fields:
+    get:
+      tags: [Settings]
+      summary: List custom fields
+      responses:
+        '200':
+          description: Custom field list
+    post:
+      tags: [Settings]
+      summary: Create a custom field
+      responses:
+        '201':
+          description: Custom field created
+
+  /api/custom-fields/{id}:
+    put:
+      tags: [Settings]
+      summary: Update custom field
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Custom field updated
+    delete:
+      tags: [Settings]
+      summary: Delete custom field
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Custom field deleted
+
+  # ─── Billing / Subscriptions ────────────────────────────────────
+  /api/billing:
+    get:
+      tags: [Billing]
+      summary: Get billing overview
+      responses:
+        '200':
+          description: Billing information
+
+  /api/subscriptions:
+    get:
+      tags: [Billing]
+      summary: Get current subscription
+      responses:
+        '200':
+          description: Subscription details
+    post:
+      tags: [Billing]
+      summary: Create / change subscription
+      responses:
+        '200':
+          description: Subscription updated
+
+  # ─── Segments ───────────────────────────────────────────────────
+  /api/segments:
+    get:
+      tags: [Segments]
+      summary: List segments
+      responses:
+        '200':
+          description: Segment list
+    post:
+      tags: [Segments]
+      summary: Create segment
+      responses:
+        '201':
+          description: Segment created
+
+  /api/segments/{id}:
+    get:
+      tags: [Segments]
+      summary: Get segment details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Segment details
+    put:
+      tags: [Segments]
+      summary: Update segment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Segment updated
+    delete:
+      tags: [Segments]
+      summary: Delete segment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Segment deleted
+
+  # ─── Export ─────────────────────────────────────────────────────
+  /api/export/leads:
+    get:
+      tags: [Export]
+      summary: Export leads to CSV
+      responses:
+        '200':
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /api/export/campaigns:
+    get:
+      tags: [Export]
+      summary: Export campaign data
+      responses:
+        '200':
+          description: CSV file download
+
+  # ─── Saved Reports ─────────────────────────────────────────────
+  /api/reports/saved:
+    get:
+      tags: [Reports]
+      summary: List saved reports
+      responses:
+        '200':
+          description: Report list
+    post:
+      tags: [Reports]
+      summary: Save a report
+      responses:
+        '201':
+          description: Report saved
+
+  /api/reports/saved/{id}:
+    get:
+      tags: [Reports]
+      summary: Get saved report
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Report details
+    put:
+      tags: [Reports]
+      summary: Update saved report
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Report updated
+    delete:
+      tags: [Reports]
+      summary: Delete saved report
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Report deleted
+
+  # ─── Deliverability ────────────────────────────────────────────
+  /api/deliverability:
+    get:
+      tags: [Messages]
+      summary: Get email deliverability stats
+      responses:
+        '200':
+          description: Deliverability data
+
+  # ─── Unsubscribe ───────────────────────────────────────────────
+  /api/unsubscribe/{token}:
+    get:
+      tags: [Messages]
+      summary: Unsubscribe page (public)
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unsubscribe confirmation
+
+  # ─── Admin ──────────────────────────────────────────────────────
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users (admin)
+      responses:
+        '200':
+          description: User list
+
+  /api/admin/organizations:
+    get:
+      tags: [Admin]
+      summary: List all organizations
+      responses:
+        '200':
+          description: Organization list
+
+  /api/admin/stats:
+    get:
+      tags: [Admin]
+      summary: Platform-wide statistics
+      responses:
+        '200':
+          description: Admin stats
+
+  # ─── System ────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [ok, degraded, error] }
+                  message: { type: string }
+                  timestamp: { type: string, format: date-time }
+                  uptime: { type: integer }
+                  checks:
+                    type: object
+                    properties:
+                      database: { type: string }
+                      sendgrid: { type: string }
+                      redis: { type: string }
+                  memory:
+                    type: object
+                    properties:
+                      rss: { type: integer }
+                      heapUsed: { type: integer }
+                      heapTotal: { type: integer }
+
+  /api/system/integration-status:
+    get:
+      tags: [System]
+      summary: Get integration configuration status
+      security: []
+      responses:
+        '200':
+          description: Integration statuses

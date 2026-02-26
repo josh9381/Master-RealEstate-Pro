@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mail, Server, Shield, CheckCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -8,8 +10,7 @@ import { settingsApi, messagesApi } from '@/lib/api';
 
 const EmailConfiguration = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   
@@ -61,98 +62,69 @@ const EmailConfiguration = () => {
     bounceRate: 0,
   });
 
-  useEffect(() => {
-    const initializeData = async () => {
-      await loadEmailConfig();
-      await loadUsageStats();
-    };
-    initializeData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadEmailConfig = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
+  const { data: emailConfigData, isLoading: loading, isFetching: refreshing, refetch: refetchEmailConfig } = useQuery({
+    queryKey: ['settings', 'emailConfig'],
+    queryFn: async () => {
       const response = await settingsApi.getEmailConfig();
-      const config = response?.config;
-      
-      if (config) {
-        // Update SMTP settings from API
-        setSmtpHost(config.smtpHost || 'smtp.sendgrid.net');
-        setSmtpPort(String(config.smtpPort) || '587');
-        setUsername(config.smtpUser || 'apikey');
-        
-        // Check if API key is stored (masked response means it exists)
-        const apiKeyStored = config.apiKey && config.apiKey.startsWith('••••');
-        setHasStoredKey(apiKeyStored);
-        
-        // Don't populate password field - user must enter new one to update
-        setPassword('');
-        
-        setEncryption('tls'); // SendGrid uses TLS
-        setFromName(config.fromName || 'Your CRM Team');
-        setFromEmail(config.fromEmail || 'noreply@yourcrm.com');
-        
-        // Update status indicators
-        setIsConfigured(config.isActive && apiKeyStored);
-        setConfigMode(apiKeyStored ? 'production' : 'mock');
-      }
-      
-      if (isRefresh) {
-        toast.success('Email configuration refreshed');
-      }
-    } catch (error) {
-      console.error('Failed to load email config:', error);
-      toast.error('Failed to load email configuration, using defaults');
-      setConfigMode('mock');
-      setIsConfigured(false);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      return response?.config;
+    },
+  });
 
-  const loadUsageStats = async () => {
-    try {
-      // Fetch EMAIL-only statistics by passing type parameter
+  const { data: usageStatsData, refetch: refetchUsageStats } = useQuery({
+    queryKey: ['settings', 'emailUsageStats'],
+    queryFn: async () => {
       const response = await messagesApi.getStats({ type: 'EMAIL' });
-      const stats = response?.data;
+      return response?.data;
+    },
+  });
+
+  // Sync email config data into form state
+  useEffect(() => {
+    if (emailConfigData) {
+      const config = emailConfigData;
+      setSmtpHost(config.smtpHost || 'smtp.sendgrid.net');
+      setSmtpPort(String(config.smtpPort) || '587');
+      setUsername(config.smtpUser || 'apikey');
       
-      if (stats) {
-        // Now total, sent, delivered, failed, opened are EMAIL-only
-        const emailCount = stats.total || 0;
-        const delivered = stats.delivered || 0;
-        const opened = stats.opened || 0;
-        const failed = stats.failed || 0;
-        
-        // Calculate rates based on EMAIL messages only
-        const deliveryRate = emailCount > 0 ? (delivered / emailCount) * 100 : 0;
-        const openRate = delivered > 0 ? (opened / delivered) * 100 : 0;
-        const bounceRate = emailCount > 0 ? (failed / emailCount) * 100 : 0;
-        
-        setUsageStats({
-          sent: emailCount,
-          delivered,
-          deliveryRate: Math.min(deliveryRate, 100), // Cap at 100%
-          opened,
-          openRate,
-          bounced: failed,
-          bounceRate,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load usage stats:', error);
+      const apiKeyStored = config.apiKey && config.apiKey.startsWith('••••');
+      setHasStoredKey(apiKeyStored);
+      setPassword('');
+      setEncryption('tls');
+      setFromName(config.fromName || 'Your CRM Team');
+      setFromEmail(config.fromEmail || 'noreply@yourcrm.com');
+      setIsConfigured(config.isActive && apiKeyStored);
+      setConfigMode(apiKeyStored ? 'production' : 'mock');
     }
-  };
+  }, [emailConfigData]);
+
+  // Sync usage stats into state
+  useEffect(() => {
+    if (usageStatsData) {
+      const stats = usageStatsData;
+      const emailCount = stats.total || 0;
+      const delivered = stats.delivered || 0;
+      const opened = stats.opened || 0;
+      const failed = stats.failed || 0;
+      
+      const deliveryRate = emailCount > 0 ? (delivered / emailCount) * 100 : 0;
+      const openRate = delivered > 0 ? (opened / delivered) * 100 : 0;
+      const bounceRate = emailCount > 0 ? (failed / emailCount) * 100 : 0;
+      
+      setUsageStats({
+        sent: emailCount,
+        delivered,
+        deliveryRate: Math.min(deliveryRate, 100),
+        opened,
+        openRate,
+        bounced: failed,
+        bounceRate,
+      });
+    }
+  }, [usageStatsData]);
 
   const handleRefresh = () => {
-    loadEmailConfig(true);
-    loadUsageStats();
+    refetchEmailConfig();
+    refetchUsageStats();
   };
   
   const handleTestConnection = async () => {
@@ -184,9 +156,10 @@ const EmailConfiguration = () => {
       } else {
         toast.success(`Test email sent successfully in PRODUCTION mode! Check ${fromEmail}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to test connection:', error);
-      const message = error.response?.data?.error || error.message || 'Failed to send test email';
+      const err = error as { response?: { data?: { error?: string } }; message?: string }
+      const message = err.response?.data?.error || err.message || 'Failed to send test email';
       toast.error(message);
       setConfigMode('mock');
       setIsConfigured(false);
@@ -195,7 +168,28 @@ const EmailConfiguration = () => {
     }
   };
   
-  const handleSaveSettings = async () => {
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (updateData: Record<string, unknown>) => {
+      return await settingsApi.updateEmailConfig(updateData);
+    },
+    onSuccess: () => {
+      const successMsg = hasStoredKey 
+        ? password 
+          ? 'Email configuration and API key updated successfully' 
+          : 'Email configuration updated successfully'
+        : 'Email configuration saved successfully';
+      
+      toast.success(successMsg);
+      setPassword('');
+      queryClient.invalidateQueries({ queryKey: ['settings', 'emailConfig'] });
+    },
+    onError: (error) => {
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings');
+    },
+  });
+
+  const handleSaveSettings = () => {
     // Validation: Need API key for new setup, optional for updates
     if (!hasStoredKey && !password) {
       toast.error('Please enter your SendGrid API key');
@@ -207,74 +201,34 @@ const EmailConfiguration = () => {
       return;
     }
 
-    setSaving(true);
-    try {
-      const updateData: {
-        provider: string;
-        fromEmail?: string;
-        fromName?: string;
-        smtpHost?: string;
-        smtpPort?: number;
-        smtpUser?: string;
-        smtpPassword?: null;
-        isActive: boolean;
-        apiKey?: string;
-      } = {
-        provider: 'sendgrid',
-        fromEmail,
-        fromName,
-        smtpHost,
-        smtpPort: parseInt(smtpPort),
-        smtpUser: username,
-        smtpPassword: null,
-        isActive: true,
-      };
-      
-      // Only include API key if user entered a new one
-      if (password) {
-        updateData.apiKey = password;
-      }
-      
-      await settingsApi.updateEmailConfig(updateData);
-      
-      const successMsg = hasStoredKey 
-        ? password 
-          ? 'Email configuration and API key updated successfully' 
-          : 'Email configuration updated successfully'
-        : 'Email configuration saved successfully';
-      
-      toast.success(successMsg);
-      setPassword(''); // Clear password field after save
-      await loadEmailConfig(); // Reload from API
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      toast.error('Failed to save settings');
-    } finally {
-      setSaving(false);
+    const updateData: Record<string, unknown> = {
+      provider: 'sendgrid',
+      fromEmail,
+      fromName,
+      smtpHost,
+      smtpPort: parseInt(smtpPort),
+      smtpUser: username,
+      smtpPassword: null,
+      isActive: true,
+    };
+    
+    // Only include API key if user entered a new one
+    if (password) {
+      updateData.apiKey = password;
     }
+    
+    saveSettingsMutation.mutate(updateData);
   };
   
   const handleVerifyDNS = async () => {
-    setLoading(true);
-    try {
-      // TODO: Wire to real DNS verification endpoint when backend supports it
-      toast.info('DNS verification is not yet connected to a backend endpoint. Configure your DNS records manually and check back later.');
-    } finally {
-      setLoading(false);
-    }
+    // TODO: Wire to real DNS verification endpoint when backend supports it
+    toast.info('DNS verification is not yet connected to a backend endpoint. Configure your DNS records manually and check back later.');
   };
   
   return (
     <div className="space-y-6">
       {loading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Loading email configuration...</p>
-            </div>
-          </CardContent>
-        </Card>
+        <LoadingSkeleton rows={4} />
       ) : (
         <>
       <div className="flex items-center justify-between">
@@ -468,8 +422,8 @@ const EmailConfiguration = () => {
             </select>
           </div>
           <div className="flex space-x-2">
-            <Button onClick={handleSaveSettings} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Settings'}
+            <Button onClick={handleSaveSettings} disabled={saveSettingsMutation.isPending}>
+              {saveSettingsMutation.isPending ? 'Saving...' : 'Save Settings'}
             </Button>
             <Button variant="outline" onClick={handleTestConnection} disabled={testingConnection}>
               {testingConnection ? 'Testing...' : 'Send Test Email'}

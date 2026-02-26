@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useNavigate } from 'react-router-dom';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
+import { useQuery } from '@tanstack/react-query';
 
 interface CampaignTemplate {
   id: string;
@@ -29,61 +30,34 @@ interface CampaignTemplate {
 }
 
 const CampaignTemplates = () => {
-  const [templates, setTemplates] = useState<CampaignTemplate[]>([]);
-  const [filteredTemplates, setFilteredTemplates] = useState<CampaignTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [stats, setStats] = useState({
-    total: 0,
-    email: 0,
-    sms: 0,
-    phone: 0,
-    recurring: 0
-  });
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadTemplates();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    filterTemplates();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templates, selectedCategory, searchQuery]);
-
-  const loadTemplates = async () => {
-    setIsLoading(true);
-    try {
+  const { data: templates = [], isLoading, refetch } = useQuery({
+    queryKey: ['campaign-templates'],
+    queryFn: async () => {
       const response = await campaignsApi.getTemplates();
-      const templateList = response.data?.templates || [];
-      
-      setTemplates(templateList);
-      
-      // Calculate stats
-      const emailCount = templateList.filter((t: CampaignTemplate) => t.type === 'EMAIL').length;
-      const smsCount = templateList.filter((t: CampaignTemplate) => t.type === 'SMS').length;
-      const phoneCount = templateList.filter((t: CampaignTemplate) => t.type === 'PHONE').length;
-      const recurringCount = templateList.filter((t: CampaignTemplate) => t.isRecurring).length;
-      
-      setStats({
-        total: templateList.length,
-        email: emailCount,
-        sms: smsCount,
-        phone: phoneCount,
-        recurring: recurringCount
-      });
-    } catch (error) {
-      console.error('Error loading templates:', error);
-      toast.error('Failed to load templates');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return (response.data?.templates || []) as CampaignTemplate[];
+    },
+  });
 
-  const filterTemplates = () => {
+  const stats = useMemo(() => {
+    const emailCount = templates.filter((t) => t.type === 'EMAIL').length;
+    const smsCount = templates.filter((t) => t.type === 'SMS').length;
+    const phoneCount = templates.filter((t) => t.type === 'PHONE').length;
+    const recurringCount = templates.filter((t) => t.isRecurring).length;
+    return {
+      total: templates.length,
+      email: emailCount,
+      sms: smsCount,
+      phone: phoneCount,
+      recurring: recurringCount,
+    };
+  }, [templates]);
+
+  const filteredTemplates = useMemo(() => {
     let filtered = [...templates];
     
     // Filter by category
@@ -108,8 +82,8 @@ const CampaignTemplates = () => {
       );
     }
     
-    setFilteredTemplates(filtered);
-  };
+    return filtered;
+  }, [templates, selectedCategory, searchQuery]);
 
   const handleUseTemplate = async (templateId: string) => {
     try {
@@ -151,7 +125,7 @@ const CampaignTemplates = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadTemplates} disabled={isLoading}>
+          <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>

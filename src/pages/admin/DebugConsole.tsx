@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Terminal, AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,6 +8,10 @@ import { useToast } from '@/hooks/useToast';
 const DebugConsole = () => {
   const { toast } = useToast();
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const [selectedSource, setSelectedSource] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const sourceRef = useRef<HTMLSelectElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [logs, setLogs] = useState([
     {
       id: 1,
@@ -82,9 +86,12 @@ const DebugConsole = () => {
     }, 500);
   };
 
-  const filteredLogs = selectedFilter === 'all' 
-    ? logs 
-    : logs.filter(log => log.level === selectedFilter);
+  const filteredLogs = logs.filter(log => {
+    if (selectedFilter !== 'all' && log.level !== selectedFilter) return false;
+    if (selectedSource !== 'all' && log.source !== selectedSource) return false;
+    if (searchQuery && !log.message.toLowerCase().includes(searchQuery.toLowerCase()) && !log.source.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
 
   const getLogIcon = (level: string) => {
     switch (level) {
@@ -186,21 +193,38 @@ const DebugConsole = () => {
               <option value="info">Info</option>
               <option value="success">Success</option>
             </select>
-            <select className="px-4 py-2 border rounded-md">
-              <option>All Sources</option>
-              <option>EmailService</option>
-              <option>APIGateway</option>
-              <option>AIService</option>
-              <option>BackupService</option>
-              <option>WebhookService</option>
-              <option>AuthService</option>
+            <select 
+              className="px-4 py-2 border rounded-md"
+              ref={sourceRef}
+              value={selectedSource}
+              onChange={(e) => setSelectedSource(e.target.value)}
+            >
+              <option value="all">All Sources</option>
+              <option value="EmailService">EmailService</option>
+              <option value="APIGateway">APIGateway</option>
+              <option value="AIService">AIService</option>
+              <option value="BackupService">BackupService</option>
+              <option value="WebhookService">WebhookService</option>
+              <option value="AuthService">AuthService</option>
             </select>
             <input
               type="text"
               placeholder="Search logs..."
               className="flex-1 px-4 py-2 border rounded-md"
+              ref={searchRef}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  toast.success(`Filters applied — ${filteredLogs.length} logs shown`);
+                }
+              }}
             />
-            <Button onClick={() => toast.info('Filters applied')}>Apply Filters</Button>
+            <Button onClick={() => {
+              setSelectedSource(sourceRef.current?.value || 'all');
+              setSearchQuery(searchRef.current?.value || '');
+              toast.success(`Filters applied — showing ${filteredLogs.length} matching logs`);
+            }}>Apply Filters</Button>
           </div>
         </CardContent>
       </Card>

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { Mail, Layout, Type, Image, Link, Code, Eye, RefreshCw, Edit, Trash2, Plus, X, Send } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -185,12 +186,7 @@ const EmailTemplatesLibrary = () => {
       </div>
 
       {loading ? (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading templates...</p>
-          </div>
-        </Card>
+        <LoadingSkeleton rows={5} />
       ) : (
         <>
       <div className="hidden">Wrapper for loading state</div>

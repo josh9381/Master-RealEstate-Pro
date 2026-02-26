@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/Dialog'
 import { useToast } from '@/hooks/useToast'
 import { MockModeBanner } from '@/components/shared/MockModeBanner'
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { messagesApi, leadsApi, aiApi } from '@/lib/api'
 import { AIComposer } from '@/components/ai/AIComposer'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
@@ -1009,12 +1010,7 @@ const CommunicationInbox = () => {
       </div>
 
       {loading ? (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading messages...</p>
-          </div>
-        </Card>
+        <LoadingSkeleton rows={6} showChart={false} />
       ) : (
         <>
       <div className="hidden">Wrapper for loading state</div>

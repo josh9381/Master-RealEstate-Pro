@@ -120,9 +120,9 @@ const CampaignSchedule = () => {
           const result = await campaignsApi.sendCampaignNow(campaignId);
           toast.success(`Campaign "${campaignName}" sent successfully! Sent to ${result.data.sent} recipients.`);
           await loadCampaigns();
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Error sending campaign:', error);
-          toast.error(error.response?.data?.message || 'Failed to send campaign');
+          toast.error(error instanceof Error ? error.message : 'Failed to send campaign');
         }
       }
     });
@@ -139,9 +139,9 @@ const CampaignSchedule = () => {
           await campaignsApi.updateCampaign(campaignId, { status: 'CANCELLED' });
           toast.success(`Campaign "${campaignName}" cancelled`);
           await loadCampaigns();
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Error cancelling campaign:', error);
-          toast.error(error.response?.data?.message || 'Failed to cancel campaign');
+          toast.error(error instanceof Error ? error.message : 'Failed to cancel campaign');
         }
       }
     });
@@ -197,9 +197,9 @@ const CampaignSchedule = () => {
       
       closeRescheduleModal();
       await loadCampaigns();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error rescheduling campaign:', error);
-      toast.error(error.response?.data?.message || 'Failed to reschedule campaign');
+      toast.error(error instanceof Error ? error.message : 'Failed to reschedule campaign');
     }
   };
 
@@ -395,8 +395,8 @@ const CampaignSchedule = () => {
                         await campaignsApi.pauseCampaign(String(schedule.id));
                         toast.success('Campaign paused successfully');
                         loadCampaigns();
-                      } catch (err: any) {
-                        toast.error(err.response?.data?.message || 'Failed to pause campaign');
+                      } catch (err: unknown) {
+                        toast.error(err instanceof Error ? err.message : 'Failed to pause campaign');
                       }
                     }}>
                       Pause

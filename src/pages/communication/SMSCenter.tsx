@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Smartphone, Send, Users, Clock, MessageSquare, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -51,9 +52,10 @@ const SMSCenter = () => {
       setSmsMessage('')
       // Refresh messages list to show the new message
       refetch()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send SMS:', error)
-      toast.error(error?.response?.data?.message || 'Failed to send SMS')
+      const err = error as { response?: { data?: { message?: string } } }
+      toast.error(err?.response?.data?.message || 'Failed to send SMS')
     } finally {
       setSending(false)
     }
@@ -85,12 +87,7 @@ const SMSCenter = () => {
       </div>
 
       {loading ? (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading SMS messages...</p>
-          </div>
-        </Card>
+        <LoadingSkeleton rows={4} />
       ) : (
         <>
       <div className="hidden">Wrapper for loading state</div>

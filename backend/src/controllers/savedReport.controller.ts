@@ -1,7 +1,5 @@
 import { Request, Response } from 'express'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '../config/database'
 
 // GET /api/reports/saved — List saved reports for the user's org
 export const listSavedReports = async (req: Request, res: Response) => {

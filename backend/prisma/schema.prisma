@@ -150,6 +150,8 @@ model Campaign {
   organizationId   String
   ABTestResult     ABTestResult[]
   activities       Activity[]
+  campaignLeads    CampaignLead[]
+  campaignAnalytics CampaignAnalytics?
   user             User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
   organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   tags             Tag[]          @relation("CampaignToTag")
@@ -248,10 +250,12 @@ model Lead {
   unsubscribeToken  String?        @unique
   organizationId    String
   scoreUpdatedAt    DateTime?
+  expectedCloseDate DateTime?
   ABTestResult      ABTestResult[]
   activities        Activity[]
   appointments      Appointment[]
   Call              Call[]
+  campaignLeads     CampaignLead[]
   assignedTo        User?          @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
   organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   messages          Message[]
@@ -497,6 +501,7 @@ model User {
   UserAIPreferences    UserAIPreferences?
   refreshTokens        RefreshToken[]
   passwordResetTokens  PasswordResetToken[]
+  loginHistory         LoginHistory[]
 
   @@unique([organizationId, email])
   @@index([email])
@@ -787,6 +792,9 @@ model Organization {
   SavedReport       SavedReport[]
   Workflow          Workflow[]
   EmailSuppression  EmailSuppression[]
+  CampaignLead      CampaignLead[]
+  CampaignAnalytics CampaignAnalytics[]
+  LoginHistory      LoginHistory[]
 
   @@index([isActive])
   @@index([slug])
@@ -1057,6 +1065,85 @@ enum SubscriptionStatus {
   PAST_DUE
   CANCELLED
   INCOMPLETE
+}
+
+// Per-lead campaign tracking — records individual lead engagement with campaigns
+model CampaignLead {
+  id             String    @id @default(cuid())
+  campaignId     String
+  leadId         String
+  organizationId String
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  convertedAt    DateTime?
+  bouncedAt      DateTime?
+  unsubscribedAt DateTime?
+  status         String    @default("PENDING") // PENDING, SENT, DELIVERED, OPENED, CLICKED, BOUNCED, UNSUBSCRIBED
+  metadata       Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  campaign       Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, leadId])
+  @@index([campaignId])
+  @@index([leadId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+// Aggregated campaign analytics — snapshot of campaign performance
+model CampaignAnalytics {
+  id               String   @id @default(cuid())
+  campaignId       String   @unique
+  organizationId   String
+  totalSent        Int      @default(0)
+  totalDelivered   Int      @default(0)
+  totalOpened      Int      @default(0)
+  totalClicked     Int      @default(0)
+  totalConverted   Int      @default(0)
+  totalBounced     Int      @default(0)
+  totalUnsubscribed Int     @default(0)
+  openRate         Float?   @default(0)
+  clickRate        Float?   @default(0)
+  conversionRate   Float?   @default(0)
+  bounceRate       Float?   @default(0)
+  revenue          Float?   @default(0)
+  lastUpdatedAt    DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  campaign         Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([campaignId])
+}
+
+// Login history for session management — tracks user sessions across devices
+model LoginHistory {
+  id             String    @id @default(cuid())
+  userId         String
+  organizationId String
+  ipAddress      String?
+  userAgent      String?
+  deviceType     String?
+  browser        String?
+  os             String?
+  country        String?
+  city           String?
+  isActive       Boolean   @default(true)
+  lastActiveAt   DateTime  @default(now())
+  loggedOutAt    DateTime?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([isActive])
 }
 
 // Sprint 9.1 #102: Bounce suppression list — prevents sending to addresses that have bounced or reported spam

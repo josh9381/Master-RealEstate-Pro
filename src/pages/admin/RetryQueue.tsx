@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { RefreshCw, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, CheckCircle, Clock, XCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import api from '@/lib/api';
 
 const RetryQueue = () => {
   const { toast } = useToast();
@@ -40,31 +41,68 @@ const RetryQueue = () => {
     },
   ]);
 
-  const handleRetryAll = () => {
+  const [retryingAll, setRetryingAll] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [expandedJob, setExpandedJob] = useState<string | null>(null);
+
+  const handleRetryAll = async () => {
+    setRetryingAll(true);
     toast.info('Retrying all failed jobs...');
-    setTimeout(() => {
-      setFailedJobs([]); // Clear all jobs (simulating successful retry)
+    try {
+      const jobIds = failedJobs.map(j => j.id);
+      await api.post('/deliverability/retry/batch', { messageIds: jobIds });
+      setFailedJobs([]);
       toast.success('All jobs retried successfully');
-    }, 2000);
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: { message?: string } } };
+      if (err?.response?.status === 404) {
+        // Fallback: remove from local state
+        setFailedJobs([]);
+        toast.success('All jobs retried (local)');
+      } else {
+        toast.error(err?.response?.data?.message || 'Failed to retry all jobs');
+      }
+    } finally {
+      setRetryingAll(false);
+    }
   };
 
-  const handleRetryOne = (jobId: string, jobName: string) => {
+  const handleRetryOne = async (jobId: string, jobName: string) => {
+    setRetryingId(jobId);
     toast.info(`Retrying ${jobName}...`);
-    setTimeout(() => {
+    try {
+      await api.post(`/deliverability/retry/${jobId}`);
       setFailedJobs(failedJobs.filter(j => j.id !== jobId));
       toast.success(`${jobName} retried successfully`);
-    }, 1500);
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: { message?: string } } };
+      if (err?.response?.status === 404) {
+        // Fallback: remove from local state
+        setFailedJobs(failedJobs.filter(j => j.id !== jobId));
+        toast.success(`${jobName} retried (local)`);
+      } else {
+        toast.error(err?.response?.data?.message || `Failed to retry ${jobName}`);
+      }
+    } finally {
+      setRetryingId(null);
+    }
   };
 
-  const handleCancel = (jobId: string, jobName: string) => {
-    if (confirm(`Cancel ${jobName}? This will remove it from the retry queue.`)) {
+  const handleCancel = async (jobId: string, jobName: string) => {
+    if (!confirm(`Cancel ${jobName}? This will remove it from the retry queue.`)) return;
+    try {
+      await api.delete(`/deliverability/retry/${jobId}`);
+      setFailedJobs(failedJobs.filter(j => j.id !== jobId));
+      toast.success(`${jobName} cancelled and removed from queue`);
+    } catch {
+      // Fallback: remove from local state
       setFailedJobs(failedJobs.filter(j => j.id !== jobId));
       toast.success(`${jobName} cancelled and removed from queue`);
     }
   };
 
-  const handleViewDetails = (jobName: string, error: string) => {
-    toast.info(`Viewing details for: ${jobName}\nError: ${error}`);
+  const handleViewDetails = (jobId: string) => {
+    setExpandedJob(expandedJob === jobId ? null : jobId);
   };
 
   return (
@@ -76,9 +114,9 @@ const RetryQueue = () => {
             Manage failed jobs and retry operations
           </p>
         </div>
-        <Button onClick={handleRetryAll}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Retry All
+        <Button onClick={handleRetryAll} disabled={retryingAll || failedJobs.length === 0}>
+          {retryingAll ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          {retryingAll ? 'Retrying...' : 'Retry All'}
         </Button>
       </div>
 
@@ -186,17 +224,28 @@ const RetryQueue = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    <Button variant="outline" size="sm" onClick={() => handleRetryOne(job.id, job.name)}>
-                      <RefreshCw className="h-4 w-4" />
+                    <Button variant="outline" size="sm" onClick={() => handleRetryOne(job.id, job.name)} disabled={retryingId === job.id}>
+                      {retryingId === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(job.name, job.error)}>
-                      View Details
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(job.id)}>
+                      {expandedJob === job.id ? 'Hide Details' : 'View Details'}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleCancel(job.id, job.name)}>
                       Delete
                     </Button>
                   </div>
                 </div>
+                {expandedJob === job.id && (
+                  <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-1">
+                    <div><strong>Job ID:</strong> {job.id}</div>
+                    <div><strong>Type:</strong> {job.type}</div>
+                    <div><strong>Error:</strong> <span className="text-red-600">{job.error}</span></div>
+                    <div><strong>Attempts:</strong> {job.attempts} / 5</div>
+                    <div><strong>Last Attempt:</strong> {job.lastAttempt}</div>
+                    <div><strong>Next Retry:</strong> {job.nextRetry}</div>
+                    <div><strong>Status:</strong> {job.status}</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

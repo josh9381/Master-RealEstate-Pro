@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
+import { cacheResponse } from '../middleware/cache';
 import * as intelligenceController from '../controllers/intelligence.controller';
 
 const router = Router();
@@ -11,31 +12,31 @@ router.use(authenticate);
  * GET /api/intelligence/leads/:id/prediction
  * Get conversion probability prediction for a specific lead
  */
-router.get('/leads/:id/prediction', intelligenceController.getLeadPrediction);
+router.get('/leads/:id/prediction', cacheResponse(180), intelligenceController.getLeadPrediction);
 
 /**
  * GET /api/intelligence/leads/:id/engagement
  * Get engagement analysis for a specific lead
  */
-router.get('/leads/:id/engagement', intelligenceController.getLeadEngagement);
+router.get('/leads/:id/engagement', cacheResponse(180), intelligenceController.getLeadEngagement);
 
 /**
  * GET /api/intelligence/leads/:id/next-action
  * Get AI-suggested next action for a specific lead
  */
-router.get('/leads/:id/next-action', intelligenceController.getNextAction);
+router.get('/leads/:id/next-action', cacheResponse(120), intelligenceController.getNextAction);
 
 /**
  * GET /api/intelligence/insights/dashboard
  * Get organization-wide insights and analytics
  */
-router.get('/insights/dashboard', intelligenceController.getDashboardInsights);
+router.get('/insights/dashboard', cacheResponse(120), intelligenceController.getDashboardInsights);
 
 /**
  * GET /api/intelligence/analytics/trends
  * Get trend analytics for the organization
  */
-router.get('/analytics/trends', intelligenceController.getTrends);
+router.get('/analytics/trends', cacheResponse(300), intelligenceController.getTrends);
 
 /**
  * POST /api/intelligence/analyze-batch

@@ -2,6 +2,7 @@ import { prisma } from '../config/database';
 import { WorkflowTrigger, ExecutionStatus } from '@prisma/client';
 import { sendEmail } from './email.service';
 import { sendSMS } from './sms.service';
+import { pushWorkflowEvent } from '../config/socket';
 
 /**
  * Workflow Service
@@ -490,6 +491,16 @@ export async function executeWorkflow(
     // Update workflow stats
     await updateWorkflowStats(workflowId, true);
 
+    // Push real-time workflow event
+    if (workflow.organizationId) {
+      pushWorkflowEvent(workflow.organizationId, {
+        workflowId,
+        workflowName: workflow.name,
+        action: 'completed',
+        leadId: leadId || undefined,
+      });
+    }
+
     return execution.id;
   } catch (error) {
     // Update execution as failed
@@ -890,13 +901,65 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
       break;
 
     case 'SEND_NOTIFICATION':
-      // This would integrate with notification service
-      console.log('Sending notification:', action.config);
+      if (!leadId) {
+        console.warn('[Workflow] No leadId for SEND_NOTIFICATION, skipping');
+        break;
+      }
+      // Send an in-app notification via the notification table
+      const notifLead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { firstName: true, lastName: true, assignedToId: true, organizationId: true }
+      });
+      if (notifLead?.assignedToId) {
+        const notifOrgId = organizationId || notifLead.organizationId;
+        await prisma.notification.create({
+          data: {
+            userId: notifLead.assignedToId,
+            organizationId: notifOrgId,
+            title: action.config.title || 'Workflow Notification',
+            message: replaceVariables(
+              action.config.message || action.config.body || 'You have a new workflow notification.',
+              notifLead,
+              metadata
+            ),
+            type: action.config.type || 'workflow',
+            read: false,
+          },
+        });
+        console.log(`[Workflow] Notification created for user ${notifLead.assignedToId} re: lead ${leadId}`);
+      } else {
+        console.warn(`[Workflow] Lead ${leadId} has no assignedTo, skipping SEND_NOTIFICATION`);
+      }
       break;
 
     case 'WEBHOOK':
-      // This would make HTTP request to webhook URL
-      console.log('Calling webhook:', action.config.url);
+      // Make HTTP request to configured webhook URL
+      const webhookUrl = action.config.url;
+      if (!webhookUrl) {
+        console.warn('[Workflow] No URL configured for WEBHOOK action, skipping');
+        break;
+      }
+      try {
+        const webhookPayload = {
+          event: 'workflow_trigger',
+          workflowId: metadata?.workflowId || null,
+          leadId: leadId || null,
+          timestamp: new Date().toISOString(),
+          data: action.config.payload || action.config.data || {},
+        };
+        const webhookResponse = await fetch(webhookUrl, {
+          method: action.config.method || 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(action.config.headers || {}),
+          },
+          body: JSON.stringify(webhookPayload),
+          signal: AbortSignal.timeout(10000), // 10s timeout
+        });
+        console.log(`[Workflow] Webhook called: ${webhookUrl} — status ${webhookResponse.status}`);
+      } catch (webhookErr) {
+        console.error(`[Workflow] Webhook failed for ${webhookUrl}:`, webhookErr);
+      }
       break;
 
     default:

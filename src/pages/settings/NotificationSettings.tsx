@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Mail, MessageSquare, TrendingUp, Users, Calendar, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
@@ -24,9 +26,7 @@ interface NotificationCategory {
 
 const NotificationSettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
   
   // Channel toggles
   const [emailEnabled, setEmailEnabled] = useState(true);
@@ -82,42 +82,31 @@ const NotificationSettings = () => {
     },
   ]);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
+  const { data: notificationData, isLoading: loading, isFetching: refreshing, refetch } = useQuery({
+    queryKey: ['settings', 'notifications'],
+    queryFn: async () => {
       const response = await settingsApi.getNotificationSettings();
-      
-      if (response) {
-        setEmailEnabled(response.emailEnabled ?? true);
-        setPushEnabled(response.pushEnabled ?? true);
-        setSmsEnabled(response.smsEnabled ?? true);
-        setQuietHoursEnabled(response.quietHoursEnabled ?? false);
-        setQuietStart(response.quietStart || '22:00');
-        setQuietEnd(response.quietEnd || '08:00');
-        if (response.categories) {
-          setNotificationCategories(response.categories);
-        }
+      return response;
+    },
+  });
+
+  // Sync fetched data into form state
+  useEffect(() => {
+    if (notificationData) {
+      setEmailEnabled(notificationData.emailEnabled ?? true);
+      setPushEnabled(notificationData.pushEnabled ?? true);
+      setSmsEnabled(notificationData.smsEnabled ?? true);
+      setQuietHoursEnabled(notificationData.quietHoursEnabled ?? false);
+      setQuietStart(notificationData.quietStart || '22:00');
+      setQuietEnd(notificationData.quietEnd || '08:00');
+      if (notificationData.categories) {
+        setNotificationCategories(notificationData.categories);
       }
-    } catch (error) {
-      console.error('Failed to load notification settings:', error);
-      toast.error('Failed to load settings, using defaults');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
-  };
+  }, [notificationData]);
 
   const handleRefresh = () => {
-    loadSettings(true);
+    refetch();
   };
 
   const toggleNotification = (categoryIndex: number, settingIndex: number, channel: 'email' | 'push' | 'sms') => {
@@ -130,39 +119,34 @@ const NotificationSettings = () => {
 
   const handleToggleNotification = toggleNotification;
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await settingsApi.updateNotificationSettings({
-        emailEnabled,
-        pushEnabled,
-        smsEnabled,
-        quietHoursEnabled,
-        quietStart,
-        quietEnd,
-        categories: notificationCategories
-      });
+  const saveMutation = useMutation({
+    mutationFn: async (data: { emailEnabled: boolean; pushEnabled: boolean; smsEnabled: boolean; quietHoursEnabled: boolean; quietStart: string; quietEnd: string; categories: NotificationCategory[] }) => {
+      return await settingsApi.updateNotificationSettings(data);
+    },
+    onSuccess: () => {
       toast.success('Notification preferences saved successfully');
-      await loadSettings(true);
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'notifications'] });
+    },
+    onError: (error) => {
       console.error('Failed to save preferences:', error);
       toast.error('Failed to save preferences');
-    } finally {
-      setSaving(false);
-    }
+    },
+  });
+
+  const handleSave = () => {
+    saveMutation.mutate({
+      emailEnabled,
+      pushEnabled,
+      smsEnabled,
+      quietHoursEnabled,
+      quietStart,
+      quietEnd,
+      categories: notificationCategories,
+    });
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6 max-w-4xl">
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading notification settings...</p>
-          </div>
-        </Card>
-      </div>
-    );
+    return <LoadingSkeleton rows={3} />;
   }
 
   const handleReset = () => {
@@ -412,8 +396,8 @@ const NotificationSettings = () => {
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline" onClick={handleReset}>Reset to Default</Button>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Preferences'}
+        <Button onClick={handleSave} disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? 'Saving...' : 'Save Preferences'}
         </Button>
       </div>
     </div>

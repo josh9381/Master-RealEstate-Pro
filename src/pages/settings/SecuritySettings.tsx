@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Shield, Key, Smartphone, AlertTriangle, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,9 +11,7 @@ import { settingsApi } from '@/lib/api';
 
 const SecuritySettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -31,44 +31,46 @@ const SecuritySettings = () => {
     { id: 3, device: 'macOS • Firefox', location: 'San Jose, CA', time: '1 day ago', current: false },
   ]);
 
-  useEffect(() => {
-    loadSecuritySettings();
-  }, []);
-
-  const loadSecuritySettings = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
+  const { data: securityData, isLoading: loading, isFetching: refreshing, refetch } = useQuery({
+    queryKey: ['settings', 'security'],
+    queryFn: async () => {
       const settings = await settingsApi.getSecuritySettings();
-      
-      if (settings) {
-        const data = settings.data || settings;
-        setTwoFactorEnabled(data.twoFactorEnabled ?? true);
-        setSecurityScore(data.securityScore ?? 0);
-        setLastPasswordChange(data.lastPasswordChange || '');
-      }
-      
-      if (isRefresh) {
-        toast.success('Security settings refreshed');
-      }
-    } catch (error) {
-      console.error('Failed to load security settings:', error);
-      toast.error('Failed to load security settings, using defaults');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      const data = settings?.data || settings;
+      return data;
+    },
+  });
+
+  // Sync fetched data into form state
+  useEffect(() => {
+    if (securityData) {
+      setTwoFactorEnabled(securityData.twoFactorEnabled ?? true);
+      setSecurityScore(securityData.securityScore ?? 0);
+      setLastPasswordChange(securityData.lastPasswordChange || '');
     }
-  };
+  }, [securityData]);
 
   const handleRefresh = () => {
-    loadSecuritySettings(true);
+    refetch();
   };
   
-  const handlePasswordChange = async () => {
+  const passwordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      return await settingsApi.changePassword(data);
+    },
+    onSuccess: () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Password updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['settings', 'security'] });
+    },
+    onError: (error) => {
+      console.error('Failed to change password:', error);
+      toast.error('Failed to update password');
+    },
+  });
+
+  const handlePasswordChange = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error('Please fill in all password fields');
       return;
@@ -84,40 +86,35 @@ const SecuritySettings = () => {
       return;
     }
     
-    setSaving(true);
-    try {
-      await settingsApi.changePassword({ currentPassword, newPassword });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      toast.success('Password updated successfully');
-    } catch (error) {
-      console.error('Failed to change password:', error);
-      toast.error('Failed to update password');
-    } finally {
-      setSaving(false);
-    }
+    passwordMutation.mutate({ currentPassword, newPassword });
   };
   
-  const handleToggle2FA = async () => {
-    setSaving(true);
-    try {
+  const toggle2FAMutation = useMutation({
+    mutationFn: async () => {
       if (twoFactorEnabled) {
         await settingsApi.disable2FA({});
+      } else {
+        await settingsApi.enable2FA({});
+      }
+    },
+    onSuccess: () => {
+      if (twoFactorEnabled) {
         setTwoFactorEnabled(false);
         toast.success('2FA disabled');
       } else {
-        await settingsApi.enable2FA({});
         setTwoFactorEnabled(true);
         toast.success('2FA enabled successfully');
       }
-      loadSecuritySettings(); // Reload from API
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'security'] });
+    },
+    onError: (error) => {
       console.error('Failed to toggle 2FA:', error);
       toast.error('Failed to update 2FA settings');
-    } finally {
-      setSaving(false);
-    }
+    },
+  });
+
+  const handleToggle2FA = () => {
+    toggle2FAMutation.mutate();
   };
   
   const handleRemove2FA = async () => {
@@ -159,14 +156,7 @@ const SecuritySettings = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       {loading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Loading security settings...</p>
-            </div>
-          </CardContent>
-        </Card>
+        <LoadingSkeleton rows={3} />
       ) : (
         <>
       <div className="flex items-center justify-between">
@@ -265,8 +255,8 @@ const SecuritySettings = () => {
               <li>• Contains at least one special character</li>
             </ul>
           </div>
-          <Button onClick={handlePasswordChange} disabled={saving}>
-            {saving ? 'Updating...' : 'Update Password'}
+          <Button onClick={handlePasswordChange} disabled={passwordMutation.isPending}>
+            {passwordMutation.isPending ? 'Updating...' : 'Update Password'}
           </Button>
         </CardContent>
       </Card>

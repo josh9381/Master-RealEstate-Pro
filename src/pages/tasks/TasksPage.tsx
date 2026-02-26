@@ -92,7 +92,7 @@ export default function TasksPage() {
   // Smart data source - use API data or fallback
   const tasks: Task[] = useMemo(() => {
     if (tasksResponse?.tasks && tasksResponse.tasks.length > 0) {
-      return tasksResponse.tasks.map((task: any) => ({
+      return tasksResponse.tasks.map((task: { id: string; title: string; description?: string; priority?: string; dueDate?: string; assignedTo?: { firstName: string; lastName: string }; assignedToId?: string; status?: string; category?: string; leadId?: string }) => ({
         id: task.id,
         title: task.title,
         description: task.description || '',

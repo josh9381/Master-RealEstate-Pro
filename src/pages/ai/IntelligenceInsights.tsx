@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw, Brain, Target, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -8,66 +8,43 @@ import { aiApi, tasksApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import intelligenceService, { type DashboardInsights, type ScoringModel } from '@/services/intelligenceService';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const IntelligenceInsights = () => {
   const { toast } = useToast()
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [optimizing, setOptimizing] = useState(false)
-  const [insights, setInsights] = useState<Array<{
-    id: string | number;
-    category: string;
-    priority: string;
-    title: string;
-    description: string;
-    impact: string;
-    action: string;
-    confidence: number;
-    created: string;
-  }>>([])
-  const [dashboardInsights, setDashboardInsights] = useState<DashboardInsights | null>(null)
-  const [scoringModel, setScoringModel] = useState<ScoringModel | null>(null)
-  const [trendsData, setTrendsData] = useState<any>(null)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      await loadInsights()
-    }
-    fetchData()
-  }, [])
-
-  const loadInsights = async () => {
-    setLoading(true)
-    try {
-      // Load both old and new insights
+  const { data: insightsData, isLoading: loading, refetch } = useQuery({
+    queryKey: ['ai', 'intelligence-insights'],
+    queryFn: async () => {
       const [oldInsights, newDashboard, model, trends] = await Promise.all([
         aiApi.getInsights(),
         intelligenceService.getDashboardInsights(),
         intelligenceService.getScoringModel(),
         intelligenceService.getAnalyticsTrends(30),
       ])
-      
-      if (oldInsights?.data && Array.isArray(oldInsights.data)) {
-        setInsights(oldInsights.data)
+      return {
+        insights: (oldInsights?.data && Array.isArray(oldInsights.data)) ? oldInsights.data : [],
+        dashboardInsights: newDashboard as DashboardInsights | null,
+        scoringModel: model as ScoringModel | null,
+        trendsData: trends,
       }
-      
-      setDashboardInsights(newDashboard)
-      setScoringModel(model)
-      setTrendsData(trends)
-    } catch (error) {
-      const err = error as Error
-      toast.error(err.message || 'Failed to load insights')
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+  })
+
+  const insights = insightsData?.insights ?? []
+  const dashboardInsights = insightsData?.dashboardInsights ?? null
+  const scoringModel = insightsData?.scoringModel ?? null
+  const trendsData = insightsData?.trendsData ?? null
   
   const handleOptimizeScoring = async () => {
     setOptimizing(true)
     try {
       const result = await intelligenceService.optimizeScoring()
       toast.success(`Scoring optimized! New accuracy: ${result.accuracy.toFixed(1)}%`)
-      await loadInsights() // Reload to get updated model
+      await refetch() // Reload to get updated model
     } catch (error) {
       const err = error as Error
       toast.error(err.message || 'Failed to optimize scoring')
@@ -80,7 +57,10 @@ const IntelligenceInsights = () => {
     try {
       await aiApi.dismissInsight(insightId.toString())
       toast.success('Insight dismissed')
-      setInsights(prev => prev.filter(i => i.id !== insightId))
+      queryClient.setQueryData(['ai', 'intelligence-insights'], (old: { insights?: Array<{ id: string | number }> } | undefined) => {
+        if (!old) return old
+        return { ...old, insights: old.insights?.filter((i: { id: string | number }) => i.id !== insightId) }
+      })
     } catch (error) {
       const err = error as Error
       toast.error(err.message || 'Failed to dismiss insight')
@@ -158,7 +138,7 @@ const IntelligenceInsights = () => {
             AI-generated insights and recommendations for your business
           </p>
         </div>
-        <Button onClick={loadInsights} disabled={loading}>
+        <Button onClick={() => refetch()} disabled={loading}>
           {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
           {loading ? 'Loading...' : 'Refresh Insights'}
         </Button>
@@ -182,7 +162,7 @@ const IntelligenceInsights = () => {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{insights.filter(i => i.priority === 'high').length}</div>
+            <div className="text-2xl font-bold">{insights.filter((i: { priority?: string }) => i.priority === 'high').length}</div>
             <p className="text-xs text-muted-foreground">Require immediate action</p>
           </CardContent>
         </Card>
@@ -192,7 +172,7 @@ const IntelligenceInsights = () => {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{new Set(insights.map(i => i.category)).size}</div>
+            <div className="text-2xl font-bold">{new Set(insights.map((i: { category?: string }) => i.category)).size}</div>
             <p className="text-xs text-muted-foreground">Different types</p>
           </CardContent>
         </Card>
@@ -203,7 +183,7 @@ const IntelligenceInsights = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {insights.length > 0 ? Math.round(insights.reduce((acc, i) => acc + i.confidence, 0) / insights.length) : 0}%
+              {insights.length > 0 ? Math.round(insights.reduce((acc: number, i: { confidence?: number }) => acc + (i.confidence || 0), 0) / insights.length) : 0}%
             </div>
             <p className="text-xs text-muted-foreground">Across all insights</p>
           </CardContent>
@@ -385,7 +365,7 @@ const IntelligenceInsights = () => {
       {/* Insights List */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">All Insights</h2>
-        {insights.map((insight) => {
+        {insights.map((insight: { id: string | number; title?: string; description?: string; priority?: string; category?: string; confidence?: number; action?: string; date?: string; createdAt?: string; created?: string; impact?: string }) => {
           const Icon = categoryIcons[insight.category as keyof typeof categoryIcons] || Sparkles;
           const colorClass = categoryColors[insight.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-600';
 

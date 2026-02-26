@@ -410,28 +410,61 @@ export class IntelligenceService {
     // Calculate predicted revenue
     const predictedRevenue = topOpportunitiesData.reduce((sum, l) => sum + (l.estimatedValue * (l.conversionProbability / 100)), 0);
 
-    // Simple trend calculation (would be more sophisticated with historical data)
+    // Calculate real trend changes by comparing current vs previous period
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+    const thisWeekLeads = leads.filter(l => new Date(l.createdAt) >= oneWeekAgo).length;
+    const lastWeekLeads = leads.filter(l => {
+      const d = new Date(l.createdAt);
+      return d >= twoWeeksAgo && d < oneWeekAgo;
+    }).length;
+    const newLeadsChange = lastWeekLeads > 0
+      ? Math.round(((thisWeekLeads - lastWeekLeads) / lastWeekLeads) * 1000) / 10
+      : thisWeekLeads > 0 ? 100 : 0;
+
+    const thisMonthHotLeads = leads.filter(l => (l.score || 0) >= 80 && new Date(l.updatedAt) >= oneMonthAgo).length;
+    const lastMonthHotLeads = leads.filter(l => (l.score || 0) >= 80 && new Date(l.updatedAt) >= twoMonthsAgo && new Date(l.updatedAt) < oneMonthAgo).length;
+    const hotLeadsChange = lastMonthHotLeads > 0
+      ? Math.round(((thisMonthHotLeads - lastMonthHotLeads) / lastMonthHotLeads) * 1000) / 10
+      : thisMonthHotLeads > 0 ? 100 : 0;
+
+    const thisMonthLeads = leads.filter(l => new Date(l.updatedAt) >= oneMonthAgo);
+    const lastMonthLeads = leads.filter(l => {
+      const d = new Date(l.updatedAt);
+      return d >= twoMonthsAgo && d < oneMonthAgo;
+    });
+    const thisMonthAvgScore = thisMonthLeads.length > 0
+      ? Math.round(thisMonthLeads.reduce((s, l) => s + (l.score || 0), 0) / thisMonthLeads.length)
+      : 0;
+    const lastMonthAvgScore = lastMonthLeads.length > 0
+      ? Math.round(lastMonthLeads.reduce((s, l) => s + (l.score || 0), 0) / lastMonthLeads.length)
+      : 0;
+    const engagementChange = lastMonthAvgScore > 0
+      ? Math.round(((thisMonthAvgScore - lastMonthAvgScore) / lastMonthAvgScore) * 1000) / 10
+      : thisMonthAvgScore > 0 ? 100 : 0;
+
     const trends = [
       {
         period: 'This Week',
         metric: 'New Leads',
-        value: leads.filter(l => {
-          const daysSince = (Date.now() - new Date(l.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-          return daysSince <= 7;
-        }).length,
-        change: 12.5, // Placeholder
+        value: thisWeekLeads,
+        change: newLeadsChange,
       },
       {
         period: 'This Month',
         metric: 'Hot Leads',
         value: hotLeads,
-        change: -5.2, // Placeholder
+        change: hotLeadsChange,
       },
       {
         period: 'This Month',
         metric: 'Avg Engagement',
         value: totalLeads > 0 ? Math.round(leads.reduce((sum, l) => sum + (l.score || 0), 0) / totalLeads) : 0,
-        change: 8.3, // Placeholder
+        change: engagementChange,
       },
     ];
 

@@ -3,15 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
 import { settingsApi } from '@/lib/api';
 
 const ProfileSettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
+  const queryClient = useQueryClient();
   
   // Basic Information
   const [firstName, setFirstName] = useState('');
@@ -40,50 +38,37 @@ const ProfileSettings = () => {
   const [timezone, setTimezone] = useState('America/Los_Angeles');
   const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
   
-  useEffect(() => {
-    loadProfile();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadProfile = async (showRefreshState = false) => {
-    try {
-      if (showRefreshState) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
+  const { data: profileData, isLoading: loading, isFetching: refreshing, refetch } = useQuery({
+    queryKey: ['settings', 'profile'],
+    queryFn: async () => {
       const response = await settingsApi.getProfile();
-      const user = response.data?.user;
-      
-      if (user) {
-        setFirstName(user.firstName || '');
-        setLastName(user.lastName || '');
-        setEmail(user.email || '');
-        setAvatar(user.avatar || '');
-        setPhone(user.phone || '');
-        setJobTitle(user.jobTitle || '');
-        setCompany(user.company || '');
-        setAddress(user.address || '');
-        setCity('');
-        setState('');
-        setZipCode('');
-        setCountry('United States');
-        setLanguage(user.language || 'en');
-        setTimezone(user.timezone || 'America/Los_Angeles');
-        setDateFormat('MM/DD/YYYY');
-      }
-    } catch (error) {
-      console.error('Failed to load profile:', error);
-      toast.error('Failed to load profile');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      return response.data?.user;
+    },
+  });
+
+  // Sync fetched data into form state
+  useEffect(() => {
+    if (profileData) {
+      setFirstName(profileData.firstName || '');
+      setLastName(profileData.lastName || '');
+      setEmail(profileData.email || '');
+      setAvatar(profileData.avatar || '');
+      setPhone(profileData.phone || '');
+      setJobTitle(profileData.jobTitle || '');
+      setCompany(profileData.company || '');
+      setAddress(profileData.address || '');
+      setCity('');
+      setState('');
+      setZipCode('');
+      setCountry('United States');
+      setLanguage(profileData.language || 'en');
+      setTimezone(profileData.timezone || 'America/Los_Angeles');
+      setDateFormat('MM/DD/YYYY');
     }
-  };
+  }, [profileData]);
 
   const handleRefresh = () => {
-    loadProfile(true);
+    refetch();
   };
   
   const handlePhotoUpload = async () => {
@@ -91,40 +76,59 @@ const ProfileSettings = () => {
     // In a real app, this would open a file picker
   };
 
-  const handleSave = async () => {
+  const saveMutation = useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone: string; jobTitle: string; company: string; address: string; timezone: string; language: string }) => {
+      return await settingsApi.updateProfile(data);
+    },
+    onSuccess: () => {
+      toast.success('Profile updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['settings', 'profile'] });
+    },
+    onError: (error) => {
+      console.error('Failed to update profile:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
+      toast.error(errorMessage);
+    },
+  });
+
+  const handleSave = () => {
     if (!firstName || !lastName || !email) {
       toast.error('Please fill in all required fields');
       return;
     }
     
-    setSaving(true);
-    try {
-      const response = await settingsApi.updateProfile({
-        firstName,
-        lastName,
-        email,
-        phone,
-        jobTitle,
-        company,
-        address,
-        timezone,
-        language
-      });
-      
-      if (response.success) {
-        toast.success('Profile updated successfully');
-        await loadProfile(true);
-      }
-    } catch (error) {
-      console.error('Failed to update profile:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
-      toast.error(errorMessage);
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({
+      firstName,
+      lastName,
+      email,
+      phone,
+      jobTitle,
+      company,
+      address,
+      timezone,
+      language,
+    });
   };
 
-  const handleChangePassword = async () => {
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      return await settingsApi.changePassword(data);
+    },
+    onSuccess: () => {
+      toast.success('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordSection(false);
+    },
+    onError: (error) => {
+      console.error('Failed to change password:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to change password';
+      toast.error(errorMessage);
+    },
+  });
+
+  const handleChangePassword = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error('Please fill in all password fields');
       return;
@@ -140,27 +144,10 @@ const ProfileSettings = () => {
       return;
     }
 
-    setChangingPassword(true);
-    try {
-      const response = await settingsApi.changePassword({
-        currentPassword,
-        newPassword
-      });
-
-      if (response.success) {
-        toast.success('Password changed successfully');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setShowPasswordSection(false);
-      }
-    } catch (error) {
-      console.error('Failed to change password:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to change password';
-      toast.error(errorMessage);
-    } finally {
-      setChangingPassword(false);
-    }
+    changePasswordMutation.mutate({
+      currentPassword,
+      newPassword,
+    });
   };
 
   if (loading) {
@@ -397,9 +384,9 @@ const ProfileSettings = () => {
               <div className="flex gap-2">
                 <Button 
                   onClick={handleChangePassword} 
-                  disabled={changingPassword}
+                  disabled={changePasswordMutation.isPending}
                 >
-                  {changingPassword ? 'Changing...' : 'Change Password'}
+                  {changePasswordMutation.isPending ? 'Changing...' : 'Change Password'}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -421,8 +408,8 @@ const ProfileSettings = () => {
       {/* Actions */}
       <div className="flex justify-between">
         <Button variant="outline">Cancel</Button>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Changes'}
+        <Button onClick={handleSave} disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Send, Eye, MousePointer, Users, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -60,11 +61,7 @@ const CampaignAnalytics = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingSkeleton rows={4} showChart={true} />;
   }
 
   if (campaignError) {

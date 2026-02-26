@@ -47,8 +47,8 @@ function LeadsImport() {
       const result = response.data || response
       setImportResult(result)
       toast.success('Import complete!', `${result.imported} of ${result.total} leads imported successfully`)
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'Import failed'
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Import failed'
       toast.error('Import failed', message)
     } finally {
       setUploading(false)

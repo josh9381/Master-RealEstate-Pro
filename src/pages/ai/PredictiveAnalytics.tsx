@@ -21,7 +21,7 @@ import {
 } from 'recharts';
 
 const PredictiveAnalytics = () => {
-  const [selectedPrediction, setSelectedPrediction] = useState<any>(null);
+  const [selectedPrediction, setSelectedPrediction] = useState<{ id: string; title: string; prediction: string; confidence: number; impact: string; status: string; details: string; dataPoints?: number | string } | null>(null);
 
   const defaultPredictiveData = {
     predictions: [] as Array<{ id: string; title: string; prediction: string; confidence: number; impact: string; status: string; details: string; dataPoints?: number }>,
@@ -226,7 +226,7 @@ const PredictiveAnalytics = () => {
           <CardContent>
             {predictions.length > 0 ? (
             <div className="space-y-4 max-h-[250px] overflow-y-auto">
-              {predictions.slice(0, 4).map((prediction: any) => (
+              {predictions.slice(0, 4).map((prediction: { id: string; status: string; title: string; confidence: number; prediction: string; details: string }) => (
                 <div key={prediction.id} className="flex items-start space-x-3 p-3 border rounded-lg">
                   <div
                     className={`p-2 rounded-lg ${
@@ -300,7 +300,7 @@ const PredictiveAnalytics = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {predictions.map((prediction: any) => (
+            {predictions.map((prediction: { id: string; status: string; title: string; confidence: number; prediction: string; details: string; impact: string; dataPoints?: string }) => (
               <div key={prediction.id} className="border rounded-lg">
                 <div className="flex items-center justify-between p-4">
                 <div className="flex items-center space-x-4">

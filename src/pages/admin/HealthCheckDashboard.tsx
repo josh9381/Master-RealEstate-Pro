@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Activity, Database, Cpu, HardDrive, Network, CheckCircle, AlertTriangle, XCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -15,57 +15,43 @@ interface ServiceHealth {
   uptime: string;
 }
 
+const defaultServices: ServiceHealth[] = [
+  { name: 'Database', status: 'checking', latency: '—', uptime: '—' },
+  { name: 'API Server', status: 'checking', latency: '—', uptime: '—' },
+  { name: 'Cache (Redis)', status: 'checking', latency: '—', uptime: '—' },
+  { name: 'Email Service', status: 'checking', latency: '—', uptime: '—' },
+  { name: 'Storage (S3)', status: 'checking', latency: '—', uptime: '—' },
+  { name: 'Search (Elasticsearch)', status: 'checking', latency: '—', uptime: '—' },
+];
+
 const HealthCheckDashboard = () => {
   const { toast } = useToast();
-  const [lastRefresh, setLastRefresh] = useState(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [services, setServices] = useState<ServiceHealth[]>([
-    { name: 'Database', status: 'checking', latency: '—', uptime: '—' },
-    { name: 'API Server', status: 'checking', latency: '—', uptime: '—' },
-    { name: 'Cache (Redis)', status: 'checking', latency: '—', uptime: '—' },
-    { name: 'Email Service', status: 'checking', latency: '—', uptime: '—' },
-    { name: 'Storage (S3)', status: 'checking', latency: '—', uptime: '—' },
-    { name: 'Search (Elasticsearch)', status: 'checking', latency: '—', uptime: '—' },
-  ]);
 
-  const fetchHealthData = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const response = await adminApi.healthCheck();
-      const data = response.data || response;
-
-      if (data.services && Array.isArray(data.services)) {
-        setServices(data.services);
+  const { data: services = defaultServices, isFetching: isRefreshing, refetch, dataUpdatedAt } = useQuery({
+    queryKey: ['admin', 'health'],
+    queryFn: async () => {
+      try {
+        const response = await adminApi.healthCheck();
+        const data = response.data || response;
+        if (data.services && Array.isArray(data.services)) {
+          return data.services as ServiceHealth[];
+        }
+      } catch (error: unknown) {
+        const err = error as { response?: { status?: number } }
+        if (err?.response?.status !== 404) {
+          console.error('Health check failed:', error);
+        }
       }
-      setLastRefresh(new Date());
-    } catch (error: any) {
-      // If health endpoint doesn't exist (404), show unknown state
-      if (error?.response?.status === 404) {
-        setServices(prev => prev.map(s => ({
-          ...s,
-          status: 'checking' as const,
-          latency: 'N/A',
-          uptime: 'N/A',
-        })));
-      } else {
-        console.error('Health check failed:', error);
-        toast.error('Failed to fetch health data');
-      }
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [toast]);
+      return defaultServices;
+    },
+    refetchInterval: AUTO_REFRESH_INTERVAL,
+  });
 
-  // Initial load and auto-refresh every 30 seconds
-  useEffect(() => {
-    fetchHealthData();
-    const interval = setInterval(fetchHealthData, AUTO_REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchHealthData]);
+  const lastRefresh = dataUpdatedAt ? new Date(dataUpdatedAt) : new Date();
 
   const handleRefresh = () => {
     toast.info('Refreshing health checks...');
-    fetchHealthData();
+    refetch();
   };
 
   const healthyCount = services.filter(s => s.status === 'healthy').length;

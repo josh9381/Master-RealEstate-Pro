@@ -1,16 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Shield, Activity, Settings, Loader2 } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { adminApi } from '@/lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const SystemSettings = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [savingGeneral, setSavingGeneral] = useState(false);
-  const [savingSecurity, setSavingSecurity] = useState(false);
+  const queryClient = useQueryClient();
   
   // General Settings
   const [systemName, setSystemName] = useState('Your CRM System');
@@ -29,72 +29,79 @@ const SystemSettings = () => {
   const [maxLoginAttempts, setMaxLoginAttempts] = useState(5);
   const [lockoutDuration, setLockoutDuration] = useState(30);
 
-  // Load settings from API on mount
-  const loadSettings = useCallback(async () => {
-    try {
-      setLoading(true);
+  // Fetch settings via useQuery
+  const { data: settingsData, isLoading: loading } = useQuery({
+    queryKey: ['admin', 'system-settings'],
+    queryFn: async () => {
       const response = await adminApi.getSystemSettings();
-      const data = response.data || response;
-      
-      if (data.general) {
-        setSystemName(data.general.systemName || 'Your CRM System');
-        setSystemUrl(data.general.systemUrl || 'https://crm.yourcompany.com');
-        setSystemDescription(data.general.systemDescription || '');
-        setLanguage(data.general.language || 'en');
-        setTimezone(data.general.timezone || 'America/New_York');
-        setDateFormat(data.general.dateFormat || 'MM/DD/YYYY');
-        setTimeFormat(data.general.timeFormat || '12');
-      }
+      return response.data || response;
+    },
+    retry: false,
+  });
 
-      if (data.security) {
-        setStrongPasswords(data.security.strongPasswords ?? true);
-        setEnable2FA(data.security.enable2FA ?? true);
-        setRequire2FAAdmins(data.security.require2FAAdmins ?? true);
-        setSessionTimeout(data.security.sessionTimeout ?? 60);
-        setMaxLoginAttempts(data.security.maxLoginAttempts ?? 5);
-        setLockoutDuration(data.security.lockoutDuration ?? 30);
-      }
-    } catch (error: any) {
-      // If 404 or no endpoint, use defaults silently
-      if (error?.response?.status !== 404) {
-        console.error('Failed to load system settings:', error);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Sync fetched data into form state
   useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+    if (settingsData) {
+      if (settingsData.general) {
+        setSystemName(settingsData.general.systemName || 'Your CRM System');
+        setSystemUrl(settingsData.general.systemUrl || 'https://crm.yourcompany.com');
+        setSystemDescription(settingsData.general.systemDescription || '');
+        setLanguage(settingsData.general.language || 'en');
+        setTimezone(settingsData.general.timezone || 'America/New_York');
+        setDateFormat(settingsData.general.dateFormat || 'MM/DD/YYYY');
+        setTimeFormat(settingsData.general.timeFormat || '12');
+      }
+      if (settingsData.security) {
+        setStrongPasswords(settingsData.security.strongPasswords ?? true);
+        setEnable2FA(settingsData.security.enable2FA ?? true);
+        setRequire2FAAdmins(settingsData.security.require2FAAdmins ?? true);
+        setSessionTimeout(settingsData.security.sessionTimeout ?? 60);
+        setMaxLoginAttempts(settingsData.security.maxLoginAttempts ?? 5);
+        setLockoutDuration(settingsData.security.lockoutDuration ?? 30);
+      }
+    }
+  }, [settingsData]);
+
+  const saveGeneralMutation = useMutation({
+    mutationFn: async () => {
+      await adminApi.updateSystemSettings({
+        section: 'general',
+        data: { systemName, systemUrl, systemDescription, language, timezone, dateFormat, timeFormat },
+      });
+    },
+    onSuccess: () => {
+      toast.success('General settings saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] });
+    },
+    onError: (error: Error) => {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save general settings';
+      toast.error(message);
+    },
+  });
+
+  const saveSecurityMutation = useMutation({
+    mutationFn: async () => {
+      await adminApi.updateSystemSettings({
+        section: 'security',
+        data: { strongPasswords, enable2FA, require2FAAdmins, sessionTimeout, maxLoginAttempts, lockoutDuration },
+      });
+    },
+    onSuccess: () => {
+      toast.success('Security settings saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] });
+    },
+    onError: (error: Error) => {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save security settings';
+      toast.error(message);
+    },
+  });
   
   const handleSaveGeneralSettings = async () => {
     if (!systemName || !systemUrl) {
       toast.error('System name and URL are required');
       return;
     }
-    
-    setSavingGeneral(true);
-    try {
-      await adminApi.updateSystemSettings({
-        section: 'general',
-        data: {
-          systemName,
-          systemUrl,
-          systemDescription,
-          language,
-          timezone,
-          dateFormat,
-          timeFormat,
-        },
-      });
-      toast.success('General settings saved successfully');
-    } catch (error: any) {
-      const message = error?.response?.data?.message || 'Failed to save general settings';
-      toast.error(message);
-    } finally {
-      setSavingGeneral(false);
-    }
+    saveGeneralMutation.mutate();
   };
   
   const handleSaveSecuritySettings = async () => {
@@ -102,36 +109,11 @@ const SystemSettings = () => {
       toast.error('Please enter valid positive numbers for all fields');
       return;
     }
-
-    setSavingSecurity(true);
-    try {
-      await adminApi.updateSystemSettings({
-        section: 'security',
-        data: {
-          strongPasswords,
-          enable2FA,
-          require2FAAdmins,
-          sessionTimeout,
-          maxLoginAttempts,
-          lockoutDuration,
-        },
-      });
-      toast.success('Security settings saved successfully');
-    } catch (error: any) {
-      const message = error?.response?.data?.message || 'Failed to save security settings';
-      toast.error(message);
-    } finally {
-      setSavingSecurity(false);
-    }
+    saveSecurityMutation.mutate();
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">Loading system settings...</span>
-      </div>
-    );
+    return <LoadingSkeleton rows={4} />;
   }
 
   return (
@@ -277,8 +259,8 @@ const SystemSettings = () => {
               </select>
             </div>
           </div>
-          <Button onClick={handleSaveGeneralSettings} disabled={savingGeneral}>
-            {savingGeneral && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button onClick={handleSaveGeneralSettings} disabled={saveGeneralMutation.isPending}>
+            {saveGeneralMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save General Settings
           </Button>
         </CardContent>
@@ -354,8 +336,8 @@ const SystemSettings = () => {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-          <Button onClick={handleSaveSecuritySettings} disabled={savingSecurity}>
-            {savingSecurity && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button onClick={handleSaveSecuritySettings} disabled={saveSecurityMutation.isPending}>
+            {saveSecurityMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Security Settings
           </Button>
         </CardContent>

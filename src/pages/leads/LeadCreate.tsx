@@ -419,7 +419,7 @@ export default function LeadCreate() {
                   >
                     <option value="">Unassigned</option>
                     {teamMembers.length > 0 ? (
-                      teamMembers.map((member: any) => (
+                      teamMembers.map((member: { id: string; firstName: string; lastName: string }) => (
                         <option key={member.id} value={member.id}>
                           {member.firstName} {member.lastName}
                         </option>

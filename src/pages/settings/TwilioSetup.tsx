@@ -1,15 +1,16 @@
 import { Phone, MessageSquare, Power, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
 import { settingsApi, messagesApi } from '@/lib/api';
 
 const TwilioSetup = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -63,147 +64,93 @@ const TwilioSetup = () => {
   const [enableCallForwarding, setEnableCallForwarding] = useState(true);
   const [enableVoicemailTranscription, setEnableVoicemailTranscription] = useState(true);
 
-  // Load functions defined before useEffect to avoid hoisting issues
-  const loadCurrentUser = async () => {
-    try {
-      const response = await settingsApi.getProfile();
-      // Handle different response structures
-      const user = response?.data?.user || response?.data || response;
-      
-      if (user?.id) {
-        setUserId(user.id);
-      } else {
-        console.error('No user ID found in response');
-        toast.error('Failed to load user ID. Using fallback method.');
-        
-        // Fallback: decode JWT token to get user ID
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            if (payload.userId) {
-              setUserId(payload.userId);
-            }
-          } catch (e) {
-            console.error('Failed to decode JWT:', e);
+  // Load current user profile
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const response = await settingsApi.getProfile();
+        const user = response?.data?.user || response?.data || response;
+        if (user?.id) {
+          setUserId(user.id);
+        } else {
+          const token = localStorage.getItem('accessToken');
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              if (payload.userId) setUserId(payload.userId);
+            } catch (e) { console.error('Failed to decode JWT:', e); }
           }
         }
+      } catch (error) {
+        console.error('Failed to load user:', error);
       }
-    } catch (error) {
-      console.error('Failed to load user:', error);
-      toast.error('Failed to load user profile');
-    }
-  };
-
-  const loadTwilioConfig = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    
-    try {
-      const response = await settingsApi.getSMSConfig();
-      // Response structure: { config: { accountSid, authToken, ... } }
-      const config = response?.config || response; // Handle both structures
-      
-      if (config) {
-        // Show masked Account SID if it exists
-        // Backend returns masked format (AC1234••••7890) or null
-        if (config.accountSid) {
-          setAccountSid(config.accountSid); // Full Account SID from backend
-        } else {
-          setAccountSid('');
-        }
-        
-        // Auth token is NEVER returned from backend
-        // If it exists, backend returns '••••••••', keep empty so user can enter new
-        setAuthToken(''); // Always empty - user enters new token to update
-        
-        // Update last updated timestamp
-        if (config.updatedAt) {
-          setLastUpdated(config.updatedAt);
-        }
-        
-        // Set phone number from config
-        setPhoneNumber(config.phoneNumber || '');
-        
-        // Update phone numbers list
-        if (config.phoneNumber) {
-          setPhoneNumbers([{
-            id: '1',
-            number: config.phoneNumber,
-            type: 'Configured',
-            capabilities: ['SMS', 'Voice'],
-            status: config.isActive ? 'active' : 'inactive',
-          }]);
-        } else {
-          setPhoneNumbers([]);
-        }
-        
-        // Use hasCredentials from backend (true if both accountSid and authToken exist)
-        const credentialsExist = config.hasCredentials || false;
-        setHasCredentials(credentialsExist);
-        
-        setConnected(!!config.isActive && credentialsExist);
-        setIsConfigured(config.isActive && credentialsExist);
-        setConfigMode(credentialsExist ? 'production' : 'mock');
-      }
-      if (isRefresh) toast.success('Settings refreshed');
-    } catch (error) {
-      console.error('Failed to load Twilio config:', error);
-      toast.error('Failed to load settings, using defaults');
-      setConfigMode('mock');
-      setIsConfigured(false);
-      setHasCredentials(false);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const loadUsageStats = async () => {
-    try {
-      const response = await messagesApi.getStats();
-      const stats = response?.data;
-      
-      if (stats) {
-        // Count messages by type
-        const smsCount = stats.byType?.find((t: { type: string; count: number }) => t.type === 'SMS')?.count || 0;
-        const emailCount = stats.byType?.find((t: { type: string; count: number }) => t.type === 'EMAIL')?.count || 0;
-        const callCount = stats.byType?.find((t: { type: string; count: number }) => t.type === 'CALL')?.count || 0;
-        
-        // Estimated costs (these are approximate)
-        const smsCost = smsCount * 0.01; // $0.01 per SMS
-        const callCost = callCount * 0.1; // $0.10 per call (assuming 1 min avg)
-        const numberCost = 3.00; // $1 per number per month
-        const totalCost = smsCost + callCost + numberCost;
-        
-        setUsageStats({
-          smsCount,
-          emailCount,
-          callCount,
-          totalCost,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load usage stats:', error);
-      // Keep default values (0) if it fails
-    }
-  };
-
-  // Load data on component mount
-  useEffect(() => {
-    const initializeData = async () => {
-      await loadCurrentUser();
-      await loadTwilioConfig();
-      await loadUsageStats();
     };
-    
-    initializeData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadCurrentUser();
   }, []);
 
+  const { data: twilioConfigData, isLoading: loading, isFetching, refetch: refetchConfig } = useQuery({
+    queryKey: ['settings', 'twilio', 'config'],
+    queryFn: async () => {
+      const response = await settingsApi.getSMSConfig();
+      return response?.config || response;
+    },
+  });
+
+  const { data: usageData, refetch: refetchUsage } = useQuery({
+    queryKey: ['settings', 'twilio', 'usage'],
+    queryFn: async () => {
+      const response = await messagesApi.getStats();
+      return response?.data;
+    },
+  });
+
+  // Sync Twilio config to form state
+  useEffect(() => {
+    if (!twilioConfigData) return;
+    const config = twilioConfigData;
+    if (config.accountSid) {
+      setAccountSid(config.accountSid);
+    } else {
+      setAccountSid('');
+    }
+    setAuthToken('');
+    if (config.updatedAt) setLastUpdated(config.updatedAt);
+    setPhoneNumber(config.phoneNumber || '');
+    if (config.phoneNumber) {
+      setPhoneNumbers([{
+        id: '1',
+        number: config.phoneNumber,
+        type: 'Configured',
+        capabilities: ['SMS', 'Voice'],
+        status: config.isActive ? 'active' : 'inactive',
+      }]);
+    } else {
+      setPhoneNumbers([]);
+    }
+    const credentialsExist = config.hasCredentials || false;
+    setHasCredentials(credentialsExist);
+    setConnected(!!config.isActive && credentialsExist);
+    setIsConfigured(config.isActive && credentialsExist);
+    setConfigMode(credentialsExist ? 'production' : 'mock');
+  }, [twilioConfigData]);
+
+  // Sync usage stats to state
+  useEffect(() => {
+    if (!usageData) return;
+    const stats = usageData;
+    const smsCount = stats.byType?.find((t: { type: string; count: number }) => t.type === 'SMS')?.count || 0;
+    const emailCount = stats.byType?.find((t: { type: string; count: number }) => t.type === 'EMAIL')?.count || 0;
+    const callCount = stats.byType?.find((t: { type: string; count: number }) => t.type === 'CALL')?.count || 0;
+    const smsCost = smsCount * 0.01;
+    const callCost = callCount * 0.1;
+    const numberCost = 3.00;
+    const totalCost = smsCost + callCost + numberCost;
+    setUsageStats({ smsCount, emailCount, callCount, totalCost });
+  }, [usageData]);
+
   const handleRefresh = () => {
-    loadTwilioConfig(true);
-    loadUsageStats();
+    refetchConfig();
+    refetchUsage();
   };
 
   const handleSaveCredentials = async () => {
@@ -236,7 +183,7 @@ const TwilioSetup = () => {
 
     setSaving(true);
     try {
-      const updateData: Record<string, any> = {
+      const updateData: Record<string, string | boolean> = {
         provider: 'twilio',
         isActive: true
       };
@@ -264,10 +211,11 @@ const TwilioSetup = () => {
       
       toast.success(successMsg);
       setConnected(true);
-      await loadTwilioConfig(); // Reload to get updated values
-    } catch (error: any) {
+      await queryClient.invalidateQueries({ queryKey: ['settings', 'twilio', 'config'] });
+    } catch (error: unknown) {
       console.error('Failed to save credentials:', error);
-      const errorMsg = error?.response?.data?.error || 'Failed to save credentials';
+      const err = error as { response?: { data?: { error?: string } } }
+      const errorMsg = err?.response?.data?.error || 'Failed to save credentials';
       toast.error(errorMsg);
     } finally {
       setSaving(false);
@@ -330,10 +278,11 @@ const TwilioSetup = () => {
       setConfigMode('mock');
       setPhoneNumbers([]);
       
-      loadTwilioConfig(); // Reload to confirm
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'twilio', 'config'] });
+    } catch (error: unknown) {
       console.error('Failed to delete credentials:', error);
-      const errorMsg = error?.response?.data?.error || 'Failed to delete credentials';
+      const err = error as { response?: { data?: { error?: string } } }
+      const errorMsg = err?.response?.data?.error || 'Failed to delete credentials';
       toast.error(errorMsg);
     } finally {
       setSaving(false);
@@ -347,14 +296,7 @@ const TwilioSetup = () => {
   return (
     <div className="space-y-6">
       {loading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Loading Twilio configuration...</p>
-            </div>
-          </CardContent>
-        </Card>
+        <LoadingSkeleton rows={3} />
       ) : (
         <>
       <div className="flex items-center justify-between">
@@ -364,8 +306,8 @@ const TwilioSetup = () => {
             Configure Twilio for SMS and phone call functionality
           </p>
         </div>
-        <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+        <Button variant="outline" onClick={handleRefresh} disabled={isFetching}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching && !loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>

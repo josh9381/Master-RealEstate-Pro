@@ -1,4 +1,5 @@
-import { CreditCard, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
+import { CreditCard, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -47,8 +48,9 @@ export default function BillingSubscriptionPage() {
         toast.info(data.message || 'Checkout session created')
       }
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Failed to start checkout'
+    onError: (error: Error) => {
+      const err = error as { response?: { data?: { message?: string } } }
+      const message = err?.response?.data?.message || 'Failed to start checkout'
       if (message.includes('not configured')) {
         toast.warning('Stripe is not configured. Set STRIPE_SECRET_KEY to enable billing.')
       } else {
@@ -67,8 +69,9 @@ export default function BillingSubscriptionPage() {
         toast.info(data.message || 'Billing portal opened')
       }
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Failed to open billing portal'
+    onError: (error: Error) => {
+      const err = error as { response?: { data?: { message?: string } } }
+      const message = err?.response?.data?.message || 'Failed to open billing portal'
       if (message.includes('not configured')) {
         toast.warning('Stripe is not configured. Set STRIPE_SECRET_KEY to enable billing management.')
       } else {
@@ -162,10 +165,7 @@ export default function BillingSubscriptionPage() {
       {/* Current Plan */}
       <Card className="p-6">
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">Loading subscription...</span>
-          </div>
+          <LoadingSkeleton rows={3} />
         ) : (
           <>
             <div className="flex items-start justify-between mb-6">
@@ -247,14 +247,14 @@ export default function BillingSubscriptionPage() {
           <p className="text-muted-foreground py-4">No invoices yet.</p>
         ) : (
           <div className="space-y-3">
-            {invoices.map((invoice: any) => (
+            {invoices.map((invoice: { id: string; description?: string; createdAt?: string; created?: string; amount?: number; amountDue?: number; status: string }) => (
               <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <CreditCard className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <div className="font-medium">{invoice.description || invoice.id}</div>
                     <div className="text-sm text-muted-foreground">
-                      {new Date(invoice.createdAt || invoice.created).toLocaleDateString()}
+                      {new Date(invoice.createdAt || invoice.created || '').toLocaleDateString()}
                     </div>
                   </div>
                 </div>

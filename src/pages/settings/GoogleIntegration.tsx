@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Chrome, Calendar, Mail, Shield, CheckCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,8 +9,7 @@ import { settingsApi } from '@/lib/api';
 
 const GoogleIntegration = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [connected, setConnected] = useState(true);
   const [connectedEmail, setConnectedEmail] = useState('');
@@ -31,32 +31,23 @@ const GoogleIntegration = () => {
   const [syncContacts, setSyncContacts] = useState(true);
   const [autoImport, setAutoImport] = useState(false);
 
-  useEffect(() => {
-    loadIntegrationSettings();
-  }, []);
-
-  const loadIntegrationSettings = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    
-    try {
+  const { data: integrationData, isLoading: loading, isFetching, refetch } = useQuery({
+    queryKey: ['settings', 'integration', 'google'],
+    queryFn: async () => {
       const status = await settingsApi.getIntegrationStatus('google');
-      if (status) {
-        setConnected(status.connected ?? true);
-        setConnectedEmail(status.email || status.account?.email || '');
-        setConnectedDate(status.connectedAt || status.connectedDate || '');
-      }
-      if (isRefresh) toast.success('Settings refreshed');
-    } catch (error) {
-      console.error('Failed to load Google integration:', error);
-      toast.error('Failed to load settings, using defaults');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      return status;
+    },
+  });
 
-  const handleRefresh = () => loadIntegrationSettings(true);
+  useEffect(() => {
+    if (integrationData) {
+      setConnected(integrationData.connected ?? true);
+      setConnectedEmail(integrationData.email || integrationData.account?.email || '');
+      setConnectedDate(integrationData.connectedAt || integrationData.connectedDate || '');
+    }
+  }, [integrationData]);
+
+  const handleRefresh = () => refetch();
   
   const handleConnect = async () => {
     setSaving(true);
@@ -64,7 +55,7 @@ const GoogleIntegration = () => {
       await settingsApi.connectIntegration('google', {});
       setConnected(true);
       toast.success('Connected to Google Workspace successfully');
-      loadIntegrationSettings(); // Reload
+      queryClient.invalidateQueries({ queryKey: ['settings', 'integration', 'google'] });
     } catch (error) {
       console.error('Failed to connect:', error);
       toast.error('Failed to connect to Google');
@@ -98,6 +89,7 @@ const GoogleIntegration = () => {
         contacts: { enabled: contactsEnabled, syncContacts, autoImport },
       });
       toast.success('Google integration settings saved');
+      queryClient.invalidateQueries({ queryKey: ['settings', 'integration', 'google'] });
     } catch (error) {
       toast.error('Failed to save settings');
     } finally {
@@ -125,8 +117,8 @@ const GoogleIntegration = () => {
             Connect Google services for enhanced functionality
           </p>
         </div>
-        <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+        <Button variant="outline" onClick={handleRefresh} disabled={isFetching}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching && !loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>

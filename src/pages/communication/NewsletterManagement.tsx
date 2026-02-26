@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Mail, Users, Send, Calendar, BarChart3, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -6,9 +7,13 @@ import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast'
 import { messagesApi } from '@/lib/api'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
+import { useNavigate } from 'react-router-dom'
 
 const NewsletterManagement = () => {
   const { toast } = useToast()
+  const navigate = useNavigate()
+  const [reportView, setReportView] = useState<string | null>(null)
+  const [sendingId, setSendingId] = useState<string | null>(null)
 
   const { data: newsletters = [], isLoading: loading, isFetching, refetch } = useQuery({
     queryKey: ['newsletter-management'],
@@ -164,7 +169,9 @@ const NewsletterManagement = () => {
                   <div className="flex items-center space-x-2 ml-4">
                     {newsletter.status === 'sent' ? (
                       <>
-                        <Button variant="outline" size="sm" onClick={() => toast.info(`Viewing report for "${newsletter.name}"`)}>
+                        <Button variant="outline" size="sm" onClick={() => {
+                          setReportView(reportView === newsletter.id ? null : newsletter.id);
+                        }}>
                           View Report
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => {
@@ -176,22 +183,62 @@ const NewsletterManagement = () => {
                       </>
                     ) : (
                       <>
-                        <Button variant="outline" size="sm" onClick={() => toast.info(`Editing "${newsletter.name}"`)}>
+                        <Button variant="outline" size="sm" onClick={() => {
+                          navigate(`/communication/campaigns?edit=${newsletter.id}`);
+                        }}>
                           Edit
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => toast.info(`Sending "${newsletter.name}" now...`)}>
-                          Send Now
+                        <Button variant="outline" size="sm" disabled={sendingId === newsletter.id} onClick={async () => {
+                          setSendingId(newsletter.id);
+                          try {
+                            await messagesApi.sendEmail({
+                              newsletterId: newsletter.id,
+                              subject: newsletter.subject,
+                              sendNow: true,
+                            });
+                            toast.success(`"${newsletter.name}" sent successfully`);
+                            refetch();
+                          } catch {
+                            toast.error(`Failed to send "${newsletter.name}"`);
+                          } finally {
+                            setSendingId(null);
+                          }
+                        }}>
+                          {sendingId === newsletter.id ? 'Sending...' : 'Send Now'}
                         </Button>
                       </>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => {
-                      toast.success(`Deleted "${newsletter.name}"`);
+                      toast.success(`Deleted "${newsletter.name}"`);  
                       refetch();
                     }}>
                       Delete
                     </Button>
                   </div>
                 </div>
+                {reportView === newsletter.id && (
+                  <div className="mt-3 p-4 bg-muted/50 rounded-lg">
+                    <h5 className="font-semibold text-sm mb-3">Report: {newsletter.name}</h5>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div className="p-2 border rounded text-center">
+                        <div className="text-muted-foreground text-xs">Subscribers</div>
+                        <div className="font-bold">{newsletter.subscribers?.toLocaleString() || 0}</div>
+                      </div>
+                      <div className="p-2 border rounded text-center">
+                        <div className="text-muted-foreground text-xs">Open Rate</div>
+                        <div className="font-bold">{newsletter.openRate || 0}%</div>
+                      </div>
+                      <div className="p-2 border rounded text-center">
+                        <div className="text-muted-foreground text-xs">Click Rate</div>
+                        <div className="font-bold">{newsletter.clickRate || 0}%</div>
+                      </div>
+                      <div className="p-2 border rounded text-center">
+                        <div className="text-muted-foreground text-xs">Sent Date</div>
+                        <div className="font-bold">{newsletter.sendDate || '—'}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

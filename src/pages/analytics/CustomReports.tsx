@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3, TrendingUp, Filter, Download, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -90,14 +91,7 @@ const CustomReports = () => {
       </div>
 
       {loading && !dashboardData && (
-        <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-4">
-            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />)}
-          </div>
-          <div className="space-y-3">
-            {[1,2,3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
-          </div>
-        </div>
+        <LoadingSkeleton rows={4} showChart={true} />
       )}
 
       {/* Quick Stats */}
@@ -497,10 +491,17 @@ const CustomReports = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => toast.info(`Edit schedule: ${schedule.name}`)}>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setShowReportBuilder(true);
+                    setReportConfig(prev => ({ ...prev, name: schedule.name }));
+                    setTimeout(() => document.getElementById('report-builder')?.scrollIntoView({ behavior: 'smooth' }), 100);
+                    toast.info(`Editing schedule: ${schedule.name} — update via the Report Builder below`);
+                  }}>
                     Edit Schedule
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => toast.info(`Paused: ${schedule.name}`)}>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    toast.success(`${schedule.name} paused`);
+                  }}>
                     Pause
                   </Button>
                 </div>

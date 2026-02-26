@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import express, { Express, Request, Response } from 'express'
+import { createServer } from 'http'
 import cors from 'cors'
 import helmet from 'helmet'
 import cron from 'node-cron'
@@ -51,10 +52,14 @@ import { generalLimiter } from './middleware/rateLimiter'
 import { authenticate } from './middleware/auth'
 import { requireAdminOrManager } from './middleware/admin'
 import { logger } from './lib/logger'
+import { getRedisClient, isRedisConnected, closeRedis } from './config/redis'
+import { initSocketServer } from './config/socket'
+import { setupSwagger } from './config/swagger'
 import * as Sentry from '@sentry/node'
 
 // Initialize express app
 const app: Express = express()
+const httpServer = createServer(app)
 const PORT = process.env.PORT || 8000
 
 // #109: Initialize Sentry for error tracking (if DSN configured)
@@ -118,6 +123,7 @@ app.get('/health', async (req: Request, res: Response) => {
   const checks: Record<string, string> = {
     database: 'unknown',
     sendgrid: 'unknown',
+    redis: 'unknown',
   }
 
   let overallStatus: 'ok' | 'degraded' | 'error' = 'ok'
@@ -133,6 +139,14 @@ app.get('/health', async (req: Request, res: Response) => {
 
   // Check SendGrid API key presence (does not make an API call)
   checks.sendgrid = process.env.SENDGRID_API_KEY ? 'configured' : 'not_configured'
+
+  // Check Redis connectivity
+  if (process.env.REDIS_ENABLED === 'true') {
+    checks.redis = isRedisConnected() ? 'connected' : 'disconnected'
+    if (!isRedisConnected()) overallStatus = overallStatus === 'error' ? 'error' : 'degraded'
+  } else {
+    checks.redis = 'disabled'
+  }
 
   // Memory usage
   const mem = process.memoryUsage()
@@ -199,6 +213,9 @@ app.get('/api', (req: Request, res: Response) => {
   })
 })
 
+// Swagger API documentation — must be before auth-protected routes
+setupSwagger(app)
+
 // Mount routes
 app.use('/api/auth', authRoutes)
 app.use('/api/leads', leadRoutes)
@@ -243,9 +260,18 @@ if (process.env.SENTRY_DSN) {
 // Global error handler (must be last)
 app.use(errorHandler)
 
+// Initialise Socket.io for real-time events
+initSocketServer(httpServer)
+
 // Start server
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   logger.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, 'Server started')
+
+  // Initialize Redis (non-blocking — caching degrades gracefully)
+  if (process.env.REDIS_ENABLED === 'true') {
+    getRedisClient()
+    logger.info('Redis caching enabled')
+  }
   
   // Initialize cron jobs
   logger.info('Starting scheduled jobs...')

@@ -34,7 +34,7 @@ export default function ActivityPage() {
   const leads = useMemo(() => {
     const raw = leadsResponse?.data?.leads || leadsResponse?.leads || leadsResponse || []
     if (!Array.isArray(raw)) return []
-    return raw.map((l: any) => ({
+    return raw.map((l: { id: string; firstName?: string; lastName?: string; email?: string }) => ({
       id: l.id,
       name: `${l.firstName || ''} ${l.lastName || ''}`.trim() || l.email || 'Unknown',
     }))
@@ -42,7 +42,7 @@ export default function ActivityPage() {
 
   // Build API query params
   const queryParams = useMemo(() => {
-    const params: Record<string, any> = {
+    const params: Record<string, string | number> = {
       page,
       limit: PAGE_SIZE,
     }
@@ -120,7 +120,7 @@ export default function ActivityPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   // Client-side search filter (search is on top of server-side filters)
-  const filteredActivities = activities.filter((activity: any) => {
+  const filteredActivities = activities.filter((activity: typeof activities[number]) => {
     if (searchTerm && !activity.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
         !activity.description.toLowerCase().includes(searchTerm.toLowerCase())) return false
     return true
@@ -133,7 +133,7 @@ export default function ActivityPage() {
       return
     }
     const headers = ['Type', 'Title', 'Description', 'User', 'Date']
-    const rows = activities.map((a: any) => [
+    const rows = activities.map((a: typeof activities[number]) => [
       a.type,
       `"${(a.title || '').replace(/"/g, '""')}"`,
       `"${(a.description || '').replace(/"/g, '""')}"`,
@@ -182,15 +182,15 @@ export default function ActivityPage() {
           <div className="text-sm text-muted-foreground">Total Activities</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'email').length}</div>
+          <div className="text-2xl font-bold">{activities.filter((a: typeof activities[number]) => a.type === 'email').length}</div>
           <div className="text-sm text-muted-foreground">Emails Sent</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'call').length}</div>
+          <div className="text-2xl font-bold">{activities.filter((a: typeof activities[number]) => a.type === 'call').length}</div>
           <div className="text-sm text-muted-foreground">Calls Made</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: any) => a.type === 'meeting').length}</div>
+          <div className="text-2xl font-bold">{activities.filter((a: typeof activities[number]) => a.type === 'meeting').length}</div>
           <div className="text-sm text-muted-foreground">Meetings</div>
         </Card>
       </div>
@@ -259,7 +259,7 @@ export default function ActivityPage() {
                 onChange={(e) => { setSelectedLeadId(e.target.value); setPage(1) }}
               >
                 <option value="">All Leads</option>
-                {leads.map((l: any) => (
+                {leads.map((l: { id: string; name: string }) => (
                   <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
@@ -305,7 +305,7 @@ export default function ActivityPage() {
         </div>
         
         <div className="space-y-6">
-          {filteredActivities.map((activity: any, index: number) => {
+          {filteredActivities.map((activity: typeof activities[number], index: number) => {
             const Icon = activity.icon
             
             return (

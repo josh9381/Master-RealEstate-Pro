@@ -136,7 +136,7 @@ const LeadScoring = () => {
         }) || []
         const totalLeads = leadsResponse.data?.total || scoredLeads.length
         
-        const highQualityCount = scoredLeads.filter((l: any) => l.score >= 80).length
+        const highQualityCount = scoredLeads.filter((l: { score: number }) => l.score >= 80).length
         let scoringStats = {
           accuracy: 0,
           leadsScored: totalLeads,

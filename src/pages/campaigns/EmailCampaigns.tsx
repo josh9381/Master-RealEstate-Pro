@@ -22,14 +22,10 @@ const EmailCampaigns = () => {
       const emailCampaigns = response.data?.campaigns || response.campaigns || [];
       
       // Calculate stats from real data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const scheduled = emailCampaigns.filter((c: any) => c.status === 'SCHEDULED').length;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalSent = emailCampaigns.reduce((sum: number, c: any) => sum + (c.sent || c.recipientCount || 0), 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalOpened = emailCampaigns.reduce((sum: number, c: any) => sum + (c.opens || c.opened || 0), 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalClicked = emailCampaigns.reduce((sum: number, c: any) => sum + (c.clicks || c.clicked || 0), 0);
+      const scheduled = emailCampaigns.filter((c: Campaign) => c.status === 'SCHEDULED').length;
+      const totalSent = emailCampaigns.reduce((sum: number, c: Campaign) => sum + (c.sent || c.recipientCount || 0), 0);
+      const totalOpened = emailCampaigns.reduce((sum: number, c: Campaign) => sum + (c.opened || 0), 0);
+      const totalClicked = emailCampaigns.reduce((sum: number, c: Campaign) => sum + (c.clicks || c.clicked || 0), 0);
 
       return {
         campaigns: emailCampaigns,

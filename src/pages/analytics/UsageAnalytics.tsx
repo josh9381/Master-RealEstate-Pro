@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Clock, Users, Zap, RefreshCw } from 'lucide-react';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -94,16 +95,7 @@ const UsageAnalytics = () => {
     : [] as { feature: string; usage: number; percentage: number }[];
 
   if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-10 bg-muted rounded w-48" />
-        <div className="grid gap-4 md:grid-cols-4">
-          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-muted rounded" />)}
-        </div>
-        <div className="h-64 bg-muted rounded" />
-        <div className="h-48 bg-muted rounded" />
-      </div>
-    );
+    return <LoadingSkeleton rows={4} showChart={true} />;
   }
 
   return (
@@ -367,11 +359,11 @@ const UsageAnalytics = () => {
               <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted text-sm font-medium">
-                    {(activity.userName || activity.user || 'S').charAt(0)}
+                    {(activity.userName || (typeof activity.user === 'object' && activity.user !== null ? activity.user.firstName || activity.user.name : activity.user) || 'S').toString().charAt(0)}
                   </div>
                   <div>
                     <p className="text-sm">
-                      <span className="font-medium">{activity.userName || activity.user || 'System'}</span>{' '}
+                      <span className="font-medium">{activity.userName || (typeof activity.user === 'object' && activity.user !== null ? `${activity.user.firstName || ''} ${activity.user.lastName || ''}`.trim() || activity.user.name : activity.user) || 'System'}</span>{' '}
                       {activity.description || activity.action || 'performed an action'}
                     </p>
                     <p className="text-xs text-muted-foreground">

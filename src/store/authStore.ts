@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, UserPermissions } from '@/types'
 import { authApi, type LoginData, type RegisterData } from '@/lib/api'
+import { disconnectSocket } from '@/hooks/useSocket'
 
 interface AuthState {
   user: User | null
@@ -55,6 +56,7 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () => {
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
+        disconnectSocket()
         set({ 
           user: null, 
           accessToken: null, 

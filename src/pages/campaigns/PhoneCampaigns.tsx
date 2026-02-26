@@ -18,12 +18,9 @@ const PhoneCampaigns = () => {
       const phoneCampaigns = response.data?.campaigns || response.campaigns || [];
       
       // Compute real stats from campaign data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalCalls = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.sent || 0), 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalAnswered = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.opened || 0), 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const totalConversions = phoneCampaigns.reduce((sum: number, c: any) => sum + (c.converted || 0), 0);
+      const totalCalls = phoneCampaigns.reduce((sum: number, c: Campaign) => sum + (c.sent || 0), 0);
+      const totalAnswered = phoneCampaigns.reduce((sum: number, c: Campaign) => sum + (c.opened || 0), 0);
+      const totalConversions = phoneCampaigns.reduce((sum: number, c: Campaign) => sum + (c.converted || 0), 0);
 
       return {
         campaigns: phoneCampaigns,

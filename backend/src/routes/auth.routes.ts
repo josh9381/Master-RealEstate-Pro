@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, refresh, me, forgotPassword, resetPassword, logout } from '../controllers/auth.controller';
+import { register, login, refresh, me, forgotPassword, resetPassword, logout, getActiveSessions, terminateSession } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 import { validateBody } from '../middleware/validate';
 import { registerSchema, loginSchema, refreshSchema } from '../validators/auth.validator';
@@ -86,6 +86,28 @@ router.post(
   '/logout',
   authenticate,
   asyncHandler(logout)
+);
+
+/**
+ * @route   GET /api/auth/sessions
+ * @desc    Get all active sessions for the current user
+ * @access  Private (requires authentication)
+ */
+router.get(
+  '/sessions',
+  authenticate,
+  asyncHandler(getActiveSessions)
+);
+
+/**
+ * @route   DELETE /api/auth/sessions/:sessionId
+ * @desc    Terminate a specific session
+ * @access  Private (requires authentication)
+ */
+router.delete(
+  '/sessions/:sessionId',
+  authenticate,
+  asyncHandler(terminateSession)
 );
 
 export default router;

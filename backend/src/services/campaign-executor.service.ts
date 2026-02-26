@@ -6,6 +6,7 @@
 import { prisma } from '../config/database';
 import { sendBulkEmails } from './email.service';
 import { sendBulkSMS } from './sms.service';
+import { pushCampaignUpdate } from '../config/socket';
 import Handlebars from 'handlebars';
 
 interface CampaignExecutionOptions {
@@ -68,6 +69,13 @@ export async function executeCampaign(
 
     console.log(`[CAMPAIGN] Executing campaign ${campaign.name} to ${leads.length} leads`);
 
+    // Set campaign status to SENDING before execution begins
+    // This prevents confusion if execution crashes mid-send
+    await prisma.campaign.update({
+      where: { id: campaignId },
+      data: { status: 'SENDING' },
+    });
+
     // A/B Test: Split audience 50/50 if campaign is an A/B test
     let result: { success: number; failed: number };
 
@@ -95,6 +103,15 @@ export async function executeCampaign(
     console.log(
       `[CAMPAIGN] Completed: ${result.success} sent, ${result.failed} failed`
     );
+
+    // Push real-time campaign completion event
+    pushCampaignUpdate(campaign.organizationId, {
+      id: campaignId,
+      name: campaign.name,
+      status: 'ACTIVE',
+      sent: result.success,
+      failed: result.failed,
+    });
 
     return {
       success: true,

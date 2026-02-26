@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Download, FileText, Database, Filter, Calendar } from 'lucide-react';
+import { Download, FileText, Database, Filter, Calendar, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { exportApi } from '@/lib/api';
 
 const DataExportWizard = () => {
   const { toast } = useToast();
@@ -15,16 +16,40 @@ const DataExportWizard = () => {
     toast.success(`${dataType} selected for export`);
   };
 
-  const handleExport = () => {
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
     if (!selectedDataType) {
       toast.error('Please select a data type to export');
       return;
     }
-    
-    toast.info(`Preparing ${selectedDataType} export in ${selectedFormat.toUpperCase()} format...`);
-    setTimeout(() => {
+
+    const typeMap: Record<string, 'leads' | 'campaigns' | 'activities'> = {
+      'Leads': 'leads',
+      'Contacts': 'leads',
+      'Campaigns': 'campaigns',
+      'Activities': 'activities',
+      'Tasks': 'activities',
+      'Analytics': 'leads',
+    };
+    const exportType = typeMap[selectedDataType] || 'leads';
+    const format = selectedFormat === 'csv' ? 'csv' : 'xlsx';
+
+    setExporting(true);
+    toast.info(`Preparing ${selectedDataType} export in ${format.toUpperCase()} format...`);
+    try {
+      await exportApi.download(exportType, format as 'csv' | 'xlsx');
       toast.success(`${selectedDataType} data exported successfully!`);
-    }, 2000);
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: { message?: string } } };
+      if (err?.response?.status === 404) {
+        toast.error('Export endpoint not available — please check backend setup');
+      } else {
+        toast.error(err?.response?.data?.message || `Failed to export ${selectedDataType}`);
+      }
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -385,9 +410,9 @@ const DataExportWizard = () => {
             <Button variant="outline">Save as Template</Button>
             <div className="flex space-x-2">
               <Button variant="outline">Preview</Button>
-              <Button onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export Data
+              <Button onClick={handleExport} disabled={exporting}>
+                {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                {exporting ? 'Exporting...' : 'Export Data'}
               </Button>
             </div>
           </div>

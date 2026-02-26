@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Brain, Activity, Play, RefreshCw, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { aiApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { useQuery } from '@tanstack/react-query';
 import {
   Table,
   TableBody,
@@ -16,7 +17,6 @@ import {
 
 const ModelTraining = () => {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
   const [recalibrating, setRecalibrating] = useState(false)
   const [recalibrationResult, setRecalibrationResult] = useState<{
     oldAccuracy: number
@@ -24,39 +24,15 @@ const ModelTraining = () => {
     improvementPct: number
     leadsAnalyzed: number
   } | null>(null)
-  const [models, setModels] = useState<Array<{
-    id: string | number;
-    name: string;
-    type: string;
-    status: string;
-    accuracy: number;
-    lastTrained: string;
-    trainingTime?: string;
-    dataPoints?: number;
-  }>>([])
 
-  useEffect(() => {
-    const fetchData = async () => {
-      await loadTrainingModels()
-    }
-    fetchData()
-  }, [])
-
-  const loadTrainingModels = async () => {
-    setLoading(true)
-    try {
+  const { data: models = [], isLoading: loading, refetch: refetchModels } = useQuery({
+    queryKey: ['ai', 'training-models'],
+    queryFn: async () => {
       const data = await aiApi.getTrainingModels()
       const models = data?.data || []
-      if (Array.isArray(models)) {
-        setModels(models)
-      }
-    } catch (error) {
-      const err = error as Error
-      toast.error(err.message || 'Failed to load training models')
-    } finally {
-      setLoading(false)
-    }
-  }
+      return Array.isArray(models) ? models : []
+    },
+  })
 
   const handleRecalibrate = async () => {
     setRecalibrating(true)
@@ -73,7 +49,7 @@ const ModelTraining = () => {
             setRecalibrating(false)
             setRecalibrationResult(status.data.result)
             toast.success(`Recalibration complete! Accuracy: ${status.data.result?.oldAccuracy}% → ${status.data.result?.newAccuracy}%`)
-            loadTrainingModels() // Refresh model list
+            refetchModels() // Refresh model list
           } else if (status.data?.status === 'failed') {
             clearInterval(poll)
             setRecalibrating(false)
@@ -143,7 +119,7 @@ const ModelTraining = () => {
             {recalibrating ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Brain className="h-4 w-4 mr-2" />}
             {recalibrating ? 'Recalibrating...' : 'Recalibrate Model'}
           </Button>
-          <Button onClick={loadTrainingModels} disabled={loading}>
+          <Button onClick={() => refetchModels()} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             {loading ? 'Loading...' : 'Refresh'}
           </Button>

@@ -511,7 +511,7 @@ const ComplianceSettings = () => {
             </label>
           </div>
           <div className="space-y-3">
-            {auditLogs.length > 0 ? auditLogs.map((log: any, index: number) => (
+            {auditLogs.length > 0 ? auditLogs.map((log: { id?: string; type?: string; title?: string; user?: { firstName?: string; lastName?: string }; createdAt?: string }, index: number) => (
               <div key={log.id || index} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   {log.type?.includes('STATUS') ? <AlertTriangle className="h-5 w-5 text-orange-600" /> :

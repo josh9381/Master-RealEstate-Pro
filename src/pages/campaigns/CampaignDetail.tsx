@@ -763,10 +763,17 @@ function CampaignDetail() {
 
       {/* Full Content Modal */}
       {showContentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-4xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="content-modal-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowContentModal(false) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowContentModal(false) }}
+        >
+          <div className="bg-background rounded-lg p-6 max-w-4xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto" ref={(el) => { if (el) el.focus() }} tabIndex={-1}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold">Full Campaign Content</h3>
+              <h3 id="content-modal-title" className="text-xl font-semibold">Full Campaign Content</h3>
               <button
                 onClick={() => setShowContentModal(false)}
                 className="text-muted-foreground hover:text-foreground"
@@ -801,10 +808,17 @@ function CampaignDetail() {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-modal-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowEditModal(false) }}
+        >
+          <div className="bg-background rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto" ref={(el) => { if (el) el.focus() }} tabIndex={-1}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold">Edit Campaign</h3>
+              <h3 id="edit-modal-title" className="text-xl font-semibold">Edit Campaign</h3>
               <button
                 onClick={() => setShowEditModal(false)}
                 className="text-muted-foreground hover:text-foreground"
@@ -952,10 +966,17 @@ function CampaignDetail() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowDeleteModal(false) }}
+        >
+          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" ref={(el) => { if (el) el.focus() }} tabIndex={-1}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-red-600">Delete Campaign</h3>
+              <h3 id="delete-modal-title" className="text-lg font-semibold text-red-600">Delete Campaign</h3>
               <button
                 onClick={() => setShowDeleteModal(false)}
                 className="text-muted-foreground hover:text-foreground"

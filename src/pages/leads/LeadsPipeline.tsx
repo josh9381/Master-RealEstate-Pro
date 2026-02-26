@@ -23,7 +23,7 @@ import { leadsApi, analyticsApi } from '@/lib/api'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 interface Lead {
-  id: number
+  id: string | number
   firstName: string
   lastName: string
   company: string
@@ -69,7 +69,7 @@ function LeadsPipeline() {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      leads.forEach((apiLead: any) => {
+      leads.forEach((apiLead: { id: string; firstName: string; lastName: string; company?: string; score?: number; estimatedValue?: number; lastContactedAt?: string; email: string; phone?: string; status?: string }) => {
         const lead: Lead = {
           id: apiLead.id,
           firstName: apiLead.firstName,
@@ -82,7 +82,7 @@ function LeadsPipeline() {
           phone: apiLead.phone || undefined
         }
         
-        const status = apiLead.status?.toLowerCase() || 'new'
+        const status = (apiLead.status || 'new').toLowerCase()
         if (statusMap[status]) {
           statusMap[status].push(lead)
         } else {
