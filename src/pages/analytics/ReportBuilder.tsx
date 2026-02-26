@@ -2,9 +2,10 @@ import { Layout, Plus, Settings, TrendingUp, BarChart3, RefreshCw, X, Download, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { analyticsApi } from '@/lib/api';
+import { analyticsApi, savedReportsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
@@ -37,16 +38,16 @@ const ReportBuilder = () => {
   const [reportName, setReportName] = useState('My Custom Report');
   const [reportCategory, setReportCategory] = useState('Sales');
 
-  const { data: builderResult, isLoading, refetch } = useQuery({
+  const { data: builderResult, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['report-builder'],
     queryFn: async () => {
       const dateParams = dateRangeRef.current;
       const [dashboardData, leadData, campaignData] = await Promise.all([
-        analyticsApi.getDashboardStats(dateParams).catch((e: Error) => { console.error('Dashboard stats failed:', e); return null; }),
-        analyticsApi.getLeadAnalytics(dateParams).catch((e: Error) => { console.error('Lead analytics failed:', e); return null; }),
-        analyticsApi.getCampaignAnalytics(dateParams).catch((e: Error) => { console.error('Campaign analytics failed:', e); return null; }),
+        analyticsApi.getDashboardStats(dateParams),
+        analyticsApi.getLeadAnalytics(dateParams),
+        analyticsApi.getCampaignAnalytics(dateParams),
       ]);
-      return { dashboardData, leadData, campaignData };
+      return { dashboardData: dashboardData?.data || dashboardData, leadData: leadData?.data || leadData, campaignData: campaignData?.data || campaignData };
     },
   });
 
@@ -57,8 +58,8 @@ const ReportBuilder = () => {
   const dataSources = {
     leads: leadData?.total || 0,
     campaigns: campaignData?.total || 0,
-    contacts: dashboardData?.stats?.totalLeads || 0,
-    tasks: dashboardData?.stats?.totalTasks || 0,
+    contacts: dashboardData?.overview?.totalLeads || 0,
+    tasks: dashboardData?.overview?.totalTasks || dashboardData?.tasks?.total || 0,
   };
 
   const analyticsData = {
@@ -79,15 +80,15 @@ const ReportBuilder = () => {
       opened: (c.opened as number) || 0,
       clicked: (c.clicked as number) || 0,
     })),
-    monthlyTrend: (dashboardData?.monthlyTrend || []).map((m: Record<string, unknown>) => ({
-      name: (m.month as string) || (m.label as string),
-      leads: (m.leads as number) || (m.count as number) || 0,
-      value: (m.value as number) || 0,
+    monthlyTrend: (dashboardData?.activities?.recent || []).map((m: Record<string, unknown>) => ({
+      name: (m.createdAt as string)?.split('T')[0] || '',
+      leads: 1,
+      value: 1,
     })),
     tasksByPriority: [
-      { name: 'High', value: dashboardData?.stats?.highPriorityTasks || 0 },
-      { name: 'Medium', value: dashboardData?.stats?.mediumPriorityTasks || 0 },
-      { name: 'Low', value: dashboardData?.stats?.lowPriorityTasks || 0 },
+      { name: 'Completed', value: dashboardData?.tasks?.completed || 0 },
+      { name: 'Overdue', value: dashboardData?.tasks?.overdue || 0 },
+      { name: 'Due Today', value: dashboardData?.tasks?.dueToday || 0 },
     ].filter(d => d.value > 0),
   };
 
@@ -363,6 +364,9 @@ const ReportBuilder = () => {
 
   return (
     <div className="space-y-6">
+      {isError && (
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load report data'} retry={() => refetch()} />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Report Builder</h1>
@@ -380,16 +384,24 @@ const ReportBuilder = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button onClick={() => {
+          <Button onClick={async () => {
             if (!reportName.trim()) {
               toast.error('Please enter a report name')
               return
             }
-            const reportData = { name: reportName, widgets, createdAt: new Date().toISOString() }
-            const saved = JSON.parse(localStorage.getItem('saved-reports') || '[]')
-            saved.push(reportData)
-            localStorage.setItem('saved-reports', JSON.stringify(saved))
-            toast.success(`Report "${reportName}" saved successfully`)
+            try {
+              await savedReportsApi.create({
+                name: reportName,
+                type: reportCategory,
+                config: {
+                  widgets: widgets.map(w => ({ type: w.type, dataSource: w.dataSource, label: w.label })),
+                  createdAt: new Date().toISOString(),
+                },
+              })
+              toast.success(`Report "${reportName}" saved successfully`)
+            } catch (error) {
+              toast.error('Failed to save report. Please try again.')
+            }
           }}>Save Report</Button>
         </div>
       </div>

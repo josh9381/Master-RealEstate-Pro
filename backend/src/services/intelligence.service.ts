@@ -430,7 +430,7 @@ export class IntelligenceService {
       {
         period: 'This Month',
         metric: 'Avg Engagement',
-        value: Math.round((leads.reduce((sum, l) => sum + (l.score || 0), 0) / totalLeads) || 0),
+        value: totalLeads > 0 ? Math.round(leads.reduce((sum, l) => sum + (l.score || 0), 0) / totalLeads) : 0,
         change: 8.3, // Placeholder
       },
     ];

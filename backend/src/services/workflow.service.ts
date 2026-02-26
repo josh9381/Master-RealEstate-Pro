@@ -324,6 +324,11 @@ export async function triggerWorkflowsForLead(
       results.push({ workflowId: workflow.id, executionId });
     } catch (error) {
       console.error(`Error executing workflow ${workflow.id}:`, error);
+      results.push({
+        workflowId: workflow.id,
+        executionId: null,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 
@@ -564,7 +569,33 @@ async function executeActionSequence(
       continue;
     }
 
-    await executeAction(action, leadId, metadata, organizationId, dryRun);
+    // Per-action retry: attempt up to 3 times with exponential backoff
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS = [1000, 3000, 9000]; // 1s, 3s, 9s
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        await executeAction(action, leadId, metadata, organizationId, dryRun);
+        lastError = undefined;
+        break; // Success — move to next action
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        console.warn(
+          `[Workflow] Action ${action.type} attempt ${attempt + 1}/${MAX_RETRIES} failed: ${lastError.message}`
+        );
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
+        }
+      }
+    }
+
+    if (lastError) {
+      console.error(
+        `[Workflow] Action ${action.type} failed after ${MAX_RETRIES} retries – skipping and continuing sequence`
+      );
+      // Continue with next action instead of aborting the whole sequence
+    }
   }
 }
 
@@ -610,7 +641,11 @@ function scheduleDelayedActions(
           scheduledFor: new Date(Date.now() + cappedDelay).toISOString(),
         } as any,
       },
-    }).catch(err => console.error('[Workflow] Failed to save scheduled actions:', err));
+    }).catch(err => {
+      // This is a fire-and-forget persistence write for recovery data.
+      // Log with execution ID so it can be investigated if delayed actions fail.
+      console.error(`[Workflow] Failed to save scheduled actions for execution ${executionId}:`, err);
+    });
   }
 
   setTimeout(async () => {

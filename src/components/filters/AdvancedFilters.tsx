@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { X, Filter, Calendar, Tag, User, Star, Building } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
+import { tagsApi, usersApi } from '@/lib/api'
 
 interface FilterConfig {
   status: string[]
@@ -23,11 +25,43 @@ interface AdvancedFiltersProps {
 
 const statusOptions = ['New', 'Contacted', 'Qualified', 'Proposal', 'Won', 'Lost']
 const sourceOptions = ['Website', 'Referral', 'LinkedIn', 'Cold Call', 'Campaign', 'Direct']
-const tagOptions = ['Enterprise', 'Hot Lead', 'Demo Scheduled', 'Follow-up', 'High Value', 'Partner']
-const assignedToOptions = ['Sarah Johnson', 'Mike Davis', 'Emily Wilson', 'Unassigned']
 
 export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: AdvancedFiltersProps) {
   const [filters, setFilters] = useState<FilterConfig>(currentFilters)
+
+  // Fetch dynamic tag options from API
+  const { data: tagOptions = [] } = useQuery({
+    queryKey: ['filter-tags'],
+    queryFn: async () => {
+      try {
+        const response = await tagsApi.getTags()
+        const tags = response?.data?.tags || response?.tags || response || []
+        return Array.isArray(tags) ? tags.map((t: { name: string }) => t.name) : []
+      } catch {
+        return ['Enterprise', 'Hot Lead', 'Demo Scheduled', 'Follow-up', 'High Value', 'Partner']
+      }
+    },
+    staleTime: 120_000,
+  })
+
+  // Fetch dynamic assigned-to options from API
+  const { data: assignedToOptions = [] } = useQuery({
+    queryKey: ['filter-team-members'],
+    queryFn: async () => {
+      try {
+        const response = await usersApi.getTeamMembers()
+        const members = response?.data?.users || response?.users || response || []
+        return Array.isArray(members)
+          ? [...members.map((u: { firstName?: string; lastName?: string; name?: string }) =>
+              u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown'
+            ), 'Unassigned']
+          : ['Unassigned']
+      } catch {
+        return ['Unassigned']
+      }
+    },
+    staleTime: 120_000,
+  })
 
   const handleApply = () => {
     onApply(filters)

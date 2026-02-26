@@ -20,6 +20,10 @@ export async function getProfile(req: Request, res: Response): Promise<void> {
       lastName: true,
       email: true,
       avatar: true,
+      phone: true,
+      jobTitle: true,
+      company: true,
+      address: true,
       role: true,
       timezone: true,
       language: true,
@@ -48,7 +52,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     throw new UnauthorizedError('Authentication required');
   }
 
-  const { firstName, lastName, email, timezone, language } = req.body;
+  const { firstName, lastName, email, phone, jobTitle, company, address, timezone, language } = req.body;
 
   // If email is being updated, check if it's already taken
   if (email && email !== req.user.email) {
@@ -73,6 +77,10 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       ...(firstName && { firstName }),
       ...(lastName && { lastName }),
       ...(email && { email }),
+      ...(phone !== undefined && { phone: phone || null }),
+      ...(jobTitle !== undefined && { jobTitle: jobTitle || null }),
+      ...(company !== undefined && { company: company || null }),
+      ...(address !== undefined && { address: address || null }),
       ...(timezone && { timezone }),
       ...(language && { language })
     },
@@ -82,6 +90,10 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       lastName: true,
       email: true,
       avatar: true,
+      phone: true,
+      jobTitle: true,
+      company: true,
+      address: true,
       role: true,
       timezone: true,
       language: true,
@@ -160,14 +172,20 @@ export async function changePassword(req: Request, res: Response): Promise<void>
   // Hash new password
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  // Update password
-  await prisma.user.update({
-    where: { id: req.user.userId },
-    data: { password: hashedPassword }
-  });
+  // Update password AND revoke all refresh tokens (force re-login on all devices) (#86)
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: req.user.userId },
+      data: { password: hashedPassword },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId: req.user.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
 
   res.status(200).json({
     success: true,
-    message: 'Password changed successfully'
+    message: 'Password changed successfully. Please log in again on all devices.'
   });
 }

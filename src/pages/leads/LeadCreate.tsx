@@ -44,12 +44,9 @@ export default function LeadCreate() {
         const members = await usersApi.getTeamMembers()
         return Array.isArray(members) ? members : []
       } catch {
-        try {
-          const response = await usersApi.getUsers({ limit: 50 })
-          return response.data?.users || response.data || []
-        } catch {
-          return []
-        }
+        // Fallback to users list if team-members endpoint unavailable
+        const response = await usersApi.getUsers({ limit: 50 })
+        return response.data?.users || response.data || []
       }
     },
   })

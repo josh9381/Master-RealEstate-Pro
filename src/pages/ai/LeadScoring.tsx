@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Target, TrendingUp, AlertCircle, Settings, RefreshCw } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Settings, RefreshCw, Save, RotateCcw, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -19,6 +20,70 @@ import {
 const LeadScoring = () => {
   const { toast } = useToast()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [showConfig, setShowConfig] = useState(false)
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+
+  // Score factors breakdown query
+  const { data: factorBreakdown, isLoading: factorsLoading } = useQuery({
+    queryKey: ['score-factors', selectedLeadId],
+    queryFn: () => aiApi.getLeadScoreFactors(selectedLeadId!),
+    enabled: !!selectedLeadId,
+  })
+
+  // Scoring config query
+  const { data: scoringConfig, isLoading: configLoading } = useQuery({
+    queryKey: ['scoring-config'],
+    queryFn: () => aiApi.getScoringConfig(),
+    enabled: showConfig,
+  })
+
+  const [configForm, setConfigForm] = useState<Record<string, number>>({})
+
+  const initConfigForm = (data: Record<string, unknown>) => {
+    setConfigForm({
+      emailOpenWeight: (data.emailOpenWeight as number) ?? 5,
+      emailClickWeight: (data.emailClickWeight as number) ?? 10,
+      emailReplyWeight: (data.emailReplyWeight as number) ?? 15,
+      formSubmissionWeight: (data.formSubmissionWeight as number) ?? 20,
+      propertyInquiryWeight: (data.propertyInquiryWeight as number) ?? 25,
+      scheduledApptWeight: (data.scheduledApptWeight as number) ?? 30,
+      completedApptWeight: (data.completedApptWeight as number) ?? 40,
+      emailOptOutPenalty: (data.emailOptOutPenalty as number) ?? -50,
+      recencyBonusMax: (data.recencyBonusMax as number) ?? 20,
+      frequencyBonusMax: (data.frequencyBonusMax as number) ?? 15,
+    })
+  }
+
+  const saveConfigMutation = useMutation({
+    mutationFn: (config: Record<string, number>) => aiApi.updateScoringConfig(config),
+    onSuccess: () => {
+      toast.success('Scoring configuration saved')
+      queryClient.invalidateQueries({ queryKey: ['scoring-config'] })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to save configuration')
+    },
+  })
+
+  const resetConfigMutation = useMutation({
+    mutationFn: () => aiApi.resetScoringConfig(),
+    onSuccess: (data) => {
+      toast.success('Scoring configuration reset to defaults')
+      initConfigForm(data.data || {})
+      queryClient.invalidateQueries({ queryKey: ['scoring-config'] })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to reset configuration')
+    },
+  })
+
+  // Initialize form when config loads
+  useEffect(() => {
+    if (scoringConfig?.data && Object.keys(configForm).length === 0) {
+      initConfigForm(scoringConfig.data)
+    }
+  }, [scoringConfig])
 
   const getScoreGrade = (score: number): string => {
     if (score >= 90) return 'A+'
@@ -81,28 +146,32 @@ const LeadScoring = () => {
         let modelStatus = 'active'
         try {
           const perfData = await aiApi.getModelPerformance()
-          if (perfData?.accuracy) {
-            scoringStats = { ...scoringStats, accuracy: Math.floor(perfData.accuracy * 100) }
+          const perfModels = perfData?.data || []
+          if (Array.isArray(perfModels) && perfModels.length > 0 && perfModels[0]?.accuracy) {
+            scoringStats = { ...scoringStats, accuracy: Math.floor(perfModels[0].accuracy * 100) }
           }
-          if (perfData?.status) {
-            modelStatus = perfData.status
+          if (perfData?.data?.status) {
+            modelStatus = perfData.data.status
           }
-        } catch {
-          // Model performance not available
+        } catch (err) {
+          console.error('Failed to load model performance:', err)
+          toast.error('Failed to load model performance data')
         }
         
         let scoreFactors = defaultScoreFactors
         try {
           const featureData = await aiApi.getFeatureImportance()
-          if (featureData?.features) {
-            scoreFactors = featureData.features.map((f: { name: string; importance: number }) => ({
+          const features = featureData?.data || []
+          if (Array.isArray(features) && features.length > 0) {
+            scoreFactors = features.map((f: { name: string; value: number }) => ({
               factor: f.name,
-              weight: Math.round(f.importance * 100),
-              impact: f.importance > 0.20 ? 'High' : f.importance > 0.10 ? 'Medium' : 'Low'
+              weight: f.value,
+              impact: f.value > 20 ? 'High' : f.value > 10 ? 'Medium' : 'Low'
             }))
           }
-        } catch {
-          // Keep default factors if API fails
+        } catch (err) {
+          console.error('Failed to load feature importance:', err)
+          toast.error('Failed to load feature importance data')
         }
 
         return { scoringStats, recentScores: scoredLeads, scoreFactors, modelStatus }
@@ -147,9 +216,14 @@ const LeadScoring = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" disabled title="Model configuration coming soon">
+          <Button variant="outline" onClick={() => {
+            setShowConfig(!showConfig)
+            if (!showConfig && scoringConfig?.data) {
+              initConfigForm(scoringConfig.data)
+            }
+          }}>
             <Settings className="h-4 w-4 mr-2" />
-            Configure Model
+            {showConfig ? 'Close Config' : 'Configure Model'}
           </Button>
           <Button onClick={handleRecalculateScores} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
@@ -157,6 +231,116 @@ const LeadScoring = () => {
           </Button>
         </div>
       </div>
+
+      {/* Scoring Configuration Panel */}
+      {showConfig && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Scoring Model Configuration</CardTitle>
+              <CardDescription>
+                Adjust the weight of each scoring factor. Higher values mean more influence on the final score.
+                {scoringConfig?.data?.updatedBy && (
+                  <span className="block mt-1 text-xs">
+                    Last updated by {scoringConfig.data.updatedBy}
+                    {scoringConfig.data.updatedAt && ` on ${new Date(scoringConfig.data.updatedAt).toLocaleDateString()}`}
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setShowConfig(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {configLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading configuration...</span>
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {[
+                    { key: 'emailOpenWeight', label: 'Email Opens', defaultVal: 5, max: 50 },
+                    { key: 'emailClickWeight', label: 'Email Clicks', defaultVal: 10, max: 50 },
+                    { key: 'emailReplyWeight', label: 'Email Replies', defaultVal: 15, max: 50 },
+                    { key: 'formSubmissionWeight', label: 'Form Submissions', defaultVal: 20, max: 60 },
+                    { key: 'propertyInquiryWeight', label: 'Property Inquiries', defaultVal: 25, max: 60 },
+                    { key: 'scheduledApptWeight', label: 'Scheduled Appointments', defaultVal: 30, max: 80 },
+                    { key: 'completedApptWeight', label: 'Completed Appointments', defaultVal: 40, max: 100 },
+                    { key: 'recencyBonusMax', label: 'Recency Bonus (max)', defaultVal: 20, max: 50 },
+                    { key: 'frequencyBonusMax', label: 'Frequency Bonus (max)', defaultVal: 15, max: 50 },
+                  ].map(({ key, label, max }) => (
+                    <div key={key} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">{label}</label>
+                        <span className="text-sm font-bold tabular-nums w-8 text-right">
+                          {configForm[key] ?? 0}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={max}
+                        step={1}
+                        value={configForm[key] ?? 0}
+                        onChange={(e) => setConfigForm(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                        className="w-full accent-primary"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>0</span>
+                        <span>{max}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Email opt-out penalty (negative) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Email Opt-Out Penalty</label>
+                      <span className="text-sm font-bold tabular-nums w-10 text-right text-red-600">
+                        {configForm.emailOptOutPenalty ?? -50}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-200}
+                      max={0}
+                      step={5}
+                      value={configForm.emailOptOutPenalty ?? -50}
+                      onChange={(e) => setConfigForm(prev => ({ ...prev, emailOptOutPenalty: Number(e.target.value) }))}
+                      className="w-full accent-red-500"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>-200</span>
+                      <span>0</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => resetConfigMutation.mutate()}
+                    disabled={resetConfigMutation.isPending}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    Reset to Defaults
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => saveConfigMutation.mutate(configForm)}
+                    disabled={saveConfigMutation.isPending}
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    {saveConfigMutation.isPending ? 'Saving...' : 'Save Configuration'}
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Model Status */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -280,9 +464,14 @@ const LeadScoring = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/leads/${lead.id}`)}>
-                        View Details
-                      </Button>
+                      <div className="flex space-x-1">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedLeadId(String(lead.id))}>
+                          Score Breakdown
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/leads/${lead.id}`)}>
+                          View Lead
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -291,6 +480,94 @@ const LeadScoring = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Score Factor Breakdown Panel */}
+      {selectedLeadId && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Score Factor Breakdown</CardTitle>
+              <CardDescription>
+                Detailed breakdown of how this lead's score is calculated
+              </CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedLeadId(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {factorsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading score breakdown...</span>
+              </div>
+            ) : factorBreakdown?.data ? (
+              <div className="space-y-6">
+                {/* Summary */}
+                <div className="flex items-center gap-4 pb-4 border-b">
+                  <div>
+                    <span className="text-sm text-muted-foreground">Final Score</span>
+                    <div className="text-3xl font-bold">{factorBreakdown.data.finalScore}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Raw Total</span>
+                    <div className="text-xl font-medium text-muted-foreground">{factorBreakdown.data.rawTotal}</div>
+                  </div>
+                  {factorBreakdown.data.recencyLabel && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Activity Recency</span>
+                      <div className="text-sm font-medium">{factorBreakdown.data.recencyLabel}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Component bars */}
+                <div className="space-y-3">
+                  {factorBreakdown.data.components?.map((c: { name: string; count: number; weight: number; points: number }, i: number) => {
+                    const maxPoints = 50 // Scale bar to reasonable max
+                    const barWidth = Math.min(100, Math.abs(c.points) / maxPoints * 100)
+                    const isNegative = c.points < 0
+                    return (
+                      <div key={i} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{c.name}</span>
+                          <span className={`font-bold tabular-nums ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+                            {isNegative ? '' : '+'}{c.points.toFixed(1)} pts
+                            {c.count > 1 && <span className="text-muted-foreground font-normal"> ({c.count} × {c.weight})</span>}
+                          </span>
+                        </div>
+                        <div className="w-full bg-secondary rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${isNegative ? 'bg-red-500' : 'bg-green-500'}`}
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Raw factors */}
+                {factorBreakdown.data.factors && (
+                  <div className="pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-2">Raw Activity Data (Last 90 Days)</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      {Object.entries(factorBreakdown.data.factors).map(([key, value]) => (
+                        <div key={key} className="bg-muted/50 rounded p-2">
+                          <span className="text-muted-foreground text-xs">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                          <div className="font-medium">{String(value)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No breakdown data available.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Score Distribution */}
       <Card>

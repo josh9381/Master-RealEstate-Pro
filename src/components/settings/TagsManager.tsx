@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -20,12 +21,15 @@ import {
   TrendingUp,
   Users,
   Palette,
-  Combine
+  Combine,
+  Loader2
 } from 'lucide-react'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { useToast } from '@/hooks/useToast'
+import { tagsApi } from '@/lib/api'
 
 interface TagData {
-  id: number
+  id: string
   name: string
   color: string
   category: string
@@ -33,72 +37,6 @@ interface TagData {
   lastUsed: string
   description?: string
 }
-
-const mockTags: TagData[] = [
-  {
-    id: 1,
-    name: 'Hot Lead',
-    color: 'bg-red-500',
-    category: 'Priority',
-    usageCount: 145,
-    lastUsed: '2 hours ago',
-    description: 'High-priority leads requiring immediate attention'
-  },
-  {
-    id: 2,
-    name: 'Enterprise',
-    color: 'bg-purple-500',
-    category: 'Company Size',
-    usageCount: 89,
-    lastUsed: '5 hours ago',
-    description: 'Large enterprise clients'
-  },
-  {
-    id: 3,
-    name: 'Follow-up',
-    color: 'bg-blue-500',
-    category: 'Action Required',
-    usageCount: 234,
-    lastUsed: '1 hour ago',
-    description: 'Leads requiring follow-up'
-  },
-  {
-    id: 4,
-    name: 'VIP',
-    color: 'bg-yellow-500',
-    category: 'Priority',
-    usageCount: 34,
-    lastUsed: '3 days ago',
-    description: 'Very important clients'
-  },
-  {
-    id: 5,
-    name: 'Startup',
-    color: 'bg-green-500',
-    category: 'Company Size',
-    usageCount: 156,
-    lastUsed: '1 day ago',
-    description: 'Startup and small business clients'
-  },
-  {
-    id: 6,
-    name: 'Long-term',
-    color: 'bg-orange-500',
-    category: 'Timeline',
-    usageCount: 67,
-    lastUsed: '4 hours ago',
-    description: 'Long sales cycle opportunities'
-  },
-  {
-    id: 7,
-    name: 'Demo Scheduled',
-    color: 'bg-cyan-500',
-    category: 'Status',
-    usageCount: 92,
-    lastUsed: '30 min ago',
-    description: 'Product demo has been scheduled'
-  },
-]
 
 const tagColors = [
   { name: 'Red', value: 'bg-red-500' },
@@ -112,10 +50,24 @@ const tagColors = [
   { name: 'Gray', value: 'bg-gray-500' },
 ]
 
+// Color mapping from stored hex/name to Tailwind class
+function getColorClass(color?: string): string {
+  if (!color) return 'bg-blue-500'
+  if (color.startsWith('bg-')) return color
+  // Map common color names
+  const map: Record<string, string> = {
+    red: 'bg-red-500', orange: 'bg-orange-500', yellow: 'bg-yellow-500',
+    green: 'bg-green-500', cyan: 'bg-cyan-500', blue: 'bg-blue-500',
+    purple: 'bg-purple-500', pink: 'bg-pink-500', gray: 'bg-gray-500',
+  }
+  return map[color.toLowerCase()] || 'bg-blue-500'
+}
+
 const categories = ['Priority', 'Company Size', 'Action Required', 'Status', 'Timeline', 'Industry']
 
 export function TagsManager() {
-  const [tags, setTags] = useState<TagData[]>(mockTags)
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingTag, setEditingTag] = useState<TagData | null>(null)
@@ -125,7 +77,69 @@ export function TagsManager() {
     category: 'Priority',
     description: ''
   })
-  const { toast } = useToast()
+
+  // Fetch tags from API
+  const { data: tagsResponse, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => tagsApi.getTags(),
+  })
+
+  // Transform API response to our TagData format
+  const tags: TagData[] = (() => {
+    const raw = tagsResponse?.data?.tags || tagsResponse?.data || tagsResponse?.tags || tagsResponse || []
+    if (!Array.isArray(raw)) return []
+    return raw.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      color: getColorClass(t.color),
+      category: t.category || 'Priority',
+      usageCount: t._count?.leads || t.usageCount || 0,
+      lastUsed: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'N/A',
+      description: t.description || '',
+    }))
+  })()
+
+  // Create tag mutation
+  const createTagMutation = useMutation({
+    mutationFn: (data: { name: string; color?: string }) => tagsApi.createTag(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      toast.success(`Tag "${newTag.name}" created successfully`)
+      setShowAddModal(false)
+      setNewTag({ name: '', color: 'bg-blue-500', category: 'Priority', description: '' })
+    },
+    onError: () => {
+      toast.error('Failed to create tag')
+    },
+  })
+
+  // Update tag mutation
+  const updateTagMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; color?: string } }) => tagsApi.updateTag(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      toast.success(`Tag "${newTag.name}" updated successfully`)
+      setShowAddModal(false)
+      setEditingTag(null)
+      setNewTag({ name: '', color: 'bg-blue-500', category: 'Priority', description: '' })
+    },
+    onError: () => {
+      toast.error('Failed to update tag')
+    },
+  })
+
+  // Delete tag mutation
+  const deleteTagMutation = useMutation({
+    mutationFn: (id: string) => tagsApi.deleteTag(id),
+    onSuccess: (_, deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      const tag = tags.find(t => t.id === deletedId)
+      toast.success(`Tag "${tag?.name}" deleted successfully`)
+    },
+    onError: () => {
+      toast.error('Failed to delete tag')
+    },
+  })
 
   const filteredTags = tags.filter((tag: TagData) =>
     tag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -134,30 +148,16 @@ export function TagsManager() {
   )
 
   const totalUsage = tags.reduce((acc: number, tag: TagData) => acc + tag.usageCount, 0)
-  const mostUsedTag = tags.reduce((prev: TagData, current: TagData) =>
-    prev.usageCount > current.usageCount ? prev : current
-  )
+  const mostUsedTag = tags.length > 0
+    ? tags.reduce((prev: TagData, current: TagData) => prev.usageCount > current.usageCount ? prev : current)
+    : null
 
   const handleAddTag = () => {
     if (!newTag.name.trim()) {
       toast.error('Tag name is required')
       return
     }
-
-    const tag: TagData = {
-      id: tags.length + 1,
-      name: newTag.name,
-      color: newTag.color,
-      category: newTag.category,
-      description: newTag.description,
-      usageCount: 0,
-      lastUsed: 'Never'
-    }
-
-    setTags([...tags, tag])
-    toast.success(`Tag "${newTag.name}" created successfully`)
-    setShowAddModal(false)
-    setNewTag({ name: '', color: 'bg-blue-500', category: 'Priority', description: '' })
+    createTagMutation.mutate({ name: newTag.name.trim(), color: newTag.color })
   }
 
   const handleEditTag = (tag: TagData) => {
@@ -173,26 +173,40 @@ export function TagsManager() {
 
   const handleUpdateTag = () => {
     if (!editingTag) return
-
-    setTags(tags.map((t: TagData) =>
-      t.id === editingTag.id
-        ? { ...t, name: newTag.name, color: newTag.color, category: newTag.category, description: newTag.description }
-        : t
-    ))
-    toast.success(`Tag "${newTag.name}" updated successfully`)
-    setShowAddModal(false)
-    setEditingTag(null)
-    setNewTag({ name: '', color: 'bg-blue-500', category: 'Priority', description: '' })
+    updateTagMutation.mutate({
+      id: editingTag.id,
+      data: { name: newTag.name.trim(), color: newTag.color }
+    })
   }
 
-  const handleDeleteTag = (id: number) => {
-    const tag = tags.find((t: TagData) => t.id === id)
-    setTags(tags.filter((t: TagData) => t.id !== id))
-    toast.success(`Tag "${tag?.name}" deleted successfully`)
+  const handleDeleteTag = (id: string) => {
+    if (confirm('Are you sure you want to delete this tag?')) {
+      deleteTagMutation.mutate(id)
+    }
   }
 
   const handleMergeTags = () => {
-    toast.success('Merge tags functionality coming soon')
+    toast.info('Merge tags functionality coming soon')
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Tags Manager</h1>
+          <p className="mt-2 text-muted-foreground">Organize and manage your lead tags</p>
+        </div>
+        <ErrorBanner message={`Failed to load tags: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
@@ -251,9 +265,9 @@ export function TagsManager() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mostUsedTag.name}</div>
+            <div className="text-2xl font-bold">{mostUsedTag?.name || '—'}</div>
             <p className="text-xs text-muted-foreground">
-              {mostUsedTag.usageCount} times
+              {mostUsedTag ? `${mostUsedTag.usageCount} times` : 'No tags yet'}
             </p>
           </CardContent>
         </Card>

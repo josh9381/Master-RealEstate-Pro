@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import * as Sentry from '@sentry/node';
+import { logger } from '../lib/logger';
 
 /**
  * Custom Error Classes
@@ -130,22 +132,29 @@ export function errorHandler(
       : 'Internal server error';
   }
 
-  // Log error in development
+  // Log error
   if (process.env.NODE_ENV === 'development') {
-    console.error('❌ Error:', {
+    logger.error({
       name: err.name,
       message: err.message,
+      statusCode,
       stack: err.stack,
-      statusCode
-    });
+    }, 'Request error');
   } else {
-    // In production, log minimal info
-    console.error('❌ Error:', {
+    logger.error({
       statusCode,
       message,
       path: req.path,
-      method: req.method
-    });
+      method: req.method,
+      requestId: req.requestId,
+    }, 'Request error');
+  }
+
+  // #109: Capture non-operational errors in Sentry
+  if (!(err instanceof AppError) || !err.isOperational) {
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureException(err);
+    }
   }
 
   // Send error response

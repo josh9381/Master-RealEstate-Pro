@@ -1,6 +1,7 @@
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import * as aiController from '../controllers/ai.controller'
+import * as scoringConfigController from '../controllers/scoring-config.controller'
 import { authenticate } from '../middleware/auth'
 
 const aiRateLimiter = rateLimit({
@@ -37,9 +38,15 @@ router.get('/recommendations', aiController.getRecommendations)
 
 // Lead Scoring
 router.get('/lead-score/:leadId', aiController.getLeadScore)
+router.get('/lead/:leadId/score-factors', aiController.getLeadScoreFactors)
 router.post('/recalculate-scores', aiController.recalculateScores)
 
+// Model Recalibration
+router.post('/recalibrate', aiController.recalibrateModel)
+router.get('/recalibration-status', aiController.getRecalibrationStatus)
+
 // Predictions
+router.get('/predictions', aiController.getGlobalPredictions)
 router.get('/predictions/:leadId', aiController.getPredictions)
 
 // AI Assistant Features
@@ -80,5 +87,10 @@ router.post('/preferences/reset', aiController.resetPreferences)
 
 // Feature Importance
 router.get('/feature-importance', aiController.getFeatureImportance)
+
+// Scoring Configuration
+router.get('/scoring-config', scoringConfigController.getScoringConfig)
+router.put('/scoring-config', scoringConfigController.updateScoringConfig)
+router.post('/scoring-config/reset', scoringConfigController.resetScoringConfig)
 
 export default router

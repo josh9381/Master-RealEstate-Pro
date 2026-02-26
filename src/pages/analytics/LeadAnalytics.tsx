@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Users, Target, Calendar, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import {
   AreaChart,
   Area,
@@ -22,10 +23,10 @@ const LeadAnalytics = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
   const navigate = useNavigate();
 
-  const { data: leadData = null, isLoading: loading, refetch } = useQuery({
+  const { data: leadData = null, isLoading: loading, isError: leadError, error: leadErrorObj, refetch } = useQuery({
     queryKey: ['lead-analytics'],
     queryFn: async () => {
-      const response = await analyticsApi.getLeadAnalytics(dateRangeRef.current).catch(() => ({ data: null }));
+      const response = await analyticsApi.getLeadAnalytics(dateRangeRef.current);
       return response.data;
     },
   });
@@ -39,6 +40,18 @@ const LeadAnalytics = () => {
     return (
       <div className="flex items-center justify-center h-96">
         <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (leadError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Lead Analytics</h1>
+        <ErrorBanner
+          message={leadErrorObj instanceof Error ? leadErrorObj.message : 'Failed to load lead analytics'}
+          retry={() => refetch()}
+        />
       </div>
     );
   }

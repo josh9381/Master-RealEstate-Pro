@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Brain, Target, Users, TrendingUp, Sparkles, BarChart3, Upload, RefreshCw, Activity, AlertCircle, CheckCircle, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { aiApi } from '@/lib/api';
+import { aiApi, tasksApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config';
 
@@ -104,6 +104,7 @@ interface AIRecommendation {
 }
 
 const AIHub = () => {
+  const navigate = useNavigate()
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<AIStats | null>(null)
@@ -115,6 +116,43 @@ const AIHub = () => {
   const [recentInsights, setRecentInsights] = useState<AIInsight[]>([])
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([])
   const { toast } = useToast()
+
+  // Handle recommendation action buttons — execute real actions where possible
+  const handleRecommendationAction = async (rec: AIRecommendation) => {
+    const action = rec.action?.toLowerCase() || ''
+    try {
+      if (action.includes('follow up') || action.includes('task') || action.includes('create task')) {
+        // Create a follow-up task from the recommendation
+        await tasksApi.createTask({
+          title: rec.title || 'AI-recommended follow-up',
+          description: rec.description || `AI Recommendation: ${rec.action}`,
+          priority: rec.priority === 'high' || rec.priority === 'critical' ? 'high' : 'medium',
+          status: 'pending',
+        })
+        toast.success('Follow-up task created from recommendation')
+      } else if (action.includes('campaign') || action.includes('schedule')) {
+        navigate('/campaigns/create')
+        toast.info('Navigating to campaign creation')
+      } else if (action.includes('email') || action.includes('send')) {
+        navigate('/communication')
+        toast.info('Navigating to communication center')
+      } else if (action.includes('workflow') || action.includes('create workflow')) {
+        navigate('/workflows')
+        toast.info('Navigating to workflows')
+      } else if (action.includes('analytics') || action.includes('report')) {
+        navigate('/analytics')
+        toast.info('Navigating to analytics')
+      } else if (action.includes('view lead')) {
+        navigate('/leads?sort=score&order=desc')
+        toast.info('Navigating to top-scored leads')
+      } else {
+        navigate('/leads')
+        toast.info(`Navigating to: ${rec.action}`)
+      }
+    } catch (error) {
+      toast.error('Failed to execute action. Please try again.')
+    }
+  }
   
   // Load all AI Hub data
   useEffect(() => {
@@ -136,14 +174,14 @@ const AIHub = () => {
         recommendationsData,
         importanceData,
       ] = await Promise.all([
-        aiApi.getStats().catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockStats() : null })),
-        aiApi.getFeatures().catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockFeatures() : [] })),
-        aiApi.getModelPerformance(6).catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockPerformance() : [] })),
-        aiApi.getTrainingModels().catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockTrainingModels() : [] })),
-        aiApi.getDataQuality().catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockDataQuality() : [] })),
-        aiApi.getInsights({ limit: 3 }).catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockInsights() : [] })),
-        aiApi.getRecommendations({ limit: 3 }).catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockRecommendations() : [] })),
-        aiApi.getFeatureImportance('lead-scoring').catch(() => ({ data: MOCK_DATA_CONFIG.USE_MOCK_DATA ? getMockFeatureImportance() : [] })),
+        aiApi.getStats(),
+        aiApi.getFeatures(),
+        aiApi.getModelPerformance(6),
+        aiApi.getTrainingModels(),
+        aiApi.getDataQuality(),
+        aiApi.getInsights({ limit: 3 }),
+        aiApi.getRecommendations({ limit: 3 }),
+        aiApi.getFeatureImportance('lead-scoring'),
       ])
 
       setStats(statsData.data)
@@ -763,7 +801,7 @@ const AIHub = () => {
                     <h4 className="font-medium mb-1">{rec.title}</h4>
                     <p className="text-sm text-muted-foreground">{rec.description}</p>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full" disabled title="Recommendation actions coming soon">
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => handleRecommendationAction(rec)}>
                     <Zap className="mr-2 h-4 w-4" />
                     {rec.action}
                   </Button>

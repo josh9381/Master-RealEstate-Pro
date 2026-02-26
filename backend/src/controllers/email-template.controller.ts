@@ -204,8 +204,8 @@ export async function deleteEmailTemplate(req: Request, res: Response): Promise<
   const { id } = req.params;
 
   // Check if template exists
-  const template = await prisma.emailTemplate.findUnique({
-    where: { id },
+  const template = await prisma.emailTemplate.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!template) {
@@ -230,8 +230,8 @@ export async function duplicateEmailTemplate(req: Request, res: Response): Promi
   const { id } = req.params;
 
   // Get original template
-  const originalTemplate = await prisma.emailTemplate.findUnique({
-    where: { id },
+  const originalTemplate = await prisma.emailTemplate.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!originalTemplate) {
@@ -267,6 +267,7 @@ export async function duplicateEmailTemplate(req: Request, res: Response): Promi
 export async function getEmailTemplateCategories(req: Request, res: Response): Promise<void> {
   const categories = await prisma.emailTemplate.findMany({
     where: {
+      organizationId: req.user!.organizationId,
       category: { not: null },
     },
     select: {

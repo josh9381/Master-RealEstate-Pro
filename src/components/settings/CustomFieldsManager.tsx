@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -22,12 +23,15 @@ import {
   ToggleLeft,
   List,
   CheckSquare,
-  TrendingUp
+  TrendingUp,
+  Loader2
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { customFieldsApi } from '@/lib/api'
 
 interface CustomField {
-  id: number
+  id: string
   name: string
   fieldKey: string
   type: 'text' | 'number' | 'date' | 'dropdown' | 'boolean' | 'textarea'
@@ -40,68 +44,6 @@ interface CustomField {
   validation?: string
 }
 
-const mockFields: CustomField[] = [
-  {
-    id: 1,
-    name: 'Industry',
-    fieldKey: 'industry',
-    type: 'dropdown',
-    required: true,
-    options: ['Technology', 'Healthcare', 'Finance', 'Real Estate', 'Other'],
-    usageCount: 245,
-    order: 1,
-    placeholder: 'Select industry'
-  },
-  {
-    id: 2,
-    name: 'Company Size',
-    fieldKey: 'company_size',
-    type: 'number',
-    required: false,
-    usageCount: 189,
-    order: 2,
-    placeholder: 'Number of employees'
-  },
-  {
-    id: 3,
-    name: 'Expected Close Date',
-    fieldKey: 'expected_close_date',
-    type: 'date',
-    required: false,
-    usageCount: 156,
-    order: 3
-  },
-  {
-    id: 4,
-    name: 'Budget Approved',
-    fieldKey: 'budget_approved',
-    type: 'boolean',
-    required: false,
-    usageCount: 134,
-    order: 4
-  },
-  {
-    id: 5,
-    name: 'Deal Size',
-    fieldKey: 'deal_size',
-    type: 'dropdown',
-    required: false,
-    options: ['< $10k', '$10k - $50k', '$50k - $100k', '$100k+'],
-    usageCount: 98,
-    order: 5
-  },
-  {
-    id: 6,
-    name: 'Special Requirements',
-    fieldKey: 'special_requirements',
-    type: 'textarea',
-    required: false,
-    usageCount: 67,
-    order: 6,
-    placeholder: 'Any special requirements or notes'
-  },
-]
-
 const fieldTypes = [
   { value: 'text', label: 'Text', icon: Type, description: 'Single line text input' },
   { value: 'textarea', label: 'Text Area', icon: Type, description: 'Multi-line text input' },
@@ -112,7 +54,8 @@ const fieldTypes = [
 ]
 
 export function CustomFieldsManager() {
-  const [fields, setFields] = useState<CustomField[]>(mockFields)
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingField, setEditingField] = useState<CustomField | null>(null)
   const [newField, setNewField] = useState({
@@ -126,7 +69,65 @@ export function CustomFieldsManager() {
     validation: ''
   })
   const [optionInput, setOptionInput] = useState('')
-  const { toast } = useToast()
+
+  // Fetch custom fields from API
+  const { data: fieldsResponse, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['custom-fields'],
+    queryFn: () => customFieldsApi.getCustomFields(),
+  })
+
+  // Transform API response
+  const fields: CustomField[] = (() => {
+    const raw = fieldsResponse?.data?.fields || fieldsResponse?.fields || fieldsResponse?.data || fieldsResponse || []
+    if (!Array.isArray(raw)) return []
+    return raw.map((f: any) => ({
+      id: f.id,
+      name: f.name,
+      fieldKey: f.fieldKey,
+      type: f.type,
+      required: f.required ?? false,
+      options: Array.isArray(f.options) ? f.options : undefined,
+      usageCount: f.usageCount || 0,
+      order: f.order ?? 0,
+      defaultValue: f.defaultValue,
+      placeholder: f.placeholder,
+      validation: f.validation,
+    }))
+  })()
+
+  // Create mutation
+  const createFieldMutation = useMutation({
+    mutationFn: (data: Parameters<typeof customFieldsApi.createCustomField>[0]) => customFieldsApi.createCustomField(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-fields'] })
+      toast.success(`Field "${newField.name}" created successfully`)
+      resetForm()
+    },
+    onError: () => toast.error('Failed to create custom field'),
+  })
+
+  // Update mutation
+  const updateFieldMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof customFieldsApi.updateCustomField>[1] }) =>
+      customFieldsApi.updateCustomField(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-fields'] })
+      toast.success(`Field "${newField.name}" updated successfully`)
+      resetForm()
+    },
+    onError: () => toast.error('Failed to update custom field'),
+  })
+
+  // Delete mutation
+  const deleteFieldMutation = useMutation({
+    mutationFn: (id: string) => customFieldsApi.deleteCustomField(id),
+    onSuccess: (_, deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ['custom-fields'] })
+      const f = fields.find(item => item.id === deletedId)
+      toast.success(`Field "${f?.name}" deleted successfully`)
+    },
+    onError: () => toast.error('Failed to delete custom field'),
+  })
 
   const totalUsage = fields.reduce((acc: number, field: CustomField) => acc + field.usageCount, 0)
   const requiredCount = fields.filter((f: CustomField) => f.required).length
@@ -140,51 +141,37 @@ export function CustomFieldsManager() {
       toast.error('Field name is required')
       return
     }
-
-    if ((newField.type === 'dropdown') && newField.options.length === 0) {
+    if (newField.type === 'dropdown' && newField.options.length === 0) {
       toast.error('Dropdown fields require at least one option')
       return
     }
-
-    const field: CustomField = {
-      id: fields.length + 1,
-      name: newField.name,
+    createFieldMutation.mutate({
+      name: newField.name.trim(),
       fieldKey: newField.fieldKey || generateFieldKey(newField.name),
       type: newField.type,
       required: newField.required,
       options: newField.type === 'dropdown' ? newField.options : undefined,
-      usageCount: 0,
-      order: fields.length + 1,
-      placeholder: newField.placeholder,
-      defaultValue: newField.defaultValue,
-      validation: newField.validation
-    }
-
-    setFields([...fields, field])
-    toast.success(`Field "${newField.name}" created successfully`)
-    resetForm()
+      placeholder: newField.placeholder || undefined,
+      defaultValue: newField.defaultValue || undefined,
+      validation: newField.validation || undefined,
+    })
   }
 
   const handleUpdateField = () => {
     if (!editingField) return
-
-    setFields(fields.map((f: CustomField) =>
-      f.id === editingField.id
-        ? {
-            ...f,
-            name: newField.name,
-            fieldKey: newField.fieldKey || generateFieldKey(newField.name),
-            type: newField.type,
-            required: newField.required,
-            options: newField.type === 'dropdown' ? newField.options : undefined,
-            placeholder: newField.placeholder,
-            defaultValue: newField.defaultValue,
-            validation: newField.validation
-          }
-        : f
-    ))
-    toast.success(`Field "${newField.name}" updated successfully`)
-    resetForm()
+    updateFieldMutation.mutate({
+      id: editingField.id,
+      data: {
+        name: newField.name.trim(),
+        fieldKey: newField.fieldKey || generateFieldKey(newField.name),
+        type: newField.type,
+        required: newField.required,
+        options: newField.type === 'dropdown' ? newField.options : undefined,
+        placeholder: newField.placeholder || undefined,
+        defaultValue: newField.defaultValue || undefined,
+        validation: newField.validation || undefined,
+      }
+    })
   }
 
   const handleEditField = (field: CustomField) => {
@@ -202,10 +189,10 @@ export function CustomFieldsManager() {
     setShowAddModal(true)
   }
 
-  const handleDeleteField = (id: number) => {
-    const field = fields.find((f: CustomField) => f.id === id)
-    setFields(fields.filter((f: CustomField) => f.id !== id))
-    toast.success(`Field "${field?.name}" deleted successfully`)
+  const handleDeleteField = (id: string) => {
+    if (confirm('Are you sure you want to delete this custom field?')) {
+      deleteFieldMutation.mutate(id)
+    }
   }
 
   const handleAddOption = () => {
@@ -243,6 +230,26 @@ export function CustomFieldsManager() {
   const getFieldTypeIcon = (type: string) => {
     const fieldType = fieldTypes.find((ft) => ft.value === type)
     return fieldType?.icon || Type
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Custom Fields Manager</h1>
+          <p className="mt-2 text-muted-foreground">Create and manage custom fields for your leads</p>
+        </div>
+        <ErrorBanner message={`Failed to load custom fields: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (

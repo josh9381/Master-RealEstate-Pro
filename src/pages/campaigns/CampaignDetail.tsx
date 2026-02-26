@@ -8,10 +8,9 @@ import { Input } from '@/components/ui/Input'
 import { Edit, Pause, Trash2, X, Copy } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, analyticsApi, CreateCampaignData } from '@/lib/api'
-import { mockCampaigns } from '@/data/mockData'
-import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { CampaignExecutionStatus } from '@/components/campaigns/CampaignExecutionStatus'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import type { TimelineDataPoint, HourlyEngagementEntry, DeviceBreakdownEntry, GeoBreakdownEntry, ABTestResultEntry } from '@/types'
 import {
   LineChart,
@@ -42,21 +41,11 @@ function CampaignDetail() {
   const [showContentModal, setShowContentModal] = useState(false)
 
   // Fetch campaign from API
-  const { data: campaignResponse, isLoading } = useQuery({
+  const { data: campaignResponse, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['campaign', id],
     queryFn: async () => {
-      try {
-        const response = await campaignsApi.getCampaign(id!)
-        // response shape: { success, data: { campaign: {...} } }
-        return response.data?.campaign || response.data || response
-      } catch (error) {
-        // If API fails, try to find campaign in mock data (if enabled)
-        if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
-          const mockCampaign = mockCampaigns.find(c => String(c.id) === id)
-          return mockCampaign || null
-        }
-        return null
-      }
+      const response = await campaignsApi.getCampaign(id!)
+      return response.data?.campaign || response.data || response
     },
     enabled: !!id,
     retry: false,
@@ -98,13 +87,8 @@ function CampaignDetail() {
   const { data: analyticsData } = useQuery({
     queryKey: ['campaign-analytics', id],
     queryFn: async () => {
-      try {
-        const response = await campaignsApi.getCampaignAnalytics(id!)
-        return response.data || response
-      } catch (error) {
-        console.warn('Campaign analytics not available:', error)
-        return null
-      }
+      const response = await campaignsApi.getCampaignAnalytics(id!)
+      return response.data || response
     },
     enabled: !!id && !!campaignResponse,
     retry: false,
@@ -114,13 +98,8 @@ function CampaignDetail() {
   const { data: timelineData } = useQuery({
     queryKey: ['campaign-timeline', id],
     queryFn: async () => {
-      try {
-        const response = await campaignsApi.getCampaignTimeline(id!, { days: 30 })
-        return response.data || response
-      } catch (error) {
-        console.warn('Campaign timeline not available:', error)
-        return null
-      }
+      const response = await campaignsApi.getCampaignTimeline(id!, { days: 30 })
+      return response.data || response
     },
     enabled: !!id && !!campaignResponse,
     retry: false,
@@ -163,13 +142,8 @@ function CampaignDetail() {
   const { data: hourlyResponse } = useQuery({
     queryKey: ['hourly-engagement'],
     queryFn: async () => {
-      try {
-        const response = await analyticsApi.getHourlyEngagement({ days: 90 })
-        return response.data || response
-      } catch (error) {
-        console.warn('Hourly engagement not available:', error)
-        return null
-      }
+      const response = await analyticsApi.getHourlyEngagement({ days: 90 })
+      return response.data || response
     },
     enabled: !!id && hasSentData,
     retry: false,
@@ -200,10 +174,8 @@ function CampaignDetail() {
   const { data: deviceBreakdownData } = useQuery({
     queryKey: ['campaign-device-breakdown', id],
     queryFn: async () => {
-      try {
-        const response = await analyticsApi.getDeviceBreakdown({ campaignId: id! })
-        return response.data || null
-      } catch { return null }
+      const response = await analyticsApi.getDeviceBreakdown({ campaignId: id! })
+      return response.data || null
     },
     enabled: !!id && hasSentData,
     retry: false,
@@ -212,10 +184,8 @@ function CampaignDetail() {
   const { data: geoBreakdownData } = useQuery({
     queryKey: ['campaign-geo-breakdown', id],
     queryFn: async () => {
-      try {
-        const response = await analyticsApi.getGeographicBreakdown({ campaignId: id! })
-        return response.data || null
-      } catch { return null }
+      const response = await analyticsApi.getGeographicBreakdown({ campaignId: id! })
+      return response.data || null
     },
     enabled: !!id && hasSentData,
     retry: false,
@@ -245,18 +215,12 @@ function CampaignDetail() {
   const { data: abTestResults } = useQuery({
     queryKey: ['campaign-abtest', id],
     queryFn: async () => {
-      try {
-        // Check if this campaign has A/B test data
-        if (!campaignData?.isABTest) return null
-        // Try to find related A/B tests via the campaigns API client
-        const abRes = await campaignsApi.getCampaignAnalytics(id!)
-        if (abRes?.data?.abTests) {
-          return Array.isArray(abRes.data.abTests) ? abRes.data.abTests : null
-        }
-        return null
-      } catch {
-        return null
+      if (!campaignData?.isABTest) return null
+      const abRes = await campaignsApi.getCampaignAnalytics(id!)
+      if (abRes?.data?.abTests) {
+        return Array.isArray(abRes.data.abTests) ? abRes.data.abTests : null
       }
+      return null
     },
     enabled: !!id && !!campaignData?.isABTest,
     retry: false,
@@ -336,8 +300,8 @@ function CampaignDetail() {
         return
       }
     }
-    if (editForm.scheduledDate && new Date(editForm.scheduledDate) < new Date()) {
-      toast.error('Schedule date must be in the future')
+    if (editForm.startDate && new Date(editForm.startDate) < new Date()) {
+      toast.error('Start date must be in the future')
       return
     }
     updateCampaignMutation.mutate({
@@ -346,6 +310,9 @@ function CampaignDetail() {
       status: (editForm.status || '').toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED',
       subject: editForm.subject || undefined,
       body: editForm.fullContent || editForm.content || undefined,
+      startDate: editForm.startDate || undefined,
+      endDate: editForm.endDate || undefined,
+      budget: editForm.budget != null ? editForm.budget : undefined,
     })
     setShowEditModal(false)
   }
@@ -368,6 +335,19 @@ function CampaignDetail() {
             <div key={i} className="h-32 bg-muted rounded animate-pulse" />
           ))}
         </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <CampaignsSubNav />
+        <ErrorBanner 
+          message={`Failed to load campaign: ${error instanceof Error ? error.message : 'Unknown error'}`}
+          retry={refetch}
+        />
       </div>
     )
   }

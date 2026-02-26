@@ -197,9 +197,10 @@ export const getMessages = async (req: Request, res: Response) => {
 // Get single message
 export const getMessage = async (req: Request, res: Response) => {
   const { id } = req.params
+  const organizationId = req.user!.organizationId
 
-  const message = await prisma.message.findUnique({
-    where: { id },
+  const message = await prisma.message.findFirst({
+    where: { id, organizationId },
   })
 
   if (!message) {
@@ -215,14 +216,15 @@ export const getMessage = async (req: Request, res: Response) => {
 // Send email
 export const sendEmail = async (req: Request, res: Response) => {
   const { to, subject, body, leadId, templateId, templateVariables, threadId } = req.body
+  const organizationId = req.user!.organizationId
 
   let finalSubject = subject
   let finalBody = body
 
   // If templateId is provided, render the template
   if (templateId) {
-    const template = await prisma.emailTemplate.findUnique({
-      where: { id: templateId }
+    const template = await prisma.emailTemplate.findFirst({
+      where: { id: templateId, organizationId }
     })
 
     if (!template) {
@@ -243,7 +245,7 @@ export const sendEmail = async (req: Request, res: Response) => {
 
     // If leadId provided, fetch lead data
     if (leadId) {
-      const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+      const lead = await prisma.lead.findFirst({ where: { id: leadId, organizationId } })
       if (lead) {
         const {firstName, lastName} = { firstName: lead.firstName, lastName: lead.lastName }
         context.lead = {
@@ -293,8 +295,8 @@ export const sendEmail = async (req: Request, res: Response) => {
     leadId,
     trackOpens: true,
     trackClicks: true,
-    userId: req.user?.userId, // Pass user ID to use their email credentials
-    organizationId: req.user.organizationId, // Pass organization ID for multi-tenancy
+    userId: req.user?.userId,
+    organizationId,
   })
 
   if (!result.success) {
@@ -318,13 +320,14 @@ export const sendEmail = async (req: Request, res: Response) => {
 // Send SMS
 export const sendSMS = async (req: Request, res: Response) => {
   const { to, body, leadId, templateId, templateVariables, threadId } = req.body
+  const organizationId = req.user!.organizationId
 
   let finalBody = body
 
   // If templateId is provided, render the template
   if (templateId) {
-    const template = await prisma.sMSTemplate.findUnique({
-      where: { id: templateId }
+    const template = await prisma.sMSTemplate.findFirst({
+      where: { id: templateId, organizationId }
     })
 
     if (!template) {
@@ -345,7 +348,7 @@ export const sendSMS = async (req: Request, res: Response) => {
 
     // If leadId provided, fetch lead data
     if (leadId) {
-      const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+      const lead = await prisma.lead.findFirst({ where: { id: leadId, organizationId } })
       if (lead) {
         const {firstName, lastName} = { firstName: lead.firstName, lastName: lead.lastName }
         context.lead = {
@@ -387,17 +390,13 @@ export const sendSMS = async (req: Request, res: Response) => {
   // Generate threadId if not provided
   const messageThreadId = threadId || crypto.randomBytes(16).toString('hex')
 
-  if (!req.user?.organizationId) {
-    throw new ValidationError('Organization ID is required')
-  }
-
   // Use the SMS service with userId for config lookup
   const result = await sendSMSService({
     to,
     message: finalBody,
     leadId,
-    userId: req.user?.userId, // Pass user ID to use their Twilio credentials
-    organizationId: req.user.organizationId, // Pass organization ID for multi-tenancy
+    userId: req.user?.userId,
+    organizationId,
   })
 
   if (!result.success) {
@@ -421,25 +420,28 @@ export const sendSMS = async (req: Request, res: Response) => {
 // Make call
 export const makeCall = async (req: Request, res: Response) => {
   const { to, leadId } = req.body
+  const organizationId = req.user!.organizationId
 
   if (!to) {
     throw new ValidationError('Phone number is required')
   }
 
-  // Create placeholder message
-  // TODO: Implement Twilio voice call integration
-  const message = {
-    type: 'CALL',
-    direction: 'OUTBOUND',
-    body: 'Outbound call initiated',
-    fromAddress: process.env.TWILIO_PHONE_NUMBER || '+1234567890',
-    toAddress: to,
-    status: 'PENDING',
-    leadId: leadId || null,
-    metadata: {
-      initiatedAt: new Date().toISOString(),
+  // Persist call record to DB
+  const message = await prisma.message.create({
+    data: {
+      type: 'CALL',
+      direction: 'OUTBOUND',
+      body: 'Outbound call initiated',
+      fromAddress: process.env.TWILIO_PHONE_NUMBER || '+1234567890',
+      toAddress: to,
+      status: 'PENDING',
+      leadId: leadId || null,
+      organizationId,
+      metadata: {
+        initiatedAt: new Date().toISOString(),
+      },
     },
-  }
+  })
 
   res.status(201).json({
     success: true,
@@ -453,9 +455,10 @@ export const makeCall = async (req: Request, res: Response) => {
 // Mark message as read
 export const markAsRead = async (req: Request, res: Response) => {
   const { id } = req.params
+  const organizationId = req.user!.organizationId
 
-  const message = await prisma.message.findUnique({
-    where: { id },
+  const message = await prisma.message.findFirst({
+    where: { id, organizationId },
   })
 
   if (!message) {
@@ -478,9 +481,10 @@ export const markAsRead = async (req: Request, res: Response) => {
 // Mark message as unread
 export const markAsUnread = async (req: Request, res: Response) => {
   const { id } = req.params
+  const organizationId = req.user!.organizationId
 
-  const message = await prisma.message.findUnique({
-    where: { id },
+  const message = await prisma.message.findFirst({
+    where: { id, organizationId },
   })
 
   if (!message) {
@@ -503,9 +507,10 @@ export const markAsUnread = async (req: Request, res: Response) => {
 // Delete message
 export const deleteMessage = async (req: Request, res: Response) => {
   const { id } = req.params
+  const organizationId = req.user!.organizationId
 
-  const message = await prisma.message.findUnique({
-    where: { id },
+  const message = await prisma.message.findFirst({
+    where: { id, organizationId },
   })
 
   if (!message) {
@@ -525,9 +530,10 @@ export const deleteMessage = async (req: Request, res: Response) => {
 // Get message statistics
 export const getMessageStats = async (req: Request, res: Response) => {
   const { leadId, type } = req.query
+  const organizationId = req.user!.organizationId
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {}
+  const where: any = { organizationId }
   
   if (leadId) {
     where.leadId = leadId as string
@@ -547,7 +553,7 @@ export const getMessageStats = async (req: Request, res: Response) => {
 
   const byType = await prisma.message.groupBy({
     by: ['type'],
-    where: leadId ? { leadId: leadId as string } : {}, // Don't filter byType grouping by type param
+    where: leadId ? { leadId: leadId as string, organizationId } : { organizationId }, // Don't filter byType grouping by type param
     _count: {
       _all: true,
     },
@@ -572,9 +578,11 @@ export const getMessageStats = async (req: Request, res: Response) => {
 // Get messages in a thread
 export const getThreadMessages = async (req: Request, res: Response) => {
   const { threadId } = req.params
+  const organizationId = req.user!.organizationId
 
   const messages = await prisma.message.findMany({
     where: { 
+      organizationId,
       metadata: {
         path: ['threadId'],
         equals: threadId
@@ -602,8 +610,8 @@ export const replyToMessage = async (req: Request, res: Response) => {
   const { id } = req.params
   const { body } = req.body
 
-  const originalMessage = await prisma.message.findUnique({
-    where: { id },
+  const originalMessage = await prisma.message.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   })
 
   if (!originalMessage) {
@@ -673,11 +681,14 @@ export const markMessagesAsRead = async (req: Request, res: Response) => {
   const { messageIds } = req.body
   console.log('📥 Extracted messageIds:', messageIds)
 
+  const organizationId = req.user!.organizationId
+
   await prisma.message.updateMany({
     where: {
       id: {
         in: messageIds
-      }
+      },
+      organizationId,
     },
     data: {
       readAt: new Date(),
@@ -693,12 +704,14 @@ export const markMessagesAsRead = async (req: Request, res: Response) => {
 // Mark multiple messages as unread
 export const markMessagesAsUnread = async (req: Request, res: Response) => {
   const { messageIds } = req.body
+  const organizationId = req.user!.organizationId
 
   await prisma.message.updateMany({
     where: {
       id: {
         in: messageIds
-      }
+      },
+      organizationId,
     },
     data: {
       readAt: null,
@@ -713,12 +726,17 @@ export const markMessagesAsUnread = async (req: Request, res: Response) => {
 
 // Mark all messages as read
 export const markAllAsRead = async (req: Request, res: Response) => {
-  const userId = (req as any).user.id
+  const userId = req.user!.userId
+  const organizationId = req.user!.organizationId
 
   const result = await prisma.message.updateMany({
     where: {
       readAt: null,
       direction: 'INBOUND',
+      organizationId,
+      lead: {
+        assignedToId: userId,
+      },
     },
     data: {
       readAt: new Date(),

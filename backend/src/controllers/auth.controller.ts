@@ -4,6 +4,56 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../config/database';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { ConflictError, UnauthorizedError, NotFoundError } from '../middleware/errorHandler';
+import { sendEmail } from '../services/email.service';
+
+/**
+ * Store a refresh token in the database for revocation support.
+ * Supports multi-device: each login creates a separate token record.
+ */
+async function storeRefreshToken(token: string, userId: string, organizationId: string): Promise<void> {
+  await prisma.refreshToken.create({
+    data: {
+      token,
+      userId,
+      organizationId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    },
+  });
+}
+
+/**
+ * Revoke a specific refresh token
+ */
+async function revokeRefreshToken(token: string): Promise<void> {
+  await prisma.refreshToken.updateMany({
+    where: { token, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/**
+ * Revoke ALL refresh tokens for a user (e.g., password change, token theft detection)
+ */
+async function revokeAllUserTokens(userId: string): Promise<void> {
+  await prisma.refreshToken.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/**
+ * Clean up expired tokens periodically (called opportunistically)
+ */
+async function cleanupExpiredTokens(): Promise<void> {
+  try {
+    await prisma.refreshToken.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+  } catch {
+    // Non-critical — just log
+    console.warn('[AUTH] Failed to clean up expired tokens');
+  }
+}
 
 /**
  * Register a new user
@@ -87,6 +137,9 @@ export async function register(req: Request, res: Response): Promise<void> {
   );
   const refreshToken = generateRefreshToken(result.user.id, result.user.organizationId);
 
+  // Store refresh token in DB for revocation support
+  await storeRefreshToken(refreshToken, result.user.id, result.user.organizationId);
+
   res.status(201).json({
     success: true,
     message: 'User registered successfully',
@@ -153,6 +206,9 @@ export async function login(req: Request, res: Response): Promise<void> {
   );
   const refreshToken = generateRefreshToken(user.id, user.organizationId);
 
+  // Store refresh token in DB for revocation support
+  await storeRefreshToken(refreshToken, user.id, user.organizationId);
+
   // Update last login
   await prisma.user.update({
     where: { id: user.id },
@@ -182,15 +238,37 @@ export async function login(req: Request, res: Response): Promise<void> {
 }
 
 /**
- * Refresh access token
+ * Refresh access token with token rotation (#87)
  * POST /api/auth/refresh
- * Validation handled by middleware
+ * Issues a NEW refresh token and revokes the old one.
+ * If a revoked token is reused, ALL tokens for that user are revoked (theft detection).
  */
 export async function refresh(req: Request, res: Response): Promise<void> {
   const { refreshToken } = req.body;
 
-  // Verify refresh token (now includes organizationId)
+  // Verify JWT signature and expiry
   const payload = verifyRefreshToken(refreshToken);
+
+  // Check if this token exists in DB
+  const storedToken = await prisma.refreshToken.findUnique({
+    where: { token: refreshToken },
+  });
+
+  if (!storedToken) {
+    // Token not in DB — could be from before migration, or completely unknown
+    throw new UnauthorizedError('Invalid refresh token');
+  }
+
+  // If token was already revoked, this is a reuse attack — revoke ALL tokens for this user
+  if (storedToken.revokedAt) {
+    await revokeAllUserTokens(storedToken.userId);
+    throw new UnauthorizedError('Refresh token reuse detected. All sessions revoked for security.');
+  }
+
+  // Check expiry
+  if (storedToken.expiresAt < new Date()) {
+    throw new UnauthorizedError('Refresh token has expired');
+  }
 
   // Get user with organizationId
   const user = await prisma.user.findUnique({
@@ -199,8 +277,8 @@ export async function refresh(req: Request, res: Response): Promise<void> {
       id: true,
       organizationId: true,
       email: true,
-      role: true
-    }
+      role: true,
+    },
   });
 
   if (!user) {
@@ -212,20 +290,31 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     throw new UnauthorizedError('Organization mismatch');
   }
 
-  // Generate new access token with organizationId
+  // Revoke the old refresh token
+  await revokeRefreshToken(refreshToken);
+
+  // Generate new access token and NEW refresh token (rotation)
   const accessToken = generateAccessToken(
     user.id,
     user.email,
     user.role,
     user.organizationId
   );
+  const newRefreshToken = generateRefreshToken(user.id, user.organizationId);
+
+  // Store the new refresh token in DB
+  await storeRefreshToken(newRefreshToken, user.id, user.organizationId);
+
+  // Opportunistically clean up expired tokens
+  cleanupExpiredTokens();
 
   res.status(200).json({
     success: true,
     message: 'Token refreshed successfully',
     data: {
-      accessToken
-    }
+      accessToken,
+      refreshToken: newRefreshToken,
+    },
   });
 }
 
@@ -301,8 +390,9 @@ export async function me(req: Request, res: Response): Promise<void> {
 }
 
 /**
- * Forgot password
+ * Forgot password (#88)
  * POST /api/auth/forgot-password
+ * Generates a token, stores it in DB, and sends a real reset email.
  */
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
   const { email } = req.body;
@@ -310,32 +400,120 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
   // Don't reveal if email exists - always show success
   const user = await prisma.user.findFirst({ where: { email } });
   if (user) {
-    // In production, would send real email. For now, log the token.
     const token = crypto.randomBytes(32).toString('hex');
-    console.log(`Password reset token for ${email}: ${token}`); // TODO: Replace with real email sending
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Store hashed token in DB (expires in 1 hour)
+    await prisma.passwordResetToken.create({
+      data: {
+        token: hashedToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+      },
+    });
+
+    // Build reset URL — use frontend URL from env or default
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+    // Send reset email via email service
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset Request - Master RealEstate Pro',
+        html: `
+          <h2>Password Reset</h2>
+          <p>Hi ${user.firstName},</p>
+          <p>You requested a password reset. Click the link below to set a new password:</p>
+          <p><a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Reset Password</a></p>
+          <p>This link expires in 1 hour. If you didn't request this, please ignore this email.</p>
+          <p>— Master RealEstate Pro</p>
+        `,
+        text: `Hi ${user.firstName},\n\nYou requested a password reset. Visit this link to set a new password:\n${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, please ignore this email.\n\n— Master RealEstate Pro`,
+        userId: user.id,
+        organizationId: user.organizationId,
+      });
+    } catch (emailError) {
+      console.error('[AUTH] Failed to send password reset email:', emailError);
+      // Still return success to not leak email existence
+    }
   }
 
   res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
 }
 
 /**
- * Reset password
+ * Reset password (#88)
  * POST /api/auth/reset-password
+ * Validates the token, updates the password, and revokes all refresh tokens.
  */
 export async function resetPassword(req: Request, res: Response): Promise<void> {
-  const { token: _token, password: _password } = req.body;
+  const { token, password } = req.body;
 
-  // For now, just return an error since we don't store tokens yet
-  res.status(400).json({ success: false, message: 'Password reset is not yet fully configured. Contact support.' });
+  if (!token || !password) {
+    res.status(400).json({ success: false, message: 'Token and password are required.' });
+    return;
+  }
+
+  if (password.length < 8) {
+    res.status(400).json({ success: false, message: 'Password must be at least 8 characters.' });
+    return;
+  }
+
+  // Hash the incoming token to compare with stored hash
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  // Find valid (unused, unexpired) token
+  const resetToken = await prisma.passwordResetToken.findFirst({
+    where: {
+      token: hashedToken,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!resetToken) {
+    res.status(400).json({ success: false, message: 'Invalid or expired reset token.' });
+    return;
+  }
+
+  // Hash new password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Update password + mark token as used + revoke all refresh tokens (force re-login on all devices)
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { password: hashedPassword },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { usedAt: new Date() },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId: resetToken.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+
+  res.json({ success: true, message: 'Password has been reset. Please log in with your new password.' });
 }
 
 /**
- * Logout
+ * Logout (#85)
  * POST /api/auth/logout
+ * Revokes the refresh token server-side so it cannot be reused.
  */
-export async function logout(_req: Request, res: Response): Promise<void> {
-  // Clear any server-side session data
-  // For JWT-based auth, the client just discards the token
-  // But we acknowledge the logout request properly
+export async function logout(req: Request, res: Response): Promise<void> {
+  const { refreshToken } = req.body;
+
+  if (refreshToken) {
+    // Revoke the specific refresh token
+    await revokeRefreshToken(refreshToken);
+  } else if (req.user) {
+    // If no refresh token provided, revoke all tokens for the user (nuclear option)
+    await revokeAllUserTokens(req.user.userId);
+  }
+
   res.json({ success: true, message: 'Logged out successfully' });
 }

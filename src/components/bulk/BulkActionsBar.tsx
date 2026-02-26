@@ -6,9 +6,9 @@ import { cn } from '@/lib/utils'
 interface BulkActionsBarProps {
   selectedCount: number
   onClearSelection: () => void
-  onChangeStatus?: () => void
+  onChangeStatus?: (status: string) => void
   onAddTags?: () => void
-  onAssignTo?: () => void
+  onAssignTo?: (person: string) => void
   onExport?: () => void
   onDelete?: () => void
   onBulkEmail?: () => void
@@ -78,7 +78,7 @@ export function BulkActionsBar({
                         <button
                           key={status}
                           onClick={() => {
-                            onChangeStatus()
+                            onChangeStatus(status)
                             setShowStatusMenu(false)
                           }}
                           className="w-full rounded-md px-3 py-2 text-left text-sm text-foreground hover:bg-muted transition-colors"
@@ -129,7 +129,7 @@ export function BulkActionsBar({
                         <button
                           key={person}
                           onClick={() => {
-                            onAssignTo()
+                            onAssignTo(person)
                             setShowAssignMenu(false)
                           }}
                           className="w-full rounded-md px-3 py-2 text-left text-sm text-foreground hover:bg-muted transition-colors"

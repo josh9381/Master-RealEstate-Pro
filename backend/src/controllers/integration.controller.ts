@@ -208,10 +208,13 @@ export async function getAllIntegrationStatuses(req: Request, res: Response): Pr
   }
 
   // Get all integrations for the user's organization
-  // In a full implementation, you'd query by organizationId
-  // For now, we'll use userId
+  // Query through the user relation to scope by organization
   const integrations = await prisma.integration.findMany({
-    where: { userId: req.user.userId },
+    where: { 
+      user: {
+        organizationId: req.user.organizationId,
+      },
+    },
     select: {
       provider: true,
       isConnected: true,

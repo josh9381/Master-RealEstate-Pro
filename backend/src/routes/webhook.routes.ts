@@ -5,27 +5,71 @@ import {
   trackEmailOpen,
   trackEmailClick,
 } from '../services/campaignAnalytics.service';
+import { suppressEmail } from '../services/email.service';
 import { parseUserAgent } from '../utils/useragent';
 import { lookupGeo } from '../utils/geoip';
+import { webhookLimiter } from '../middleware/rateLimiter';
+import { verifyTwilioSignature, verifySendGridSignature } from '../middleware/webhookAuth';
+import { logger } from '../lib/logger';
+import {
+  twilioSmsWebhookSchema,
+  twilioStatusWebhookSchema,
+  sendgridWebhookSchema,
+  sendgridInboundSchema,
+} from '../validators/webhook.validator';
 
 const router = Router();
+
+// Apply webhook rate limiter to all webhook routes (#90)
+router.use(webhookLimiter);
+
+/** Extract bare email address from "Display Name <email@domain.com>" or plain "email@domain.com" */
+function parseEmailAddress(raw: string): string {
+  const match = raw.match(/<([^>]+)>/);
+  return match ? match[1].trim().toLowerCase() : raw.trim().toLowerCase();
+}
+
+/** Create a notification for a user in an org about an inbound message */
+async function createInboundNotification(
+  userId: string,
+  organizationId: string,
+  type: 'INBOUND_EMAIL' | 'INBOUND_SMS',
+  title: string,
+  message: string,
+  link = '/communication'
+): Promise<void> {
+  await prisma.notification.create({
+    data: {
+      id: `notif_inbound_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      userId,
+      organizationId,
+      type,
+      title,
+      message,
+      link,
+    },
+  });
+}
 
 /**
  * Handle Twilio SMS webhook - User-specific route (secure)
  * POST /api/webhooks/twilio/sms/:userId
+ * #95: Zod-validated. #96: Signature-verified.
  */
-router.post('/twilio/sms/:userId', async (req, res) => {
+router.post('/twilio/sms/:userId', verifyTwilioSignature, async (req, res) => {
   try {
-    const { userId } = req.params;
-    console.log('[WEBHOOK] Twilio SMS received:', req.body);
-    console.log('[WEBHOOK] User ID:', userId);
-    
-    const { MessageSid, From, To, Body, NumMedia } = req.body;
-    
-    if (!MessageSid || !From || !To || Body === undefined) {
-      console.warn('[WEBHOOK] Missing required fields');
-      return res.status(400).send('Missing required fields');
+    // Validate payload shape (#95)
+    const parseResult = twilioSmsWebhookSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      logger.warn({ issues: parseResult.error.issues }, '[WEBHOOK] Invalid Twilio SMS payload');
+      return res.status(400).send('Invalid payload');
     }
+
+    const { userId } = req.params;
+    logger.info({ body: req.body }, '[WEBHOOK] Twilio SMS received');
+    logger.info({ userId }, '[WEBHOOK] Twilio SMS user');
+    
+    const { MessageSid, From, To, Body, NumMedia } = parseResult.data;
     
     // Find SMS config for this user
     const config = await prisma.sMSConfig.findUnique({
@@ -43,7 +87,7 @@ router.post('/twilio/sms/:userId', async (req, res) => {
     });
     
     if (!config) {
-      console.warn('[WEBHOOK] No config found for user:', userId);
+      logger.warn({ userId }, '[WEBHOOK] No config found for user');
       return res.status(404).send('User configuration not found');
     }
     
@@ -77,8 +121,27 @@ router.post('/twilio/sms/:userId', async (req, res) => {
       }
     });
     
-    console.log('[WEBHOOK] Inbound SMS saved:', message.id);
-    
+    logger.info({ messageId: message.id }, '[WEBHOOK] Inbound SMS saved');
+
+    // Create notification for the user who owns this SMS config (#83)
+    try {
+      const leadName = lead
+        ? `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() || From
+        : From;
+      const orgId = lead?.organizationId || config.user?.organizationId;
+      if (orgId && orgId !== 'clz0000000000000000000000') {
+        await createInboundNotification(
+          config.userId,
+          orgId,
+          'INBOUND_SMS',
+          `New SMS from ${leadName}`,
+          Body.length > 100 ? Body.substring(0, 97) + '…' : Body,
+        );
+      }
+    } catch (notifErr) {
+      logger.error({ error: notifErr }, '[WEBHOOK] Failed to create SMS notification');
+    }
+
     // Respond to Twilio with TwiML (optional - for auto-reply)
     res.type('text/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>
@@ -87,7 +150,7 @@ router.post('/twilio/sms/:userId', async (req, res) => {
 </Response>`);
     
   } catch (error) {
-    console.error('[WEBHOOK] Error processing SMS:', error);
+    logger.error({ error }, '[WEBHOOK] Error processing SMS');
     // Still return 200 to prevent Twilio from retrying
     res.status(200).send('OK');
   }
@@ -96,16 +159,20 @@ router.post('/twilio/sms/:userId', async (req, res) => {
 /**
  * Twilio Status Callback - Updates message delivery status
  * POST /api/webhooks/twilio/status
+ * #95: Zod-validated. #96: Signature-verified.
  */
-router.post('/twilio/status', async (req, res) => {
+router.post('/twilio/status', verifyTwilioSignature, async (req, res) => {
   try {
-    console.log('[WEBHOOK] Twilio status update:', req.body);
-    
-    const { MessageSid, MessageStatus, ErrorCode } = req.body;
-    
-    if (!MessageSid) {
-      return res.status(400).send('Missing MessageSid');
+    // Validate payload shape (#95)
+    const parseResult = twilioStatusWebhookSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      logger.warn({ issues: parseResult.error.issues }, '[WEBHOOK] Invalid Twilio status payload');
+      return res.status(400).send('Invalid payload');
     }
+
+    logger.info({ body: req.body }, '[WEBHOOK] Twilio status update');
+    
+    const { MessageSid, MessageStatus, ErrorCode } = parseResult.data;
     
     // Find message by externalId (MessageSid)
     const message = await prisma.message.findFirst({
@@ -113,7 +180,7 @@ router.post('/twilio/status', async (req, res) => {
     });
     
     if (!message) {
-      console.warn('[WEBHOOK] Message not found:', MessageSid);
+      logger.warn({ MessageSid }, '[WEBHOOK] Message not found');
       return res.status(200).send('OK');
     }
     
@@ -155,11 +222,11 @@ router.post('/twilio/status', async (req, res) => {
       }
     });
     
-    console.log('[WEBHOOK] Status updated:', { MessageSid, MessageStatus, newStatus });
+    logger.info({ MessageSid, MessageStatus, newStatus }, '[WEBHOOK] Status updated');
     res.status(200).send('OK');
     
   } catch (error) {
-    console.error('[WEBHOOK] Error updating status:', error);
+    logger.error({ error }, '[WEBHOOK] Error updating status');
     res.status(200).send('OK');
   }
 });
@@ -167,13 +234,21 @@ router.post('/twilio/status', async (req, res) => {
 /**
  * SendGrid Email Webhook - Receives email events (opens, clicks, bounces)
  * POST /api/webhooks/sendgrid
+ * #95: Zod-validated. #96: Signature-verified.
  * 
  * Phase 5.11: Now integrates with campaignAnalytics.service for 
  * lead score updates and campaign counter increments.
  */
-router.post('/sendgrid', async (req, res) => {
+router.post('/sendgrid', verifySendGridSignature, async (req, res) => {
   try {
-    console.log('[WEBHOOK] SendGrid event received');
+    // Validate payload shape (#95)
+    const parseResult = sendgridWebhookSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      logger.warn({ issues: parseResult.error.issues }, '[WEBHOOK] Invalid SendGrid payload');
+      return res.status(400).send('Invalid payload');
+    }
+
+    logger.info('[WEBHOOK] SendGrid event received');
     
     const events = Array.isArray(req.body) ? req.body : [req.body];
     
@@ -211,7 +286,7 @@ router.post('/sendgrid', async (req, res) => {
       });
       
       if (!message) {
-        console.warn('[WEBHOOK] Email message not found:', sg_message_id);
+        logger.warn({ sg_message_id }, '[WEBHOOK] Email message not found');
         continue;
       }
       
@@ -234,10 +309,32 @@ router.post('/sendgrid', async (req, res) => {
         case 'dropped':
           updates.status = 'BOUNCED';
           updates.bouncedAt = new Date();
+          // #102: Add bounced address to suppression list
+          if (email && message.organizationId) {
+            try { await suppressEmail(email, message.organizationId, 'bounce'); } catch (e) {
+              logger.error({ error: e, email }, '[WEBHOOK] Failed to suppress bounced email');
+            }
+          }
           break;
         case 'spamreport':
           updates.status = 'FAILED';
           updates.spamComplaintAt = new Date();
+          // #103: Add to suppression list AND opt-out the lead
+          if (email && message.organizationId) {
+            try { await suppressEmail(email, message.organizationId, 'spamreport'); } catch (e) {
+              logger.error({ error: e, email }, '[WEBHOOK] Failed to suppress spam-reported email');
+            }
+          }
+          if (message.leadId) {
+            try {
+              await prisma.lead.update({
+                where: { id: message.leadId },
+                data: { emailOptIn: false, emailOptOutAt: new Date(), emailOptOutReason: 'spam_complaint' },
+              });
+            } catch (e) {
+              logger.error({ error: e, leadId: message.leadId }, '[WEBHOOK] Failed to opt-out lead after spam report');
+            }
+          }
           break;
       }
       
@@ -247,7 +344,7 @@ router.post('/sendgrid', async (req, res) => {
           data: updates
         });
         
-        console.log('[WEBHOOK] Email status updated:', { sg_message_id, eventType });
+        logger.info({ sg_message_id, eventType }, '[WEBHOOK] Email status updated');
       }
 
       // Phase 5.11: Wire to campaign analytics tracking
@@ -265,7 +362,7 @@ router.post('/sendgrid', async (req, res) => {
                 message.id,
                 message.organizationId
               );
-              console.log('[WEBHOOK] Campaign open tracked:', { campaignId, leadId: message.leadId });
+              logger.info({ campaignId, leadId: message.leadId }, '[WEBHOOK] Campaign open tracked');
               break;
 
             case 'click':
@@ -276,19 +373,15 @@ router.post('/sendgrid', async (req, res) => {
                 url || '',
                 message.organizationId
               );
-              console.log('[WEBHOOK] Campaign click tracked:', { campaignId, leadId: message.leadId });
+              logger.info({ campaignId, leadId: message.leadId }, '[WEBHOOK] Campaign click tracked');
               break;
           }
         } catch (trackError) {
           // Don't fail the webhook if campaign tracking fails
-          console.error('[WEBHOOK] Campaign analytics tracking error:', trackError);
+          logger.error({ error: trackError }, '[WEBHOOK] Campaign analytics tracking error');
         }
       } else if (campaignId) {
-        console.warn('[WEBHOOK] Missing leadId or orgId for campaign tracking:', {
-          campaignId,
-          leadId: message.leadId,
-          orgId: message.organizationId,
-        });
+        logger.warn({ campaignId, leadId: message.leadId, orgId: message.organizationId }, '[WEBHOOK] Missing leadId or orgId for campaign tracking');
       }
 
       // Phase 8.9: Store device/geo data as Activity metadata
@@ -326,7 +419,7 @@ router.post('/sendgrid', async (req, res) => {
           });
         } catch (activityError) {
           // Don't fail webhook if activity creation fails
-          console.error('[WEBHOOK] Activity creation error:', activityError);
+          logger.error({ error: activityError }, '[WEBHOOK] Activity creation error');
         }
       }
     }
@@ -334,8 +427,125 @@ router.post('/sendgrid', async (req, res) => {
     res.status(200).send('OK');
     
   } catch (error) {
-    console.error('[WEBHOOK] Error processing SendGrid event:', error);
+    logger.error({ error }, '[WEBHOOK] Error processing SendGrid event');
     res.status(200).send('OK');
+  }
+});
+
+/**
+ * SendGrid Inbound Parse webhook — receives emails sent to the app's inbound email address
+ * POST /api/webhooks/sendgrid/inbound
+ * #95: Zod-validated.
+ *
+ * SendGrid sends form-encoded fields:
+ *   from     — sender "Display Name <email@domain.com>" or plain "email@domain.com"
+ *   to       — recipient email address
+ *   subject  — email subject
+ *   text     — plain-text body
+ *   html     — html body (fallback when text is empty)
+ *   envelope — JSON string { from: string, to: string[] }
+ *
+ * #79: Store inbound email as Message (direction INBOUND)
+ * #83: Create Notification for the recipient user
+ */
+router.post('/sendgrid/inbound', async (req, res) => {
+  // Always respond 200 quickly so SendGrid doesn't retry
+  res.status(200).send('OK');
+
+  try {
+    // Validate payload (#95)
+    const parseResult = sendgridInboundSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      logger.warn({ issues: parseResult.error.issues }, '[WEBHOOK] Invalid SendGrid inbound payload');
+      return;
+    }
+
+    const { from, to, subject, text, html } = parseResult.data;
+
+    const senderEmail = parseEmailAddress(from);
+    const recipientEmail = parseEmailAddress(to);
+
+    // Extract display name from "Name <email>" or fall back to email
+    const senderName = from.match(/^(.+?)\s*</) ? from.match(/^(.+?)\s*</)?.[1]?.trim() || senderEmail : senderEmail;
+
+    const body = text.trim() || html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || '(empty)';
+
+    if (!senderEmail) {
+      logger.warn('[WEBHOOK] SendGrid inbound: missing from address');
+      return;
+    }
+
+    // 1. Find lead by sender email
+    const lead = await prisma.lead.findFirst({
+      where: { email: senderEmail },
+      select: { id: true, organizationId: true, firstName: true, lastName: true },
+    });
+
+    // 2. Find the recipient user via their EmailConfig or by email address match
+    const emailConfig = await prisma.emailConfig.findFirst({
+      where: { fromEmail: recipientEmail },
+      include: { user: { select: { id: true, organizationId: true } } },
+    });
+
+    // Fall back: find a user whose own email matches the recipient
+    const userByEmail = !emailConfig
+      ? await prisma.user.findFirst({
+          where: { email: recipientEmail },
+          select: { id: true, organizationId: true },
+        })
+      : null;
+
+    const recipientUser = emailConfig?.user || userByEmail;
+    const organizationId = lead?.organizationId || recipientUser?.organizationId;
+
+    if (!organizationId) {
+      logger.warn({ senderEmail, recipientEmail }, '[WEBHOOK] SendGrid inbound: cannot resolve organizationId');
+      return;
+    }
+
+    // 3. Create inbound Message record
+    const message = await prisma.message.create({
+      data: {
+        id: `msg_inbound_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        type: 'EMAIL',
+        direction: 'INBOUND',
+        status: 'DELIVERED',
+        fromAddress: senderEmail,
+        toAddress: recipientEmail,
+        subject,
+        body,
+        leadId: lead?.id || null,
+        organizationId,
+        provider: 'sendgrid',
+        metadata: {
+          webhook: true,
+          inbound: true,
+          senderName,
+        },
+      },
+    });
+
+    logger.info({ messageId: message.id, from: senderEmail, to: recipientEmail, subject }, '[WEBHOOK] Inbound email saved');
+
+    // 4. Create Notification for the recipient user (#83)
+    if (recipientUser?.id) {
+      try {
+        const leadName = lead
+          ? `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() || senderName
+          : senderName;
+        await createInboundNotification(
+          recipientUser.id,
+          organizationId,
+          'INBOUND_EMAIL',
+          `New email from ${leadName}`,
+          body.length > 120 ? body.substring(0, 117) + '…' : body,
+        );
+      } catch (notifErr) {
+        logger.error({ error: notifErr }, '[WEBHOOK] Failed to create email notification');
+      }
+    }
+  } catch (error) {
+    logger.error({ error }, '[WEBHOOK] Error processing SendGrid inbound email');
   }
 });
 

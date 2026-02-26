@@ -25,22 +25,29 @@ export async function canAccessLead(
     const leadId = req.params.id;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
-
-    // ADMINs have full access
-    if (userRole === 'ADMIN') {
-      return next();
-    }
+    const organizationId = req.user!.organizationId;
 
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
       select: {
         id: true,
-        assignedToId: true
+        assignedToId: true,
+        organizationId: true
       }
     });
 
     if (!lead) {
       throw new NotFoundError('Lead not found');
+    }
+
+    // Must belong to same org
+    if (lead.organizationId !== organizationId) {
+      throw new ForbiddenError('You do not have permission to access this lead');
+    }
+
+    // ADMINs can access all resources within their org
+    if (userRole === 'ADMIN') {
+      return next();
     }
 
     // User can access if it's assigned to them
@@ -66,17 +73,14 @@ export async function canAccessTask(
     const taskId = req.params.id;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
-
-    // ADMINs have full access
-    if (userRole === 'ADMIN') {
-      return next();
-    }
+    const organizationId = req.user!.organizationId;
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       select: {
         id: true,
-        assignedToId: true
+        assignedToId: true,
+        organizationId: true
       }
     });
 
@@ -84,7 +88,14 @@ export async function canAccessTask(
       throw new NotFoundError('Task not found');
     }
 
-    // User can access if it's assigned to them
+    if (task.organizationId !== organizationId) {
+      throw new ForbiddenError('You do not have permission to access this task');
+    }
+
+    if (userRole === 'ADMIN') {
+      return next();
+    }
+
     if (task.assignedToId === userId) {
       return next();
     }
@@ -107,17 +118,14 @@ export async function canAccessActivity(
     const activityId = req.params.id;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
-
-    // ADMINs have full access
-    if (userRole === 'ADMIN') {
-      return next();
-    }
+    const organizationId = req.user!.organizationId;
 
     const activity = await prisma.activity.findUnique({
       where: { id: activityId },
       select: {
         id: true,
-        userId: true
+        userId: true,
+        organizationId: true
       }
     });
 
@@ -125,7 +133,14 @@ export async function canAccessActivity(
       throw new NotFoundError('Activity not found');
     }
 
-    // User can only access their own activities
+    if (activity.organizationId !== organizationId) {
+      throw new ForbiddenError('You do not have permission to access this activity');
+    }
+
+    if (userRole === 'ADMIN') {
+      return next();
+    }
+
     if (activity.userId === userId) {
       return next();
     }
@@ -148,11 +163,7 @@ export async function canAccessNote(
     const noteId = req.params.id;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
-
-    // ADMINs have full access
-    if (userRole === 'ADMIN') {
-      return next();
-    }
+    const organizationId = req.user!.organizationId;
 
     const note = await prisma.note.findUnique({
       where: { id: noteId },
@@ -161,7 +172,8 @@ export async function canAccessNote(
         authorId: true,
         lead: {
           select: {
-            assignedToId: true
+            assignedToId: true,
+            organizationId: true
           }
         }
       }
@@ -171,7 +183,14 @@ export async function canAccessNote(
       throw new NotFoundError('Note not found');
     }
 
-    // User can access if they authored the note or own the lead
+    if (note.lead?.organizationId !== organizationId) {
+      throw new ForbiddenError('You do not have permission to access this note');
+    }
+
+    if (userRole === 'ADMIN') {
+      return next();
+    }
+
     if (note.authorId === userId || note.lead?.assignedToId === userId) {
       return next();
     }
@@ -194,17 +213,14 @@ export async function canAccessCampaign(
     const campaignId = req.params.id;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
-
-    // ADMINs have full access
-    if (userRole === 'ADMIN') {
-      return next();
-    }
+    const organizationId = req.user!.organizationId;
 
     const campaign = await prisma.campaign.findUnique({
       where: { id: campaignId },
       select: {
         id: true,
-        createdById: true
+        createdById: true,
+        organizationId: true
       }
     });
 
@@ -212,7 +228,14 @@ export async function canAccessCampaign(
       throw new NotFoundError('Campaign not found');
     }
 
-    // User can only access campaigns they created
+    if (campaign.organizationId !== organizationId) {
+      throw new ForbiddenError('You do not have permission to access this campaign');
+    }
+
+    if (userRole === 'ADMIN') {
+      return next();
+    }
+
     if (campaign.createdById === userId) {
       return next();
     }

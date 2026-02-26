@@ -21,6 +21,8 @@ const SecuritySettings = () => {
   // 2FA state
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [showBackupCodes, setShowBackupCodes] = useState(false);
+  const [securityScore, setSecurityScore] = useState(0);
+  const [lastPasswordChange, setLastPasswordChange] = useState('');
   
   // Sessions state
   const [sessions] = useState([
@@ -44,7 +46,10 @@ const SecuritySettings = () => {
       const settings = await settingsApi.getSecuritySettings();
       
       if (settings) {
-        setTwoFactorEnabled(settings.twoFactorEnabled ?? true);
+        const data = settings.data || settings;
+        setTwoFactorEnabled(data.twoFactorEnabled ?? true);
+        setSecurityScore(data.securityScore ?? 0);
+        setLastPasswordChange(data.lastPasswordChange || '');
       }
       
       if (isRefresh) {
@@ -119,17 +124,7 @@ const SecuritySettings = () => {
     if (!confirm('Are you sure you want to remove 2FA? This will make your account less secure.')) {
       return;
     }
-    
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setTwoFactorEnabled(false);
-      toast.success('2FA removed successfully');
-    } catch (error) {
-      toast.error('Failed to remove 2FA');
-    } finally {
-      setLoading(false);
-    }
+    toast.info('2FA removal is not yet implemented');
   };
   
   const handleReconfigure2FA = () => {
@@ -142,31 +137,14 @@ const SecuritySettings = () => {
   };
   
   const handleRevokeSession = async (_sessionId: number) => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      toast.success('Session revoked successfully');
-    } catch (error) {
-      toast.error('Failed to revoke session');
-    } finally {
-      setLoading(false);
-    }
+    toast.info('Session revocation is not yet implemented');
   };
   
   const handleSignOutAllSessions = async () => {
     if (!confirm('Are you sure you want to sign out all other sessions?')) {
       return;
     }
-    
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('All other sessions signed out');
-    } catch (error) {
-      toast.error('Failed to sign out sessions');
-    } finally {
-      setLoading(false);
-    }
+    toast.info('Sign out all sessions is not yet implemented');
   };
   
   const handleDeleteAccount = async () => {
@@ -175,16 +153,7 @@ const SecuritySettings = () => {
       toast.error('Account deletion cancelled');
       return;
     }
-    
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success('Account deletion initiated. You will receive a confirmation email.');
-    } catch (error) {
-      toast.error('Failed to delete account');
-    } finally {
-      setLoading(false);
-    }
+    toast.info('Account deletion is not yet implemented');
   };
   
   return (
@@ -228,14 +197,18 @@ const SecuritySettings = () => {
                 <Shield className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <div className="text-3xl font-bold">85/100</div>
-                <p className="text-sm text-muted-foreground">Strong</p>
+                <div className="text-3xl font-bold">{securityScore || '—'}/100</div>
+                <p className="text-sm text-muted-foreground">
+                  {securityScore >= 80 ? 'Strong' : securityScore >= 50 ? 'Moderate' : securityScore > 0 ? 'Weak' : '—'}
+                </p>
               </div>
             </div>
-            <Badge variant="success">Good</Badge>
+            <Badge variant={securityScore >= 80 ? 'success' : securityScore >= 50 ? 'default' : 'destructive'}>
+              {securityScore >= 80 ? 'Good' : securityScore >= 50 ? 'Fair' : securityScore > 0 ? 'Needs Improvement' : '—'}
+            </Badge>
           </div>
           <div className="w-full bg-secondary rounded-full h-2 mb-4">
-            <div className="bg-green-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+            <div className={`h-2 rounded-full ${securityScore >= 80 ? 'bg-green-600' : securityScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${securityScore}%` }}></div>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
@@ -245,7 +218,7 @@ const SecuritySettings = () => {
               <span className="text-muted-foreground">✓ Strong password</span>
             </div>
             <div className="flex items-center justify-between text-warning">
-              <span>⚠ Last password change: 6 months ago</span>
+              <span>⚠ Last password change: {lastPasswordChange ? new Date(lastPasswordChange).toLocaleDateString() : 'Unknown'}</span>
               <Button variant="link" size="sm">Change Now</Button>
             </div>
           </div>

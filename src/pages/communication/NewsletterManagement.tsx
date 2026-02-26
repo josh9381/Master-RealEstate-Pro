@@ -14,7 +14,8 @@ const NewsletterManagement = () => {
     queryKey: ['newsletter-management'],
     queryFn: async () => {
       const response = await messagesApi.getMessages({ type: 'NEWSLETTER' })
-      return (response && Array.isArray(response)) ? response : []
+      const threads = response?.data?.threads || response?.threads || []
+      return Array.isArray(threads) ? threads : []
     }
   })
   const refreshing = isFetching && !loading

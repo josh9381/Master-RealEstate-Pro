@@ -257,11 +257,8 @@ const EmailConfiguration = () => {
   const handleVerifyDNS = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success('DNS records verified successfully');
-    } catch (error) {
-      toast.error('Failed to verify DNS records');
+      // TODO: Wire to real DNS verification endpoint when backend supports it
+      toast.info('DNS verification is not yet connected to a backend endpoint. Configure your DNS records manually and check back later.');
     } finally {
       setLoading(false);
     }
@@ -669,12 +666,26 @@ const EmailConfiguration = () => {
           </div>
           <div className="pt-4 border-t">
             <Button 
-              onClick={() => {
-                toast.success('Email template settings saved!');
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await settingsApi.updateEmailConfig({
+                    includeUnsubscribe,
+                    trackOpens,
+                    trackClicks,
+                    includeLogo,
+                    includeSocial,
+                  });
+                  toast.success('Email template settings saved!');
+                } catch (error) {
+                  toast.error('Failed to save template settings. Please try again.');
+                } finally {
+                  setSaving(false);
+                }
               }}
               disabled={saving}
             >
-              Save Template Settings
+              {saving ? 'Saving...' : 'Save Template Settings'}
             </Button>
           </div>
         </CardContent>
@@ -727,12 +738,24 @@ const EmailConfiguration = () => {
           </div>
           <div className="pt-4 border-t">
             <Button 
-              onClick={() => {
-                toast.success('Delivery settings saved!');
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await settingsApi.updateEmailConfig({
+                    dailyLimit: parseInt(dailyLimit) || 0,
+                    rateLimit,
+                    bounceHandling,
+                  });
+                  toast.success('Delivery settings saved!');
+                } catch (error) {
+                  toast.error('Failed to save delivery settings. Please try again.');
+                } finally {
+                  setSaving(false);
+                }
               }}
               disabled={saving}
             >
-              Save Delivery Settings
+              {saving ? 'Saving...' : 'Save Delivery Settings'}
             </Button>
           </div>
         </CardContent>

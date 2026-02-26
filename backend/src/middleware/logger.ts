@@ -1,61 +1,77 @@
 import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
+import { logger } from '../lib/logger';
+
+// Augment Express Request with requestId for correlation (#108)
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Request {
+      requestId?: string;
+    }
+  }
+}
 
 /**
- * Request logging middleware
- * Logs incoming requests with method, path, IP, and response time
+ * #108: Correlation ID middleware — generates a UUID for every request.
+ * The ID is:
+ *  - stored on `req.requestId`
+ *  - returned via `X-Request-ID` response header
+ *  - included in every pino log line for this request
+ */
+export function correlationId(req: Request, res: Response, next: NextFunction): void {
+  const id = (req.headers['x-request-id'] as string) || crypto.randomUUID();
+  req.requestId = id;
+  res.setHeader('X-Request-ID', id);
+  next();
+}
+
+/**
+ * #106/#107: Structured request logging with pino.
+ * In development: pretty-printed with timing.
+ * In production: JSON with full request context.
+ * Always includes the correlation ID (#108).
  */
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const startTime = Date.now();
-  
-  // Log request
-  const requestLog = {
+
+  const reqLog = logger.child({ requestId: req.requestId });
+
+  // Log incoming request at debug level (won't appear in production default 'info' level)
+  reqLog.debug({
     method: req.method,
     path: req.path,
     ip: req.ip || req.socket.remoteAddress,
     userAgent: req.get('user-agent'),
-    timestamp: new Date().toISOString()
-  };
-
-  console.log(`📨 ${requestLog.method} ${requestLog.path} - ${requestLog.ip}`);
+  }, 'Incoming request');
 
   // Log response when finished
   res.on('finish', () => {
     const duration = Date.now() - startTime;
-    const statusColor = res.statusCode >= 500 ? '🔴' 
-                      : res.statusCode >= 400 ? '🟡'
-                      : res.statusCode >= 300 ? '🔵'
-                      : '🟢';
-    
-    console.log(
-      `${statusColor} ${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`
-    );
+    const logData = {
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration,
+      ip: req.ip || req.socket.remoteAddress,
+    };
+
+    if (res.statusCode >= 500) {
+      reqLog.error(logData, 'Request completed with server error');
+    } else if (res.statusCode >= 400) {
+      reqLog.warn(logData, 'Request completed with client error');
+    } else {
+      reqLog.info(logData, 'Request completed');
+    }
   });
 
   next();
 }
 
 /**
- * Minimal logger for production (logs only errors and important events)
+ * @deprecated Use `requestLogger` instead — pino handles dev/prod differences via transport config.
+ * Kept for backward compatibility but now just delegates to requestLogger.
  */
 export function productionLogger(req: Request, res: Response, next: NextFunction): void {
-  // Only log in production mode
-  if (process.env.NODE_ENV !== 'production') {
-    return next();
-  }
-
-  res.on('finish', () => {
-    // Only log errors (4xx and 5xx)
-    if (res.statusCode >= 400) {
-      console.log(JSON.stringify({
-        timestamp: new Date().toISOString(),
-        method: req.method,
-        path: req.path,
-        status: res.statusCode,
-        ip: req.ip,
-        userAgent: req.get('user-agent')
-      }));
-    }
-  });
-
-  next();
+  return requestLogger(req, res, next);
 }

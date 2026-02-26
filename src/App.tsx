@@ -155,8 +155,8 @@ function App() {
 
       {/* Main app routes */}
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
-        <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+        <Route path="/" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Dashboard"><Dashboard /></PageErrorBoundary></Suspense>} />
+        <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Dashboard"><Dashboard /></PageErrorBoundary></Suspense>} />
         
         {/* Leads */}
         <Route path="/leads" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Leads List"><LeadsList /></PageErrorBoundary></Suspense>} />
@@ -170,9 +170,9 @@ function App() {
         <Route path="/leads/merge" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Merge Leads"><LeadsMerge /></PageErrorBoundary></Suspense>} />
         
         {/* Calendar & Tasks */}
-        <Route path="/calendar" element={<Suspense fallback={<PageLoader />}><CalendarPage /></Suspense>} />
-        <Route path="/activity" element={<Suspense fallback={<PageLoader />}><ActivityPage /></Suspense>} />
-        <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><TasksPage /></Suspense>} />
+        <Route path="/calendar" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Calendar"><CalendarPage /></PageErrorBoundary></Suspense>} />
+        <Route path="/activity" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Activity"><ActivityPage /></PageErrorBoundary></Suspense>} />
+        <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Tasks"><TasksPage /></PageErrorBoundary></Suspense>} />
         
         {/* Campaigns */}
         <Route path="/campaigns" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaigns"><CampaignsList /></PageErrorBoundary></Suspense>} />
@@ -206,38 +206,38 @@ function App() {
         <Route path="/analytics/report-builder" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Report Builder"><ReportBuilder /></PageErrorBoundary></Suspense>} />
         
         {/* Communication */}
-        <Route path="/communication" element={<Suspense fallback={<PageLoader />}><CommunicationInbox /></Suspense>} />
-        <Route path="/communication/inbox" element={<Suspense fallback={<PageLoader />}><CommunicationInbox /></Suspense>} />
-        <Route path="/communication/templates" element={<Suspense fallback={<PageLoader />}><EmailTemplatesLibrary /></Suspense>} />
-        <Route path="/communication/sms" element={<Suspense fallback={<PageLoader />}><SMSCenter /></Suspense>} />
-        <Route path="/communication/calls" element={<Suspense fallback={<PageLoader />}><CallCenter /></Suspense>} />
-        <Route path="/communication/social" element={<Suspense fallback={<PageLoader />}><SocialMediaDashboard /></Suspense>} />
-        <Route path="/communication/newsletter" element={<Suspense fallback={<PageLoader />}><NewsletterManagement /></Suspense>} />
+        <Route path="/communication" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Inbox"><CommunicationInbox /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication/inbox" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Inbox"><CommunicationInbox /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication/templates" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Templates"><EmailTemplatesLibrary /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication/sms" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="SMS Center"><SMSCenter /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication/calls" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Call Center"><CallCenter /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication/social" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Social Media"><SocialMediaDashboard /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication/newsletter" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Newsletter"><NewsletterManagement /></PageErrorBoundary></Suspense>} />
         
         {/* Workflows */}
-        <Route path="/workflows" element={<Suspense fallback={<PageLoader />}><WorkflowsList /></Suspense>} />
-        <Route path="/workflows/builder" element={<Suspense fallback={<PageLoader />}><WorkflowBuilder /></Suspense>} />
-        <Route path="/workflows/automation" element={<Suspense fallback={<PageLoader />}><AutomationRules /></Suspense>} />
+        <Route path="/workflows" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Workflows"><WorkflowsList /></PageErrorBoundary></Suspense>} />
+        <Route path="/workflows/builder" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Workflow Builder"><WorkflowBuilder /></PageErrorBoundary></Suspense>} />
+        <Route path="/workflows/automation" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Automation Rules"><AutomationRules /></PageErrorBoundary></Suspense>} />
         
         {/* Settings */}
-        <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsHub /></Suspense>} />
-        <Route path="/settings/profile" element={<Suspense fallback={<PageLoader />}><ProfileSettings /></Suspense>} />
-        <Route path="/settings/business" element={<Suspense fallback={<PageLoader />}><BusinessSettings /></Suspense>} />
-        <Route path="/settings/team" element={<Suspense fallback={<PageLoader />}><TeamManagement /></Suspense>} />
-        <Route path="/settings/email" element={<Suspense fallback={<PageLoader />}><EmailConfiguration /></Suspense>} />
-        <Route path="/settings/notifications" element={<Suspense fallback={<PageLoader />}><NotificationSettings /></Suspense>} />
-        <Route path="/settings/security" element={<Suspense fallback={<PageLoader />}><SecuritySettings /></Suspense>} />
-        <Route path="/settings/compliance" element={<Suspense fallback={<PageLoader />}><ComplianceSettings /></Suspense>} />
-        <Route path="/settings/google" element={<Suspense fallback={<PageLoader />}><GoogleIntegration /></Suspense>} />
-        <Route path="/settings/twilio" element={<Suspense fallback={<PageLoader />}><TwilioSetup /></Suspense>} />
-        <Route path="/settings/services" element={<Suspense fallback={<PageLoader />}><ServiceConfiguration /></Suspense>} />
-        <Route path="/settings/demo-data" element={<Suspense fallback={<PageLoader />}><DemoDataGenerator /></Suspense>} />
-        <Route path="/settings/tags" element={<Suspense fallback={<PageLoader />}><TagsManager /></Suspense>} />
-        <Route path="/settings/custom-fields" element={<Suspense fallback={<PageLoader />}><CustomFieldsManager /></Suspense>} />
-        <Route path="/settings/security/password" element={<Suspense fallback={<PageLoader />}><PasswordSecurityPage /></Suspense>} />
+        <Route path="/settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Settings"><SettingsHub /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/profile" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Profile"><ProfileSettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/business" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Business Settings"><BusinessSettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/team" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Team"><TeamManagement /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/email" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Config"><EmailConfiguration /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/notifications" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Notification Settings"><NotificationSettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/security" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Security"><SecuritySettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/compliance" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Compliance"><ComplianceSettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/google" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Google Integration"><GoogleIntegration /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/twilio" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Twilio Setup"><TwilioSetup /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/services" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Services"><ServiceConfiguration /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/demo-data" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Demo Data"><DemoDataGenerator /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/tags" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Tags"><TagsManager /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/custom-fields" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Custom Fields"><CustomFieldsManager /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/security/password" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Password Security"><PasswordSecurityPage /></PageErrorBoundary></Suspense>} />
         
         {/* Notifications */}
-        <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
+        <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Notifications"><NotificationsPage /></PageErrorBoundary></Suspense>} />
         
         {/* Admin */}
         <Route path="/admin" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Admin Panel"><AdminPanel /></PageErrorBoundary></Suspense>} />
@@ -254,22 +254,22 @@ function App() {
         <Route path="/admin/database" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Database Maintenance"><DatabaseMaintenance /></PageErrorBoundary></Suspense>} />
         
         {/* Billing */}
-        <Route path="/billing" element={<Suspense fallback={<PageLoader />}><BillingPage /></Suspense>} />
-        <Route path="/billing/subscription" element={<Suspense fallback={<PageLoader />}><BillingSubscriptionPage /></Suspense>} />
-        <Route path="/billing/invoices/:id" element={<Suspense fallback={<PageLoader />}><InvoiceDetail /></Suspense>} />
-        <Route path="/billing/usage" element={<Suspense fallback={<PageLoader />}><UsageDashboard /></Suspense>} />
-        <Route path="/billing/upgrade" element={<Suspense fallback={<PageLoader />}><UpgradeWizard /></Suspense>} />
-        <Route path="/billing/payment-methods" element={<Suspense fallback={<PageLoader />}><PaymentMethods /></Suspense>} />
+        <Route path="/billing" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Billing"><BillingPage /></PageErrorBoundary></Suspense>} />
+        <Route path="/billing/subscription" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Subscription"><BillingSubscriptionPage /></PageErrorBoundary></Suspense>} />
+        <Route path="/billing/invoices/:id" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Invoice"><InvoiceDetail /></PageErrorBoundary></Suspense>} />
+        <Route path="/billing/usage" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Usage"><UsageDashboard /></PageErrorBoundary></Suspense>} />
+        <Route path="/billing/upgrade" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Upgrade"><UpgradeWizard /></PageErrorBoundary></Suspense>} />
+        <Route path="/billing/payment-methods" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Payment Methods"><PaymentMethods /></PageErrorBoundary></Suspense>} />
         
         {/* Help */}
-        <Route path="/help" element={<Suspense fallback={<PageLoader />}><HelpCenter /></Suspense>} />
-        <Route path="/help/docs" element={<Suspense fallback={<PageLoader />}><DocumentationPages /></Suspense>} />
-        <Route path="/help/support" element={<Suspense fallback={<PageLoader />}><SupportTicketSystem /></Suspense>} />
-        <Route path="/help/videos" element={<Suspense fallback={<PageLoader />}><VideoTutorialLibrary /></Suspense>} />
+        <Route path="/help" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Help Center"><HelpCenter /></PageErrorBoundary></Suspense>} />
+        <Route path="/help/docs" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Documentation"><DocumentationPages /></PageErrorBoundary></Suspense>} />
+        <Route path="/help/support" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Support"><SupportTicketSystem /></PageErrorBoundary></Suspense>} />
+        <Route path="/help/videos" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Video Tutorials"><VideoTutorialLibrary /></PageErrorBoundary></Suspense>} />
         
         {/* Integrations */}
-        <Route path="/integrations" element={<Suspense fallback={<PageLoader />}><IntegrationsHub /></Suspense>} />
-        <Route path="/integrations/api" element={<Suspense fallback={<PageLoader />}><APIIntegrationsPage /></Suspense>} />
+        <Route path="/integrations" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Integrations"><IntegrationsHub /></PageErrorBoundary></Suspense>} />
+        <Route path="/integrations/api" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="API Integrations"><APIIntegrationsPage /></PageErrorBoundary></Suspense>} />
         
         {/* 404 */}
         <Route path="/404" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />

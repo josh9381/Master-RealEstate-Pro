@@ -392,7 +392,7 @@ const WorkflowBuilder = () => {
     }
     
     // Check for disconnected nodes (basic check)
-    if (nodes.length > 1 && !nodes[0] || nodes[0]?.type !== 'trigger') {
+    if (nodes.length > 0 && (!nodes[0] || nodes[0]?.type !== 'trigger')) {
       errors.push('Workflow should start with a trigger');
     }
     

@@ -1,12 +1,12 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, Clock, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { aiApi } from '@/lib/api';
-import { useToast } from '@/hooks/useToast';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
-import type { AIModelEntry } from '@/types';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import {
   LineChart,
   Line,
@@ -21,84 +21,40 @@ import {
 } from 'recharts';
 
 const PredictiveAnalytics = () => {
-  const { toast } = useToast();
+  const [selectedPrediction, setSelectedPrediction] = useState<any>(null);
 
   const defaultPredictiveData = {
-    predictions: [] as Array<{ id: number; title: string; prediction: string; confidence: number; impact: string; status: string; details: string }>,
+    predictions: [] as Array<{ id: string; title: string; prediction: string; confidence: number; impact: string; status: string; details: string; dataPoints?: number }>,
     stats: { activePredictions: 0, avgConfidence: 0, highImpactAlerts: 0, accuracy: 0 },
-    revenueForecast: [] as Array<{ month: string; predicted: number; actual?: number }>,
-    conversionPredictions: [] as Array<{ month: string; predicted?: number; actual?: number; rate?: number }>,
+    revenueForecast: [] as Array<{ month: string; predicted?: number; actual?: number; confidence?: number }>,
+    conversionTrend: [] as Array<{ month: string; converted: number; total: number; rate: number }>,
+    stageDistribution: [] as Array<{ stage: string; count: number }>,
+    pipelineSummary: { avgDaysInPipeline: 0, totalPipelineValue: 0, activeDeals: 0 },
   }
 
-  const { data: predictiveData = defaultPredictiveData, isLoading, refetch } = useQuery({
+  const { data: predictiveData = defaultPredictiveData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['predictive-analytics'],
     queryFn: async () => {
-      try {
-        const performanceData = await aiApi.getModelPerformance();
-
-        // Use real model performance data if available
-        const accuracy = performanceData?.accuracy ? Math.floor(performanceData.accuracy * 100) : 0;
-
-        let predictions = defaultPredictiveData.predictions;
-        let stats = defaultPredictiveData.stats;
-        let revenueForecast = defaultPredictiveData.revenueForecast;
-        let conversionPredictions = defaultPredictiveData.conversionPredictions;
-
-        // If we got real performance data, build predictions from it
-        if (performanceData && (performanceData.accuracy || performanceData.models)) {
-          const models = performanceData.models || [];
-          predictions = models.map((model: AIModelEntry, idx: number) => ({
-            id: idx + 1,
-            title: model.name || model.type || 'Model',
-            prediction: model.accuracy ? `${(model.accuracy * 100).toFixed(1)}% accuracy` : 'No data',
-            confidence: model.accuracy ? Math.floor(model.accuracy * 100) : 0,
-            impact: (model.accuracy ?? 0) > 0.8 ? 'high' : (model.accuracy ?? 0) > 0.6 ? 'medium' : 'low',
-            status: (model.accuracy ?? 0) > 0.7 ? 'positive' : (model.accuracy ?? 0) > 0.5 ? 'neutral' : 'warning',
-            details: `Based on ${model.dataPoints || 0} data points`,
-          }));
-
-          const avgConf = predictions.length > 0
-            ? predictions.reduce((sum: number, p: { confidence: number }) => sum + p.confidence, 0) / predictions.length
-            : 0;
-          const highImpact = predictions.filter((p: { impact: string }) => p.impact === 'high').length;
-
-          stats = {
-            activePredictions: predictions.length,
-            avgConfidence: Math.floor(avgConf),
-            highImpactAlerts: highImpact,
-            accuracy,
-          };
-        }
-
-        // Revenue forecast and conversion predictions derived from model data
-        if (performanceData && performanceData.models) {
-          const models = performanceData.models || [];
-          // Generate forecast points from model metrics
-          revenueForecast = models.slice(0, 6).map((model: AIModelEntry, idx: number) => ({
-            month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][idx] || `M${idx + 1}`,
-            actual: model.dataPoints ? Math.round(model.dataPoints * (model.accuracy || 0.5) * 100) : 0,
-            predicted: model.dataPoints ? Math.round(model.dataPoints * (model.accuracy || 0.5) * 110) : 0,
-          }));
-
-          conversionPredictions = models.slice(0, 6).map((model: AIModelEntry, idx: number) => ({
-            month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][idx] || `M${idx + 1}`,
-            rate: model.accuracy ? Math.round(model.accuracy * 100) : 0,
-            predicted: model.accuracy ? Math.round(model.accuracy * 100 * 1.05) : 0,
-          }));
-        }
-
-        return { predictions, stats, revenueForecast, conversionPredictions }
-      } catch (error) {
-        console.error('Failed to load predictions:', error);
-        toast.error('Failed to load predictions');
-        return defaultPredictiveData
-      }
-    }
+      const response = await aiApi.getGlobalPredictions();
+      const d = response?.data || response;
+      return {
+        predictions: d.predictions || [],
+        stats: d.stats || defaultPredictiveData.stats,
+        revenueForecast: d.revenueForecast || [],
+        conversionTrend: d.conversionTrend || [],
+        stageDistribution: d.stageDistribution || [],
+        pipelineSummary: d.pipelineSummary || defaultPredictiveData.pipelineSummary,
+      };
+    },
   })
-  const { predictions, stats, revenueForecast, conversionPredictions } = predictiveData
+  const { predictions, stats, revenueForecast, conversionTrend, pipelineSummary } = predictiveData
 
   if (isLoading) {
     return <LoadingSkeleton rows={5} showChart />;
+  }
+
+  if (isError) {
+    return <ErrorBanner message={`Failed to load predictions: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
   }
 
   return (
@@ -226,20 +182,30 @@ const PredictiveAnalytics = () => {
         <Card>
           <CardHeader>
             <CardTitle>Conversion Rate Trend</CardTitle>
-            <CardDescription>Predicted conversion rate for next 6 weeks</CardDescription>
+            <CardDescription>Monthly conversion rates with trend</CardDescription>
           </CardHeader>
           <CardContent>
-            {conversionPredictions.length > 0 ? (
+            {conversionTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={conversionPredictions}>
+              <LineChart data={conversionTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="week" />
+                <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
+                <Legend />
                 <Line
                   type="monotone"
-                  dataKey="conversion"
+                  dataKey="rate"
+                  name="Conversion %"
                   stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  name="Total Leads"
+                  stroke="#82ca9d"
                   strokeWidth={2}
                   dot={{ r: 4 }}
                 />
@@ -247,7 +213,7 @@ const PredictiveAnalytics = () => {
             </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[250px] text-muted-foreground">
-                No conversion trend data available yet.
+                No conversion trend data available yet. Add leads to generate trends.
               </div>
             )}
           </CardContent>
@@ -260,7 +226,7 @@ const PredictiveAnalytics = () => {
           <CardContent>
             {predictions.length > 0 ? (
             <div className="space-y-4 max-h-[250px] overflow-y-auto">
-              {predictions.slice(0, 4).map((prediction) => (
+              {predictions.slice(0, 4).map((prediction: any) => (
                 <div key={prediction.id} className="flex items-start space-x-3 p-3 border rounded-lg">
                   <div
                     className={`p-2 rounded-lg ${
@@ -299,6 +265,32 @@ const PredictiveAnalytics = () => {
         </Card>
       </div>
 
+      {/* Pipeline Summary */}
+      {pipelineSummary.activeDeals > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pipeline Summary</CardTitle>
+            <CardDescription>Current pipeline health metrics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="text-center p-4 border rounded-lg">
+                <p className="text-3xl font-bold">{pipelineSummary.activeDeals}</p>
+                <p className="text-sm text-muted-foreground">Active Deals</p>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <p className="text-3xl font-bold">{pipelineSummary.avgDaysInPipeline}d</p>
+                <p className="text-sm text-muted-foreground">Avg Pipeline Duration</p>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <p className="text-3xl font-bold">${pipelineSummary.totalPipelineValue.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Pipeline Value</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* All Predictions List */}
       {predictions.length > 0 && (
       <Card>
@@ -308,8 +300,9 @@ const PredictiveAnalytics = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {predictions.map((prediction) => (
-              <div key={prediction.id} className="flex items-center justify-between p-4 border rounded-lg">
+            {predictions.map((prediction: any) => (
+              <div key={prediction.id} className="border rounded-lg">
+                <div className="flex items-center justify-between p-4">
                 <div className="flex items-center space-x-4">
                   <div
                     className={`p-2 rounded-lg ${
@@ -349,10 +342,56 @@ const PredictiveAnalytics = () => {
                   >
                     {prediction.impact} impact
                   </Badge>
-                  <Button variant="outline" size="sm" disabled title="Prediction details coming soon">
-                    Details
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedPrediction(
+                      selectedPrediction?.id === prediction.id ? null : prediction
+                    )}
+                  >
+                    {selectedPrediction?.id === prediction.id ? (
+                      <><ChevronUp className="h-4 w-4 mr-1" />Hide</>
+                    ) : (
+                      <><ChevronDown className="h-4 w-4 mr-1" />Details</>
+                    )}
                   </Button>
                 </div>
+              </div>
+              {selectedPrediction?.id === prediction.id && (
+                <div className="mt-3 ml-14 p-4 bg-secondary/30 rounded-lg space-y-2">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Data Points</p>
+                      <p className="text-sm font-medium">{prediction.dataPoints || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Confidence Range</p>
+                      <p className="text-sm font-medium">
+                        {Math.max(0, prediction.confidence - 10)}% – {Math.min(100, prediction.confidence + 5)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Impact Level</p>
+                      <p className="text-sm font-medium capitalize">{prediction.impact}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Analysis</p>
+                    <p className="text-sm">{prediction.details}</p>
+                  </div>
+                  <div className="pt-1">
+                    <div className="w-full bg-secondary rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          prediction.confidence >= 80 ? 'bg-green-500' : prediction.confidence >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${prediction.confidence}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Confidence: {prediction.confidence}%</p>
+                  </div>
+                </div>
+              )}
               </div>
             ))}
           </div>

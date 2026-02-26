@@ -16,8 +16,9 @@ const SocialMediaDashboard = () => {
   const { data: socialPosts = [], isLoading: loading, isFetching, refetch } = useQuery({
     queryKey: ['social-media-posts'],
     queryFn: async () => {
-      const response = await messagesApi.getMessages({ type: 'social' })
-      return (response && Array.isArray(response)) ? response : []
+      const response = await messagesApi.getMessages({ type: 'SOCIAL' })
+      const threads = response?.data?.threads || response?.threads || []
+      return Array.isArray(threads) ? threads : []
     }
   })
   const refreshing = isFetching && !loading

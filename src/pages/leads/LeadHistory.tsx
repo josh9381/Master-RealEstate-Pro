@@ -4,17 +4,25 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { activitiesApi } from '@/lib/api';
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
 import type { ActivityRecord } from '@/types';
 
 const LeadHistory = () => {
+  const [searchParams] = useSearchParams();
+  const leadIdParam = searchParams.get('leadId');
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [selectedLeadId] = useState<string>(leadIdParam || '');
 
   const { data: activitiesData, isLoading, refetch: loadActivities } = useQuery({
-    queryKey: ['lead-activity-history'],
+    queryKey: ['lead-activity-history', selectedLeadId],
     queryFn: async () => {
-      const response = await activitiesApi.getActivities({ limit: 50 });
+      const params: Record<string, unknown> = { limit: 50 };
+      if (selectedLeadId) {
+        params.leadId = selectedLeadId;
+      }
+      const response = await activitiesApi.getActivities(params);
       const activities = response.data?.activities || [];
 
       const timelineItems = activities.map((activity: ActivityRecord, index: number) => ({

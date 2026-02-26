@@ -43,6 +43,8 @@ function LeadDetail() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [showAddNote, setShowAddNote] = useState(false)
   const [newNoteText, setNewNoteText] = useState('')
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingNoteText, setEditingNoteText] = useState('')
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
   
   // AI Intelligence state
@@ -55,13 +57,9 @@ function LeadDetail() {
   const { data: notes = [] } = useQuery({
     queryKey: ['lead-notes', id],
     queryFn: async () => {
-      try {
-        const response = await notesApi.getLeadNotes(id!)
-        const result = response.data?.notes || response.data
-        return Array.isArray(result) ? result : []
-      } catch {
-        return []
-      }
+      const response = await notesApi.getLeadNotes(id!)
+      const result = response.data?.notes || response.data
+      return Array.isArray(result) ? result : []
     },
     enabled: !!id,
   })
@@ -71,16 +69,12 @@ function LeadDetail() {
     queryKey: ['team-members'],
     queryFn: async () => {
       try {
-        const response = await usersApi.getTeamMembers()
-        return response.data || []
+        const members = await usersApi.getTeamMembers()
+        return Array.isArray(members) ? members : []
       } catch {
         // Fallback to users list if team-members endpoint unavailable
-        try {
-          const response = await usersApi.getUsers({ limit: 50 })
-          return response.data?.users || response.data || []
-        } catch {
-          return []
-        }
+        const result = await usersApi.getUsers({ limit: 50 })
+        return result?.data?.users || result?.users || []
       }
     },
   })
@@ -147,6 +141,33 @@ function LeadDetail() {
     },
   })
 
+  // Update note mutation
+  const updateNoteMutation = useMutation({
+    mutationFn: ({ noteId, content }: { noteId: string; content: string }) =>
+      notesApi.updateNote(noteId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-notes', id] })
+      toast.success('Note updated successfully')
+      setEditingNoteId(null)
+      setEditingNoteText('')
+    },
+    onError: () => {
+      toast.error('Failed to update note')
+    },
+  })
+
+  // Delete note mutation
+  const deleteNoteMutation = useMutation({
+    mutationFn: (noteId: string) => notesApi.deleteNote(noteId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-notes', id] })
+      toast.success('Note deleted')
+    },
+    onError: () => {
+      toast.error('Failed to delete note')
+    },
+  })
+
   const handleAddNote = () => {
     if (!newNoteText.trim() || !id) return
     createNoteMutation.mutate({ leadId: id, content: newNoteText.trim() })
@@ -175,17 +196,25 @@ function LeadDetail() {
       
       setLoadingAI(true)
       try {
-        const [prediction, engagement, nextAction] = await Promise.all([
-          intelligenceService.getLeadPrediction(id).catch(() => null),
-          intelligenceService.getEngagementAnalysis(id).catch(() => null),
-          intelligenceService.getNextAction(id).catch(() => null),
+        const results = await Promise.allSettled([
+          intelligenceService.getLeadPrediction(id),
+          intelligenceService.getEngagementAnalysis(id),
+          intelligenceService.getNextAction(id),
         ])
         
-        setAiPrediction(prediction)
-        setAiEngagement(engagement)
-        setAiNextAction(nextAction)
+        if (results[0].status === 'fulfilled') setAiPrediction(results[0].value)
+        if (results[1].status === 'fulfilled') setAiEngagement(results[1].value)
+        if (results[2].status === 'fulfilled') setAiNextAction(results[2].value)
+        
+        const failures = results.filter(r => r.status === 'rejected')
+        if (failures.length === results.length) {
+          toast.error('Failed to load AI insights')
+        } else if (failures.length > 0) {
+          console.warn('Some AI insights failed to load:', failures)
+        }
       } catch (error) {
         console.error('Error loading AI insights:', error)
+        toast.error('Failed to load AI insights')
       } finally {
         setLoadingAI(false)
       }
@@ -300,6 +329,7 @@ function LeadDetail() {
           ? (editingLead.assignedTo as AssignedUser).id 
           : editingLead.assignedTo || undefined,
         tags: editingLead.tags,
+        customFields: editingLead.customFields,
       }
       
       updateLeadMutation.mutate({
@@ -513,13 +543,59 @@ function LeadDetail() {
                 ) : (
                   notes.map((note: LeadNote) => (
                     <div key={note.id} className="rounded-lg border p-4 hover:bg-muted/30 transition-colors">
-                      <p className="text-sm whitespace-pre-wrap">{note.content}</p>
-                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{note.user?.firstName || note.author || 'You'}</span>
-                        <span>{note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-US', {
-                          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
-                        }) : note.date}</span>
-                      </div>
+                      {editingNoteId === note.id ? (
+                        <>
+                          <textarea
+                            className="w-full p-2 border rounded-md min-h-[60px] text-sm resize-none"
+                            value={editingNoteText}
+                            onChange={(e) => setEditingNoteText(e.target.value)}
+                            autoFocus
+                          />
+                          <div className="flex justify-end gap-2 mt-2">
+                            <Button size="sm" variant="outline" onClick={() => { setEditingNoteId(null); setEditingNoteText('') }}>
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => updateNoteMutation.mutate({ noteId: note.id, content: editingNoteText.trim() })}
+                              disabled={!editingNoteText.trim() || updateNoteMutation.isPending}
+                            >
+                              <Save className="mr-1 h-3 w-3" />
+                              {updateNoteMutation.isPending ? 'Saving...' : 'Save'}
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{note.user?.firstName || note.author || 'You'}</span>
+                            <div className="flex items-center gap-3">
+                              <span>{note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-US', {
+                                month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+                              }) : note.date}</span>
+                              <button
+                                className="text-primary hover:underline"
+                                onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.content) }}
+                              >
+                                <Edit className="h-3 w-3 inline mr-0.5" />
+                                Edit
+                              </button>
+                              <button
+                                className="text-destructive hover:underline"
+                                onClick={() => {
+                                  if (confirm('Delete this note?')) {
+                                    deleteNoteMutation.mutate(note.id)
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 inline mr-0.5" />
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))
                 )}

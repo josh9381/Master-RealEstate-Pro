@@ -99,7 +99,8 @@ function LeadsPipeline() {
             stageMetrics[m.stage.toLowerCase()] = m.avgDays
           }
         }
-      } catch {
+      } catch (err) {
+        console.warn('Pipeline metrics unavailable:', err)
         // Pipeline metrics are optional — continue with zeros
       }
 

@@ -21,7 +21,8 @@ const SMSCenter = () => {
     queryKey: ['sms-center-messages'],
     queryFn: async () => {
       const response = await messagesApi.getMessages({ type: 'SMS' })
-      return (response && Array.isArray(response)) ? response : []
+      const threads = response?.data?.threads || response?.threads || []
+      return Array.isArray(threads) ? threads : []
     }
   })
   const refreshing = isFetching && !loading
@@ -43,7 +44,7 @@ const SMSCenter = () => {
     try {
       await messagesApi.sendSMS({
         to: smsRecipient.trim(),
-        message: smsMessage.trim(),
+        body: smsMessage.trim(),
       })
       toast.success('SMS sent successfully!')
       setSmsRecipient('')
@@ -265,25 +266,37 @@ const SMSCenter = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="p-3 border rounded-lg hover:bg-accent cursor-pointer">
+            <div className="p-3 border rounded-lg hover:bg-accent cursor-pointer" onClick={() => {
+              setSmsMessage('Hi! Reminder: You have an appointment tomorrow at [TIME]. Reply YES to confirm.')
+              toast.info('Template inserted')
+            }}>
               <h4 className="font-medium mb-1">Appointment Reminder</h4>
               <p className="text-sm text-muted-foreground">
                 Hi! Reminder: You have an appointment tomorrow at [TIME]. Reply YES to confirm.
               </p>
             </div>
-            <div className="p-3 border rounded-lg hover:bg-accent cursor-pointer">
+            <div className="p-3 border rounded-lg hover:bg-accent cursor-pointer" onClick={() => {
+              setSmsMessage('Thanks for your interest! Do you have any questions I can help with?')
+              toast.info('Template inserted')
+            }}>
               <h4 className="font-medium mb-1">Follow-up Message</h4>
               <p className="text-sm text-muted-foreground">
                 Thanks for your interest! Do you have any questions I can help with?
               </p>
             </div>
-            <div className="p-3 border rounded-lg hover:bg-accent cursor-pointer">
+            <div className="p-3 border rounded-lg hover:bg-accent cursor-pointer" onClick={() => {
+              setSmsMessage('Limited time offer! Get [X]% off when you [ACTION]. Use code: [CODE]')
+              toast.info('Template inserted')
+            }}>
               <h4 className="font-medium mb-1">Special Offer</h4>
               <p className="text-sm text-muted-foreground">
                 Limited time offer! Get [X]% off when you [ACTION]. Use code: [CODE]
               </p>
             </div>
-            <div className="p-3 border rounded-lg hover:bg-accent cursor-pointer">
+            <div className="p-3 border rounded-lg hover:bg-accent cursor-pointer" onClick={() => {
+              setSmsMessage('Thank you for choosing us! We appreciate your business.')
+              toast.info('Template inserted')
+            }}>
               <h4 className="font-medium mb-1">Thank You</h4>
               <p className="text-sm text-muted-foreground">
                 Thank you for choosing us! We appreciate your business.

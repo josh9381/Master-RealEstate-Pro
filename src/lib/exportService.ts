@@ -121,6 +121,150 @@ function downloadBlob(blob: Blob, filename: string): void {
   window.URL.revokeObjectURL(url)
 }
 
+/**
+ * Export the current page (or a specific DOM element) as a real PDF file using
+ * html2canvas + jsPDF.  Falls back to window.print() if the libraries fail.
+ *
+ * @param title    – PDF document title & filename (without .pdf)
+ * @param element  – optional DOM element to capture; defaults to document.body
+ */
+export async function printToPDF(
+  title?: string,
+  element?: HTMLElement
+): Promise<void> {
+  const target = element ?? document.body
+  const filename = `${(title ?? 'report').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
+
+  try {
+    const [html2canvasMod, jsPDFMod] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ])
+    const html2canvas = html2canvasMod.default
+    const { jsPDF } = jsPDFMod
+
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    })
+    const imgData = canvas.toDataURL('image/png')
+
+    const pdfWidth = 210 // A4 mm
+    const pdfHeight = 297
+    const imgWidth = pdfWidth
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width
+
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    let position = 0
+
+    // Multi-page support
+    while (position < imgHeight) {
+      if (position > 0) pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, -position, imgWidth, imgHeight)
+      position += pdfHeight
+    }
+
+    pdf.save(filename)
+  } catch {
+    // Fallback to browser print dialog
+    const originalTitle = document.title
+    if (title) document.title = title
+    window.print()
+    if (title) document.title = originalTitle
+  }
+}
+
+/**
+ * Export analytics data as a formatted PDF.
+ * Builds an off-screen HTML table, renders it with html2canvas, then saves via jsPDF.
+ */
+export async function exportAnalyticsAsPDF(
+  reportTitle: string,
+  sections: { label: string; value: string | number }[]
+): Promise<void> {
+  const filename = `${reportTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
+
+  try {
+    const [html2canvasMod, jsPDFMod] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ])
+    const html2canvas = html2canvasMod.default
+    const { jsPDF } = jsPDFMod
+
+    // Build an off-screen container
+    const container = document.createElement('div')
+    container.style.cssText =
+      'position:fixed;top:-9999px;left:0;width:800px;padding:40px;font-family:system-ui,sans-serif;color:#111;background:#fff'
+
+    const rows = sections
+      .map(
+        (s) =>
+          `<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:500">${s.label}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${s.value}</td></tr>`
+      )
+      .join('')
+
+    container.innerHTML = `
+      <h1 style="font-size:24px;margin-bottom:4px">${reportTitle}</h1>
+      <div style="color:#6b7280;font-size:14px;margin-bottom:24px">Generated ${new Date().toLocaleString()}</div>
+      <table style="width:100%;border-collapse:collapse">${rows}</table>
+    `
+
+    document.body.appendChild(container)
+
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    })
+
+    document.body.removeChild(container)
+
+    const imgData = canvas.toDataURL('image/png')
+    const pdfWidth = 210
+    const pdfHeight = 297
+    const imgWidth = pdfWidth
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width
+
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    let position = 0
+
+    while (position < imgHeight) {
+      if (position > 0) pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, -position, imgWidth, imgHeight)
+      position += pdfHeight
+    }
+
+    pdf.save(filename)
+  } catch {
+    // Fallback: open in new window with print dialog
+    const win = window.open('', '_blank')
+    if (!win) return
+
+    const rows = sections
+      .map(
+        (s) =>
+          `<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:500">${s.label}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${s.value}</td></tr>`
+      )
+      .join('')
+
+    win.document.write(`<!DOCTYPE html><html><head><title>${reportTitle}</title><style>
+      body{font-family:system-ui,sans-serif;padding:40px;color:#111}
+      h1{font-size:24px;margin-bottom:4px}
+      .meta{color:#6b7280;font-size:14px;margin-bottom:24px}
+      table{width:100%;border-collapse:collapse}
+      @media print{body{padding:20px}}
+    </style></head><body>
+      <h1>${reportTitle}</h1>
+      <div class="meta">Generated ${new Date().toLocaleString()}</div>
+      <table>${rows}</table>
+      <script>window.onload=function(){window.print()}<\/script>
+    </body></html>`)
+    win.document.close()
+  }
+}
+
 // ============================================================================
 // Pre-built column configs for common exports
 // ============================================================================

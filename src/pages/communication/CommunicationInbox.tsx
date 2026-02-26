@@ -24,7 +24,7 @@ import {
   Download,
   Filter,
   RefreshCw,
-  Pin
+  ArrowDownLeft,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -69,7 +69,6 @@ interface Message {
   snoozed?: number // timestamp (ms) until which the message is snoozed
   archived?: boolean
   trashed?: boolean
-  pinned?: boolean
   // Attachments
   attachments?: Array<{
     id: number
@@ -158,6 +157,8 @@ const CommunicationInbox = () => {
   const [showQuickReplies, setShowQuickReplies] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [threadToDelete, setThreadToDelete] = useState<number | null>(null)
+  const [inboxPage, setInboxPage] = useState(1)
+  const INBOX_PAGE_SIZE = 25
   const [showAIComposer, setShowAIComposer] = useState(false)
   const [, setShowEnhanceMode] = useState(false)
   const [enhancedMessage, setEnhancedMessage] = useState('')
@@ -171,13 +172,16 @@ const CommunicationInbox = () => {
 
   // Fetch threads via useQuery
   const { data: threadsData, isLoading: loading, isFetching, refetch: refetchMessages } = useQuery({
-    queryKey: ['communication-threads'],
+    queryKey: ['communication-threads', searchQuery, inboxPage],
     queryFn: async () => {
-      const response = await messagesApi.getMessages()
+      const params: Record<string, unknown> = { page: inboxPage, limit: INBOX_PAGE_SIZE }
+      if (searchQuery.trim()) params.search = searchQuery.trim()
+      const response = await messagesApi.getMessages(params)
       const threadsData = response?.data?.threads || response?.threads || response
       return (threadsData && Array.isArray(threadsData)) ? threadsData as Thread[] : []
     },
     staleTime: 30_000,
+    refetchInterval: 30_000,
   })
   const refreshing = isFetching && !loading
 
@@ -199,12 +203,19 @@ const CommunicationInbox = () => {
     staleTime: 60_000,
   })
 
+  // Track selectedThread id in a ref to avoid stale closure in threadsData sync effect
+  const selectedThreadIdRef = useRef<number | null>(null)
+  useEffect(() => {
+    selectedThreadIdRef.current = selectedThread?.id ?? null
+  }, [selectedThread])
+
   // Sync query data to local threads state (kept mutable for optimistic updates)
   useEffect(() => {
     if (threadsData) {
       setThreads(threadsData)
-      if (selectedThread) {
-        const updated = threadsData.find((t: Thread) => t.id === selectedThread.id)
+      const currentId = selectedThreadIdRef.current
+      if (currentId !== null) {
+        const updated = threadsData.find((t: Thread) => t.id === currentId)
         if (updated) setSelectedThread(updated)
       } else if (threadsData.length > 0) {
         setSelectedThread(threadsData[0])
@@ -436,9 +447,25 @@ const CommunicationInbox = () => {
     }
   }
 
-  const handleForward = () => {
-    toast.success('Forward feature coming soon')
+  const handleForward = async () => {
     setShowMoreMenu(false)
+    if (!selectedThread) {
+      toast.error('No message selected to forward')
+      return
+    }
+    const forwardTo = window.prompt('Enter email address to forward to:')
+    if (!forwardTo || !forwardTo.trim()) return
+    try {
+      const lastMsg = selectedThread.messages[selectedThread.messages.length - 1]
+      await messagesApi.sendEmail({
+        to: forwardTo.trim(),
+        subject: `Fwd: ${lastMsg?.subject || selectedThread.contact}`,
+        body: `---------- Forwarded message ----------\nFrom: ${selectedThread.contact}\n\n${lastMsg?.body || selectedThread.lastMessage}`,
+      })
+      toast.success(`Forwarded to ${forwardTo.trim()}`)
+    } catch {
+      toast.error('Failed to forward message')
+    }
   }
 
   const handlePrint = () => {
@@ -474,12 +501,12 @@ const CommunicationInbox = () => {
 
     return matchesChannel && matchesSearch
   }).sort((a, b) => {
-    // Pinned threads always at the top
-    const aPinned = a.messages.some(m => m.pinned)
-    const bPinned = b.messages.some(m => m.pinned)
-    if (aPinned && !bPinned) return -1
-    if (!aPinned && bPinned) return 1
-    return 0 // Keep original order for non-pinned threads
+    // Starred threads always at the top
+    const aStarred = a.messages.some(m => m.starred)
+    const bStarred = b.messages.some(m => m.starred)
+    if (aStarred && !bStarred) return -1
+    if (!aStarred && bStarred) return 1
+    return 0 // Keep original order for non-starred threads
   })
 
   const totalUnread = threads.reduce((acc: number, thread: Thread) => acc + thread.unread, 0)
@@ -514,17 +541,21 @@ const CommunicationInbox = () => {
         ? replyText + signature 
         : replyText
 
+      // Determine the correct recipient (for inbound messages, reply to the sender)
+      const firstMsg = selectedThread.messages[0]
+      const replyTo = firstMsg.direction === 'INBOUND' ? firstMsg.from : firstMsg.to
+
       // Call API based on message type
       if (selectedThread.type === 'email') {
         await messagesApi.sendEmail({
-          to: selectedThread.messages[0].to,
+          to: replyTo,
           subject: selectedThread.subject,
           body: messageBody,
           threadId: selectedThread.id
         })
       } else if (selectedThread.type === 'sms') {
         await messagesApi.sendSMS({
-          to: selectedThread.messages[0].to,
+          to: replyTo,
           body: messageBody,
           threadId: selectedThread.id
         })
@@ -535,7 +566,7 @@ const CommunicationInbox = () => {
         threadId: selectedThread.id,
         type: selectedThread.type,
         from: 'you@company.com',
-        to: selectedThread.type === 'email' ? selectedThread.messages[0].to : selectedThread.messages[0].to,
+        to: selectedThread.type === 'email' ? replyTo : replyTo,
         contact: selectedThread.contact,
         subject: selectedThread.subject,
         body: messageBody,
@@ -578,43 +609,22 @@ const CommunicationInbox = () => {
     const isStarred = thread.messages.some(m => m.starred)
     
     // Optimistically update local state
+    const previousThreads = [...threads]
     setThreads(prev => prev.map(t => 
       t.id === threadId 
         ? { ...t, messages: t.messages.map(m => ({ ...m, starred: !isStarred })) } 
         : t
     ))
-    toast.success(isStarred ? 'Removed star' : 'Starred')
 
     // Persist to backend
     try {
       await Promise.all(
         thread.messages.map(m => messagesApi.starMessage(String(m.id), !isStarred))
       )
+      toast.success(isStarred ? 'Removed star' : 'Starred')
     } catch (error) {
-      console.error('Failed to star message:', error)
-    }
-  }
-
-  const togglePinThread = async (threadId: number) => {
-    const thread = threads.find(t => t.id === threadId)
-    const isPinned = thread?.messages.some(m => m.pinned)
-    
-    setThreads(prev => prev.map(t => 
-      t.id === threadId 
-        ? { ...t, messages: t.messages.map(m => ({ ...m, pinned: !isPinned })) } 
-        : t
-    ))
-    toast.success(isPinned ? 'Unpinned thread' : 'Pinned to top')
-
-    // Persist to backend
-    if (thread) {
-      try {
-        await Promise.all(
-          thread.messages.map(m => messagesApi.starMessage(String(m.id), !isPinned))
-        )
-      } catch (error) {
-        console.error('Failed to pin message:', error)
-      }
+      setThreads(previousThreads)
+      toast.error('Failed to update star status')
     }
   }
 
@@ -622,8 +632,8 @@ const CommunicationInbox = () => {
     const thread = threads.find(t => t.id === threadId)
     
     // Optimistically update local state
+    const previousThreads = [...threads]
     setThreads(prev => prev.map(t => t.id === threadId ? { ...t, messages: t.messages.map(m => ({ ...m, archived: true })) } : t))
-    toast.success('Thread archived')
     setSelectedThread(null)
 
     // Persist to backend
@@ -632,8 +642,10 @@ const CommunicationInbox = () => {
         await Promise.all(
           thread.messages.map(m => messagesApi.archiveMessage(String(m.id), true))
         )
+        toast.success('Thread archived')
       } catch (error) {
-        console.error('Failed to archive message:', error)
+        setThreads(previousThreads)
+        toast.error('Failed to archive thread')
       }
     }
   }
@@ -646,8 +658,8 @@ const CommunicationInbox = () => {
   const confirmTrashThread = async () => {
     if (threadToDelete) {
       const thread = threads.find(t => t.id === threadToDelete)
+      const previousThreads = [...threads]
       setThreads(prev => prev.map(t => t.id === threadToDelete ? { ...t, messages: t.messages.map(m => ({ ...m, trashed: true })) } : t))
-      toast.success('Moved to trash')
       setSelectedThread(null)
 
       // Persist to backend
@@ -656,8 +668,10 @@ const CommunicationInbox = () => {
           await Promise.all(
             thread.messages.map(m => messagesApi.deleteMessage(String(m.id)))
           )
+          toast.success('Moved to trash')
         } catch (error) {
-          console.error('Failed to trash message:', error)
+          setThreads(previousThreads)
+          toast.error('Failed to move to trash')
         }
       }
     }
@@ -814,36 +828,56 @@ const CommunicationInbox = () => {
     }
   }
 
-  const handleBulkArchive = () => {
+  const handleBulkArchive = async () => {
     if (selectedThreadIds.size === 0) {
       toast.error('No threads selected')
       return
     }
 
+    const previousThreads = [...threads]
     setThreads(prev => prev.map(t => 
       selectedThreadIds.has(t.id)
         ? { ...t, messages: t.messages.map(m => ({ ...m, archived: true })) }
         : t
     ))
 
-    toast.success(`${selectedThreadIds.size} thread(s) archived`)
+    try {
+      const allMessageIds = threads
+        .filter(t => selectedThreadIds.has(t.id))
+        .flatMap(t => t.messages.map(m => String(m.id)))
+      await Promise.all(allMessageIds.map(id => messagesApi.archiveMessage(id, true)))
+      toast.success(`${selectedThreadIds.size} thread(s) archived`)
+    } catch (error) {
+      setThreads(previousThreads)
+      toast.error('Failed to archive threads')
+    }
     setSelectedThreadIds(new Set())
     setBulkSelectMode(false)
   }
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedThreadIds.size === 0) {
       toast.error('No threads selected')
       return
     }
 
+    const previousThreads = [...threads]
     setThreads(prev => prev.map(t => 
       selectedThreadIds.has(t.id)
         ? { ...t, messages: t.messages.map(m => ({ ...m, trashed: true })) }
         : t
     ))
 
-    toast.success(`${selectedThreadIds.size} thread(s) moved to trash`)
+    try {
+      const allMessageIds = threads
+        .filter(t => selectedThreadIds.has(t.id))
+        .flatMap(t => t.messages.map(m => String(m.id)))
+      await Promise.all(allMessageIds.map(id => messagesApi.deleteMessage(id)))
+      toast.success(`${selectedThreadIds.size} thread(s) moved to trash`)
+    } catch (error) {
+      setThreads(previousThreads)
+      toast.error('Failed to delete threads')
+    }
     setSelectedThreadIds(new Set())
     setBulkSelectMode(false)
   }
@@ -1187,8 +1221,8 @@ const CommunicationInbox = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-1 min-w-0">
-                            {thread.messages.some(m => m.pinned) && (
-                              <Pin className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                            {thread.messages.some(m => m.starred) && (
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 flex-shrink-0" />
                             )}
                             <p className="font-medium truncate">{thread.contact}</p>
                           </div>
@@ -1211,13 +1245,17 @@ const CommunicationInbox = () => {
                               {thread.messages.length} messages
                             </Badge>
                           )}
+                          {/* Direction indicator: show "Incoming" badge when last message is inbound (#80/#82) */}
+                          {thread.messages[thread.messages.length - 1]?.direction === 'INBOUND' && (
+                            <Badge variant="outline" className="text-xs gap-1 text-green-600 border-green-300 bg-green-50">
+                              <ArrowDownLeft className="h-3 w-3" />
+                              Incoming
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="ml-2 flex flex-col gap-1">
-                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); togglePinThread(thread.id) }} title="Pin to top">
-                          <Pin className={`h-4 w-4 ${thread.messages.some(m => m.pinned) ? 'fill-blue-500 text-blue-500' : ''}`} />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); toggleStarThread(thread.id) }} title="Star">
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); toggleStarThread(thread.id) }} title="Star (starred threads sort to top)">
                           <Star className={`h-4 w-4 ${thread.messages.some(m => m.starred) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); snoozeThread(thread.id, 60) }} title="Snooze">
@@ -1228,6 +1266,30 @@ const CommunicationInbox = () => {
                   </div>
                   )
                 })
+              )}
+              {/* Load More / Pagination */}
+              {filteredThreads.length >= INBOX_PAGE_SIZE && (
+                <div className="p-3 text-center border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setInboxPage(p => p + 1)}
+                    disabled={isFetching}
+                  >
+                    {isFetching ? 'Loading...' : 'Load More'}
+                  </Button>
+                </div>
+              )}
+              {inboxPage > 1 && (
+                <div className="p-2 text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setInboxPage(1)}
+                  >
+                    Back to first page
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>
@@ -1246,9 +1308,6 @@ const CommunicationInbox = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => selectedThread && togglePinThread(selectedThread.id)} title="Pin to top">
-                    <Pin className={`h-4 w-4 ${selectedThread?.messages.some(m => m.pinned) ? 'fill-blue-500 text-blue-500' : ''}`} />
-                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => selectedThread && toggleStarThread(selectedThread.id)} title="Star">
                     <Star className={`h-4 w-4 ${selectedThread?.messages.some(m => m.starred) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                   </Button>
@@ -2041,9 +2100,37 @@ const CommunicationInbox = () => {
                     multiple
                     className="hidden"
                     id="file-upload"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
                     onChange={async (e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         const files = Array.from(e.target.files)
+
+                        // Client-side file size validation (#98)
+                        const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB per file
+                        const MAX_TOTAL_SIZE = 25 * 1024 * 1024 // 25 MB total
+                        const BLOCKED_EXTENSIONS = ['.exe', '.bat', '.sh', '.cmd', '.com', '.js', '.vbs', '.ps1', '.msi', '.dll']
+
+                        let totalSize = 0
+                        for (const file of files) {
+                          const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
+                          if (BLOCKED_EXTENSIONS.includes(ext)) {
+                            toast.error(`Blocked file type: ${ext}. Executable files are not allowed.`)
+                            e.target.value = ''
+                            return
+                          }
+                          if (file.size > MAX_FILE_SIZE) {
+                            toast.error(`File "${file.name}" exceeds 10 MB limit.`)
+                            e.target.value = ''
+                            return
+                          }
+                          totalSize += file.size
+                        }
+                        if (totalSize > MAX_TOTAL_SIZE) {
+                          toast.error('Total file size exceeds 25 MB limit.')
+                          e.target.value = ''
+                          return
+                        }
+
                         setPendingAttachments(prev => [...prev, ...files])
                         const fileNames = files.map(f => f.name).join(', ')
                         // Upload each file to the server

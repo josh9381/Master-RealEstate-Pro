@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Activity, TrendingUp, Users, Target, RefreshCw } from 'lucide-react';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { analyticsApi } from '@/lib/api';
@@ -25,20 +26,20 @@ const ConversionReports = () => {
   const navigate = useNavigate();
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
 
-  const { data: conversionResult, isLoading: loading, refetch } = useQuery({
+  const { data: conversionResult, isLoading: loading, isError, error, refetch } = useQuery({
     queryKey: ['conversion-reports'],
     queryFn: async () => {
       const params = dateRangeRef.current;
       const [leads, campaigns] = await Promise.all([
-        analyticsApi.getLeadAnalytics(params).catch((e: Error) => { console.error('Lead analytics failed:', e); return null; }),
-        analyticsApi.getCampaignAnalytics(params).catch((e: Error) => { console.error('Campaign analytics failed:', e); return null; }),
+        analyticsApi.getLeadAnalytics(params),
+        analyticsApi.getCampaignAnalytics(params),
       ]);
-      // Also try to get conversion funnel for time-to-convert data
+      // Conversion funnel is optional — don't fail entire query if unavailable
       let funnelData = null;
       try {
         funnelData = await analyticsApi.getConversionFunnel(params);
       } catch {
-        // Conversion funnel is optional
+        // Optional endpoint
       }
       const leadResult = leads?.data || leads;
       if (funnelData?.data?.timeToConvert) {
@@ -74,19 +75,18 @@ const ConversionReports = () => {
         { stage: 'Won', count: 0, percentage: 0 },
       ];
 
-  // Build source conversion from lead source data
+  // Build source conversion from lead source data using real per-source won counts
   const totalConversions = leadData?.byStatus?.won || leadData?.byStatus?.WON || 0;
   const overallConversionRate = leadData?.conversionRate || 0;
-  const totalLeadCount = leadData?.total || 0;
+  const wonBySource: Record<string, number> = leadData?.wonBySource || {};
   const sourceConversion = leadData?.bySource
     ? (Object.entries(leadData.bySource) as [string, number][]).map(([source, count]) => {
-        const convRate = totalLeadCount > 0 ? (totalConversions / totalLeadCount) : 0;
-        const converted = Math.round(count * convRate);
+        const converted = wonBySource[source] || 0;
         return {
           source: source.charAt(0).toUpperCase() + source.slice(1).replace('-', ' '),
           leads: count,
           converted,
-          rate: totalLeadCount > 0 ? ((converted / count) * 100).toFixed(1) : '0.0'
+          rate: count > 0 ? ((converted / count) * 100).toFixed(1) : '0.0'
         };
       })
     : [];
@@ -111,6 +111,15 @@ const ConversionReports = () => {
         </div>
         <div className="h-64 bg-muted rounded" />
         <div className="h-64 bg-muted rounded" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Conversion Reports</h1>
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load conversion data'} retry={() => refetch()} />
       </div>
     );
   }

@@ -8,10 +8,11 @@ import { NotFoundError, ForbiddenError } from '../middleware/errorHandler';
  */
 export const getNotesForLead = async (req: Request, res: Response) => {
   const { leadId } = req.params;
+  const organizationId = req.user!.organizationId;
 
-  // Check if lead exists
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
+  // Check if lead exists within org
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, organizationId },
   });
 
   if (!lead) {
@@ -51,9 +52,10 @@ export const getNotesForLead = async (req: Request, res: Response) => {
  */
 export const getNote = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const organizationId = req.user!.organizationId;
 
-  const note = await prisma.note.findUnique({
-    where: { id },
+  const note = await prisma.note.findFirst({
+    where: { id, lead: { organizationId } },
     include: {
       author: {
         select: {
@@ -94,14 +96,15 @@ export const createNote = async (req: Request, res: Response) => {
   const { leadId } = req.params;
   const { content } = req.body;
   const userId = req.user?.userId;
+  const organizationId = req.user!.organizationId;
 
   if (!userId) {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Check if lead exists
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
+  // Check if lead exists within org
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, organizationId },
   });
 
   if (!lead) {
@@ -148,9 +151,9 @@ export const updateNote = async (req: Request, res: Response) => {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Check if note exists
-  const existingNote = await prisma.note.findUnique({
-    where: { id },
+  // Check if note exists within org
+  const existingNote = await prisma.note.findFirst({
+    where: { id, lead: { organizationId: req.user!.organizationId } },
   });
 
   if (!existingNote) {
@@ -199,16 +202,16 @@ export const deleteNote = async (req: Request, res: Response) => {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Check if note exists
-  const note = await prisma.note.findUnique({
-    where: { id },
+  // Check if note exists within org
+  const note = await prisma.note.findFirst({
+    where: { id, lead: { organizationId: req.user!.organizationId } },
   });
 
   if (!note) {
     throw new NotFoundError('Note not found');
   }
 
-  // Check if user is the author or an admin
+  // Check if user is the author or an admin within the same org
   if (note.authorId !== userId && userRole !== 'ADMIN') {
     throw new ForbiddenError('You can only delete your own notes unless you are an admin');
   }

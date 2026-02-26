@@ -12,7 +12,7 @@ import { getCampaignsFilter, getRoleFilterFromRequest } from '../utils/roleFilte
  */
 export const getCampaigns = async (req: Request, res: Response) => {
   // Get validated query parameters
-  const validatedQuery = (req as any).validatedQuery || req.query;
+  const validatedQuery = (req.validatedQuery || req.query) as Record<string, any>;
   const {
     page = 1,
     limit = 20,

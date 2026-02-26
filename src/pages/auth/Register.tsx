@@ -31,8 +31,8 @@ function Register() {
       return
     }
     
-    if (formData.password.length < 6) {
-      toast.warning('Weak password', 'Password should be at least 6 characters')
+    if (formData.password.length < 8) {
+      toast.warning('Weak password', 'Password should be at least 8 characters')
       return
     }
 

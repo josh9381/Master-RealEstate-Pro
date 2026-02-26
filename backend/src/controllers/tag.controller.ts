@@ -285,8 +285,8 @@ export const removeTagFromLead = async (req: Request, res: Response) => {
   const { leadId, tagId } = req.params;
 
   // Check if lead exists
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, organizationId: req.user!.organizationId },
     include: {
       tags: true,
     },

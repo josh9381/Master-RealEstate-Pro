@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { 
@@ -17,9 +17,14 @@ import {
   ChevronUp,
   Eye,
   MousePointerClick,
-  Loader2
+  Loader2,
+  Pencil,
+  Trash2,
+  Save,
+  X
 } from 'lucide-react'
 import { activitiesApi } from '@/lib/api'
+import { useToast } from '@/hooks/useToast'
 
 interface Activity {
   id: number | string
@@ -91,14 +96,44 @@ function mapApiActivity(raw: Record<string, unknown>): Activity {
 }
 
 export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTimelineProps) {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState<'all' | 'email' | 'call' | 'sms' | 'note'>('all')
   const [expandedIds, setExpandedIds] = useState<(number | string)[]>([])
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ title: '', description: '' })
 
   // Fetch real activities from API when leadId is provided
   const { data: apiActivities, isLoading } = useQuery({
     queryKey: ['lead-activities', leadId],
     queryFn: () => activitiesApi.getLeadActivities(leadId!),
     enabled: !!leadId,
+  })
+
+  // Update activity mutation
+  const updateActivityMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { title: string; description: string } }) =>
+      activitiesApi.updateActivity(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-activities', leadId] })
+      toast.success('Activity updated')
+      setEditingId(null)
+    },
+    onError: () => {
+      toast.error('Failed to update activity')
+    },
+  })
+
+  // Delete activity mutation
+  const deleteActivityMutation = useMutation({
+    mutationFn: (id: string) => activitiesApi.deleteActivity(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-activities', leadId] })
+      toast.success('Activity deleted')
+    },
+    onError: () => {
+      toast.error('Failed to delete activity')
+    },
   })
 
   // Map API response to Activity type; show empty state for real leads with no activities
@@ -214,28 +249,91 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
                 <div className="flex-1 space-y-2 pb-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium">{activity.title}</p>
+                      {editingId === String(activity.id) ? (
+                        <div className="space-y-2">
+                          <input
+                            className="w-full p-1.5 border rounded text-sm"
+                            value={editForm.title}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                            placeholder="Title"
+                          />
+                          <textarea
+                            className="w-full p-1.5 border rounded text-sm min-h-[50px] resize-none"
+                            value={editForm.description}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Description"
+                          />
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              className="h-6 text-xs"
+                              onClick={() => updateActivityMutation.mutate({ id: String(activity.id), data: editForm })}
+                              disabled={updateActivityMutation.isPending}
+                            >
+                              <Save className="h-3 w-3 mr-1" />
+                              Save
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingId(null)}>
+                              <X className="h-3 w-3 mr-1" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium">{activity.title}</p>
                         
-                        {/* Email Tracking Badges */}
-                        {activity.type === 'email' && activity.details?.emailOpened && (
-                          <Badge variant="secondary" className="text-xs gap-1">
-                            <Eye className="h-3 w-3" />
-                            Opened
-                          </Badge>
-                        )}
-                        {activity.type === 'email' && activity.details?.emailClicked && (
-                          <Badge variant="default" className="text-xs gap-1">
-                            <MousePointerClick className="h-3 w-3" />
-                            Clicked
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
+                            {/* Email Tracking Badges */}
+                            {activity.type === 'email' && activity.details?.emailOpened && (
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <Eye className="h-3 w-3" />
+                                Opened
+                              </Badge>
+                            )}
+                            {activity.type === 'email' && activity.details?.emailClicked && (
+                              <Badge variant="default" className="text-xs gap-1">
+                                <MousePointerClick className="h-3 w-3" />
+                                Clicked
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
+                        </>
+                      )}
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.timestamp}</span>
+                      {editingId !== String(activity.id) && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingId(String(activity.id))
+                              setEditForm({ title: activity.title, description: activity.description })
+                            }}
+                            className="h-6 w-6 p-0"
+                            title="Edit"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (confirm('Delete this activity?')) {
+                                deleteActivityMutation.mutate(String(activity.id))
+                              }
+                            }}
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </>
+                      )}
                       {showExpandButton && (
                         <Button
                           size="sm"

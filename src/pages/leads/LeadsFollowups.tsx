@@ -67,7 +67,7 @@ function LeadsFollowups() {
       
       // Transform activities to follow-ups
       const followupList: FollowUp[] = activities.map((activity: ActivityRecord, index: number) => {
-        const lead: Lead | undefined = leadMap.get(activity.leadId as number)
+        const lead: Lead | undefined = leadMap.get(Number(activity.leadId))
         const createdDate = activity.createdAt ? new Date(activity.createdAt) : new Date()
         const isPast = createdDate < new Date()
         

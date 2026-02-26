@@ -36,12 +36,12 @@ function CampaignEdit() {
       try {
         const response = await campaignsApi.getCampaign(id!)
         return response.data?.campaign || response.data || null
-      } catch {
+      } catch (err) {
         if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
           const mockCampaign = mockCampaigns.find(c => String(c.id) === id)
           return mockCampaign || null
         }
-        return null
+        throw err
       }
     },
     enabled: !!id,
@@ -96,7 +96,7 @@ function CampaignEdit() {
       previewText: editForm.previewText || undefined,
       startDate: editForm.startDate || undefined,
       endDate: editForm.endDate || undefined,
-      budget: editForm.budget || undefined,
+      budget: editForm.budget != null ? editForm.budget : undefined,
     })
   }
 

@@ -426,7 +426,7 @@ function CampaignsList() {
       <BulkActionsBar
         selectedCount={selectedCampaigns.length}
         onClearSelection={() => setSelectedCampaigns([])}
-        onChangeStatus={() => setShowStatusModal(true)}
+        onChangeStatus={(_status) => setShowStatusModal(true)}
         onExport={handleExportCSV}
         onDelete={() => setShowDeleteModal(true)}
       />

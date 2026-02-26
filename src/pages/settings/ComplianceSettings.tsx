@@ -2,8 +2,9 @@ import { Shield, CheckCircle, AlertTriangle, FileText, RefreshCw } from 'lucide-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
-import { settingsApi } from '@/lib/api';
+import { settingsApi, activitiesApi } from '@/lib/api';
 
 const ComplianceSettings = () => {
   const { toast } = useToast();
@@ -22,6 +23,10 @@ const ComplianceSettings = () => {
   const [auditEnabled, setAuditEnabled] = useState(true);
   const [logAllChanges, setLogAllChanges] = useState(true);
   const [retentionDays, setRetentionDays] = useState('365');
+  const [ccpaEnabled, setCcpaEnabled] = useState(true);
+  const [ccpaDoNotSell, setCcpaDoNotSell] = useState(true);
+  const [ccpaConsumerRequests, setCcpaConsumerRequests] = useState(true);
+  const [ccpaDisclosePractices, setCcpaDisclosePractices] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -47,6 +52,10 @@ const ComplianceSettings = () => {
         if (data.auditEnabled !== undefined) setAuditEnabled(data.auditEnabled);
         if (data.logAllChanges !== undefined) setLogAllChanges(data.logAllChanges);
         if (data.retentionDays !== undefined) setRetentionDays(String(data.retentionDays));
+        if (data.ccpaEnabled !== undefined) setCcpaEnabled(data.ccpaEnabled);
+        if (data.ccpaDoNotSell !== undefined) setCcpaDoNotSell(data.ccpaDoNotSell);
+        if (data.ccpaConsumerRequests !== undefined) setCcpaConsumerRequests(data.ccpaConsumerRequests);
+        if (data.ccpaDisclosePractices !== undefined) setCcpaDisclosePractices(data.ccpaDisclosePractices);
       }
       if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
@@ -76,6 +85,10 @@ const ComplianceSettings = () => {
         auditEnabled,
         logAllChanges,
         retentionDays: parseInt(retentionDays, 10),
+        ccpaEnabled,
+        ccpaDoNotSell,
+        ccpaConsumerRequests,
+        ccpaDisclosePractices,
       });
       toast.success('Settings Saved', 'Compliance settings have been updated successfully.');
     } catch (error) {
@@ -84,6 +97,14 @@ const ComplianceSettings = () => {
       setSaving(false);
     }
   };
+
+  // Fetch real audit log entries from activity feed
+  const { data: auditLogsData } = useQuery({
+    queryKey: ['compliance-audit-logs'],
+    queryFn: () => activitiesApi.getActivities(),
+    enabled: auditEnabled,
+  });
+  const auditLogs = (auditLogsData?.activities || []).slice(0, 6);
 
   return (
     <div className="space-y-6">
@@ -120,8 +141,11 @@ const ComplianceSettings = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium">Compliant</span>
+              {tcpaEnabled ? (
+                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium">Compliant</span></>
+              ) : (
+                <><AlertTriangle className="h-5 w-5 text-yellow-600" /><span className="text-sm font-medium text-yellow-600">Not Enabled</span></>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -132,8 +156,11 @@ const ComplianceSettings = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium">Protected</span>
+              {dncEnabled ? (
+                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium">Protected</span></>
+              ) : (
+                <><AlertTriangle className="h-5 w-5 text-yellow-600" /><span className="text-sm font-medium text-yellow-600">Not Enabled</span></>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -144,8 +171,11 @@ const ComplianceSettings = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium">Enabled</span>
+              {gdprEnabled ? (
+                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium">Enabled</span></>
+              ) : (
+                <><AlertTriangle className="h-5 w-5 text-yellow-600" /><span className="text-sm font-medium text-yellow-600">Disabled</span></>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -155,8 +185,13 @@ const ComplianceSettings = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,456</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="flex items-center space-x-2">
+              {auditEnabled ? (
+                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium">Enabled</span></>
+              ) : (
+                <><AlertTriangle className="h-5 w-5 text-yellow-600" /><span className="text-sm font-medium text-yellow-600">Disabled</span></>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -375,25 +410,25 @@ const ComplianceSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-pointer mb-4">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" checked={ccpaEnabled} onChange={(e) => setCcpaEnabled(e.target.checked)} className="rounded" />
               <span className="text-sm font-medium">Enable CCPA compliance features</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" checked={ccpaDoNotSell} onChange={(e) => setCcpaDoNotSell(e.target.checked)} className="rounded" />
               <span className="text-sm">Display "Do Not Sell My Info" link</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" checked={ccpaConsumerRequests} onChange={(e) => setCcpaConsumerRequests(e.target.checked)} className="rounded" />
               <span className="text-sm">Track and respond to consumer requests</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input type="checkbox" checked={ccpaDisclosePractices} onChange={(e) => setCcpaDisclosePractices(e.target.checked)} className="rounded" />
               <span className="text-sm">Disclose data collection practices</span>
             </label>
           </div>
@@ -476,50 +511,25 @@ const ComplianceSettings = () => {
             </label>
           </div>
           <div className="space-y-3">
-            {[
-              {
-                action: 'DNC Registry Updated',
-                user: 'System',
-                time: '2 hours ago',
-                type: 'info',
-              },
-              {
-                action: 'GDPR Data Export Request',
-                user: 'John Doe',
-                time: '5 hours ago',
-                type: 'warning',
-              },
-              {
-                action: 'Consent Record Created',
-                user: 'Sarah Johnson',
-                time: '1 day ago',
-                type: 'success',
-              },
-              {
-                action: 'TCPA Violation Prevented',
-                user: 'System',
-                time: '2 days ago',
-                type: 'error',
-              },
-            ].map((log, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+            {auditLogs.length > 0 ? auditLogs.map((log: any, index: number) => (
+              <div key={log.id || index} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
-                  {log.type === 'success' && <CheckCircle className="h-5 w-5 text-green-600" />}
-                  {log.type === 'warning' && <AlertTriangle className="h-5 w-5 text-orange-600" />}
-                  {log.type === 'error' && <AlertTriangle className="h-5 w-5 text-red-600" />}
-                  {log.type === 'info' && <FileText className="h-5 w-5 text-blue-600" />}
+                  {log.type?.includes('STATUS') ? <AlertTriangle className="h-5 w-5 text-orange-600" /> :
+                   log.type?.includes('NOTE') || log.type?.includes('CREATED') ? <CheckCircle className="h-5 w-5 text-green-600" /> :
+                   <FileText className="h-5 w-5 text-blue-600" />}
                   <div>
-                    <p className="font-medium text-sm">{log.action}</p>
+                    <p className="font-medium text-sm">{log.title || log.type || 'Activity'}</p>
                     <p className="text-xs text-muted-foreground">
-                      {log.user} • {log.time}
+                      {log.user?.firstName ? `${log.user.firstName} ${log.user.lastName}` : 'System'} • {log.createdAt ? new Date(log.createdAt).toLocaleString() : ''}
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">
-                  Details
-                </Button>
               </div>
-            ))}
+            )) : (
+              <div className="text-center text-sm text-muted-foreground py-4">
+                {auditEnabled ? 'No recent audit log entries' : 'Audit logging is disabled'}
+              </div>
+            )}
           </div>
           <div className="mt-4">
             <Button variant="outline" className="w-full">

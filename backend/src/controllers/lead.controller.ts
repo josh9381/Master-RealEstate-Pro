@@ -5,6 +5,7 @@ import type { LeadStatus } from '@prisma/client';
 import { workflowTriggerService } from '../services/workflow-trigger.service';
 import { updateLeadScore, updateMultipleLeadScores, updateAllLeadScores, getScoreCategory, getLeadsByScoreCategory } from '../services/leadScoring.service';
 import { getLeadsFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
+import { parse as csvParse } from 'csv-parse/sync';
 
 /**
  * Get all leads with filtering, pagination, and sorting
@@ -214,7 +215,7 @@ export async function getLead(req: Request, res: Response): Promise<void> {
  * POST /api/leads
  */
 export async function createLead(req: Request, res: Response): Promise<void> {
-  const { firstName, lastName, email, phone, company, position, status, source, value, stage, assignedToId, customFields } = req.body;
+  const { firstName, lastName, email, phone, company, position, status, source, value, stage, assignedToId, customFields, notes, tags } = req.body;
 
   // Check if email already exists within the organization (not globally)
   const existingLead = await prisma.lead.findFirst({
@@ -258,6 +259,23 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       stage,
       assignedToId,
       customFields,
+      // Connect existing tags by name if provided
+      ...(Array.isArray(tags) && tags.length > 0 ? {
+        tags: {
+          connectOrCreate: tags.map((tagName: string) => ({
+            where: { 
+              organizationId_name: { 
+                organizationId: req.user!.organizationId, 
+                name: tagName 
+              } 
+            },
+            create: { 
+              name: tagName, 
+              organizationId: req.user!.organizationId 
+            },
+          })),
+        },
+      } : {}),
     },
     include: {
       assignedTo: {
@@ -269,8 +287,25 @@ export async function createLead(req: Request, res: Response): Promise<void> {
           avatar: true,
         },
       },
+      tags: true,
     },
   });
+
+  // Create initial note if provided
+  if (notes && typeof notes === 'string' && notes.trim()) {
+    try {
+      await prisma.note.create({
+        data: {
+          content: notes.trim(),
+          leadId: lead.id,
+          authorId: req.user!.userId,
+        },
+      });
+    } catch (error) {
+      console.error('Error creating initial note for lead:', error);
+      // Don't fail lead creation if note creation fails
+    }
+  }
 
   // Log activity
   try {
@@ -884,8 +919,8 @@ export async function recalculateAllScores(req: Request, res: Response): Promise
  * POST /api/leads/import
  */
 export async function importLeads(req: Request, res: Response): Promise<void> {
-  const organizationId = (req as any).user!.organizationId;
-  const file = (req as any).file;
+  const organizationId = req.user!.organizationId;
+  const file = (req as any).file; // multer types
 
   if (!file) {
     res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -893,24 +928,35 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
   }
 
   const csv = file.buffer.toString('utf-8');
-  const lines = csv.split('\n').filter((l: string) => l.trim());
 
-  if (lines.length < 2) {
+  // Parse CSV properly (handles quoted fields like "Smith, John")
+  let records: Record<string, string>[];
+  try {
+    records = csvParse(csv, {
+      columns: (header: string[]) => header.map((h: string) => h.trim().toLowerCase()),
+      skip_empty_lines: true,
+      trim: true,
+      relax_quotes: true,
+    });
+  } catch (parseErr: any) {
+    res.status(400).json({ success: false, message: `CSV parse error: ${parseErr.message}` });
+    return;
+  }
+
+  if (records.length === 0) {
     res.status(400).json({ success: false, message: 'CSV file is empty or has no data rows' });
     return;
   }
 
-  const headers = lines[0].split(',').map((h: string) => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   let imported = 0;
   let skipped = 0;
   const errors: string[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = 0; i < records.length; i++) {
     try {
-      const values = lines[i].split(',').map((v: string) => v.trim().replace(/^"|"$/g, ''));
-      const row: Record<string, string> = {};
-      headers.forEach((h: string, idx: number) => { row[h] = values[idx] || ''; });
+      const row = records[i];
 
       const leadData = {
         firstName: row['first name'] || row['firstname'] || row['first_name'] || row['name']?.split(' ')[0] || '',
@@ -920,12 +966,19 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
         source: row['source'] || 'IMPORT',
         status: 'NEW' as const,
         organizationId,
-        assignedToId: (req as any).user!.id,
+        assignedToId: req.user!.userId,
       };
 
       if (!leadData.firstName && !leadData.email) {
         skipped++;
-        errors.push(`Row ${i}: Missing name and email`);
+        errors.push(`Row ${i + 2}: Missing name and email`);
+        continue;
+      }
+
+      // L5: Validate email format if provided
+      if (leadData.email && !emailRegex.test(leadData.email)) {
+        skipped++;
+        errors.push(`Row ${i + 2}: Invalid email format "${leadData.email}"`);
         continue;
       }
 
@@ -939,7 +992,7 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
 
   res.json({
     success: true,
-    data: { imported, skipped, total: lines.length - 1, errors: errors.slice(0, 10) },
+    data: { imported, skipped, total: records.length, errors: errors.slice(0, 10) },
   });
 }
 

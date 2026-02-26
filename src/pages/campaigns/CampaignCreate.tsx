@@ -86,7 +86,7 @@ function CampaignCreate() {
         toast.warning('Could not load template content — you can type manually')
       })
     }
-  }, [searchParams])
+  }, [searchParams.toString()])
   
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false)

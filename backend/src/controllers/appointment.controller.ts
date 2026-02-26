@@ -341,8 +341,8 @@ export async function confirmAppointment(req: Request, res: Response): Promise<v
   const { id } = req.params;
 
   // Check appointment exists and user owns it
-  const existingAppointment = await prisma.appointment.findUnique({
-    where: { id },
+  const existingAppointment = await prisma.appointment.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!existingAppointment) {
@@ -388,6 +388,7 @@ export async function getCalendarView(req: Request, res: Response): Promise<void
 
   const appointments = await prisma.appointment.findMany({
     where: {
+      organizationId: req.user!.organizationId,
       userId: req.user.userId,
       startTime: {
         gte: new Date(startDate),
@@ -451,6 +452,7 @@ export async function getUpcomingAppointments(req: Request, res: Response): Prom
 
   const appointments = await prisma.appointment.findMany({
     where: {
+      organizationId: req.user!.organizationId,
       userId: req.user.userId,
       startTime: {
         gte: now,
@@ -498,8 +500,8 @@ export async function sendReminder(req: Request, res: Response): Promise<void> {
   const { method = 'email', message } = req.body;
 
   // Check appointment exists and user owns it
-  const appointment = await prisma.appointment.findUnique({
-    where: { id },
+  const appointment = await prisma.appointment.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!appointment) {

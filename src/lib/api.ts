@@ -102,12 +102,18 @@ api.interceptors.response.use(
         // Handle both token structures: {data: {accessToken}} and {data: {tokens: {accessToken}}}
         const data = response.data.data || response.data
         const newAccessToken = data.tokens?.accessToken || data.accessToken
+        // Token rotation (#87): backend now returns a new refresh token
+        const newRefreshToken = data.tokens?.refreshToken || data.refreshToken
 
         if (!newAccessToken) {
           throw new Error('No access token in refresh response')
         }
 
         localStorage.setItem('accessToken', newAccessToken)
+        // Store rotated refresh token if provided
+        if (newRefreshToken) {
+          localStorage.setItem('refreshToken', newRefreshToken)
+        }
         processQueue(null, newAccessToken)
 
         if (originalRequest.headers) {
@@ -339,6 +345,54 @@ export const tagsApi = {
 
   removeTagFromLead: async (leadId: string, tagId: string) => {
     const response = await api.delete(`/leads/${leadId}/tags/${tagId}`)
+    return response.data
+  },
+}
+
+// ============================================================================
+// CUSTOM FIELDS API
+// ============================================================================
+
+export interface CreateCustomFieldData {
+  name: string
+  fieldKey?: string
+  type: 'text' | 'number' | 'date' | 'dropdown' | 'boolean' | 'textarea'
+  required?: boolean
+  options?: string[]
+  order?: number
+  defaultValue?: string
+  placeholder?: string
+  validation?: string
+}
+
+export const customFieldsApi = {
+  getCustomFields: async () => {
+    const response = await api.get('/custom-fields')
+    return response.data
+  },
+
+  getCustomField: async (id: string) => {
+    const response = await api.get(`/custom-fields/${id}`)
+    return response.data
+  },
+
+  createCustomField: async (data: CreateCustomFieldData) => {
+    const response = await api.post('/custom-fields', data)
+    return response.data
+  },
+
+  updateCustomField: async (id: string, data: Partial<CreateCustomFieldData>) => {
+    const response = await api.put(`/custom-fields/${id}`, data)
+    return response.data
+  },
+
+  deleteCustomField: async (id: string) => {
+    const response = await api.delete(`/custom-fields/${id}`)
+    return response.data
+  },
+
+  reorderCustomFields: async (fieldIds: string[]) => {
+    const response = await api.put('/custom-fields/reorder', { fieldIds })
     return response.data
   },
 }
@@ -606,7 +660,7 @@ export interface TasksQuery {
   leadId?: string
   status?: 'pending' | 'completed' | 'cancelled'
   priority?: 'low' | 'medium' | 'high'
-  assignedTo?: string
+  assignedToId?: string
   dueDate?: string
 }
 
@@ -617,7 +671,7 @@ export interface CreateTaskData {
   status?: 'pending' | 'completed' | 'cancelled'
   priority?: 'low' | 'medium' | 'high'
   dueDate?: string
-  assignedTo?: string
+  assignedToId?: string
 }
 
 export const tasksApi = {
@@ -775,6 +829,20 @@ export interface UploadTrainingDataPayload {
   data: Record<string, unknown> | unknown[]
 }
 
+export interface ScoringConfigData {
+  weights?: { engagement?: number; demographic?: number; behavior?: number; timing?: number }
+  emailOpenWeight?: number
+  emailClickWeight?: number
+  emailReplyWeight?: number
+  formSubmissionWeight?: number
+  propertyInquiryWeight?: number
+  scheduledApptWeight?: number
+  completedApptWeight?: number
+  emailOptOutPenalty?: number
+  recencyBonusMax?: number
+  frequencyBonusMax?: number
+}
+
 export const aiApi = {
   // AI Hub Stats & Overview
   getStats: async () => {
@@ -838,12 +906,32 @@ export const aiApi = {
     return response.data
   },
 
+  getLeadScoreFactors: async (leadId: string) => {
+    const response = await api.get(`/ai/lead/${leadId}/score-factors`)
+    return response.data
+  },
+
   recalculateScores: async () => {
     const response = await api.post('/ai/recalculate-scores')
     return response.data
   },
 
+  // Model Recalibration
+  recalibrateModel: async () => {
+    const response = await api.post('/ai/recalibrate')
+    return response.data
+  },
+
+  getRecalibrationStatus: async () => {
+    const response = await api.get('/ai/recalibration-status')
+    return response.data
+  },
+
   // Predictions
+  getGlobalPredictions: async () => {
+    const response = await api.get('/ai/predictions')
+    return response.data
+  },
   getPredictions: async (leadId: string) => {
     const response = await api.get(`/ai/predictions/${leadId}`)
     return response.data
@@ -875,6 +963,22 @@ export const aiApi = {
     const response = await api.get('/ai/feature-importance', {
       params: { modelType }
     })
+    return response.data
+  },
+
+  // Scoring Configuration
+  getScoringConfig: async () => {
+    const response = await api.get('/ai/scoring-config')
+    return response.data
+  },
+
+  updateScoringConfig: async (config: ScoringConfigData) => {
+    const response = await api.put('/ai/scoring-config', config)
+    return response.data
+  },
+
+  resetScoringConfig: async () => {
+    const response = await api.post('/ai/scoring-config/reset')
     return response.data
   },
 }
@@ -1625,6 +1729,29 @@ export const exportApi = {
     window.URL.revokeObjectURL(url);
 
     return { success: true, records: 0 }; // record count not known from blob
+  },
+}
+
+export const savedReportsApi = {
+  list: async () => {
+    const response = await api.get('/reports/saved');
+    return response.data;
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/reports/saved/${id}`);
+    return response.data;
+  },
+  create: async (data: { name: string; description?: string; type?: string; config: Record<string, unknown> }) => {
+    const response = await api.post('/reports/saved', data);
+    return response.data;
+  },
+  update: async (id: string, data: { name?: string; description?: string; type?: string; config?: Record<string, unknown> }) => {
+    const response = await api.put(`/reports/saved/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/reports/saved/${id}`);
+    return response.data;
   },
 }
 

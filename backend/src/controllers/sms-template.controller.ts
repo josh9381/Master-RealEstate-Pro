@@ -99,8 +99,8 @@ export async function getSMSTemplates(req: Request, res: Response): Promise<void
 export async function getSMSTemplate(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
-  const template = await prisma.sMSTemplate.findUnique({
-    where: { id },
+  const template = await prisma.sMSTemplate.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!template) {
@@ -134,7 +134,7 @@ export async function createSMSTemplate(req: Request, res: Response): Promise<vo
 
   // Check if template with same name exists
   const existingTemplate = await prisma.sMSTemplate.findFirst({
-    where: { name: data.name },
+    where: { name: data.name, organizationId: req.user!.organizationId },
   });
 
   if (existingTemplate) {
@@ -174,8 +174,8 @@ export async function updateSMSTemplate(req: Request, res: Response): Promise<vo
   const data = req.body;
 
   // Check if template exists
-  const existingTemplate = await prisma.sMSTemplate.findUnique({
-    where: { id },
+  const existingTemplate = await prisma.sMSTemplate.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!existingTemplate) {
@@ -196,6 +196,7 @@ export async function updateSMSTemplate(req: Request, res: Response): Promise<vo
       where: { 
         name: data.name,
         id: { not: id },
+        organizationId: req.user!.organizationId,
       },
     });
 
@@ -236,8 +237,8 @@ export async function deleteSMSTemplate(req: Request, res: Response): Promise<vo
   const { id } = req.params;
 
   // Check if template exists
-  const template = await prisma.sMSTemplate.findUnique({
-    where: { id },
+  const template = await prisma.sMSTemplate.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!template) {
@@ -262,8 +263,8 @@ export async function duplicateSMSTemplate(req: Request, res: Response): Promise
   const { id } = req.params;
 
   // Get original template
-  const originalTemplate = await prisma.sMSTemplate.findUnique({
-    where: { id },
+  const originalTemplate = await prisma.sMSTemplate.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
   });
 
   if (!originalTemplate) {
@@ -300,6 +301,7 @@ export async function duplicateSMSTemplate(req: Request, res: Response): Promise
 export async function getSMSTemplateCategories(req: Request, res: Response): Promise<void> {
   const categories = await prisma.sMSTemplate.findMany({
     where: {
+      organizationId: req.user!.organizationId,
       category: { not: null },
     },
     select: {

@@ -255,13 +255,22 @@ export class ABTestService {
     const nA = variantA.participantCount;
     const nB = variantB.participantCount;
 
-    // Calculate pooled probability
+    // Calculate pooled probability (guard against empty samples)
     const conversionsA = Math.round(convA * nA);
     const conversionsB = Math.round(convB * nB);
-    const pooledProb = (conversionsA + conversionsB) / (nA + nB);
+    const totalN = nA + nB;
+    if (totalN === 0) {
+      return { isSignificant: false, confidence: 0, winner: null, pValue: 1 };
+    }
+    const pooledProb = (conversionsA + conversionsB) / totalN;
 
-    // Calculate standard error
+    // Calculate standard error (guard against zero SE)
     const se = Math.sqrt(pooledProb * (1 - pooledProb) * (1 / nA + 1 / nB));
+
+    // If SE is 0 (both rates identical or 0%/100%), test is inconclusive
+    if (se === 0 || !isFinite(se)) {
+      return { isSignificant: false, confidence: 0, winner: null, pValue: 1 };
+    }
 
     // Calculate z-score
     const zScore = Math.abs(convA - convB) / se;

@@ -47,7 +47,24 @@ import {
 import prisma from '../config/database';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+// CSV import multer config with fileFilter (#97)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    // Accept only CSV files by mimetype and extension
+    const allowedMimes = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
+    const allowedExts = ['.csv'];
+    const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
+
+    if (allowedMimes.includes(file.mimetype) && allowedExts.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed') as any, false);
+    }
+  },
+});
 
 // All lead routes require authentication
 router.use(authenticate);

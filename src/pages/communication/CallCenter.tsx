@@ -19,7 +19,8 @@ const CallCenter = () => {
     queryKey: ['call-center-calls'],
     queryFn: async () => {
       const response = await messagesApi.getMessages({ type: 'CALL' })
-      return (response && Array.isArray(response)) ? response : []
+      const threads = response?.data?.threads || response?.threads || []
+      return Array.isArray(threads) ? threads : []
     }
   })
   const refreshing = isFetching && !loading
@@ -133,7 +134,7 @@ const CallCenter = () => {
               disabled={!dialNumber.trim()}
               onClick={async () => {
                 try {
-                  await messagesApi.makeCall({ phone: dialNumber, notes: 'Quick dial call' })
+                  await messagesApi.makeCall({ to: dialNumber })
                   toast.success(`Call initiated to ${dialNumber}`)
                 } catch {
                   toast.error('Failed to initiate call')
@@ -308,7 +309,7 @@ const CallCenter = () => {
                   disabled={!newCallNumber.trim()}
                   onClick={async () => {
                     try {
-                      await messagesApi.makeCall({ phone: newCallNumber, notes: newCallNotes })
+                      await messagesApi.makeCall({ to: newCallNumber })
                       toast.success(`Call initiated to ${newCallNumber}`)
                       setShowNewCallModal(false)
                       setNewCallNumber('')

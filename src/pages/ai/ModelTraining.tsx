@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Brain, Activity, Settings, Play, Pause, RefreshCw, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Brain, Activity, Play, RefreshCw, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -17,6 +17,13 @@ import {
 const ModelTraining = () => {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
+  const [recalibrating, setRecalibrating] = useState(false)
+  const [recalibrationResult, setRecalibrationResult] = useState<{
+    oldAccuracy: number
+    newAccuracy: number
+    improvementPct: number
+    leadsAnalyzed: number
+  } | null>(null)
   const [models, setModels] = useState<Array<{
     id: string | number;
     name: string;
@@ -39,8 +46,9 @@ const ModelTraining = () => {
     setLoading(true)
     try {
       const data = await aiApi.getTrainingModels()
-      if (data?.models) {
-        setModels(data.models)
+      const models = data?.data || []
+      if (Array.isArray(models)) {
+        setModels(models)
       }
     } catch (error) {
       const err = error as Error
@@ -50,30 +58,74 @@ const ModelTraining = () => {
     }
   }
 
+  const handleRecalibrate = async () => {
+    setRecalibrating(true)
+    setRecalibrationResult(null)
+    try {
+      await aiApi.recalibrateModel()
+      toast.success('Recalibration started — polling for results...')
+      // Poll for completion
+      const poll = setInterval(async () => {
+        try {
+          const status = await aiApi.getRecalibrationStatus()
+          if (status.data?.status === 'completed') {
+            clearInterval(poll)
+            setRecalibrating(false)
+            setRecalibrationResult(status.data.result)
+            toast.success(`Recalibration complete! Accuracy: ${status.data.result?.oldAccuracy}% → ${status.data.result?.newAccuracy}%`)
+            loadTrainingModels() // Refresh model list
+          } else if (status.data?.status === 'failed') {
+            clearInterval(poll)
+            setRecalibrating(false)
+            toast.error(status.data.error || 'Recalibration failed')
+          }
+        } catch {
+          // Keep polling
+        }
+      }, 2000)
+      // Stop polling after 2 minutes max
+      setTimeout(() => {
+        clearInterval(poll)
+        if (recalibrating) {
+          setRecalibrating(false)
+          toast.warning('Recalibration is taking longer than expected. Check back later.')
+        }
+      }, 120000)
+    } catch (error) {
+      const err = error as Error
+      setRecalibrating(false)
+      toast.error(err.message || 'Failed to start recalibration')
+    }
+  }
+
   // Training metrics derived from model data (will be replaced with real training API data when available)
-  const trainingMetrics: Array<{ epoch: number; trainLoss: number; valLoss: number; accuracy: number }> = models.length > 0
-    ? models.slice(0, 5).map((model, i) => ({
-        epoch: i + 1,
-        trainLoss: parseFloat((1 - (model.accuracy || 0.5) * 0.01 + Math.random() * 0.1).toFixed(3)),
-        valLoss: parseFloat((1 - (model.accuracy || 0.5) * 0.01 + Math.random() * 0.15).toFixed(3)),
-        accuracy: model.accuracy || 50,
-      }))
-    : [];
+  const trainingMetrics = useMemo<Array<{ epoch: number; trainLoss: number; valLoss: number; accuracy: number }>>(() => {
+    if (models.length === 0) return []
+    return models.slice(0, 5).map((model, i) => ({
+      epoch: i + 1,
+      trainLoss: parseFloat((1 - (model.accuracy || 50) * 0.01 + (i * 0.02)).toFixed(3)),
+      valLoss: parseFloat((1 - (model.accuracy || 50) * 0.01 + (i * 0.03)).toFixed(3)),
+      accuracy: model.accuracy || 50,
+    }))
+  }, [models])
 
   return (
     <div className="space-y-6">
-      {/* Coming Soon Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <h3 className="font-semibold text-amber-800">Coming Soon — Custom Model Training</h3>
-          <p className="text-sm text-amber-700 mt-1">
-            Custom model training requires dedicated ML infrastructure which is not yet available.
-            AI features like Lead Scoring and Content Generation use pre-trained models and work today.
-          </p>
+      {/* Recalibration Result Banner */}
+      {recalibrationResult && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+          <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+          <div>
+            <h3 className="font-semibold text-green-800">Recalibration Complete</h3>
+            <p className="text-sm text-green-700 mt-1">
+              Accuracy improved from {recalibrationResult.oldAccuracy.toFixed(1)}% to {recalibrationResult.newAccuracy.toFixed(1)}% 
+              ({recalibrationResult.improvementPct > 0 ? '+' : ''}{recalibrationResult.improvementPct.toFixed(1)}%) 
+              using {recalibrationResult.leadsAnalyzed} leads.
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setRecalibrationResult(null)}>Dismiss</Button>
         </div>
-        <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
-      </div>
+      )}
 
       <div className="flex items-center justify-between">
         <div>
@@ -83,12 +135,16 @@ const ModelTraining = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" disabled title="Training configuration coming soon">
-            <Settings className="h-4 w-4 mr-2" />
-            Training Config
+          <Button 
+            variant="outline" 
+            onClick={handleRecalibrate} 
+            disabled={recalibrating}
+          >
+            {recalibrating ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Brain className="h-4 w-4 mr-2" />}
+            {recalibrating ? 'Recalibrating...' : 'Recalibrate Model'}
           </Button>
           <Button onClick={loadTrainingModels} disabled={loading}>
-            {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+            {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
         </div>
@@ -195,17 +251,14 @@ const ModelTraining = () => {
                   <TableCell>
                     <div className="flex space-x-2">
                       {model.status === 'training' ? (
-                        <Button variant="ghost" size="sm" disabled title="Pause training coming soon">
-                          <Pause className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" disabled>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
                         </Button>
                       ) : (
-                        <Button variant="ghost" size="sm" disabled title="Start training coming soon">
+                        <Button variant="ghost" size="sm" onClick={handleRecalibrate} disabled={recalibrating} title="Recalibrate this model">
                           <Play className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="sm" disabled title="Model details coming soon">
-                        View
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -222,9 +275,42 @@ const ModelTraining = () => {
             <CardTitle>Current Training Job</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center h-32 text-muted-foreground">
-              No training jobs running. Start a training job from the models table above.
-            </div>
+            {recalibrating ? (
+              <div className="flex flex-col items-center justify-center h-32 gap-2">
+                <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Recalibrating scoring model...</p>
+                <p className="text-xs text-muted-foreground">Analyzing lead conversion data to optimize weights</p>
+              </div>
+            ) : recalibrationResult ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">Last Recalibration Completed</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Previous Accuracy:</span>
+                    <span className="ml-2 font-medium">{recalibrationResult.oldAccuracy.toFixed(1)}%</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">New Accuracy:</span>
+                    <span className="ml-2 font-medium text-green-600">{recalibrationResult.newAccuracy.toFixed(1)}%</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Leads Analyzed:</span>
+                    <span className="ml-2 font-medium">{recalibrationResult.leadsAnalyzed}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Improvement:</span>
+                    <span className="ml-2 font-medium">{recalibrationResult.improvementPct > 0 ? '+' : ''}{recalibrationResult.improvementPct.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-32 text-muted-foreground">
+                No training jobs running. Click "Recalibrate Model" to optimize scoring weights.
+              </div>
+            )}
           </CardContent>
         </Card>
 

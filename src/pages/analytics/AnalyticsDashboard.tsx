@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart3, TrendingUp, Users, DollarSign, Mail, Phone, Target, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import {
   AreaChart,
   Area,
@@ -28,15 +29,15 @@ const AnalyticsDashboard = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
   const navigate = useNavigate();
 
-  const { data: analyticsResult, isLoading: loading, refetch } = useQuery({
+  const { data: analyticsResult, isLoading: loading, isError: analyticsError, error: analyticsErrorObj, refetch } = useQuery({
     queryKey: ['analytics-dashboard'],
     queryFn: async () => {
       const params = dateRangeRef.current;
       const [dashboard, leads, campaigns, teamPerf] = await Promise.all([
-        analyticsApi.getDashboardStats(params).catch(() => ({ data: null })),
-        analyticsApi.getLeadAnalytics(params).catch(() => ({ data: null })),
-        analyticsApi.getCampaignAnalytics(params).catch(() => ({ data: null })),
-        analyticsApi.getTeamPerformance(params).catch(() => ({ data: null }))
+        analyticsApi.getDashboardStats(params),
+        analyticsApi.getLeadAnalytics(params),
+        analyticsApi.getCampaignAnalytics(params),
+        analyticsApi.getTeamPerformance(params)
       ]);
       return {
         dashboardData: dashboard.data,
@@ -72,7 +73,7 @@ const AnalyticsDashboard = () => {
   const channelData = leadAnalytics?.bySource 
     ? Object.entries(leadAnalytics.bySource).map(([name, value]: [string, any], index) => ({
         name,
-        value: Math.round((value / totalLeads) * 100),
+        value: totalLeads > 0 ? Math.round((value / totalLeads) * 100) : 0,
         color: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899'][index] || '#6b7280'
       }))
     : [];
@@ -99,6 +100,18 @@ const AnalyticsDashboard = () => {
     return (
       <div className="flex items-center justify-center h-96">
         <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (analyticsError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+        <ErrorBanner
+          message={analyticsErrorObj instanceof Error ? analyticsErrorObj.message : 'Failed to load analytics data'}
+          retry={() => refetch()}
+        />
       </div>
     );
   }

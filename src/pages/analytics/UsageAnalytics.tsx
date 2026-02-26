@@ -4,6 +4,7 @@ import { Activity, Clock, Users, Zap, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { analyticsApi } from '@/lib/api';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
@@ -21,17 +22,17 @@ import {
 const UsageAnalytics = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
 
-  const { data: usageResult, isLoading: loading, refetch } = useQuery({
+  const { data: usageResult, isLoading: loading, isError, error, refetch } = useQuery({
     queryKey: ['usage-analytics'],
     queryFn: async () => {
       const dateParams = dateRangeRef.current;
       const [dashboard, activity] = await Promise.all([
-        analyticsApi.getDashboardStats(dateParams).catch((e: Error) => { console.error('Dashboard stats failed:', e); return null; }),
-        analyticsApi.getActivityFeed().catch((e: Error) => { console.error('Activity feed failed:', e); return null; }),
+        analyticsApi.getDashboardStats(dateParams),
+        analyticsApi.getActivityFeed(),
       ]);
       return {
-        dashboardData: dashboard,
-        activityData: activity?.activities || [],
+        dashboardData: dashboard?.data || dashboard,
+        activityData: activity?.data?.activities || activity?.activities || [],
       };
     },
   });
@@ -107,6 +108,9 @@ const UsageAnalytics = () => {
 
   return (
     <div className="space-y-6">
+      {isError && (
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load usage data'} retry={() => refetch()} />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Usage Analytics</h1>
@@ -141,7 +145,7 @@ const UsageAnalytics = () => {
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData?.stats?.totalLeads || 0}</div>
+            <div className="text-2xl font-bold">{dashboardData?.overview?.totalLeads || 0}</div>
             <p className="text-xs text-muted-foreground">In system</p>
           </CardContent>
         </Card>
@@ -151,7 +155,7 @@ const UsageAnalytics = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData?.stats?.totalCampaigns || 0}</div>
+            <div className="text-2xl font-bold">{dashboardData?.overview?.totalCampaigns || dashboardData?.campaigns?.total || 0}</div>
             <p className="text-xs text-muted-foreground">Active</p>
           </CardContent>
         </Card>
@@ -161,8 +165,8 @@ const UsageAnalytics = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData?.stats?.avgSessionTime || '—'}</div>
-            <p className="text-xs text-muted-foreground">This week</p>
+            <div className="text-2xl font-bold">{dashboardData?.activities?.total || '—'}</div>
+            <p className="text-xs text-muted-foreground">This period</p>
           </CardContent>
         </Card>
       </div>

@@ -7,11 +7,17 @@ import sgMail from '@sendgrid/mail';
 import Handlebars from 'handlebars';
 import { prisma } from '../config/database';
 import { decryptForUser } from '../utils/encryption';
+import { logger } from '../lib/logger';
 
 // Initialize SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@realestate.com';
 const FROM_NAME = process.env.FROM_NAME || 'RealEstate Pro';
+const APP_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+const UNSUBSCRIBE_EMAIL = process.env.UNSUBSCRIBE_EMAIL || `unsubscribe@${FROM_EMAIL.split('@')[1] || 'realestate.com'}`;
+
+// #105: Default daily email sending limit per org (configurable via env)
+const DAILY_EMAIL_LIMIT = parseInt(process.env.DAILY_EMAIL_LIMIT || '1000', 10);
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -48,7 +54,7 @@ async function getEmailConfig(userId?: string) {
           mode: 'database' as const
         };
       } catch (decryptError) {
-        console.error('[EMAIL] Failed to decrypt user credentials:', decryptError);
+        logger.error({ error: decryptError }, '[EMAIL] Failed to decrypt user credentials');
         // Fall through to environment variables
       }
     }
@@ -61,7 +67,7 @@ async function getEmailConfig(userId?: string) {
       mode: 'environment' as const
     };
   } catch (error) {
-    console.error('Error fetching email config:', error);
+    logger.error({ error }, 'Error fetching email config');
     // Fall back to environment variables on error
     return {
       apiKey: SENDGRID_API_KEY,
@@ -95,6 +101,53 @@ export interface EmailOptions {
   organizationId: string; // Organization ID for multi-tenancy
   trackOpens?: boolean;
   trackClicks?: boolean;
+  skipSuppressionCheck?: boolean; // For transactional emails that must go out regardless
+}
+
+/**
+ * #102/#103: Check if an email address is on the suppression list (bounced or spam-reported)
+ */
+export async function isEmailSuppressed(email: string, organizationId: string): Promise<boolean> {
+  const suppression = await prisma.emailSuppression.findUnique({
+    where: { organizationId_email: { organizationId, email: email.toLowerCase() } },
+  });
+  return !!suppression;
+}
+
+/**
+ * #102/#103: Add an email address to the suppression list
+ */
+export async function suppressEmail(email: string, organizationId: string, reason: string): Promise<void> {
+  await prisma.emailSuppression.upsert({
+    where: { organizationId_email: { organizationId, email: email.toLowerCase() } },
+    update: { reason },
+    create: {
+      email: email.toLowerCase(),
+      reason,
+      organizationId,
+    },
+  });
+  logger.info({ email, organizationId, reason }, '[EMAIL] Address added to suppression list');
+}
+
+/**
+ * #105: Check daily sending limit for an organization
+ * Returns { allowed: boolean, sent: number, limit: number }
+ */
+export async function checkDailySendingLimit(organizationId: string): Promise<{ allowed: boolean; sent: number; limit: number }> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const sent = await prisma.message.count({
+    where: {
+      organizationId,
+      type: 'EMAIL',
+      direction: 'OUTBOUND',
+      createdAt: { gte: startOfDay },
+    },
+  });
+
+  return { allowed: sent < DAILY_EMAIL_LIMIT, sent, limit: DAILY_EMAIL_LIMIT };
 }
 
 export interface EmailResult {
@@ -124,19 +177,54 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   } = options;
 
   try {
+    // #102: Check suppression list before sending (unless skipped for transactional emails)
+    if (!options.skipSuppressionCheck) {
+      const recipients = Array.isArray(to) ? to : [to];
+      for (const recipient of recipients) {
+        if (await isEmailSuppressed(recipient, organizationId)) {
+          logger.warn({ to: recipient, organizationId }, '[EMAIL] Recipient is on suppression list, skipping');
+          return { success: false, error: `Email to ${recipient} suppressed (bounced or spam-reported)` };
+        }
+      }
+
+      // Also check lead-level emailOptIn
+      if (leadId) {
+        const lead = await prisma.lead.findUnique({
+          where: { id: leadId },
+          select: { emailOptIn: true },
+        });
+        if (lead && !lead.emailOptIn) {
+          logger.warn({ leadId, organizationId }, '[EMAIL] Lead has opted out of emails, skipping');
+          return { success: false, error: 'Lead has opted out of emails' };
+        }
+      }
+    }
+
+    // #105: Check daily sending limit
+    const limitCheck = await checkDailySendingLimit(organizationId);
+    if (!limitCheck.allowed) {
+      logger.warn({ organizationId, sent: limitCheck.sent, limit: limitCheck.limit }, '[EMAIL] Daily sending limit reached');
+      return { success: false, error: `Daily email limit reached (${limitCheck.sent}/${limitCheck.limit}). Try again tomorrow.` };
+    }
+
     // Get email configuration (database or environment)
     const config = await getEmailConfig(userId);
 
     // Check if SendGrid is configured
     if (!config.apiKey) {
-      console.warn('[EMAIL] SendGrid API key not configured, using mock mode');
+      logger.warn('[EMAIL] SendGrid API key not configured, using mock mode');
       return mockEmailSend(options);
     }
 
     // Set API key for this request
     sgMail.setApiKey(config.apiKey);
 
-    console.log(`[EMAIL] Using config from ${config.mode} (userId: ${userId || 'none'})`);
+    logger.info({ mode: config.mode, userId: userId || 'none' }, '[EMAIL] Using config');
+
+    // #101: Build unsubscribe URL for List-Unsubscribe header (RFC 8058)
+    const unsubscribeUrl = leadId
+      ? `${APP_URL}/api/unsubscribe/${leadId}`
+      : `${APP_URL}/api/unsubscribe`;
 
     // Prepare email message
     const message = {
@@ -151,6 +239,11 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
       trackingSettings: {
         clickTracking: { enable: trackClicks },
         openTracking: { enable: trackOpens },
+      },
+      // #101: List-Unsubscribe headers (required by Gmail/Yahoo since Feb 2024)
+      headers: {
+        'List-Unsubscribe': `<mailto:${UNSUBSCRIBE_EMAIL}>, <${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
       },
     };
 
@@ -175,11 +268,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     const [response] = await sgMail.send(message as never);
 
     // Log success
-    console.log('[EMAIL] Sent successfully:', {
-      to,
-      subject,
-      messageId: response.headers['x-message-id'],
-    });
+    logger.info({ to, subject, messageId: response.headers['x-message-id'] }, '[EMAIL] Sent successfully');
 
     // Create message record in database
     const createdMessage = await createMessageRecord({
@@ -207,7 +296,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[EMAIL] Send failed:', errorMessage);
+    logger.error({ error: errorMessage }, '[EMAIL] Send failed');
 
     // Log failed message
     await createMessageRecord({
@@ -282,7 +371,7 @@ export async function sendTemplateEmail(
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[EMAIL] Template send failed:', errorMessage);
+    logger.error({ error: errorMessage }, '[EMAIL] Template send failed');
     return {
       success: false,
       error: errorMessage,
@@ -338,12 +427,9 @@ export async function sendBulkEmails(
 async function mockEmailSend(options: EmailOptions): Promise<EmailResult> {
   const { to, subject, html, text, leadId, organizationId } = options;
 
-  console.log('[EMAIL] MOCK MODE - Email not actually sent:');
-  console.log('To:', to);
-  console.log('Subject:', subject);
-  console.log('Body preview:', (html || text || '').substring(0, 100) + '...');
+  logger.info({ to, subject, bodyPreview: (html || text || '').substring(0, 100) }, '[EMAIL] MOCK MODE - Email not actually sent');
 
-  // Create message record
+  // #104: Create message record with PENDING status (not DELIVERED) to avoid inflating analytics
   const message = await createMessageRecord({
     type: 'EMAIL',
     direction: 'OUTBOUND',
@@ -351,7 +437,7 @@ async function mockEmailSend(options: EmailOptions): Promise<EmailResult> {
     body: html || text || '',
     fromAddress: FROM_EMAIL,
     toAddress: Array.isArray(to) ? to.join(', ') : to,
-    status: 'DELIVERED', // Mock mode treats as immediately delivered
+    status: 'PENDING', // #104: Mock mode should NOT mark as delivered — prevents inflated analytics
     provider: 'mock',
     organizationId,
     leadId,
@@ -375,7 +461,7 @@ async function createMessageRecord(data: Record<string, unknown>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return await prisma.message.create({ data: data as any });
   } catch (error) {
-    console.error('[EMAIL] Failed to create message record:', error);
+    logger.error({ error }, '[EMAIL] Failed to create message record');
     return null;
   }
 }
@@ -393,7 +479,7 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
     });
 
     if (!message) {
-      console.warn('[EMAIL] Webhook: Message not found:', sg_message_id);
+      logger.warn({ sg_message_id }, '[EMAIL] Webhook: Message not found');
       return;
     }
 
@@ -467,17 +553,45 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
         break;
 
       case 'bounce':
-      case 'dropped':
+      case 'dropped': {
         await prisma.message.update({
           where: { id: message.id },
           data: { status: 'BOUNCED' },
         });
+
+        // #102: Add bounced address to suppression list
+        const bouncedEmail = (event.email as string) || message.toAddress;
+        if (bouncedEmail && message.organizationId) {
+          await suppressEmail(bouncedEmail, message.organizationId, 'bounce');
+        }
         break;
+      }
+
+      case 'spamreport': {
+        await prisma.message.update({
+          where: { id: message.id },
+          data: { status: 'FAILED', spamComplaintAt: new Date() },
+        });
+
+        // #103: Add to suppression list AND opt-out the lead
+        const spamEmail = (event.email as string) || message.toAddress;
+        if (spamEmail && message.organizationId) {
+          await suppressEmail(spamEmail, message.organizationId, 'spamreport');
+        }
+        if (message.leadId) {
+          await prisma.lead.update({
+            where: { id: message.leadId },
+            data: { emailOptIn: false, emailOptOutAt: new Date(), emailOptOutReason: 'spam_complaint' },
+          });
+          logger.info({ leadId: message.leadId }, '[EMAIL] Lead opted out due to spam complaint');
+        }
+        break;
+      }
 
       default:
-        console.log('[EMAIL] Webhook: Unknown event type:', eventType);
+        logger.info({ eventType }, '[EMAIL] Webhook: Unknown event type');
     }
   } catch (error) {
-    console.error('[EMAIL] Webhook processing failed:', error);
+    logger.error({ error }, '[EMAIL] Webhook processing failed');
   }
 }

@@ -149,12 +149,9 @@ function LeadsList() {
         const members = await usersApi.getTeamMembers()
         return Array.isArray(members) ? members : []
       } catch {
-        try {
-          const response = await usersApi.getUsers({ limit: 50 })
-          return response.data?.users || response.data || []
-        } catch {
-          return []
-        }
+        // Fallback to users list if team-members endpoint unavailable
+        const response = await usersApi.getUsers({ limit: 50 })
+        return response.data?.users || response.data || []
       }
     },
   })
@@ -163,9 +160,8 @@ function LeadsList() {
   const { data: leadsResponse, isLoading } = useQuery({
     queryKey: ['leads', currentPage, pageSize, searchQuery, sortField, sortDirection, filters],
     queryFn: async () => {
-      try {
-        // Map frontend sort fields to backend-accepted values
-        const sortFieldMap: Record<string, string> = {
+      // Map frontend sort fields to backend-accepted values
+      const sortFieldMap: Record<string, string> = {
           name: 'firstName',
           company: 'createdAt',
           score: 'score',
@@ -184,13 +180,15 @@ function LeadsList() {
         if (searchQuery) params.search = searchQuery
         if (filters.status.length > 0) params.status = filters.status[0]
         if (filters.source.length > 0) params.source = filters.source[0]
+        if (filters.scoreRange[0] > 0) params.minScore = filters.scoreRange[0]
+        if (filters.scoreRange[1] < 100) params.maxScore = filters.scoreRange[1]
+        if (filters.dateRange.from) params.startDate = filters.dateRange.from
+        if (filters.dateRange.to) params.endDate = filters.dateRange.to
+        if (filters.tags.length > 0) params.tags = filters.tags.join(',')
+        if (filters.assignedTo.length > 0) params.assignedTo = filters.assignedTo.join(',')
         
         const response = await leadsApi.getLeads(params)
         return response.data
-      } catch (error) {
-        // If API fails (e.g., not authenticated), return null to use mock data
-        return null
-      }
     },
     retry: false, // Don't retry on auth failures
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
@@ -348,8 +346,14 @@ function LeadsList() {
     // Client-side sorting for mock data
     if (sortField && sortDirection) {
       filtered = [...filtered].sort((a, b) => {
-        const aVal = a[sortField]
-        const bVal = b[sortField]
+        let aVal: unknown, bVal: unknown
+        if (sortField === 'name') {
+          aVal = `${a.firstName} ${a.lastName}`
+          bVal = `${b.firstName} ${b.lastName}`
+        } else {
+          aVal = a[sortField]
+          bVal = b[sortField]
+        }
         const modifier = sortDirection === 'asc' ? 1 : -1
         
         if (typeof aVal === 'string' && typeof bVal === 'string') {
@@ -468,9 +472,9 @@ function LeadsList() {
       setShowMassEmail(true)
     } else if (action === 'Tags added') {
       setShowTagsModal(true)
-    } else if (action === 'Status change') {
+    } else if (action.startsWith('Status change')) {
       setShowStatusModal(true)
-    } else if (action === 'Assignment') {
+    } else if (action.startsWith('Assignment')) {
       setShowAssignModal(true)
     } else if (action === 'Delete') {
       setShowDeleteModal(true)
@@ -549,12 +553,7 @@ function LeadsList() {
         }))
         toast.success('Note added successfully')
       } catch {
-        // Fall back to local-only storage
-        setLeadNotes(prev => ({
-          ...prev,
-          [leadId]: [...(prev[leadId] || []), quickNote.text]
-        }))
-        toast.success('Note saved locally')
+        toast.error('Failed to save note. Please try again.')
       }
       setQuickNote(null)
     }
@@ -879,9 +878,9 @@ function LeadsList() {
       <BulkActionsBar
         selectedCount={selectedLeads.length}
         onClearSelection={() => setSelectedLeads([])}
-        onChangeStatus={() => handleBulkAction('Status change')}
+        onChangeStatus={(status) => handleBulkAction(`Status change:${status}`)}
         onAddTags={() => handleBulkAction('Tags added')}
-        onAssignTo={() => handleBulkAction('Assignment')}
+        onAssignTo={(person) => handleBulkAction(`Assignment:${person}`)}
         onExport={() => handleBulkAction('Export')}
         onDelete={() => handleBulkAction('Delete')}
         onBulkEmail={() => handleBulkAction('Bulk email')}
@@ -1427,7 +1426,7 @@ function LeadsList() {
                     <label className="text-sm font-medium">Assigned To</label>
                     <select 
                       className="w-full mt-1 p-2 border rounded-md"
-                      value={editingLead.assignedTo || ''}
+                      value={typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null ? (editingLead.assignedTo as AssignedUser).id || (editingLead.assignedTo as AssignedUser)._id || '' : editingLead.assignedTo || ''}
                       onChange={(e) => setEditingLead({...editingLead, assignedTo: e.target.value || null})}
                     >
                       <option value="">Unassigned</option>

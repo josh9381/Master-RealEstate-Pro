@@ -343,6 +343,8 @@ export interface ActivityRecord {
   } | string
   userName?: string
   lead?: {
+    firstName?: string
+    lastName?: string
     name?: string
   }
   leadId?: string | number

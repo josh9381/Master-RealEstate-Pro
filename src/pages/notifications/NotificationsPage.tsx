@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import {
   Bell,
   Check,
@@ -17,140 +19,76 @@ import {
   Phone,
   Calendar,
   Search,
-  Archive
+  Archive,
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useNavigate } from 'react-router-dom'
-
-interface Notification {
-  id: number
-  type: 'mention' | 'assignment' | 'update' | 'system' | 'email' | 'sms' | 'call' | 'meeting'
-  title: string
-  message: string
-  time: string
-  date: string
-  read: boolean
-  link?: string
-  leadName?: string
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: 1,
-    type: 'mention',
-    title: 'Sarah mentioned you',
-    message: 'Sarah mentioned you in a comment on lead "Tech Corp" regarding the Q4 pricing discussion',
-    time: '5 min ago',
-    date: '2025-10-20',
-    read: false,
-    link: '/leads/123',
-    leadName: 'Tech Corp'
-  },
-  {
-    id: 2,
-    type: 'assignment',
-    title: 'New lead assigned',
-    message: 'John assigned you to follow up with "Enterprise Solutions" - high priority deal worth $150k',
-    time: '15 min ago',
-    date: '2025-10-20',
-    read: false,
-    link: '/leads/124',
-    leadName: 'Enterprise Solutions'
-  },
-  {
-    id: 3,
-    type: 'email',
-    title: 'Email received',
-    message: 'Michael Johnson replied to your email about the proposal with additional questions',
-    time: '1 hour ago',
-    date: '2025-10-20',
-    read: false,
-    link: '/communication'
-  },
-  {
-    id: 4,
-    type: 'update',
-    title: 'Lead status changed',
-    message: 'Lead "ABC Inc" moved from Qualified to Proposal - contract ready for review',
-    time: '2 hours ago',
-    date: '2025-10-20',
-    read: true,
-    link: '/leads/125',
-    leadName: 'ABC Inc'
-  },
-  {
-    id: 5,
-    type: 'meeting',
-    title: 'Upcoming meeting',
-    message: 'Meeting with "Global Tech" starts in 30 minutes - Conference Room A',
-    time: '3 hours ago',
-    date: '2025-10-20',
-    read: false,
-    link: '/calendar',
-    leadName: 'Global Tech'
-  },
-  {
-    id: 6,
-    type: 'sms',
-    title: 'SMS received',
-    message: 'Lisa Chen: "Thanks for the follow-up call today! Looking forward to our demo next week."',
-    time: '4 hours ago',
-    date: '2025-10-20',
-    read: true,
-    link: '/communication'
-  },
-  {
-    id: 7,
-    type: 'call',
-    title: 'Missed call',
-    message: 'Missed call from David Williams at Startup Inc - left voicemail',
-    time: '5 hours ago',
-    date: '2025-10-20',
-    read: true,
-    link: '/communication'
-  },
-  {
-    id: 8,
-    type: 'assignment',
-    title: 'Task reminder',
-    message: 'You have 3 overdue follow-ups that need attention',
-    time: 'Yesterday',
-    date: '2025-10-19',
-    read: true,
-    link: '/leads/followups'
-  },
-  {
-    id: 9,
-    type: 'system',
-    title: 'New AI features available',
-    message: 'AI-powered email composer and SMS templates are now available in the platform',
-    time: '2 days ago',
-    date: '2025-10-18',
-    read: true,
-    link: '/ai'
-  },
-  {
-    id: 10,
-    type: 'update',
-    title: 'Deal won!',
-    message: 'Congratulations! Lead "Fortune 500 Co" closed successfully - $500k ARR',
-    time: '2 days ago',
-    date: '2025-10-18',
-    read: true,
-    link: '/leads/126',
-    leadName: 'Fortune 500 Co'
-  }
-]
+import { notificationsApi, type Notification } from '@/lib/api'
 
 export function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'mention' | 'assignment' | 'update' | 'system'>('all')
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(25)
   const { toast } = useToast()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
-  const getNotificationIcon = (type: Notification['type']) => {
+  // Fetch notifications from API with 30s polling and server-side pagination (#112)
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['notifications', currentPage, pageSize],
+    queryFn: async () => {
+      const response = await notificationsApi.getNotifications({ page: currentPage, limit: pageSize })
+      return response.data as {
+        notifications: Notification[]
+        unreadCount: number
+        pagination: { page: number; limit: number; total: number; pages: number }
+      }
+    },
+    refetchInterval: 30000,
+  })
+
+  const notifications = data?.notifications ?? []
+
+  // Mutations
+  const markAsReadMutation = useMutation({
+    mutationFn: (id: string) => notificationsApi.markAsRead(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => notificationsApi.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      toast.success('All notifications marked as read')
+    },
+    onError: () => toast.error('Failed to mark all as read'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => notificationsApi.deleteNotification(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+
+    if (minutes < 1) return 'Just now'
+    if (minutes < 60) return `${minutes} min ago`
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    return `${days} day${days > 1 ? 's' : ''} ago`
+  }
+
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'mention':
         return <AtSign className="h-5 w-5 text-blue-500" />
@@ -174,26 +112,23 @@ export function NotificationsPage() {
   }
 
   const filteredNotifications = notifications.filter((n: Notification) => {
-    // Filter by active filter
     if (activeFilter === 'unread' && n.read) return false
     if (activeFilter !== 'all' && activeFilter !== 'unread' && n.type !== activeFilter) return false
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       return (
         n.title.toLowerCase().includes(query) ||
-        n.message.toLowerCase().includes(query) ||
-        n.leadName?.toLowerCase().includes(query)
+        n.message.toLowerCase().includes(query)
       )
     }
 
     return true
   })
 
-  const unreadCount = notifications.filter((n: Notification) => !n.read).length
+  const unreadCount = data?.unreadCount ?? notifications.filter((n: Notification) => !n.read).length
 
-  const handleToggleSelect = (id: number) => {
+  const handleToggleSelect = (id: string) => {
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     )
@@ -207,41 +142,83 @@ export function NotificationsPage() {
     }
   }
 
-  const handleMarkAsRead = (id: number) => {
-    setNotifications(notifications.map((n: Notification) =>
-      n.id === id ? { ...n, read: true } : n
-    ))
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await markAsReadMutation.mutateAsync(id)
+    } catch {
+      toast.error('Failed to mark notification as read')
+    }
   }
 
-  const handleMarkSelectedAsRead = () => {
-    setNotifications(notifications.map((n: Notification) =>
-      selectedIds.includes(n.id) ? { ...n, read: true } : n
-    ))
-    setSelectedIds([])
-    toast.success(`Marked ${selectedIds.length} notifications as read`)
+  const handleMarkSelectedAsRead = async () => {
+    try {
+      const count = selectedIds.length
+      await Promise.all(selectedIds.map(id => notificationsApi.markAsRead(id)))
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      setSelectedIds([])
+      toast.success(`Marked ${count} notifications as read`)
+    } catch {
+      toast.error('Failed to mark selected as read')
+    }
   }
 
   const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map((n: Notification) => ({ ...n, read: true })))
-    toast.success('All notifications marked as read')
+    markAllAsReadMutation.mutate()
   }
 
-  const handleDeleteSelected = () => {
-    setNotifications(notifications.filter((n: Notification) => !selectedIds.includes(n.id)))
-    toast.success(`Deleted ${selectedIds.length} notifications`)
-    setSelectedIds([])
+  const handleDeleteSelected = async () => {
+    try {
+      const count = selectedIds.length
+      await Promise.all(selectedIds.map(id => notificationsApi.deleteNotification(id)))
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      setSelectedIds([])
+      toast.success(`Deleted ${count} notifications`)
+    } catch {
+      toast.error('Failed to delete selected notifications')
+    }
   }
 
-  const handleClearAll = () => {
-    setNotifications([])
-    toast.success('All notifications cleared')
+  const handleClearAll = async () => {
+    try {
+      await Promise.all(notifications.map(n => notificationsApi.deleteNotification(n.id)))
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      toast.success('All notifications cleared')
+    } catch {
+      toast.error('Failed to clear notifications')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMutation.mutateAsync(id)
+      toast.success('Notification removed')
+    } catch {
+      toast.error('Failed to delete notification')
+    }
   }
 
   const handleNotificationClick = (notification: Notification) => {
-    handleMarkAsRead(notification.id)
+    if (!notification.read) {
+      handleMarkAsRead(notification.id)
+    }
     if (notification.link) {
       navigate(notification.link)
     }
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Notifications</h1>
+          <p className="mt-2 text-muted-foreground">Stay updated with all your activities and updates</p>
+        </div>
+        <ErrorBanner
+          message={error instanceof Error ? error.message : 'Failed to load notifications'}
+          retry={() => refetch()}
+        />
+      </div>
+    )
   }
 
   return (
@@ -343,33 +320,33 @@ export function NotificationsPage() {
             <div className="flex gap-2">
               <Button
                 variant={activeFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setActiveFilter('all')}
+                onClick={() => { setActiveFilter('all'); setCurrentPage(1) }}
               >
                 All
               </Button>
               <Button
                 variant={activeFilter === 'unread' ? 'default' : 'outline'}
-                onClick={() => setActiveFilter('unread')}
+                onClick={() => { setActiveFilter('unread'); setCurrentPage(1) }}
               >
                 Unread {unreadCount > 0 && `(${unreadCount})`}
               </Button>
               <Button
                 variant={activeFilter === 'mention' ? 'default' : 'outline'}
-                onClick={() => setActiveFilter('mention')}
+                onClick={() => { setActiveFilter('mention'); setCurrentPage(1) }}
               >
                 <AtSign className="mr-2 h-4 w-4" />
                 Mentions
               </Button>
               <Button
                 variant={activeFilter === 'assignment' ? 'default' : 'outline'}
-                onClick={() => setActiveFilter('assignment')}
+                onClick={() => { setActiveFilter('assignment'); setCurrentPage(1) }}
               >
                 <UserPlus className="mr-2 h-4 w-4" />
                 Assigned
               </Button>
               <Button
                 variant={activeFilter === 'update' ? 'default' : 'outline'}
-                onClick={() => setActiveFilter('update')}
+                onClick={() => { setActiveFilter('update'); setCurrentPage(1) }}
               >
                 <TrendingUp className="mr-2 h-4 w-4" />
                 Updates
@@ -405,7 +382,12 @@ export function NotificationsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredNotifications.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin opacity-50" />
+              <p className="text-lg font-medium">Loading notifications...</p>
+            </div>
+          ) : filteredNotifications.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">No notifications</p>
@@ -442,15 +424,10 @@ export function NotificationsPage() {
                         <p className="font-medium text-sm">
                           {notification.title}
                         </p>
-                        {notification.leadName && (
-                          <Badge variant="secondary" className="text-xs mt-1">
-                            {notification.leadName}
-                          </Badge>
-                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <p className="text-xs text-muted-foreground">
-                          {notification.time}
+                          {formatTime(notification.createdAt)}
                         </p>
                         {!notification.read && (
                           <Badge variant="destructive" className="text-xs px-1.5 py-0">
@@ -482,8 +459,7 @@ export function NotificationsPage() {
                       size="sm"
                       onClick={(e: React.MouseEvent) => {
                         e.stopPropagation()
-                        setNotifications(notifications.filter((n: Notification) => n.id !== notification.id))
-                        toast.success('Notification removed')
+                        handleDelete(notification.id)
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -491,6 +467,59 @@ export function NotificationsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {data?.pagination && data.pagination.pages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * pageSize) + 1} to{' '}
+                {Math.min(currentPage * pageSize, data.pagination.total)} of{' '}
+                {data.pagination.total} notifications
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                {Array.from({ length: data.pagination.pages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === data.pagination.pages || Math.abs(p - currentPage) <= 1)
+                  .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...')
+                    acc.push(p)
+                    return acc
+                  }, [])
+                  .map((p, idx) =>
+                    typeof p === 'string' ? (
+                      <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground">...</span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={p === currentPage ? 'default' : 'outline'}
+                        size="sm"
+                        className="min-w-[2rem]"
+                        onClick={() => setCurrentPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    )
+                  )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= data.pagination.pages}
+                  onClick={() => setCurrentPage(p => Math.min(data.pagination.pages, p + 1))}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

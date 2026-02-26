@@ -12,6 +12,8 @@ const GoogleIntegration = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [connected, setConnected] = useState(true);
+  const [connectedEmail, setConnectedEmail] = useState('');
+  const [connectedDate, setConnectedDate] = useState('');
   
   // Gmail settings
   const [gmailEnabled, setGmailEnabled] = useState(true);
@@ -41,6 +43,8 @@ const GoogleIntegration = () => {
       const status = await settingsApi.getIntegrationStatus('google');
       if (status) {
         setConnected(status.connected ?? true);
+        setConnectedEmail(status.email || status.account?.email || '');
+        setConnectedDate(status.connectedAt || status.connectedDate || '');
       }
       if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
@@ -148,9 +152,9 @@ const GoogleIntegration = () => {
                   <Chrome className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-medium">admin@yourcompany.com</p>
+                  <p className="font-medium">{connectedEmail || 'Google Account'}</p>
                   <p className="text-sm text-muted-foreground">
-                    Connected on January 15, 2024
+                    {connectedDate ? `Connected on ${new Date(connectedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}` : 'Connected'}
                   </p>
                 </div>
               </div>

@@ -4,7 +4,7 @@ import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw,
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { aiApi } from '@/lib/api';
+import { aiApi, tasksApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import intelligenceService, { type DashboardInsights, type ScoringModel } from '@/services/intelligenceService';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -41,14 +41,14 @@ const IntelligenceInsights = () => {
     try {
       // Load both old and new insights
       const [oldInsights, newDashboard, model, trends] = await Promise.all([
-        aiApi.getInsights().catch(() => ({ insights: [] })),
-        intelligenceService.getDashboardInsights().catch(() => null),
-        intelligenceService.getScoringModel().catch(() => null),
-        intelligenceService.getAnalyticsTrends(30).catch(() => null),
+        aiApi.getInsights(),
+        intelligenceService.getDashboardInsights(),
+        intelligenceService.getScoringModel(),
+        intelligenceService.getAnalyticsTrends(30),
       ])
       
-      if (oldInsights?.insights) {
-        setInsights(oldInsights.insights)
+      if (oldInsights?.data && Array.isArray(oldInsights.data)) {
+        setInsights(oldInsights.data)
       }
       
       setDashboardInsights(newDashboard)
@@ -84,6 +84,54 @@ const IntelligenceInsights = () => {
     } catch (error) {
       const err = error as Error
       toast.error(err.message || 'Failed to dismiss insight')
+    }
+  }
+
+  const handleTakeAction = async (insight: typeof insights[0]) => {
+    const category = (insight.category || '').toLowerCase()
+    const action = (insight.action || '').toLowerCase()
+
+    try {
+      if (category === 'optimization' || action.includes('optim') || action.includes('improv')) {
+        handleOptimizeScoring()
+      } else if (category === 'risk' || action.includes('risk') || action.includes('address')) {
+        // Create a task to address at-risk leads
+        await tasksApi.createTask({
+          title: `Address at-risk leads: ${insight.title}`,
+          description: insight.description || `AI Insight: ${insight.action}`,
+          priority: 'high',
+          status: 'pending',
+        })
+        toast.success('Task created to address at-risk leads')
+        navigate('/tasks')
+      } else if (category === 'opportunity' || action.includes('follow up') || action.includes('lead')) {
+        // Create a follow-up task for opportunity
+        await tasksApi.createTask({
+          title: `Follow up on opportunity: ${insight.title}`,
+          description: insight.description || `AI Insight: ${insight.action}`,
+          priority: 'medium',
+          status: 'pending',
+        })
+        toast.success('Follow-up task created')
+        navigate('/tasks')
+      } else if (action.includes('campaign') || action.includes('email')) {
+        navigate('/campaigns/create')
+        toast.info('Navigating to create campaign')
+      } else if (action.includes('task') || action.includes('schedule')) {
+        await tasksApi.createTask({
+          title: insight.title || 'AI-recommended action',
+          description: insight.description || `AI Insight: ${insight.action}`,
+          priority: 'medium',
+          status: 'pending',
+        })
+        toast.success('Task created from insight')
+        navigate('/tasks')
+      } else {
+        navigate('/leads')
+        toast.info(`Action: ${insight.action}`)
+      }
+    } catch (error) {
+      toast.error('Failed to execute action. Please try again.')
     }
   }
 
@@ -317,9 +365,14 @@ const IntelligenceInsights = () => {
               <AlertTriangle className="h-4 w-4 mr-2" />
               Address Risks
             </Button>
-            <Button variant="outline" className="justify-start" disabled title="Optimization actions coming soon">
+            <Button
+              variant="outline"
+              className="justify-start"
+              onClick={handleOptimizeScoring}
+              disabled={optimizing}
+            >
               <Lightbulb className="h-4 w-4 mr-2" />
-              Apply Optimizations
+              {optimizing ? 'Optimizing...' : 'Apply Optimizations'}
             </Button>
             <Button variant="outline" className="justify-start" onClick={() => navigate('/analytics')}>
               <Sparkles className="h-4 w-4 mr-2" />
@@ -387,7 +440,7 @@ const IntelligenceInsights = () => {
                         <Button variant="outline" size="sm" onClick={() => handleDismissInsight(insight.id)}>
                           Dismiss
                         </Button>
-                        <Button size="sm" disabled title="Insight actions coming soon">Take Action</Button>
+                        <Button size="sm" onClick={() => handleTakeAction(insight)}>Take Action</Button>
                       </div>
                     </div>
                   </div>

@@ -76,6 +76,26 @@ model Appointment {
   @@index([organizationId, startTime])
 }
 
+model CustomFieldDefinition {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  fieldKey       String
+  type           String   // text, number, date, dropdown, boolean, textarea
+  required       Boolean  @default(false)
+  options        Json?    // string[] for dropdown options
+  order          Int      @default(0)
+  defaultValue   String?
+  placeholder    String?
+  validation     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, fieldKey])
+  @@index([organizationId])
+}
+
 model BusinessSettings {
   id            String   @id @default(cuid())
   userId        String   @unique
@@ -434,6 +454,10 @@ model User {
   firstName            String
   lastName             String
   avatar               String?
+  phone                String?
+  jobTitle             String?
+  company              String?
+  address              String?
   role                 Role                  @default(USER)
   isActive             Boolean               @default(true)
   emailVerified        Boolean               @default(false)
@@ -464,11 +488,15 @@ model User {
   notes                Note[]                @relation("NoteAuthor")
   Notification         Notification[]
   notificationSettings NotificationSettings?
+  ScoringConfigUpdates ScoringConfig[]       @relation("ScoringConfigUpdatedBy")
+  savedReports         SavedReport[]
   smsConfig            SMSConfig?
   tasks                Task[]                @relation("TaskAssignedTo")
   teamMembers          TeamMember[]
   organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   UserAIPreferences    UserAIPreferences?
+  refreshTokens        RefreshToken[]
+  passwordResetTokens  PasswordResetToken[]
 
   @@unique([organizationId, email])
   @@index([email])
@@ -683,6 +711,26 @@ model LeadScoringModel {
   @@index([organizationId])
 }
 
+model ScoringConfig {
+  id               String       @id @default(cuid())
+  organizationId   String       @unique
+  weights          Json         // { engagement: 30, demographic: 25, behavior: 25, timing: 20 }
+  emailOpenWeight      Float    @default(5)
+  emailClickWeight     Float    @default(10)
+  emailReplyWeight     Float    @default(15)
+  formSubmissionWeight Float    @default(20)
+  propertyInquiryWeight Float   @default(25)
+  scheduledApptWeight  Float    @default(30)
+  completedApptWeight  Float    @default(40)
+  emailOptOutPenalty   Float    @default(-50)
+  recencyBonusMax      Float    @default(20)
+  frequencyBonusMax    Float    @default(15)
+  updatedAt        DateTime     @updatedAt
+  updatedById      String?
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedBy        User?        @relation("ScoringConfigUpdatedBy", fields: [updatedById], references: [id])
+}
+
 model Notification {
   id             String       @id @default(cuid())
   userId         String
@@ -722,11 +770,13 @@ model Organization {
   Call              Call[]
   Campaign          Campaign[]
   ChatMessage       ChatMessage[]
+  CustomFieldDefinition CustomFieldDefinition[]
   EmailTemplate     EmailTemplate[]
   Lead              Lead[]
   LeadScoringModel  LeadScoringModel[]
   Message           Message[]
   Notification      Notification[]
+  ScoringConfig     ScoringConfig?
   Segment           Segment[]
   SMSTemplate       SMSTemplate[]
   Subscription      Subscription?
@@ -734,7 +784,9 @@ model Organization {
   Task              Task[]
   users             User[]
   UserAIPreferences UserAIPreferences[]
+  SavedReport       SavedReport[]
   Workflow          Workflow[]
+  EmailSuppression  EmailSuppression[]
 
   @@index([isActive])
   @@index([slug])
@@ -791,6 +843,50 @@ model UserAIPreferences {
   user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
+}
+
+model SavedReport {
+  id               String       @id @default(cuid())
+  name             String
+  description      String?
+  type             String       @default("leads")
+  config           Json
+  userId           String
+  organizationId   String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id             String    @id @default(cuid())
+  token          String    @unique
+  userId         String
+  organizationId String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
 }
 
 enum ActivityType {
@@ -961,4 +1057,18 @@ enum SubscriptionStatus {
   PAST_DUE
   CANCELLED
   INCOMPLETE
+}
+
+// Sprint 9.1 #102: Bounce suppression list — prevents sending to addresses that have bounced or reported spam
+model EmailSuppression {
+  id             String   @id @default(cuid())
+  email          String
+  reason         String   // 'bounce', 'spamreport', 'manual'
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([email])
 }

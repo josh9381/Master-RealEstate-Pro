@@ -270,7 +270,7 @@ const AutomationRules = () => {
       await workflowsApi.createWorkflow(newRuleData);
       
       const newRule = {
-        id: Math.max(...automationRules.map(r => Number(r.id)), 0) + 1,
+        id: `temp-${Date.now()}`,
         name: newRuleName,
         description: newRuleDescription || 'No description',
         trigger: triggerLabels[newRuleTrigger] || newRuleTrigger,

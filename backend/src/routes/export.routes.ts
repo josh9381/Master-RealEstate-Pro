@@ -10,11 +10,15 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { exportToResponse, ExportOptions } from '../services/export.service';
+import { exportLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Apply export rate limiter (#91) — heavy DB queries need throttling
+router.use(exportLimiter);
 
 /**
  * GET /api/export/:type

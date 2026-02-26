@@ -803,12 +803,25 @@ const TwilioSetup = () => {
           </div>
           <div className="pt-4 border-t">
             <Button 
-              onClick={() => {
-                toast.success('SMS settings saved successfully!');
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await settingsApi.updateSMSConfig({
+                    smsCharLimit,
+                    enableDeliveryReceipts,
+                    enableLinkShortening,
+                    autoOptOut,
+                  });
+                  toast.success('SMS settings saved successfully!');
+                } catch (error) {
+                  toast.error('Failed to save SMS settings. Please try again.');
+                } finally {
+                  setSaving(false);
+                }
               }}
               disabled={saving}
             >
-              Save SMS Settings
+              {saving ? 'Saving...' : 'Save SMS Settings'}
             </Button>
           </div>
         </CardContent>
@@ -886,12 +899,27 @@ const TwilioSetup = () => {
           </div>
           <div className="pt-4 border-t">
             <Button 
-              onClick={() => {
-                toast.success('Voice settings saved successfully!');
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await settingsApi.updateSMSConfig({
+                    voiceSettings: {
+                      recordingMode,
+                      voicemailUrl,
+                      enableCallForwarding,
+                      enableVoicemailTranscription,
+                    },
+                  });
+                  toast.success('Voice settings saved successfully!');
+                } catch (error) {
+                  toast.error('Failed to save voice settings. Please try again.');
+                } finally {
+                  setSaving(false);
+                }
               }}
               disabled={saving}
             >
-              Save Voice Settings
+              {saving ? 'Saving...' : 'Save Voice Settings'}
             </Button>
           </div>
         </CardContent>

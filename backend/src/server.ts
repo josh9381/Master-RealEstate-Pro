@@ -16,6 +16,7 @@ import { getMLOptimizationService } from './services/ml-optimization.service'
 import authRoutes from './routes/auth.routes'
 import leadRoutes from './routes/lead.routes'
 import tagRoutes from './routes/tag.routes'
+import customFieldRoutes from './routes/custom-field.routes'
 import noteRoutes from './routes/note.routes'
 import campaignRoutes from './routes/campaign.routes'
 import taskRoutes from './routes/task.routes'
@@ -42,16 +43,29 @@ import subscriptionRoutes from './routes/subscription.routes'
 import billingRoutes from './routes/billing.routes'
 import segmentationRoutes from './routes/segmentation.routes'
 import exportRoutes from './routes/export.routes'
-import { requestLogger } from './middleware/logger'
+import savedReportRoutes from './routes/savedReport.routes'
+import { correlationId, requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { sanitizeInput } from './middleware/sanitize'
 import { generalLimiter } from './middleware/rateLimiter'
 import { authenticate } from './middleware/auth'
 import { requireAdminOrManager } from './middleware/admin'
+import { logger } from './lib/logger'
+import * as Sentry from '@sentry/node'
 
 // Initialize express app
 const app: Express = express()
 const PORT = process.env.PORT || 8000
+
+// #109: Initialize Sentry for error tracking (if DSN configured)
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  })
+  logger.info('Sentry error tracking initialized')
+}
 
 // Trust proxy - necessary for rate limiting behind proxies/dev containers
 app.set('trust proxy', 1)
@@ -90,34 +104,53 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // Input sanitization
 app.use(sanitizeInput)
 
-// Request logging
+// #108: Correlation ID — must come before request logging so log lines include the ID
+app.use(correlationId)
+
+// Request logging (#106: pino structured logging)
 app.use(requestLogger)
 
 // Rate limiting (general)
 app.use(generalLimiter)
 
-// Health check endpoint
+// #110: Expanded health check endpoint
 app.get('/health', async (req: Request, res: Response) => {
-  try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`
-    
-    res.status(200).json({
-      status: 'ok',
-      message: 'Master RealEstate Pro API is running',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      database: 'connected'
-    })
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: 'Database connection failed',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      database: 'disconnected'
-    })
+  const checks: Record<string, string> = {
+    database: 'unknown',
+    sendgrid: 'unknown',
   }
+
+  let overallStatus: 'ok' | 'degraded' | 'error' = 'ok'
+
+  // Check database connectivity
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    checks.database = 'connected'
+  } catch {
+    checks.database = 'disconnected'
+    overallStatus = 'error'
+  }
+
+  // Check SendGrid API key presence (does not make an API call)
+  checks.sendgrid = process.env.SENDGRID_API_KEY ? 'configured' : 'not_configured'
+
+  // Memory usage
+  const mem = process.memoryUsage()
+
+  res.status(overallStatus === 'error' ? 500 : 200).json({
+    status: overallStatus,
+    message: 'Master RealEstate Pro API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    uptime: Math.floor(process.uptime()),
+    checks,
+    memory: {
+      rss: Math.round(mem.rss / 1024 / 1024),
+      heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+      heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+      external: Math.round(mem.external / 1024 / 1024),
+    },
+  })
 })
 
 // Service integration status — tells the frontend which APIs are in mock mode
@@ -170,6 +203,7 @@ app.get('/api', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/leads', leadRoutes)
 app.use('/api/tags', tagRoutes)
+app.use('/api/custom-fields', customFieldRoutes)
 app.use('/api/notes', noteRoutes)
 app.use('/api/campaigns', campaignRoutes)
 app.use('/api/tasks', taskRoutes)
@@ -196,47 +230,49 @@ app.use('/api/subscriptions', authenticate, subscriptionRoutes)
 app.use('/api/billing', billingRoutes)
 app.use('/api/segments', authenticate, segmentationRoutes)
 app.use('/api/export', authenticate, exportRoutes)
+app.use('/api/reports/saved', authenticate, savedReportRoutes)
 
 // 404 handler
 app.use(notFoundHandler)
+
+// #109: Sentry error handler (must be before our global error handler)
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app)
+}
 
 // Global error handler (must be last)
 app.use(errorHandler)
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`)
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`)
-  console.log(`🌐 API: http://localhost:${PORT}/api`)
+  logger.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, 'Server started')
   
   // Initialize cron jobs
-  console.log(`⏰ Starting scheduled jobs...`)
+  logger.info('Starting scheduled jobs...')
   
   // Run every minute to check for scheduled campaigns
   cron.schedule('* * * * *', async () => {
     await checkAndExecuteScheduledCampaigns()
   })
-  console.log(`✅ Campaign scheduler active - checking every minute`)
+  logger.info('Campaign scheduler active - checking every minute')
   
   // Run daily at 2 AM to recalculate all lead scores
   cron.schedule('0 2 * * *', async () => {
-    console.log(`🎯 Running daily lead score recalculation...`)
+    logger.info('Running daily lead score recalculation...')
     try {
       const result = await updateAllLeadScores()
-      console.log(`✅ Lead scores updated: ${result.updated} leads, ${result.errors} errors`)
+      logger.info({ updated: result.updated, errors: result.errors }, 'Lead scores updated')
     } catch (error) {
-      console.error(`❌ Failed to recalculate lead scores:`, error)
+      logger.error({ error }, 'Failed to recalculate lead scores')
     }
   })
-  console.log(`✅ Lead scoring scheduler active - running daily at 2 AM`)
+  logger.info('Lead scoring scheduler active - running daily at 2 AM')
   
   // Run weekly on Sundays at 3 AM to optimize ML scoring weights
   cron.schedule('0 3 * * 0', async () => {
-    console.log(`🤖 Running weekly ML optimization for all users...`)
+    logger.info('Running weekly ML optimization for all users...')
     try {
       const mlService = getMLOptimizationService()
-      // Get all users with at least 20 conversions for optimization
       const users = await prisma.user.findMany({
         where: {
           leads: {
@@ -251,26 +287,26 @@ app.listen(PORT, () => {
       let optimizedCount = 0
       for (const user of users) {
         try {
-          console.log(`  Optimizing model for ${user.firstName} ${user.lastName}...`)
+          logger.info({ user: `${user.firstName} ${user.lastName}` }, 'Optimizing model')
           const result = await mlService.optimizeScoringWeights(user.id, user.organizationId)
-          console.log(`  ✅ ${user.firstName} ${user.lastName}: ${result.accuracy.toFixed(1)}% accuracy (${result.sampleSize} leads)`)
+          logger.info({ user: `${user.firstName} ${user.lastName}`, accuracy: result.accuracy.toFixed(1), sampleSize: result.sampleSize }, 'Model optimized')
           optimizedCount++
         } catch (error) {
-          console.error(`  ❌ Failed to optimize for user ${user.id}:`, error)
+          logger.error({ userId: user.id, error }, 'Failed to optimize for user')
         }
       }
-      console.log(`✅ ML optimization complete for ${optimizedCount}/${users.length} users`)
+      logger.info({ optimized: optimizedCount, total: users.length }, 'ML optimization complete')
     } catch (error) {
-      console.error(`❌ Failed to run ML optimization:`, error)
+      logger.error({ error }, 'Failed to run ML optimization')
     }
   })
-  console.log(`✅ ML optimization scheduler active - running weekly on Sundays at 3 AM`)
+  logger.info('ML optimization scheduler active - running weekly on Sundays at 3 AM')
   
   // Start workflow background jobs
-  console.log(`🔄 Starting workflow automation engine...`)
+  logger.info('Starting workflow automation engine...')
   startWorkflowJobs()
   setupGracefulShutdown()
-  console.log(`✅ Workflow automation engine active`)
+  logger.info('Workflow automation engine active')
 })
 
 export default app

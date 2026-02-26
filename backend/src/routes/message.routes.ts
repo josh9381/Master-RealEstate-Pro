@@ -1,4 +1,6 @@
 import { Router } from 'express'
+import multer from 'multer'
+import path from 'path'
 import { authenticate } from '../middleware/auth'
 import { validateBody, validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../utils/asyncHandler'
@@ -34,8 +36,72 @@ import {
 
 const router = Router()
 
+// Blocked file extensions — executables and scripts (#99)
+const BLOCKED_EXTENSIONS = new Set([
+  '.exe', '.bat', '.sh', '.cmd', '.com', '.js', '.vbs', '.ps1',
+  '.msi', '.dll', '.scr', '.pif', '.hta', '.cpl', '.inf', '.reg',
+  '.ws', '.wsf', '.wsc', '.wsh',
+])
+
+// Allowed file extensions for message attachments
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg',
+  '.txt', '.csv', '.rtf', '.zip', '.gz',
+])
+
+// Attachment upload multer config (#99, #100)
+// Uses disk storage instead of memory storage for large files
+const attachmentUpload = multer({
+  storage: multer.diskStorage({
+    destination: '/tmp/uploads',
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+      cb(null, uniqueSuffix + path.extname(file.originalname))
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB per file
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase()
+    if (BLOCKED_EXTENSIONS.has(ext)) {
+      cb(new Error(`Blocked file type: ${ext}. Executable files are not allowed.`) as any, false)
+      return
+    }
+    if (ALLOWED_EXTENSIONS.size > 0 && !ALLOWED_EXTENSIONS.has(ext)) {
+      cb(new Error(`Unsupported file type: ${ext}`) as any, false)
+      return
+    }
+    cb(null, true)
+  },
+})
+
 // All message routes require authentication
 router.use(authenticate)
+
+/**
+ * @route   POST /api/messages/attachments
+ * @desc    Upload message attachment (#99)
+ * @access  Private
+ */
+router.post(
+  '/attachments',
+  attachmentUpload.single('file'),
+  asyncHandler(async (req: any, res) => {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' })
+    }
+    // Return file metadata — actual file storage (S3/R2) would be wired here
+    res.json({
+      success: true,
+      data: {
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        path: req.file.path,
+      },
+    })
+  })
+)
 
 /**
  * @route   GET /api/messages/stats

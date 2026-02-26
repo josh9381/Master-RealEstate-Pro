@@ -10,7 +10,7 @@ import { getTasksFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
  */
 export const getTasks = async (req: Request, res: Response) => {
   // Get validated query parameters
-  const validatedQuery = (req as any).validatedQuery || req.query;
+  const validatedQuery = (req.validatedQuery || req.query) as Record<string, any>;
   const {
     page = 1,
     limit = 20,
@@ -48,6 +48,8 @@ export const getTasks = async (req: Request, res: Response) => {
   }
 
   const where: any = getTasksFilter(roleFilter, additionalWhere);
+  // Ensure org-scoping even if roleFilter misses it
+  where.organizationId = req.user!.organizationId;
 
   // Calculate pagination
   const skip = (Number(page) - 1) * Number(limit);
@@ -106,9 +108,10 @@ export const getTasks = async (req: Request, res: Response) => {
  */
 export const getTask = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const organizationId = req.user!.organizationId;
 
-  const task = await prisma.task.findUnique({
-    where: { id },
+  const task = await prisma.task.findFirst({
+    where: { id, organizationId },
     include: {
       assignedTo: {
         select: {
@@ -144,20 +147,21 @@ export const getTask = async (req: Request, res: Response) => {
  */
 export const createTask = async (req: Request, res: Response) => {
   const { title, description, dueDate, priority, status, assignedToId, leadId } = req.body;
+  const organizationId = req.user!.organizationId;
 
-  // Verify assigned user exists
-  const assignedUser = await prisma.user.findUnique({
-    where: { id: assignedToId },
+  // Verify assigned user exists within the same org
+  const assignedUser = await prisma.user.findFirst({
+    where: { id: assignedToId, organizationId },
   });
 
   if (!assignedUser) {
     throw new ValidationError('Assigned user not found');
   }
 
-  // Verify lead exists if provided
+  // Verify lead exists if provided (within same org)
   if (leadId) {
-    const lead = await prisma.lead.findUnique({
-      where: { id: leadId },
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, organizationId },
     });
 
     if (!lead) {
@@ -204,20 +208,21 @@ export const createTask = async (req: Request, res: Response) => {
 export const updateTask = async (req: Request, res: Response) => {
   const { id } = req.params;
   const updateData = req.body;
+  const organizationId = req.user!.organizationId;
 
-  // Check if task exists
-  const existingTask = await prisma.task.findUnique({
-    where: { id },
+  // Check if task exists within org
+  const existingTask = await prisma.task.findFirst({
+    where: { id, organizationId },
   });
 
   if (!existingTask) {
     throw new NotFoundError('Task not found');
   }
 
-  // Verify assigned user exists if changing assignment
+  // Verify assigned user exists if changing assignment (within org)
   if (updateData.assignedToId) {
-    const assignedUser = await prisma.user.findUnique({
-      where: { id: updateData.assignedToId },
+    const assignedUser = await prisma.user.findFirst({
+      where: { id: updateData.assignedToId, organizationId },
     });
 
     if (!assignedUser) {
@@ -225,10 +230,10 @@ export const updateTask = async (req: Request, res: Response) => {
     }
   }
 
-  // Verify lead exists if provided
+  // Verify lead exists if provided (within org)
   if (updateData.leadId) {
-    const lead = await prisma.lead.findUnique({
-      where: { id: updateData.leadId },
+    const lead = await prisma.lead.findFirst({
+      where: { id: updateData.leadId, organizationId },
     });
 
     if (!lead) {
@@ -282,10 +287,11 @@ export const updateTask = async (req: Request, res: Response) => {
  */
 export const deleteTask = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const organizationId = req.user!.organizationId;
 
-  // Check if task exists
-  const task = await prisma.task.findUnique({
-    where: { id },
+  // Check if task exists within org
+  const task = await prisma.task.findFirst({
+    where: { id, organizationId },
   });
 
   if (!task) {
@@ -310,10 +316,11 @@ export const deleteTask = async (req: Request, res: Response) => {
 export const completeTask = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { completedAt } = req.body;
+  const organizationId = req.user!.organizationId;
 
-  // Check if task exists
-  const existingTask = await prisma.task.findUnique({
-    where: { id },
+  // Check if task exists within org
+  const existingTask = await prisma.task.findFirst({
+    where: { id, organizationId },
   });
 
   if (!existingTask) {
@@ -353,8 +360,10 @@ export const completeTask = async (req: Request, res: Response) => {
  */
 export const getTaskStats = async (req: Request, res: Response) => {
   const { assignedToId } = req.query;
+  const organizationId = req.user!.organizationId;
 
-  const where: any = assignedToId ? { assignedToId: assignedToId as string } : {};
+  const where: any = { organizationId };
+  if (assignedToId) where.assignedToId = assignedToId as string;
 
   // Get task counts by status
   const byStatus = await prisma.task.groupBy({
@@ -429,19 +438,20 @@ export const getTaskStats = async (req: Request, res: Response) => {
  */
 export const getTasksForLead = async (req: Request, res: Response) => {
   const { leadId } = req.params;
+  const organizationId = req.user!.organizationId;
 
-  // Verify lead exists
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
+  // Verify lead exists within org
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, organizationId },
   });
 
   if (!lead) {
     throw new NotFoundError('Lead not found');
   }
 
-  // Get all tasks for the lead
+  // Get all tasks for the lead within org
   const tasks = await prisma.task.findMany({
-    where: { leadId },
+    where: { leadId, organizationId },
     include: {
       assignedTo: {
         select: {

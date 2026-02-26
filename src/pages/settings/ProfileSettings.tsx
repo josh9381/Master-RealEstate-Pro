@@ -61,13 +61,10 @@ const ProfileSettings = () => {
         setLastName(user.lastName || '');
         setEmail(user.email || '');
         setAvatar(user.avatar || '');
-        // Phone is not in the user model yet, keep empty
-        setPhone('');
-        // Job title is not in the user model yet, keep empty
-        setJobTitle('');
-        // Company, address, etc. are not in the user model yet
-        setCompany('');
-        setAddress('');
+        setPhone(user.phone || '');
+        setJobTitle(user.jobTitle || '');
+        setCompany(user.company || '');
+        setAddress(user.address || '');
         setCity('');
         setState('');
         setZipCode('');
@@ -106,6 +103,10 @@ const ProfileSettings = () => {
         firstName,
         lastName,
         email,
+        phone,
+        jobTitle,
+        company,
+        address,
         timezone,
         language
       });

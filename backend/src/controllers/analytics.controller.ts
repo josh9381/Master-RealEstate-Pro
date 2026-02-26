@@ -164,6 +164,7 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
     totalLeads,
     leadsByStatus,
     leadsBySource,
+    wonLeadsBySource,
     conversionRate,
     averageLeadScore,
     topLeads
@@ -177,6 +178,11 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
     prisma.lead.groupBy({
       by: ['source'],
       where: whereDate,
+      _count: true
+    }),
+    prisma.lead.groupBy({
+      by: ['source'],
+      where: { ...whereDate, status: 'WON' },
       _count: true
     }),
     calculateLeadConversionRate(organizationId),
@@ -213,12 +219,19 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
     return acc
   }, {} as Record<string, number>)
 
+  // Format won leads by source (for per-source conversion rates)
+  const wonBySource = wonLeadsBySource.reduce((acc, item) => {
+    acc[item.source || 'Unknown'] = item._count
+    return acc
+  }, {} as Record<string, number>)
+
   res.json({
     success: true,
     data: {
       total: totalLeads,
       byStatus,
       bySource,
+      wonBySource,
       conversionRate,
       averageScore: Math.round(averageLeadScore._avg.score || 0),
       topLeads
@@ -499,10 +512,10 @@ async function calculateCampaignPerformance(organizationId: string) {
     totalOpened: opened,
     totalClicked: clicked,
     totalConverted: converted,
-    deliveryRate: sent > 0 ? Math.round((delivered / sent) * 100) : 0,
-    openRate: delivered > 0 ? Math.round((opened / delivered) * 100) : 0,
-    clickRate: opened > 0 ? Math.round((clicked / opened) * 100) : 0,
-    conversionRate: sent > 0 ? Math.round((converted / sent) * 100) : 0,
+    deliveryRate: sent > 0 ? Math.min(Math.round((delivered / sent) * 100), 100) : 0,
+    openRate: delivered > 0 ? Math.min(Math.round((opened / delivered) * 100), 100) : 0,
+    clickRate: opened > 0 ? Math.min(Math.round((clicked / opened) * 100), 100) : 0,
+    conversionRate: sent > 0 ? Math.min(Math.round((converted / sent) * 100), 100) : 0,
     totalRevenue: aggregate._sum.revenue || 0,
     totalSpent: aggregate._sum.spent || 0,
     averageROI: Math.round(aggregate._avg.roi || 0)
@@ -575,12 +588,12 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
     const stagesWithRates = stages.map((stage, index) => {
       let conversionRate = 0
       if (index > 0 && stages[index - 1].count > 0) {
-        conversionRate = Math.round((stage.count / stages[index - 1].count) * 100)
+        conversionRate = Math.min(Math.round((stage.count / stages[index - 1].count) * 100), 100)
       }
       return {
         ...stage,
         conversionRate,
-        percentage: totalLeads > 0 ? Math.round((stage.count / totalLeads) * 100) : 0
+        percentage: totalLeads > 0 ? Math.min(Math.round((stage.count / totalLeads) * 100), 100) : 0
       }
     })
 

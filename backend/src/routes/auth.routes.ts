@@ -4,7 +4,7 @@ import { authenticate } from '../middleware/auth';
 import { validateBody } from '../middleware/validate';
 import { registerSchema, loginSchema, refreshSchema } from '../validators/auth.validator';
 import { asyncHandler } from '../utils/asyncHandler';
-import { authLimiter, registerLimiter } from '../middleware/rateLimiter';
+import { authLimiter, registerLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -39,6 +39,7 @@ router.post(
  */
 router.post(
   '/refresh',
+  authLimiter,
   validateBody(refreshSchema),
   asyncHandler(refresh)
 );
@@ -61,7 +62,7 @@ router.get(
  */
 router.post(
   '/forgot-password',
-  authLimiter,
+  passwordResetLimiter,
   asyncHandler(forgotPassword)
 );
 
@@ -72,6 +73,7 @@ router.post(
  */
 router.post(
   '/reset-password',
+  passwordResetLimiter,
   asyncHandler(resetPassword)
 );
 

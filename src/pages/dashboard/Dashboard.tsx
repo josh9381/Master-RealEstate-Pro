@@ -93,18 +93,28 @@ function Dashboard() {
 
   // Fetch dashboard statistics from API
   const { data: dashboardData, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
-    queryKey: ['dashboard-stats', dateRange],
+    queryKey: ['dashboard-stats', dateRange, filterSource, filterStatus, filterPriority],
     queryFn: async () => {
-      const response = await analyticsApi.getDashboardStats(dateParams)
+      const params: Record<string, string> = { ...dateParams }
+      if (filterSource !== 'all') params.source = filterSource
+      if (filterStatus !== 'all') params.status = filterStatus
+      if (filterPriority !== 'all') params.priority = filterPriority
+      const response = await analyticsApi.getDashboardStats(params)
       return response.data
     },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   })
 
   // Fetch lead analytics for charts
   const { data: leadAnalyticsData, isLoading: leadsLoading, isError: leadsError, refetch: refetchLeads } = useQuery({
-    queryKey: ['lead-analytics', dateRange],
+    queryKey: ['lead-analytics', dateRange, filterSource, filterStatus, filterPriority],
     queryFn: async () => {
-      const response = await analyticsApi.getLeadAnalytics(dateParams)
+      const params: Record<string, string> = { ...dateParams }
+      if (filterSource !== 'all') params.source = filterSource
+      if (filterStatus !== 'all') params.status = filterStatus
+      if (filterPriority !== 'all') params.priority = filterPriority
+      const response = await analyticsApi.getLeadAnalytics(params)
       return response.data
     },
   })
@@ -155,16 +165,11 @@ function Dashboard() {
   })
 
   // Fetch revenue timeline data (Phase 5)
-  const { data: revenueTimelineData, refetch: refetchRevenue } = useQuery({
+  const { data: revenueTimelineData, isLoading: revenueLoading, isError: revenueError, refetch: refetchRevenue } = useQuery({
     queryKey: ['revenue-timeline'],
     queryFn: async () => {
-      try {
-        const response = await analyticsApi.getRevenueTimeline({ months: 12 })
-        return response.data
-      } catch (error) {
-        console.warn('Revenue timeline not available:', error)
-        return null
-      }
+      const response = await analyticsApi.getRevenueTimeline({ months: 12 })
+      return response.data
     },
     retry: false,
   })
@@ -173,13 +178,8 @@ function Dashboard() {
   const { data: alertsData, refetch: refetchAlerts } = useQuery({
     queryKey: ['dashboard-alerts'],
     queryFn: async () => {
-      try {
-        const response = await analyticsApi.getDashboardAlerts()
-        return response.data
-      } catch (error) {
-        console.warn('Dashboard alerts not available:', error)
-        return null
-      }
+      const response = await analyticsApi.getDashboardAlerts()
+      return response.data
     },
     retry: false,
   })
@@ -242,7 +242,7 @@ function Dashboard() {
     opens: campaign.opened || 0,
     clicks: campaign.clicked || 0,
     conversions: campaign.converted || 0,
-    roi: campaign.roi ? `${campaign.roi}%` : '0%'
+    roi: campaign.roi ? (String(campaign.roi).endsWith('%') ? String(campaign.roi) : `${campaign.roi}%`) : '0%'
   })) || []
 
   // Revenue data from API
@@ -402,6 +402,7 @@ function Dashboard() {
     a.href = url
     a.download = 'dashboard-data.json'
     a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   // Show loading state while fetching data
@@ -636,11 +637,11 @@ function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            {leadsLoading ? (
+            {revenueLoading ? (
               <div className="h-[300px] bg-muted rounded animate-pulse" />
-            ) : leadsError ? (
+            ) : revenueError ? (
               <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                <p>Failed to load chart data. <Button variant="link" size="sm" onClick={() => refetchLeads()}>Retry</Button></p>
+                <p>Failed to load chart data. <Button variant="link" size="sm" onClick={() => refetchRevenue()}>Retry</Button></p>
               </div>
             ) : (
             <ResponsiveContainer width="100%" height={300}>
@@ -748,7 +749,7 @@ function Dashboard() {
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.color }} />
                       <span className="text-sm">{source.name}</span>
                     </div>
-                    <span className="text-sm font-medium">{source.value}%</span>
+                    <span className="text-sm font-medium">{source.value}</span>
                   </div>
                 ))}
               </div>

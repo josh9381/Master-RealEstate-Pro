@@ -5,6 +5,7 @@ import { Send, Eye, MousePointer, Users, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import {
   LineChart,
   Line,
@@ -35,13 +36,13 @@ const CampaignAnalytics = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
   const navigate = useNavigate();
 
-  const { data: campaignData = null, isLoading: loading, refetch } = useQuery({
+  const { data: campaignData = null, isLoading: loading, isError: campaignError, error: campaignErrorObj, refetch } = useQuery({
     queryKey: ['campaign-analytics'],
     queryFn: async () => {
       const [campaignResponse, monthlyResponse, hourlyResponse] = await Promise.all([
-        analyticsApi.getCampaignAnalytics(dateRangeRef.current).catch(() => ({ data: null })),
-        analyticsApi.getMonthlyPerformance({ months: 12 }).catch(() => ({ data: null })),
-        analyticsApi.getHourlyEngagement({ days: 90 }).catch(() => ({ data: null })),
+        analyticsApi.getCampaignAnalytics(dateRangeRef.current),
+        analyticsApi.getMonthlyPerformance({ months: 12 }),
+        analyticsApi.getHourlyEngagement({ days: 90 }),
       ]);
       
       // Merge monthly and hourly data into the campaign data object
@@ -62,6 +63,18 @@ const CampaignAnalytics = () => {
     return (
       <div className="flex items-center justify-center h-96">
         <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (campaignError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Campaign Analytics</h1>
+        <ErrorBanner
+          message={campaignErrorObj instanceof Error ? campaignErrorObj.message : 'Failed to load campaign analytics'}
+          retry={() => refetch()}
+        />
       </div>
     );
   }

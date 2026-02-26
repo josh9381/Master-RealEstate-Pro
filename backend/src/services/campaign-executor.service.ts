@@ -54,7 +54,7 @@ export async function executeCampaign(
 
     // Get leads to send to
     const campaignTagId = campaign.tags && campaign.tags.length > 0 ? campaign.tags[0].id : null;
-    const leads = await getTargetLeads(leadIds, filters, campaignTagId);
+    const leads = await getTargetLeads(campaign.organizationId, leadIds, filters, campaignTagId);
 
     if (leads.length === 0) {
       return {
@@ -118,15 +118,17 @@ export async function executeCampaign(
  * Get target leads for campaign
  */
 async function getTargetLeads(
+  organizationId: string,
   leadIds?: string[],
   filters?: CampaignExecutionOptions['filters'],
   tagId?: string | null
 ) {
-  // If specific leads provided, use those
+  // If specific leads provided, use those (scoped to org)
   if (leadIds && leadIds.length > 0) {
     return await prisma.lead.findMany({
       where: {
         id: { in: leadIds },
+        organizationId,
       },
       include: {
         assignedTo: {
@@ -141,7 +143,7 @@ async function getTargetLeads(
   }
 
   // Build filter query
-  const where: any = {};
+  const where: any = { organizationId };
 
   // Filter by campaign tag if set
   if (tagId) {
@@ -512,7 +514,7 @@ export async function previewCampaign(
 
   // Get sample leads
   const campaignTagId = campaign.tags && campaign.tags.length > 0 ? campaign.tags[0].id : null;
-  const leads = await getTargetLeads(leadIds, undefined, campaignTagId);
+  const leads = await getTargetLeads(campaign.organizationId, leadIds, undefined, campaignTagId);
   const sampleLeads = leads.slice(0, 5);  if (campaign.type === 'EMAIL') {
     const subjectTemplate = Handlebars.compile(campaign.subject || '');
     const bodyTemplate = Handlebars.compile(campaign.body || '');

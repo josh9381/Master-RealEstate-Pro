@@ -18,7 +18,10 @@ export async function getSecuritySettings(req: Request, res: Response): Promise<
     select: {
       twoFactorEnabled: true,
       lastLoginAt: true,
-      lastLoginIp: true
+      lastLoginIp: true,
+      emailVerified: true,
+      updatedAt: true,
+      createdAt: true,
     }
   });
 
@@ -26,10 +29,25 @@ export async function getSecuritySettings(req: Request, res: Response): Promise<
     throw new NotFoundError('User not found');
   }
 
+  // Compute security score from actual settings (0–100)
+  let securityScore = 30; // Base score for having an account
+  if (user.twoFactorEnabled) securityScore += 30; // 2FA is the biggest factor
+  if (user.emailVerified) securityScore += 15;
+  if (user.lastLoginAt) {
+    // Recent login within 7 days = good sign
+    const daysSinceLogin = (Date.now() - new Date(user.lastLoginAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceLogin < 7) securityScore += 10;
+  }
+  // Password age check: if account was updated recently (could imply password change)
+  const daysSinceUpdate = (Date.now() - new Date(user.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
+  if (daysSinceUpdate < 90) securityScore += 15; // Updated within 90 days
+
   res.status(200).json({
     success: true,
     data: {
       twoFactorEnabled: user.twoFactorEnabled,
+      emailVerified: user.emailVerified,
+      securityScore: Math.min(securityScore, 100),
       lastLogin: {
         at: user.lastLoginAt,
         ip: user.lastLoginIp

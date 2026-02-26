@@ -106,7 +106,7 @@ export async function sendAppointmentReminder(options: SendReminderOptions): Pro
             to: recipient,
             subject: `Appointment Reminder: ${appointment.title}`,
             html: emailBody,
-            organizationId: appointment.lead?.organizationId || appointment.organizationId || 'clz0000000000000000000000',
+            organizationId: appointment.lead?.organizationId || appointment.organizationId,
           });
         }
         result.email = true;
@@ -134,7 +134,7 @@ export async function sendAppointmentReminder(options: SendReminderOptions): Pro
           await sendSMS({
             to: phone,
             message: smsMessage,
-            organizationId: appointment.lead?.organizationId || appointment.organizationId || 'clz0000000000000000000000',
+            organizationId: appointment.lead?.organizationId || appointment.organizationId,
           });
         }
         result.sms = true;
@@ -177,6 +177,15 @@ export async function sendUpcomingReminders(): Promise<number> {
         in: ['SCHEDULED', 'CONFIRMED'],
       },
       reminderSent: false,
+    },
+    include: {
+      lead: {
+        select: {
+          organizationId: true,
+          email: true,
+          phone: true,
+        },
+      },
     },
   });
 

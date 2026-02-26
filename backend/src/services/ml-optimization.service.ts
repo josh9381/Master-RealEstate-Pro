@@ -250,7 +250,7 @@ export class MLOptimizationService {
       }
     }
 
-    return (correct / leads.length) * 100;
+    return leads.length > 0 ? (correct / leads.length) * 100 : 0;
   }
 
   /**
