@@ -7,29 +7,291 @@ import { generateContextualMessage, generateVariations, ComposeSettings } from '
 import * as templateService from '../services/template-ai.service'
 import * as preferencesService from '../services/user-preferences.service'
 import { updateMultipleLeadScores, getLeadScoreBreakdown } from '../services/leadScoring.service'
+import { incrementAIUsage, getUsageWithLimits, getCostBreakdown } from '../services/usage-tracking.service'
 import prisma from '../config/database'
 
 /**
+ * Generate actionable insights from real DB data and store in AIInsight table.
+ * Runs on each GET /insights call but is idempotent (won't create duplicates
+ * for the same insight within 24h).
+ */
+async function generateAndStoreInsights(organizationId: string): Promise<void> {
+  const now = new Date()
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  // Helper: only create if no recent duplicate of same type exists
+  async function upsertInsight(type: string, priority: string, title: string, description: string, data?: any, actionUrl?: string) {
+    const existing = await prisma.aIInsight.findFirst({
+      where: {
+        organizationId,
+        type,
+        title,
+        createdAt: { gte: oneDayAgo },
+      },
+    })
+    if (existing) return // Already have a recent one
+
+    await prisma.aIInsight.create({
+      data: {
+        organizationId,
+        type,
+        priority,
+        title,
+        description,
+        data: data || undefined,
+        actionUrl,
+        expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 day expiry
+      },
+    })
+  }
+
+  try {
+    // 1. Leads not contacted in 14+ days
+    const staleLeads = await prisma.lead.findMany({
+      where: {
+        organizationId,
+        status: { notIn: ['WON', 'LOST'] },
+        OR: [
+          { lastContactAt: { lt: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) } },
+          { lastContactAt: null },
+        ],
+      },
+      select: { id: true, firstName: true, lastName: true, lastContactAt: true },
+      take: 20,
+    })
+
+    if (staleLeads.length > 0) {
+      await upsertInsight(
+        'lead_followup',
+        staleLeads.length > 5 ? 'high' : 'medium',
+        `${staleLeads.length} leads haven't been contacted in 14+ days`,
+        `These leads may disengage without follow-up. Consider reaching out to re-engage them.`,
+        { leadIds: staleLeads.map(l => l.id), leadNames: staleLeads.slice(0, 5).map(l => `${l.firstName} ${l.lastName}`) },
+        '/leads?filter=stale'
+      )
+    }
+
+    // 2. Scoring model accuracy check
+    const models = await prisma.leadScoringModel.findMany({
+      where: { organizationId },
+    })
+    for (const model of models) {
+      if (model.accuracy !== null && model.accuracy < 70) {
+        await upsertInsight(
+          'scoring_accuracy',
+          'high',
+          `Lead scoring model accuracy is below 70% (${model.accuracy?.toFixed(1)}%)`,
+          `Your lead scoring model has low accuracy. Consider recalibrating with more conversion data.`,
+          { modelId: model.id, accuracy: model.accuracy },
+          '/ai-hub'
+        )
+      }
+    }
+
+    // 3. Pipeline stagnation — leads stuck in same stage too long
+    const stuckLeads = await prisma.lead.findMany({
+      where: {
+        organizationId,
+        status: { notIn: ['WON', 'LOST'] },
+        stage: { in: ['CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION'] },
+        updatedAt: { lt: new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000) },
+      },
+      select: { id: true, firstName: true, lastName: true, stage: true },
+      take: 20,
+    })
+
+    if (stuckLeads.length > 0) {
+      await upsertInsight(
+        'pipeline_health',
+        stuckLeads.length > 3 ? 'high' : 'medium',
+        `${stuckLeads.length} leads stuck in pipeline for 21+ days`,
+        `These leads haven't progressed stages in 3+ weeks. They may need attention or should be marked lost.`,
+        { leadIds: stuckLeads.map(l => l.id), stages: stuckLeads.slice(0, 5).map(l => `${l.firstName} ${l.lastName} (${l.stage})`) },
+        '/leads?filter=stuck'
+      )
+    }
+
+    // 4. Email engagement drop — compare recent campaigns
+    const recentCampaigns = await prisma.campaignAnalytics.findMany({
+      where: { organizationId },
+      orderBy: { lastUpdatedAt: 'desc' },
+      take: 10,
+    })
+    if (recentCampaigns.length >= 2) {
+      const avgOpenRate = recentCampaigns.reduce((s, c) => s + (c.openRate || 0), 0) / recentCampaigns.length
+      const latestRate = recentCampaigns[0].openRate || 0
+      if (latestRate < avgOpenRate * 0.85 && avgOpenRate > 0) {
+        await upsertInsight(
+          'email_performance',
+          'medium',
+          `Email open rate dropped ${Math.round((1 - latestRate / avgOpenRate) * 100)}% vs average`,
+          `Your latest campaign open rate (${(latestRate * 100).toFixed(1)}%) is below your average (${(avgOpenRate * 100).toFixed(1)}%). Consider A/B testing subject lines.`,
+          { latestRate, avgOpenRate },
+          '/campaigns'
+        )
+      }
+    }
+
+    // 5. New leads without score
+    const unscoredLeads = await prisma.lead.count({
+      where: {
+        organizationId,
+        score: { equals: 0 },
+      },
+    })
+    if (unscoredLeads > 0) {
+      await upsertInsight(
+        'lead_followup',
+        unscoredLeads > 10 ? 'medium' : 'low',
+        `${unscoredLeads} leads don't have a score yet`,
+        `Run score recalculation to prioritize your pipeline effectively.`,
+        { count: unscoredLeads },
+        '/ai-hub'
+      )
+    }
+
+    // 6. High-value leads at risk
+    const highValueAtRisk = await prisma.lead.findMany({
+      where: {
+        organizationId,
+        value: { gte: 100000 },
+        status: { notIn: ['WON', 'LOST'] },
+        OR: [
+          { lastContactAt: { lt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+          { lastContactAt: null },
+        ],
+      },
+      select: { id: true, firstName: true, lastName: true, value: true },
+      take: 10,
+    })
+
+    if (highValueAtRisk.length > 0) {
+      const totalValue = highValueAtRisk.reduce((s, l) => s + (l.value || 0), 0)
+      await upsertInsight(
+        'lead_followup',
+        'critical',
+        `${highValueAtRisk.length} high-value leads ($${totalValue.toLocaleString()}) need attention`,
+        `These high-value leads haven't been contacted in 7+ days. Prioritize outreach to protect this pipeline value.`,
+        { leadIds: highValueAtRisk.map(l => l.id), totalValue },
+        '/leads?filter=high-value'
+      )
+    }
+
+  } catch (error) {
+    console.error('Error generating insights:', error)
+    // Don't throw — insights generation is best-effort
+  }
+}
+
+/**
  * Get AI Hub overview statistics
- * Returns real counts from database — no mock data
+ * Phase 1E — returns real counts from database
  */
 export const getAIStats = async (req: Request, res: Response) => {
   try {
-    const leadsCount = await prisma.lead.count()
-    
+    const organizationId = req.user!.organizationId
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    // Count leads
+    const leadsCount = await prisma.lead.count({ where: { organizationId } })
+
+    // Count active scoring models
+    const activeModels = await prisma.leadScoringModel.count({
+      where: { organizationId, lastTrainedAt: { not: null } },
+    })
+
+    // Count total models (including untrained)
+    const totalModels = await prisma.leadScoringModel.count({
+      where: { organizationId },
+    })
+
+    // Average model accuracy
+    const modelAccuracies = await prisma.leadScoringModel.aggregate({
+      where: { organizationId, accuracy: { not: null } },
+      _avg: { accuracy: true },
+      _count: { id: true },
+    })
+
+    // Accuracy change from last recalibration
+    const lastTwoRecalibrations = await prisma.modelPerformanceHistory.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      take: 2,
+      select: { accuracyAfter: true, accuracyBefore: true },
+    })
+    const accuracyChange = lastTwoRecalibrations.length >= 1
+      ? (lastTwoRecalibrations[0].accuracyAfter - (lastTwoRecalibrations[0].accuracyBefore || 0))
+      : 0
+
+    // Chat messages today (predictions/interactions today)
+    const messagestoday = await prisma.chatMessage.count({
+      where: {
+        organizationId,
+        createdAt: { gte: startOfDay },
+        role: 'assistant',
+      },
+    })
+
+    // Messages this month vs last month for trend
+    const messagesThisMonth = await prisma.chatMessage.count({
+      where: {
+        organizationId,
+        createdAt: { gte: startOfMonth },
+        role: 'assistant',
+      },
+    })
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+    const messagesLastMonth = await prisma.chatMessage.count({
+      where: {
+        organizationId,
+        createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
+        role: 'assistant',
+      },
+    })
+    const messageChange = messagesLastMonth > 0
+      ? Math.round(((messagesThisMonth - messagesLastMonth) / messagesLastMonth) * 100)
+      : 0
+
+    // Active insights count
+    const activeInsights = await prisma.aIInsight.count({
+      where: { organizationId, dismissed: false, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+    })
+    const highPriorityInsights = await prisma.aIInsight.count({
+      where: { organizationId, dismissed: false, priority: { in: ['high', 'critical'] }, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+    })
+
+    // Total tokens/cost this month
+    const costData = await prisma.chatMessage.aggregate({
+      where: {
+        organizationId,
+        createdAt: { gte: startOfMonth },
+        role: 'assistant',
+      },
+      _sum: { tokens: true, cost: true },
+    })
+
     res.json({
       success: true,
       data: {
-        activeModels: 0,
-        modelsInTraining: 0,
-        avgAccuracy: 0,
-        accuracyChange: 0,
-        predictionsToday: 0,
-        predictionsChange: 0,
-        activeInsights: 0,
-        highPriorityInsights: 0,
-        leadsScored: leadsCount
-      }
+        activeModels,
+        totalModels,
+        modelsInTraining: Array.from(recalibrationJobs.values()).filter(j => j.status === 'running').length,
+        avgAccuracy: modelAccuracies._avg.accuracy
+          ? Math.round(modelAccuracies._avg.accuracy * 10) / 10
+          : 0,
+        accuracyChange: Math.round(accuracyChange * 10) / 10,
+        predictionsToday: messagestoday,
+        predictionsChange: messageChange,
+        activeInsights,
+        highPriorityInsights,
+        leadsScored: leadsCount,
+        messagesThisMonth,
+        totalTokensThisMonth: costData._sum.tokens || 0,
+        totalCostThisMonth: costData._sum.cost ? Math.round(costData._sum.cost * 100) / 100 : 0,
+      },
     })
   } catch (error: any) {
     res.status(500).json({
@@ -41,55 +303,134 @@ export const getAIStats = async (req: Request, res: Response) => {
 }
 
 /**
- * Get list of AI features with their status
+ * Get list of AI features with their real status
+ * Phase 1F — dynamic feature list based on actual configuration
  */
 export const getAIFeatures = async (req: Request, res: Response) => {
   try {
-    const leadsCount = await prisma.lead.count()
-    
+    const organizationId = req.user!.organizationId
+
+    const leadsCount = await prisma.lead.count({ where: { organizationId } })
+    const modelsCount = await prisma.leadScoringModel.count({ where: { organizationId } })
+    const testsCount = await prisma.aBTest.count({ where: { organizationId } })
+    const insightsCount = await prisma.aIInsight.count({ where: { organizationId, dismissed: false } })
+
+    const hasOpenAI = !!process.env.OPENAI_API_KEY
+    // Check if org has its own key
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { useOwnAIKey: true, openaiApiKey: true },
+    })
+    const hasOrgKey = !!(org?.useOwnAIKey && org?.openaiApiKey)
+    const aiEnabled = hasOpenAI || hasOrgKey
+
+    const features = [
+      {
+        id: 'lead-scoring',
+        title: 'Lead Scoring',
+        description: 'AI-powered lead quality prediction with per-user ML models',
+        status: 'active',
+        category: 'scoring',
+        leadsScored: leadsCount,
+        models: modelsCount,
+      },
+      {
+        id: 'intelligence-hub',
+        title: 'Intelligence Hub',
+        description: 'Lead predictions, engagement analysis, and pipeline insights',
+        status: 'active',
+        category: 'analytics',
+        insights: insightsCount,
+      },
+      {
+        id: 'ab-testing',
+        title: 'A/B Testing',
+        description: 'Statistical testing for campaign optimization',
+        status: 'active',
+        category: 'optimization',
+        tests: testsCount,
+      },
+      {
+        id: 'ai-chatbot',
+        title: 'AI Chatbot',
+        description: 'GPT-powered assistant with 25+ functions (create leads, send messages, etc.)',
+        status: aiEnabled ? 'active' : 'inactive',
+        category: 'assistant',
+        requiresKey: !aiEnabled,
+      },
+      {
+        id: 'ai-compose',
+        title: 'AI Compose',
+        description: 'Context-aware message composition with streaming and variations',
+        status: aiEnabled ? 'active' : 'inactive',
+        category: 'content',
+        requiresKey: !aiEnabled,
+      },
+      {
+        id: 'content-generation',
+        title: 'AI Content Generation',
+        description: 'Generate emails, SMS, property descriptions, social posts, and listing presentations',
+        status: aiEnabled ? 'active' : 'inactive',
+        category: 'content',
+        requiresKey: !aiEnabled,
+      },
+      {
+        id: 'message-enhancer',
+        title: 'Message Enhancer',
+        description: '6 tone options for rewriting messages professionally',
+        status: aiEnabled ? 'active' : 'inactive',
+        category: 'content',
+        requiresKey: !aiEnabled,
+      },
+      {
+        id: 'ml-optimization',
+        title: 'ML Optimization',
+        description: 'Automatic per-user scoring weight optimization via correlation analysis',
+        status: 'active',
+        category: 'scoring',
+      },
+      {
+        id: 'predictive-analytics',
+        title: 'Predictive Analytics',
+        description: 'Conversion, revenue, and pipeline predictions from real data',
+        status: 'active',
+        category: 'analytics',
+      },
+      {
+        id: 'ai-insights',
+        title: 'AI Insights',
+        description: 'Automated actionable insights from lead and engagement data',
+        status: 'active',
+        category: 'analytics',
+        insights: insightsCount,
+      },
+      {
+        id: 'segmentation',
+        title: 'Segmentation',
+        description: 'Rule-based lead segmentation',
+        status: 'active',
+        category: 'targeting',
+      },
+      {
+        id: 'template-personalization',
+        title: 'Template AI Personalization',
+        description: 'AI-powered template customization with lead context',
+        status: aiEnabled ? 'active' : 'inactive',
+        category: 'content',
+        requiresKey: !aiEnabled,
+      },
+      {
+        id: 'voice-ai',
+        title: 'Voice AI (Vapi)',
+        description: 'AI-powered voice calls for leads',
+        status: 'coming_soon',
+        category: 'communication',
+      },
+    ]
+
     res.json({
       success: true,
-      data: [
-        {
-          id: 1,
-          title: 'Lead Scoring',
-          description: 'AI-powered lead quality prediction',
-          status: 'active',
-          accuracy: 'Real-time',
-          leadsScored: leadsCount,
-        },
-        {
-          id: 2,
-          title: 'Intelligence Hub',
-          description: 'Lead predictions and engagement analysis',
-          status: 'active',
-          accuracy: 'Active',
-          models: 0,
-        },
-        {
-          id: 3,
-          title: 'A/B Testing',
-          description: 'Statistical testing for campaigns',
-          status: 'active',
-          accuracy: 'Active',
-          tests: 0,
-        },
-        {
-          id: 4,
-          title: 'AI Content Generation',
-          description: 'OpenAI-powered content creation',
-          status: process.env.OPENAI_API_KEY ? 'active' : 'inactive',
-          accuracy: process.env.OPENAI_API_KEY ? 'Active' : 'Not configured',
-          models: process.env.OPENAI_API_KEY ? 1 : 0,
-        },
-        {
-          id: 5,
-          title: 'ML Optimization',
-          description: 'Automatic model weight optimization',
-          status: 'active',
-          accuracy: 'Active',
-        },
-      ]
+      data: features,
     })
   } catch (error: any) {
     res.status(500).json({
@@ -102,13 +443,74 @@ export const getAIFeatures = async (req: Request, res: Response) => {
 
 /**
  * Get model performance metrics over time
- * Stub — no real training models exist yet
+ * Phase 1A — returns real ModelPerformanceHistory data
  */
 export const getModelPerformance = async (req: Request, res: Response) => {
   try {
+    const organizationId = req.user!.organizationId
+
+    const history = await prisma.modelPerformanceHistory.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        modelType: true,
+        accuracyBefore: true,
+        accuracyAfter: true,
+        sampleSize: true,
+        improvements: true,
+        trainingDuration: true,
+        createdAt: true,
+        user: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+      },
+    })
+
+    // Also get current model stats
+    const models = await prisma.leadScoringModel.findMany({
+      where: { organizationId },
+      select: {
+        id: true,
+        accuracy: true,
+        lastTrainedAt: true,
+        trainingDataCount: true,
+        user: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+      },
+    })
+
     res.json({
       success: true,
-      data: []
+      data: {
+        history: history.map(h => ({
+          id: h.id,
+          modelType: h.modelType,
+          accuracyBefore: h.accuracyBefore,
+          accuracyAfter: h.accuracyAfter,
+          sampleSize: h.sampleSize,
+          improvements: h.improvements,
+          trainingDuration: h.trainingDuration,
+          date: h.createdAt,
+          user: `${h.user.firstName} ${h.user.lastName}`,
+        })),
+        currentModels: models.map(m => ({
+          id: m.id,
+          accuracy: m.accuracy,
+          lastTrainedAt: m.lastTrainedAt,
+          trainingDataCount: m.trainingDataCount,
+          user: `${m.user.firstName} ${m.user.lastName}`,
+        })),
+        summary: {
+          totalRecalibrations: history.length,
+          avgAccuracy: history.length > 0
+            ? Math.round(history.reduce((s, h) => s + h.accuracyAfter, 0) / history.length * 10) / 10
+            : 0,
+          activeModels: models.length,
+        },
+      },
     })
   } catch (error: any) {
     res.status(500).json({
@@ -120,13 +522,55 @@ export const getModelPerformance = async (req: Request, res: Response) => {
 }
 
 /**
- * Get active training models — stub (no real training exists yet)
+ * Get active training models — returns real LeadScoringModel records
+ * Phase 1B
  */
 export const getTrainingModels = async (req: Request, res: Response) => {
   try {
+    const organizationId = req.user!.organizationId
+
+    const models = await prisma.leadScoringModel.findMany({
+      where: { organizationId },
+      include: {
+        user: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+
+    // Get recent performance history for each model
+    const performanceHistory = await prisma.modelPerformanceHistory.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    })
+
     res.json({
       success: true,
-      data: []
+      data: models.map(m => ({
+        id: m.id,
+        userId: m.userId,
+        userName: `${m.user.firstName} ${m.user.lastName}`,
+        userEmail: m.user.email,
+        modelType: 'lead_scoring',
+        status: m.lastTrainedAt ? 'trained' : 'untrained',
+        accuracy: m.accuracy,
+        lastTrainedAt: m.lastTrainedAt,
+        trainingDataCount: m.trainingDataCount,
+        factors: m.factors,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+        recentHistory: performanceHistory
+          .filter(h => h.userId === m.userId)
+          .slice(0, 5)
+          .map(h => ({
+            accuracyBefore: h.accuracyBefore,
+            accuracyAfter: h.accuracyAfter,
+            sampleSize: h.sampleSize,
+            date: h.createdAt,
+          })),
+      })),
     })
   } catch (error: any) {
     res.status(500).json({
@@ -138,34 +582,116 @@ export const getTrainingModels = async (req: Request, res: Response) => {
 }
 
 /**
- * Upload training data — stub (no real training pipeline exists yet)
+ * Upload training data — processes lead conversion data to improve scoring
+ *
+ * Accepts an array of { leadId, converted: boolean } records.
+ * Updates leads with actual outcomes, bumps the model's trainingDataCount,
+ * and triggers an asynchronous recalibration.
  */
 export const uploadTrainingData = async (req: Request, res: Response) => {
   try {
+    const organizationId = req.user!.organizationId
+    const userId = req.user!.userId
     const { modelType, data } = req.body
-    
-    if (!modelType || !data) {
+
+    if (!modelType || !data || !Array.isArray(data) || data.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Model type and data are required'
+        message: 'modelType (string) and data (non-empty array of { leadId, converted }) are required',
       })
     }
-    
+
+    // Validate and apply conversion outcomes to leads
+    let processed = 0
+    let skipped = 0
+    for (const record of data) {
+      if (!record.leadId || typeof record.converted !== 'boolean') {
+        skipped++
+        continue
+      }
+      // Only update leads belonging to this org
+      const lead = await prisma.lead.findFirst({
+        where: { id: record.leadId, organizationId },
+        select: { id: true },
+      })
+      if (!lead) {
+        skipped++
+        continue
+      }
+      // Mark the lead's outcome
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          status: record.converted ? 'WON' : 'LOST',
+          ...(record.converted ? { stage: 'WON' } : {}),
+        },
+      })
+      processed++
+    }
+
+    // Update the model's training data count
+    await prisma.leadScoringModel.upsert({
+      where: { userId },
+      create: {
+        userId,
+        organizationId,
+        trainingDataCount: processed,
+        factors: { engagement: 30, demographic: 25, behavior: 25, timing: 20 },
+      },
+      update: {
+        trainingDataCount: { increment: processed },
+      },
+    })
+
+    // Respond immediately, then kick off a background recalibration
     res.json({
       success: true,
-      message: 'Training data uploaded successfully',
+      message: `Training data processed: ${processed} records applied, ${skipped} skipped`,
       data: {
         modelType,
-        recordsUploaded: Array.isArray(data) ? data.length : 1,
-        status: 'queued',
-        message: 'Training data uploaded successfully and queued for processing'
-      }
+        recordsUploaded: data.length,
+        recordsProcessed: processed,
+        recordsSkipped: skipped,
+        status: 'processing',
+        message: 'Training data applied. Recalibration started in background.',
+      },
     })
+
+    // Fire-and-forget recalibration with the new data
+    if (processed > 0) {
+      // Capture accuracy BEFORE optimization writes the new value
+      const preModel = await prisma.leadScoringModel.findUnique({ where: { userId } })
+      const accuracyBefore = preModel?.accuracy ?? null
+
+      import('../services/ml-optimization.service')
+        .then(({ getMLOptimizationService }) => {
+          const mlService = getMLOptimizationService()
+          return mlService.optimizeScoringWeights(userId, organizationId)
+        })
+        .then(async (result) => {
+          await prisma.modelPerformanceHistory.create({
+            data: {
+              organizationId,
+              userId,
+              modelType: modelType || 'lead_scoring',
+              accuracyBefore,
+              accuracyAfter: result.accuracy,
+              sampleSize: result.sampleSize,
+              improvements: result.improvements as any,
+              metadata: { source: 'training_upload', recordsProcessed: processed } as any,
+            },
+          })
+          console.log(`✅ Training upload recalibration complete for user ${userId}: accuracy ${result.accuracy}%`)
+        })
+        .catch((err) => {
+          console.error(`❌ Training upload recalibration failed for user ${userId}:`, err)
+        })
+    }
   } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to upload training data',
-      error: error.message
+      error: error.message,
     })
   }
 }
@@ -192,13 +718,97 @@ export const getDataQuality = async (req: Request, res: Response) => {
 }
 
 /**
- * Get AI-generated insights — stub (returns empty array)
+ * Get AI-generated insights — Phase 1C: real data-driven insights
+ * Generated from DB analysis, not OpenAI calls
  */
 export const getInsights = async (req: Request, res: Response) => {
   try {
+    const organizationId = req.user!.organizationId
+    const showDismissed = req.query.showDismissed === 'true'
+    const status = req.query.status as string | undefined // 'active' | 'dismissed' | 'acted' | 'all'
+    const priority = req.query.priority as string | undefined
+    const type = req.query.type as string | undefined
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50
+    const sortBy = req.query.sortBy as string | undefined // 'newest' | 'priority' | 'impact'
+
+    // First, generate fresh insights (idempotent — won't duplicate)
+    await generateAndStoreInsights(organizationId)
+
+    // Fetch insights from DB
+    const where: any = { organizationId }
+
+    // Status-based filtering (new param takes precedence over legacy showDismissed)
+    if (status === 'dismissed') {
+      where.dismissed = true
+    } else if (status === 'acted') {
+      where.actedOn = true
+      where.dismissed = false
+    } else if (status === 'active') {
+      where.dismissed = false
+      where.actedOn = false
+    } else if (status === 'all') {
+      // No filter
+    } else if (!showDismissed) {
+      where.dismissed = false
+    }
+
+    // Priority filter
+    if (priority && priority !== 'all') {
+      where.priority = priority
+    }
+
+    // Type filter
+    if (type && type !== 'all') {
+      where.type = type
+    }
+
+    // Filter out expired insights
+    where.OR = [
+      { expiresAt: null },
+      { expiresAt: { gt: new Date() } },
+    ]
+
+    // Determine sort order
+    // For priority sort, fetch extra rows from DB (alphabetical sort is imprecise)
+    // then apply correct priority ordering in JS and slice to the requested limit.
+    let orderBy: any[] = [{ createdAt: 'desc' }]
+    if (sortBy === 'newest') {
+      orderBy = [{ createdAt: 'desc' }]
+    }
+
+    // Fetch more than needed when sorting by priority so JS sort sees all candidates
+    const fetchLimit = sortBy === 'newest' ? Math.min(limit, 200) : Math.min(limit * 4, 200)
+
+    const insights = await prisma.aIInsight.findMany({
+      where,
+      orderBy,
+      take: fetchLimit,
+    })
+
+    // Sort by priority weight (only if default/impact sort)
+    const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+    const sorted = sortBy === 'newest'
+      ? insights
+      : insights
+          .sort((a, b) => (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2))
+          .slice(0, limit)
+
     res.json({
       success: true,
-      data: []
+      data: sorted.map(i => ({
+        id: i.id,
+        type: i.type,
+        priority: i.priority,
+        title: i.title,
+        description: i.description,
+        data: i.data,
+        actionUrl: i.actionUrl,
+        dismissed: i.dismissed,
+        actedOn: (i as any).actedOn || false,
+        actedOnAt: (i as any).actedOnAt || null,
+        actionTaken: (i as any).actionTaken || null,
+        createdAt: i.createdAt,
+      })),
     })
   } catch (error: any) {
     res.status(500).json({
@@ -210,13 +820,27 @@ export const getInsights = async (req: Request, res: Response) => {
 }
 
 /**
- * Get a specific insight by ID — stub
+ * Get a specific insight by ID
  */
 export const getInsightById = async (req: Request, res: Response) => {
   try {
-    res.status(404).json({
-      success: false,
-      message: 'Insight not found'
+    const { id } = req.params
+    const organizationId = req.user!.organizationId
+
+    const insight = await prisma.aIInsight.findFirst({
+      where: { id, organizationId },
+    })
+
+    if (!insight) {
+      return res.status(404).json({
+        success: false,
+        message: 'Insight not found',
+      })
+    }
+
+    res.json({
+      success: true,
+      data: insight,
     })
   } catch (error: any) {
     res.status(500).json({
@@ -228,11 +852,34 @@ export const getInsightById = async (req: Request, res: Response) => {
 }
 
 /**
- * Dismiss an AI insight — stub
+ * Dismiss an AI insight
  */
 export const dismissInsight = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
+    const organizationId = req.user!.organizationId
+    const userId = req.user!.userId
+
+    const insight = await prisma.aIInsight.findFirst({
+      where: { id, organizationId },
+    })
+
+    if (!insight) {
+      return res.status(404).json({
+        success: false,
+        message: 'Insight not found',
+      })
+    }
+
+    await prisma.aIInsight.update({
+      where: { id },
+      data: {
+        dismissed: true,
+        dismissedAt: new Date(),
+        dismissedBy: userId,
+      },
+    })
+
     res.json({
       success: true,
       message: 'Insight dismissed successfully'
@@ -247,13 +894,193 @@ export const dismissInsight = async (req: Request, res: Response) => {
 }
 
 /**
- * Get AI-powered recommendations — stub (returns empty array)
+ * Mark an insight as acted upon
+ */
+export const actOnInsight = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const organizationId = req.user!.organizationId
+    const userId = req.user!.userId
+    const { actionTaken } = req.body || {}
+
+    const insight = await prisma.aIInsight.findFirst({
+      where: { id, organizationId },
+    })
+
+    if (!insight) {
+      return res.status(404).json({
+        success: false,
+        message: 'Insight not found',
+      })
+    }
+
+    await prisma.aIInsight.update({
+      where: { id },
+      data: {
+        actedOn: true,
+        actedOnAt: new Date(),
+        actedOnBy: userId,
+        actionTaken: actionTaken || 'Action taken',
+      },
+    })
+
+    res.json({
+      success: true,
+      message: 'Insight marked as acted upon'
+    })
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark insight as acted upon',
+      error: error.message
+    })
+  }
+}
+
+/**
+ * Get AI-powered recommendations — Phase 1D: real data-driven
+ * Returns next-best-action suggestions based on pipeline state
  */
 export const getRecommendations = async (req: Request, res: Response) => {
   try {
+    const organizationId = req.user!.organizationId
+    const now = new Date()
+    const recommendations: Array<{
+      id: string
+      type: string
+      title: string
+      description: string
+      priority: string
+      actionUrl?: string
+      data?: any
+    }> = []
+
+    // 1. Follow up with hot leads (high score, recently active)
+    const hotLeads = await prisma.lead.findMany({
+      where: {
+        organizationId,
+        status: { notIn: ['WON', 'LOST'] },
+        score: { gte: 70 },
+      },
+      select: { id: true, firstName: true, lastName: true, score: true, stage: true },
+      orderBy: { score: 'desc' },
+      take: 5,
+    })
+    if (hotLeads.length > 0) {
+      recommendations.push({
+        id: 'follow-up-hot',
+        type: 'follow_up',
+        title: `Follow up with ${hotLeads.length} hot leads`,
+        description: `These leads have high scores (70+) and are likely ready to convert. Prioritize reaching out today.`,
+        priority: 'high',
+        actionUrl: '/leads?sort=score&order=desc',
+        data: { leads: hotLeads.slice(0, 3).map(l => ({ name: `${l.firstName} ${l.lastName}`, score: l.score, stage: l.stage })) },
+      })
+    }
+
+    // 2. Best time to send emails (analyze campaign performance)
+    const campaigns = await prisma.campaignAnalytics.findMany({
+      where: { organizationId },
+      include: { campaign: { select: { lastSentAt: true, type: true } } },
+      orderBy: { openRate: 'desc' },
+      take: 20,
+    })
+    if (campaigns.length >= 3) {
+      // Find best-performing day of week
+      const dayStats: Record<number, { opens: number; count: number }> = {}
+      for (const c of campaigns) {
+        if (c.campaign.lastSentAt) {
+          const day = c.campaign.lastSentAt.getDay()
+          if (!dayStats[day]) dayStats[day] = { opens: 0, count: 0 }
+          dayStats[day].opens += c.openRate || 0
+          dayStats[day].count++
+        }
+      }
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      let bestDay = -1
+      let bestAvg = 0
+      for (const [day, stats] of Object.entries(dayStats)) {
+        const avg = stats.opens / stats.count
+        if (avg > bestAvg) {
+          bestAvg = avg
+          bestDay = parseInt(day)
+        }
+      }
+      if (bestDay >= 0) {
+        recommendations.push({
+          id: 'best-send-day',
+          type: 'optimization',
+          title: `Your ${dayNames[bestDay]} emails perform best`,
+          description: `Based on your campaign data, emails sent on ${dayNames[bestDay]} have the highest open rates. Consider scheduling important campaigns for this day.`,
+          priority: 'medium',
+          actionUrl: '/campaigns',
+          data: { bestDay: dayNames[bestDay], avgOpenRate: (bestAvg * 100).toFixed(1) },
+        })
+      }
+    }
+
+    // 3. Leads needing stage advancement
+    const readyToAdvance = await prisma.lead.findMany({
+      where: {
+        organizationId,
+        status: { notIn: ['WON', 'LOST'] },
+        score: { gte: 60 },
+        stage: { in: ['NEW', 'CONTACTED'] },
+      },
+      select: { id: true, firstName: true, lastName: true, score: true, stage: true },
+      take: 5,
+    })
+    if (readyToAdvance.length > 0) {
+      recommendations.push({
+        id: 'advance-stage',
+        type: 'pipeline',
+        title: `${readyToAdvance.length} leads may be ready to advance`,
+        description: `These leads have high scores but are still in early stages. Review them for stage advancement.`,
+        priority: 'medium',
+        actionUrl: '/leads',
+        data: { leads: readyToAdvance.slice(0, 3).map(l => ({ name: `${l.firstName} ${l.lastName}`, score: l.score, stage: l.stage })) },
+      })
+    }
+
+    // 4. Recalibration recommendation
+    const models = await prisma.leadScoringModel.findMany({
+      where: { organizationId },
+    })
+    for (const model of models) {
+      if (model.lastTrainedAt) {
+        const daysSinceTraining = Math.floor((now.getTime() - model.lastTrainedAt.getTime()) / (1000 * 60 * 60 * 24))
+        if (daysSinceTraining > 14) {
+          recommendations.push({
+            id: `recalibrate-${model.id}`,
+            type: 'model_maintenance',
+            title: `Scoring model hasn't been recalibrated in ${daysSinceTraining} days`,
+            description: `Regular recalibration ensures your lead scores stay accurate. Consider running a recalibration.`,
+            priority: daysSinceTraining > 30 ? 'high' : 'low',
+            actionUrl: '/ai-hub',
+          })
+          break // Only show one recalibration recommendation
+        }
+      }
+    }
+
+    // 5. Campaign suggestions based on pipeline
+    const newLeadsCount = await prisma.lead.count({
+      where: { organizationId, stage: 'NEW' },
+    })
+    if (newLeadsCount > 10) {
+      recommendations.push({
+        id: 'nurture-new-leads',
+        type: 'campaign',
+        title: `${newLeadsCount} new leads could benefit from a nurture campaign`,
+        description: `Create an automated email sequence to engage new leads and move them through your pipeline.`,
+        priority: 'medium',
+        actionUrl: '/campaigns/new',
+      })
+    }
+
     res.json({
       success: true,
-      data: []
+      data: recommendations,
     })
   } catch (error: any) {
     res.status(500).json({
@@ -341,6 +1168,9 @@ export const recalculateScores = async (req: Request, res: Response) => {
     updateMultipleLeadScores(leadIds, userId).catch((err) => {
       console.error('Background recalculation error:', err)
     })
+
+    // Track usage
+    await incrementAIUsage(organizationId, 'scoringRecalculations')
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -588,6 +1418,10 @@ export const enhanceMessage = async (req: Request, res: Response) => {
     const intelligence = getIntelligenceService()
     const enhanced = await intelligence.enhanceMessage(message, type, tone)
     
+    // Track usage
+    const organizationId = req.user!.organizationId
+    await incrementAIUsage(organizationId, 'enhancements')
+
     res.json({
       success: true,
       data: enhanced
@@ -629,25 +1463,39 @@ export const suggestActions = async (req: Request, res: Response) => {
 }
 
 /**
- * Get feature importance analysis — stub (returns hardcoded weights)
+ * Get feature importance analysis — reads real model factors when available
  */
 export const getFeatureImportance = async (req: Request, res: Response) => {
   try {
-    // Derive feature importance from real SCORE_WEIGHTS
+    const organizationId = req.user!.organizationId
+
+    // Try to load actual scoring model factors for this org
+    const model = await prisma.leadScoringModel.findFirst({
+      where: { organizationId },
+      orderBy: { lastTrainedAt: 'desc' },
+    })
+
+    const factors = (model?.factors as Record<string, number> | null) ?? {}
+    const scoringConfig = await prisma.scoringConfig.findUnique({ where: { organizationId } })
+    const configWeights = (scoringConfig?.weights as Record<string, number> | null) ?? {}
+
+    // Build dynamic weights: prefer model factors, then scoring config, then defaults
+    const scoreWeight   = factors.scoreWeight   ?? configWeights.scoreWeight   ?? 30
+    const activityWeight = factors.activityWeight ?? configWeights.activityWeight ?? 30
+    const recencyWeight  = factors.recencyWeight  ?? configWeights.recencyWeight  ?? 20
+    const funnelWeight   = factors.funnelTimeWeight ?? configWeights.funnelTimeWeight ?? 20
+
     const weights: Record<string, { label: string; weight: number; color: string }> = {
-      COMPLETED_APPOINTMENT: { label: 'Completed Appointments', weight: 40, color: '#3b82f6' },
-      SCHEDULED_APPOINTMENT: { label: 'Scheduled Appointments', weight: 30, color: '#10b981' },
-      PROPERTY_INQUIRY: { label: 'Property Inquiries', weight: 25, color: '#f59e0b' },
-      FORM_SUBMISSION: { label: 'Form Submissions', weight: 20, color: '#8b5cf6' },
-      RECENCY_BONUS_MAX: { label: 'Activity Recency', weight: 20, color: '#ec4899' },
-      EMAIL_ENGAGEMENT: { label: 'Email Engagement', weight: 15 + 10 + 5, color: '#06b6d4' }, // reply + click + open
-      FREQUENCY_BONUS_MAX: { label: 'Engagement Frequency', weight: 15, color: '#6b7280' },
+      scoreWeight:    { label: 'Lead Score (Demographics & Fit)',   weight: scoreWeight,   color: '#3b82f6' },
+      activityWeight: { label: 'Activity & Engagement',            weight: activityWeight, color: '#10b981' },
+      recencyWeight:  { label: 'Recency & Timing',                 weight: recencyWeight,  color: '#f59e0b' },
+      funnelWeight:   { label: 'Funnel Progression',               weight: funnelWeight,   color: '#8b5cf6' },
     }
 
     const totalWeight = Object.values(weights).reduce((sum, w) => sum + w.weight, 0)
     const data = Object.values(weights).map(w => ({
       name: w.label,
-      value: Math.round((w.weight / totalWeight) * 100),
+      value: totalWeight > 0 ? Math.round((w.weight / totalWeight) * 100) : 25,
       color: w.color,
     }))
 
@@ -822,6 +1670,12 @@ TONE SETTINGS: ${toneConfig.systemAddition}`,
         },
       })
 
+      // Track AI usage
+      await incrementAIUsage(organizationId, 'aiMessages', {
+        tokens: response.tokens + finalResponse.tokens,
+        cost: response.cost + finalResponse.cost,
+      })
+
       return res.json({
         success: true,
         data: {
@@ -853,6 +1707,12 @@ TONE SETTINGS: ${toneConfig.systemAddition}`,
         tokens: response.tokens,
         cost: response.cost,
       },
+    })
+
+    // Track AI usage
+    await incrementAIUsage(organizationId, 'aiMessages', {
+      tokens: response.tokens,
+      cost: response.cost,
     })
 
     res.json({
@@ -958,6 +1818,9 @@ export const getAIUsage = async (req: Request, res: Response) => {
       _count: { id: true },
     })
 
+    // Also return usage-tracked data
+    const usageWithLimits = await getUsageWithLimits(organizationId)
+
     res.json({
       success: true,
       data: {
@@ -967,6 +1830,7 @@ export const getAIUsage = async (req: Request, res: Response) => {
           totalTokens: chatStats._sum.tokens || 0,
           totalCost: chatStats._sum.cost || 0,
         },
+        monthly: usageWithLimits,
       },
     })
   } catch (error: any) {
@@ -975,6 +1839,33 @@ export const getAIUsage = async (req: Request, res: Response) => {
       success: false,
       message: 'Failed to fetch usage statistics',
       error: error.message
+    })
+  }
+}
+
+/**
+ * Get AI usage limits and current usage for the org (Phase 2D)
+ * Used by frontend to show "X of Y AI messages used this month"
+ */
+export const getAIUsageLimits = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const usageWithLimits = await getUsageWithLimits(organizationId)
+    const costHistory = await getCostBreakdown(organizationId, 6)
+
+    res.json({
+      success: true,
+      data: {
+        ...usageWithLimits,
+        costHistory,
+      },
+    })
+  } catch (error: any) {
+    console.error('Usage limits error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch usage limits',
+      error: error.message,
     })
   }
 }
@@ -1001,6 +1892,9 @@ export const generateEmailSequence = async (req: Request, res: Response) => {
       tone,
       sequenceLength,
     })
+
+    // Track usage
+    await incrementAIUsage(req.user!.organizationId, 'contentGenerations')
 
     res.json({
       success: true,
@@ -1034,6 +1928,9 @@ export const generateSMS = async (req: Request, res: Response) => {
       goal,
       tone,
     })
+
+    // Track usage
+    await incrementAIUsage(req.user!.organizationId, 'contentGenerations')
 
     res.json({
       success: true,
@@ -1072,6 +1969,9 @@ export const generatePropertyDescription = async (req: Request, res: Response) =
       neighborhood,
     })
 
+    // Track usage
+    await incrementAIUsage(req.user!.organizationId, 'contentGenerations')
+
     res.json({
       success: true,
       data: { description, wordCount: description.split(' ').length },
@@ -1104,6 +2004,9 @@ export const generateSocialPosts = async (req: Request, res: Response) => {
       platforms,
       tone,
     })
+
+    // Track usage
+    await incrementAIUsage(req.user!.organizationId, 'contentGenerations')
 
     res.json({
       success: true,
@@ -1139,6 +2042,9 @@ export const generateListingPresentation = async (req: Request, res: Response) =
       marketTrends,
     })
 
+    // Track usage
+    await incrementAIUsage(req.user!.organizationId, 'contentGenerations')
+
     res.json({
       success: true,
       data: presentation,
@@ -1158,37 +2064,84 @@ export const generateListingPresentation = async (req: Request, res: Response) =
  */
 export const composeMessage = async (req: Request, res: Response) => {
   try {
-    const { leadId, conversationId, messageType, draftMessage, settings } = req.body
+    const { leadId, conversationId, messageType, draftMessage, settings,
+            // Quick-compose fields (from AIEmailComposer / AISMSComposer)
+            leadName, leadEmail, leadPhone, tone, purpose, context: quickContext } = req.body
     const userId = req.user!.userId
     const organizationId = req.user!.organizationId
 
-    if (!leadId || !conversationId || !messageType) {
-      return res.status(400).json({
-        success: false,
-        message: 'leadId, conversationId, and messageType are required'
-      })
-    }
+    // Determine message type — explicit or inferred from quick-compose
+    const resolvedType = messageType || (leadPhone ? 'sms' : 'email')
 
-    if (!['email', 'sms', 'call'].includes(messageType)) {
+    if (!['email', 'sms', 'call'].includes(resolvedType)) {
       return res.status(400).json({
         success: false,
         message: 'messageType must be email, sms, or call'
       })
     }
 
+    // Quick-compose mode: no leadId/conversationId required
+    const isQuickCompose = !leadId && !conversationId
+    if (!isQuickCompose && !leadId) {
+      return res.status(400).json({
+        success: false,
+        message: 'leadId is required (or use quick-compose with leadName/tone/purpose)'
+      })
+    }
+
     const composeSettings: ComposeSettings = {
-      tone: settings?.tone || 'professional',
+      tone: settings?.tone || tone || 'professional',
       length: settings?.length || 'standard',
       includeCTA: settings?.includeCTA !== false,
       personalization: settings?.personalization || 'standard',
       templateBase: settings?.templateBase,
       includeProperties: settings?.includeProperties,
       addUrgency: settings?.addUrgency || false,
-      draftMessage: draftMessage || undefined // Pass draft for enhancement
+      draftMessage: draftMessage || undefined
     }
 
-    const context = await gatherMessageContext(leadId, conversationId, organizationId)
-    const result = await generateContextualMessage(context, messageType, composeSettings, userId, organizationId)
+    let result
+    if (isQuickCompose) {
+      // Quick compose — build lightweight context from provided fields
+      const prompt = resolvedType === 'email'
+        ? `Write a professional ${purpose || 'follow-up'} email to ${leadName || 'a real estate lead'} (${leadEmail || ''}).
+Tone: ${composeSettings.tone}. ${quickContext ? `Context: ${quickContext}` : ''}
+Return JSON: { "subject": "...", "content": "..." }`
+        : `Write a ${purpose || 'follow-up'} SMS (max 160 chars) to ${leadName || 'a real estate lead'} (${leadPhone || ''}).
+Tone: ${composeSettings.tone}. ${quickContext ? `Context: ${quickContext}` : ''}
+Return JSON: { "content": "..." }`
+
+      const { getOpenAIClient, getModelForTask } = await import('../services/ai-config.service')
+      const { client } = await getOpenAIClient(organizationId)
+      const model = getModelForTask('content')
+      const { withRetryAndFallback } = await import('../utils/ai-retry')
+
+      const { result: completion } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: resolvedType === 'sms' ? 200 : 800,
+          response_format: { type: 'json_object' },
+        }),
+        client, model
+      )
+
+      const parsed = JSON.parse(completion.choices[0]?.message?.content || '{}')
+      result = {
+        content: parsed.content || parsed.body || parsed.message || '',
+        subject: parsed.subject,
+        confidence: 0.85,
+        messageType: resolvedType,
+      }
+    } else {
+      // Full compose mode with conversation context
+      const ctx = await gatherMessageContext(leadId!, conversationId || leadId!, organizationId)
+      result = await generateContextualMessage(ctx, resolvedType, composeSettings, userId, organizationId)
+    }
+
+    // Track usage
+    await incrementAIUsage(organizationId, 'composeUses')
 
     res.json({
       success: true,
@@ -1233,6 +2186,9 @@ export const composeVariations = async (req: Request, res: Response) => {
 
     const context = await gatherMessageContext(leadId, conversationId, organizationId)
     const variations = await generateVariations(context, messageType, composeSettings, userId, organizationId)
+
+    // Track usage
+    await incrementAIUsage(organizationId, 'composeUses')
 
     res.json({
       success: true,
@@ -1425,13 +2381,14 @@ export const saveMessageAsTemplate = async (req: Request, res: Response) => {
 }
 
 /**
- * Get preferences (Phase 3)
+ * Get preferences (Phase 3 — expanded for AI Hub rebuild)
+ * Returns all AI preferences: chatbot, composer, profile, feature toggles
  */
 export const getPreferences = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId
 
-    const preferences = await preferencesService.loadComposerPreferences(userId)
+    const preferences = await preferencesService.getFullAIPreferences(userId)
 
     res.json({
       success: true,
@@ -1447,14 +2404,23 @@ export const getPreferences = async (req: Request, res: Response) => {
 }
 
 /**
- * Save preferences (Phase 3)
+ * Save preferences (Phase 4 — expanded for AI Hub rebuild)
+ * Accepts partial updates across chatbot, composer, profile, and feature toggles
  */
 export const savePreferences = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId
-    const preferences = req.body
+    const organizationId = req.user!.organizationId
+    const body = req.body
 
-    const updated = await preferencesService.saveComposerPreferences(userId, preferences)
+    // Support both legacy flat format (composer-only) and new structured format
+    let prefsToSave: any = body
+    if (body.defaultTone !== undefined || body.defaultLength !== undefined || body.defaultCTA !== undefined) {
+      // Legacy flat format — wrap in composer
+      prefsToSave = { composer: body }
+    }
+
+    const updated = await preferencesService.saveAllAIPreferences(userId, prefsToSave, organizationId)
 
     res.json({
       success: true,
@@ -1522,7 +2488,14 @@ export const recalibrateModel = async (req: Request, res: Response) => {
     const { getMLOptimizationService } = await import('../services/ml-optimization.service')
     const mlService = getMLOptimizationService()
     try {
+      const startTime = Date.now()
+      // Capture accuracy BEFORE optimization writes the new value
+      const preModel = await prisma.leadScoringModel.findUnique({ where: { userId } })
+      const accuracyBefore = preModel?.accuracy ?? null
+
       const result = await mlService.optimizeScoringWeights(userId, organizationId)
+      const duration = Date.now() - startTime
+
       job.status = 'completed'
       job.completedAt = new Date()
       job.result = {
@@ -1530,6 +2503,28 @@ export const recalibrateModel = async (req: Request, res: Response) => {
         sampleSize: result.sampleSize,
         improvements: result.improvements,
       }
+
+      // Phase 1A: Persist model performance history
+      await prisma.modelPerformanceHistory.create({
+        data: {
+          organizationId,
+          userId,
+          modelType: 'lead_scoring',
+          accuracyBefore,
+          accuracyAfter: result.accuracy,
+          sampleSize: result.sampleSize,
+          improvements: result.improvements as any,
+          trainingDuration: duration,
+          metadata: {
+            oldWeights: result.oldWeights,
+            newWeights: result.newWeights,
+          } as any,
+        },
+      })
+
+      // Track usage
+      await incrementAIUsage(organizationId, 'scoringRecalculations')
+
       console.log(`✅ Recalibration complete for user ${userId}: accuracy ${result.accuracy}%`)
     } catch (err: any) {
       job.status = 'failed'
@@ -1589,7 +2584,9 @@ export const resetPreferences = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId
 
-    const defaults = await preferencesService.resetComposerPreferences(userId)
+    await preferencesService.resetComposerPreferences(userId)
+    // Return the full defaults
+    const defaults = await preferencesService.getFullAIPreferences(userId)
 
     res.json({
       success: true,

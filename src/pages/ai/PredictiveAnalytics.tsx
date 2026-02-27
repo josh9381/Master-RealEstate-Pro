@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, AlertTriangle, CheckCircle, Clock, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -22,6 +23,7 @@ import {
 
 const PredictiveAnalytics = () => {
   const [selectedPrediction, setSelectedPrediction] = useState<{ id: string; title: string; prediction: string; confidence: number; impact: string; status: string; details: string; dataPoints?: number | string } | null>(null);
+  const navigate = useNavigate();
 
   const defaultPredictiveData = {
     predictions: [] as Array<{ id: string; title: string; prediction: string; confidence: number; impact: string; status: string; details: string; dataPoints?: number }>,
@@ -67,7 +69,7 @@ const PredictiveAnalytics = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" disabled title="Model configuration coming soon">Configure Models</Button>
+          <Button variant="outline" onClick={() => navigate('/ai/lead-scoring')}>Configure Models</Button>
           <Button onClick={() => refetch()} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             {isLoading ? 'Loading...' : 'Run Predictions'}

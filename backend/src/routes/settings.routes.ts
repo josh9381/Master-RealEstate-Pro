@@ -27,6 +27,9 @@ import { updateNotificationSettingsSchema } from '../validators/settings/notific
 import { getSecuritySettings, enable2FA, verify2FA, disable2FA } from '../controllers/settings/security.controller';
 import { enable2FASchema, verify2FASchema, disable2FASchema } from '../validators/settings/security.validator';
 
+// AI Settings (Phase 3C)
+import { getAISettings, updateAISettings, removeAPIKey } from '../controllers/settings/ai.controller';
+
 const router = Router();
 
 // All settings routes require authentication
@@ -211,5 +214,30 @@ router.post('/services/:service/test', asyncHandler(async (req: any, res: any) =
   const service = req.params.service;
   res.json({ success: true, message: `${service} connection test passed`, data: { status: 'ok' } });
 }));
+
+// ============================================
+// AI SETTINGS (Phase 3C)
+// ============================================
+
+/**
+ * @route   GET /api/settings/ai
+ * @desc    Get organization AI settings
+ * @access  Private (Admin)
+ */
+router.get('/ai', asyncHandler(getAISettings));
+
+/**
+ * @route   PUT /api/settings/ai
+ * @desc    Update organization AI settings
+ * @access  Private (Admin)
+ */
+router.put('/ai', asyncHandler(updateAISettings));
+
+/**
+ * @route   DELETE /api/settings/ai/key
+ * @desc    Remove organization's own API key
+ * @access  Private (Admin)
+ */
+router.delete('/ai/key', asyncHandler(removeAPIKey));
 
 export default router;

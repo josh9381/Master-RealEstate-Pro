@@ -113,22 +113,6 @@ export const getAIUsage = async (startDate?: string): Promise<UsageResponse> => 
 }
 
 /**
- * Score a lead using AI
- */
-export const scoreLeadWithAI = async (leadId: string): Promise<{
-  success: boolean
-  data: {
-    leadId: string
-    previousScore: number
-    newScore: number
-    scoredAt: Date
-  }
-}> => {
-  const response = await api.post('/ai/score-lead', { leadId })
-  return response.data
-}
-
-/**
  * Get lead score (existing endpoint)
  */
 export const getLeadScore = async (leadId: string) => {
@@ -154,7 +138,6 @@ export default {
   clearChatHistory,
   enhanceMessage,
   getAIUsage,
-  scoreLeadWithAI,
   getLeadScore,
   suggestActions,
 }

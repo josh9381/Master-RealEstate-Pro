@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Target, TrendingUp, AlertCircle, Settings, RefreshCw, Save, RotateCcw, X } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Settings, RefreshCw, Save, RotateCcw, X, Upload, Activity, CheckCircle, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { leadsApi, aiApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import {
   Table,
   TableBody,
@@ -17,12 +18,57 @@ import {
   TableRow,
 } from '@/components/ui/Table';
 
+type ScoringTab = 'scores' | 'charts' | 'training';
+
+interface ModelPerformanceEntry {
+  month: string;
+  accuracy: number;
+  predictions: number;
+}
+
+interface FeatureImportanceEntry {
+  name: string;
+  value: number;
+  color?: string;
+}
+
+interface TrainingModel {
+  id?: string;
+  name: string;
+  status: string;
+  accuracy?: number;
+  lastTrained?: string;
+  progress?: number;
+  eta?: string;
+}
+
+interface DataQualityEntry {
+  metric: string;
+  score: number;
+  status: string;
+}
+
+interface OptimizationHistoryEntry {
+  id?: string;
+  modelType?: string;
+  accuracyBefore: number | null;
+  accuracyAfter: number;
+  sampleSize: number;
+  improvements?: string[] | null;
+  trainingDuration?: number | null;
+  date: string;
+  user?: string;
+}
+
 const LeadScoring = () => {
   const { toast } = useToast()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showConfig, setShowConfig] = useState(false)
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+  const breakdownRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState<ScoringTab>('scores')
+  const [uploading, setUploading] = useState(false)
 
   // Score factors breakdown query
   const { data: factorBreakdown, isLoading: factorsLoading } = useQuery({
@@ -31,12 +77,83 @@ const LeadScoring = () => {
     enabled: !!selectedLeadId,
   })
 
+  // Scroll breakdown panel into view when a lead is selected
+  useEffect(() => {
+    if (selectedLeadId && breakdownRef.current) {
+      breakdownRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [selectedLeadId, factorsLoading])
+
   // Scoring config query
   const { data: scoringConfig, isLoading: configLoading } = useQuery({
     queryKey: ['scoring-config'],
     queryFn: () => aiApi.getScoringConfig(),
     enabled: showConfig,
   })
+
+  // Charts & training data queries (loaded when charts/training tab is active)
+  const { data: chartsData } = useQuery({
+    queryKey: ['lead-scoring', 'charts'],
+    queryFn: async () => {
+      const [perfData, importanceData, qualityData] = await Promise.all([
+        aiApi.getModelPerformance(6),
+        aiApi.getFeatureImportance('lead-scoring'),
+        aiApi.getDataQuality(),
+      ])
+      // perfData.data may have { history, currentModels, summary } or be a flat array
+      const perfResult = perfData.data || {}
+      const history = Array.isArray(perfResult) ? perfResult : (perfResult.history || [])
+      const optimizationHistory = (Array.isArray(history) ? history : []) as OptimizationHistoryEntry[]
+      // Build chart-friendly model performance from history entries
+      const modelPerformance = optimizationHistory.map((h: OptimizationHistoryEntry) => ({
+        month: new Date(h.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        accuracy: h.accuracyAfter ? Math.round(h.accuracyAfter * 100) : 0,
+        predictions: h.sampleSize || 0,
+      })).reverse()
+      return {
+        modelPerformance: modelPerformance as ModelPerformanceEntry[],
+        featureImportance: (importanceData.data || []) as FeatureImportanceEntry[],
+        dataQuality: (qualityData.data || []) as DataQualityEntry[],
+        optimizationHistory,
+      }
+    },
+    enabled: activeTab === 'charts',
+  })
+
+  const { data: trainingData, refetch: refetchTraining } = useQuery({
+    queryKey: ['lead-scoring', 'training'],
+    queryFn: async () => {
+      const res = await aiApi.getTrainingModels()
+      return (res.data || []) as TrainingModel[]
+    },
+    enabled: activeTab === 'training',
+  })
+
+  const handleUploadData = async () => {
+    const fileInput = document.createElement('input')
+    fileInput.type = 'file'
+    fileInput.accept = '.csv,.json'
+    fileInput.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      setUploading(true)
+      try {
+        const text = await file.text()
+        const data = file.name.endsWith('.json') ? JSON.parse(text) : text
+        await aiApi.uploadTrainingData({
+          modelType: 'lead-scoring',
+          data: Array.isArray(data) ? data : [data]
+        })
+        toast.success('Training data uploaded successfully!')
+        refetchTraining()
+      } catch {
+        toast.error('Failed to upload training data')
+      } finally {
+        setUploading(false)
+      }
+    }
+    fileInput.click()
+  }
 
   const [configForm, setConfigForm] = useState<Record<string, number>>({})
 
@@ -209,11 +326,16 @@ const LeadScoring = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Lead Scoring</h1>
-          <p className="text-muted-foreground mt-2">
-            AI-powered lead quality prediction and scoring
-          </p>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/ai')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Lead Scoring & Models</h1>
+            <p className="text-muted-foreground mt-1">
+              AI-powered lead quality prediction, model config, and training
+            </p>
+          </div>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={() => {
@@ -232,8 +354,29 @@ const LeadScoring = () => {
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="flex border-b">
+        {[
+          { id: 'scores' as ScoringTab, label: 'Scores & Config' },
+          { id: 'charts' as ScoringTab, label: 'Model Performance' },
+          { id: 'training' as ScoringTab, label: 'Training & Data' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Scoring Configuration Panel */}
-      {showConfig && (
+      {showConfig && activeTab === 'scores' && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -343,6 +486,7 @@ const LeadScoring = () => {
       )}
 
       {/* Model Status */}
+      {activeTab === 'scores' && (<>
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -483,7 +627,7 @@ const LeadScoring = () => {
 
       {/* Score Factor Breakdown Panel */}
       {selectedLeadId && (
-        <Card>
+        <Card ref={breakdownRef}>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Score Factor Breakdown</CardTitle>
@@ -608,6 +752,265 @@ const LeadScoring = () => {
           </div>
         </CardContent>
       </Card>
+      </>)}
+
+      {/* Charts & Model Performance Tab */}
+      {activeTab === 'charts' && (
+        <div className="space-y-6">
+          {/* Model Accuracy Trend */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Model Accuracy Trend</CardTitle>
+                <CardDescription>Prediction accuracy over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {chartsData?.modelPerformance && chartsData.modelPerformance.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={chartsData.modelPerformance}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="accuracy" stroke="#3b82f6" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-12">No performance data available yet</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Feature Importance</CardTitle>
+                <CardDescription>Factors affecting lead score predictions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {chartsData?.featureImportance && chartsData.featureImportance.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={chartsData.featureImportance}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => `${name}: ${value}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {chartsData.featureImportance.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color || ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'][index % 6]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-12">No feature importance data available</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Data Quality Metrics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Quality Metrics</CardTitle>
+              <CardDescription>Quality assessment of training data</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {chartsData?.dataQuality && chartsData.dataQuality.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-4">
+                  {chartsData.dataQuality.map((item, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{item.metric}</span>
+                        {item.status === 'excellent' ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : item.status === 'good' ? (
+                          <CheckCircle className="h-4 w-4 text-blue-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-yellow-500" />
+                        )}
+                      </div>
+                      <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full ${
+                            item.status === 'excellent' ? 'bg-green-500' : item.status === 'good' ? 'bg-blue-500' : 'bg-yellow-500'
+                          }`}
+                          style={{ width: `${item.score}%` }}
+                        />
+                      </div>
+                      <div className="text-right">
+                        <span className="text-2xl font-bold">{item.score}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">No data quality metrics available</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Monthly Prediction Volume */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Predictions</CardTitle>
+              <CardDescription>Total predictions generated per month</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {chartsData?.modelPerformance && chartsData.modelPerformance.length > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={chartsData.modelPerformance}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="predictions" stroke="#10b981" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-12">No prediction data available</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Optimization History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Optimization History</CardTitle>
+              <CardDescription>Past recalibrations showing accuracy improvements over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {chartsData?.optimizationHistory && chartsData.optimizationHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {chartsData.optimizationHistory.slice(0, 10).map((entry, index) => {
+                    const accuracyBefore = entry.accuracyBefore != null ? (entry.accuracyBefore * 100).toFixed(1) : null
+                    const accuracyAfter = (entry.accuracyAfter * 100).toFixed(1)
+                    const improved = entry.accuracyBefore != null && entry.accuracyAfter > entry.accuracyBefore
+                    const change = entry.accuracyBefore != null
+                      ? ((entry.accuracyAfter - entry.accuracyBefore) * 100).toFixed(1)
+                      : null
+                    return (
+                      <div key={entry.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${improved ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {improved ? <TrendingUp className="h-4 w-4" /> : <Activity className="h-4 w-4" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {entry.modelType === 'lead_scoring' ? 'Lead Scoring' : entry.modelType || 'Model'} Recalibration
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(entry.date).toLocaleDateString()} {entry.user && `by ${entry.user}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right text-sm">
+                            {accuracyBefore && (
+                              <span className="text-muted-foreground">{accuracyBefore}%</span>
+                            )}
+                            {accuracyBefore && <span className="mx-1 text-muted-foreground">&rarr;</span>}
+                            <span className="font-bold">{accuracyAfter}%</span>
+                          </div>
+                          {change && (
+                            <Badge variant={improved ? 'success' : 'secondary'}>
+                              {improved ? '+' : ''}{change}%
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {entry.sampleSize} samples
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No optimization history yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Recalibrate your model to see history here</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Training & Data Tab */}
+      {activeTab === 'training' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Model Training</CardTitle>
+                  <CardDescription>Active training sessions and history</CardDescription>
+                </div>
+                <Button onClick={handleUploadData} disabled={uploading}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {uploading ? 'Uploading...' : 'Upload Training Data'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {trainingData && trainingData.length > 0 ? (
+                <div className="space-y-4">
+                  {trainingData.map((model, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{model.name}</span>
+                          <Badge
+                            variant={
+                              model.status === 'complete' ? 'success' : model.status === 'training' ? 'default' : 'secondary'
+                            }
+                          >
+                            {model.status}
+                          </Badge>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {model.eta ? `ETA: ${model.eta}` : model.lastTrained ? `Last trained: ${model.lastTrained}` : ''}
+                        </span>
+                      </div>
+                      <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full transition-all ${model.status === 'complete' ? 'bg-green-500' : 'bg-blue-500'}`}
+                          style={{ width: `${model.progress || 0}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{model.progress || 0}% complete</span>
+                        {model.status === 'training' && (
+                          <span className="flex items-center gap-1">
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                            Training...
+                          </span>
+                        )}
+                        {model.accuracy && (
+                          <span>Accuracy: {typeof model.accuracy === 'number' ? `${(model.accuracy * 100).toFixed(1)}%` : model.accuracy}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No training models yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Upload training data to get started</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

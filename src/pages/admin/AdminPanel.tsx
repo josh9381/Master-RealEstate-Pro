@@ -9,6 +9,7 @@ import { OrganizationHeader } from '@/components/admin/OrganizationHeader';
 import { AdminStats } from '@/components/admin/AdminStats';
 import { ActivityLog } from '@/components/admin/ActivityLog';
 import { SubscriptionStatus } from '@/components/admin/SubscriptionStatus';
+import { AICostWidget } from '@/components/admin/AICostWidget';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
@@ -90,6 +91,9 @@ const AdminPanel = () => {
           {/* Subscription Status Widget */}
           <SubscriptionStatus />
 
+          {/* AI Cost Widget */}
+          <AICostWidget />
+
           {/* Admin-Only Quick Actions */}
           <RoleBasedSection show="admin">
             <Card>
@@ -101,7 +105,7 @@ const AdminPanel = () => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => navigate('/admin/backup-restore')}
+                  onClick={() => navigate('/admin/backup')}
                 >
                   <Database className="w-4 h-4 mr-2" />
                   Backup & Restore
@@ -110,7 +114,7 @@ const AdminPanel = () => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => navigate('/admin/debug-console')}
+                  onClick={() => navigate('/admin/debug')}
                 >
                   <AlertTriangle className="w-4 h-4 mr-2" />
                   System Logs
@@ -119,7 +123,7 @@ const AdminPanel = () => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => navigate('/admin/feature-flags')}
+                  onClick={() => navigate('/admin/features')}
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   Feature Flags

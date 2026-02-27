@@ -14,6 +14,64 @@ export interface PlanFeatures {
   description: string;
 }
 
+/**
+ * AI-specific plan limits (Phase 2)
+ * Controls usage caps per subscription tier
+ */
+export interface AIPlanLimits {
+  maxMonthlyAIMessages: number | 'unlimited';
+  maxTokensPerRequest: number;
+  maxContentGenerations: number | 'unlimited';
+  maxComposeUses: number | 'unlimited';
+  maxScoringRecalculations: number | 'unlimited';
+  maxWebSearches: number | 'unlimited';
+  chatHistoryDays: number | 'unlimited';
+  aiRateLimit: number; // requests per minute
+}
+
+export const AI_PLAN_LIMITS: Record<SubscriptionTier, AIPlanLimits> = {
+  FREE: {
+    maxMonthlyAIMessages: 50,
+    maxTokensPerRequest: 500,
+    maxContentGenerations: 10,
+    maxComposeUses: 20,
+    maxScoringRecalculations: 5,
+    maxWebSearches: 10,
+    chatHistoryDays: 7,
+    aiRateLimit: 10,
+  },
+  STARTER: {
+    maxMonthlyAIMessages: 500,
+    maxTokensPerRequest: 1000,
+    maxContentGenerations: 100,
+    maxComposeUses: 200,
+    maxScoringRecalculations: 50,
+    maxWebSearches: 100,
+    chatHistoryDays: 30,
+    aiRateLimit: 30,
+  },
+  PROFESSIONAL: {
+    maxMonthlyAIMessages: 5000,
+    maxTokensPerRequest: 2000,
+    maxContentGenerations: 1000,
+    maxComposeUses: 2000,
+    maxScoringRecalculations: 'unlimited',
+    maxWebSearches: 1000,
+    chatHistoryDays: 90,
+    aiRateLimit: 60,
+  },
+  ENTERPRISE: {
+    maxMonthlyAIMessages: 'unlimited',
+    maxTokensPerRequest: 4000,
+    maxContentGenerations: 'unlimited',
+    maxComposeUses: 'unlimited',
+    maxScoringRecalculations: 'unlimited',
+    maxWebSearches: 'unlimited',
+    chatHistoryDays: 'unlimited',
+    aiRateLimit: 100,
+  },
+};
+
 export const PLAN_FEATURES: Record<SubscriptionTier, PlanFeatures> = {
   FREE: {
     name: 'Free',

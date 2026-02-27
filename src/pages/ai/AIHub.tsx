@@ -1,32 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Brain, Target, Users, TrendingUp, Sparkles, BarChart3, Upload, RefreshCw, Activity, AlertCircle, CheckCircle, Zap } from 'lucide-react';
+import { Brain, Target, TrendingUp, Sparkles, BarChart3, RefreshCw, CheckCircle, Zap, Settings, MessageSquare, Wand2, FileText, ArrowRight, Bot, ChevronRight, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { aiApi, tasksApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useQuery } from '@tanstack/react-query';
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config';
 
-// Icon mapping for API responses (which return icon names as strings)
+// Icon mapping for API responses
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Target,
-  Sparkles,
-  RefreshCw,
-  Brain,
-  Users,
-  TrendingUp,
-  BarChart3,
-  Activity,
-  AlertCircle,
-  CheckCircle,
-  Zap,
+  Target, Sparkles, RefreshCw, Brain, TrendingUp, BarChart3, CheckCircle, Zap,
 };
 
-// Type definitions for AI Hub data
+// Type definitions
 interface AIStats {
   activeModels: number;
   modelsInTraining: number;
@@ -42,7 +31,7 @@ interface AIStats {
 }
 
 interface AIFeature {
-  id: number;
+  id: number | string;
   title: string;
   description: string;
   accuracy?: string | number;
@@ -52,35 +41,6 @@ interface AIFeature {
   predictions?: number;
   models?: number;
   insights?: number;
-}
-
-interface ModelPerformanceEntry {
-  month: string;
-  accuracy: number;
-  predictions: number;
-}
-
-interface FeatureImportanceEntry {
-  name: string;
-  value: number;
-  color?: string;
-  importance?: number;
-}
-
-interface TrainingModel {
-  id?: string;
-  name: string;
-  status: string;
-  accuracy?: number;
-  lastTrained?: string;
-  progress?: number;
-  eta?: string;
-}
-
-interface DataQualityEntry {
-  metric: string;
-  score: number;
-  status: string;
 }
 
 interface AIInsight {
@@ -105,43 +65,60 @@ interface AIRecommendation {
   icon?: React.ComponentType<{ className?: string }> | string;
 }
 
+interface AIUsage {
+  tier: string;
+  useOwnKey: boolean;
+  usage: {
+    aiMessages: number;
+    contentGenerations: number;
+    composeUses: number;
+    totalTokensUsed: number;
+    totalCost: number;
+  };
+  limits: {
+    maxMonthlyAIMessages: number | 'unlimited';
+    maxContentGenerations: number | 'unlimited';
+    maxComposeUses: number | 'unlimited';
+  };
+}
+
+// "Where AI is Working" feature status items
+const embeddedFeatures = [
+  { name: 'Lead Scoring', icon: Target, description: 'Scoring all leads' },
+  { name: 'Chatbot', icon: Bot, description: '25+ functions' },
+  { name: 'AI Compose', icon: MessageSquare, description: 'Streaming' },
+  { name: 'Content Gen', icon: FileText, description: '5 types' },
+  { name: 'Message Enhancer', icon: Wand2, description: '6 tones' },
+  { name: 'Template AI', icon: Sparkles, description: 'Active' },
+];
+
 const AIHub = () => {
   const navigate = useNavigate()
-  const [uploading, setUploading] = useState(false)
   const { toast } = useToast()
 
-  // Fetch all AI Hub data via useQuery
-  const { data: aiData, isLoading: loading, refetch } = useQuery({
+  // Fetch hub data — only what the overview dashboard needs
+  const { data: aiData, isLoading: loading } = useQuery({
     queryKey: ['ai', 'hub'],
     queryFn: async () => {
       const [
         statsData,
         featuresData,
-        performanceData,
-        trainingData,
-        qualityData,
         insightsData,
         recommendationsData,
-        importanceData,
+        usageData,
       ] = await Promise.all([
         aiApi.getStats(),
         aiApi.getFeatures(),
-        aiApi.getModelPerformance(6),
-        aiApi.getTrainingModels(),
-        aiApi.getDataQuality(),
         aiApi.getInsights({ limit: 3 }),
         aiApi.getRecommendations({ limit: 3 }),
-        aiApi.getFeatureImportance('lead-scoring'),
+        aiApi.getUsageLimits(),
       ])
       return {
         stats: statsData.data as AIStats | null,
         aiFeatures: (featuresData.data || []) as AIFeature[],
-        modelPerformance: (performanceData.data || []) as ModelPerformanceEntry[],
-        trainingModels: (trainingData.data || []) as TrainingModel[],
-        dataQuality: (qualityData.data || []) as DataQualityEntry[],
         recentInsights: (insightsData.data || []) as AIInsight[],
         recommendations: (recommendationsData.data || []) as AIRecommendation[],
-        featureImportance: (importanceData.data || []) as FeatureImportanceEntry[],
+        usage: usageData.data as AIUsage | null,
       }
     },
     meta: { useMockOnError: MOCK_DATA_CONFIG.USE_MOCK_DATA },
@@ -149,19 +126,15 @@ const AIHub = () => {
 
   const stats = aiData?.stats ?? null
   const aiFeatures = aiData?.aiFeatures ?? []
-  const modelPerformance = aiData?.modelPerformance ?? []
-  const featureImportance = aiData?.featureImportance ?? []
-  const trainingModels = aiData?.trainingModels ?? []
-  const dataQuality = aiData?.dataQuality ?? []
   const recentInsights = aiData?.recentInsights ?? []
   const recommendations = aiData?.recommendations ?? []
+  const usage = aiData?.usage ?? null
 
-  // Handle recommendation action buttons — execute real actions where possible
+  // Handle recommendation action buttons
   const handleRecommendationAction = async (rec: AIRecommendation) => {
     const action = rec.action?.toLowerCase() || ''
     try {
       if (action.includes('follow up') || action.includes('task') || action.includes('create task')) {
-        // Create a follow-up task from the recommendation
         await tasksApi.createTask({
           title: rec.title || 'AI-recommended follow-up',
           description: rec.description || `AI Recommendation: ${rec.action}`,
@@ -188,81 +161,142 @@ const AIHub = () => {
         navigate('/leads')
         toast.info(`Navigating to: ${rec.action}`)
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to execute action. Please try again.')
     }
   }
-  
 
-  
-  const handleUploadData = async () => {
-    // Create file input for user to select training data file
-    const fileInput = document.createElement('input')
-    fileInput.type = 'file'
-    fileInput.accept = '.csv,.json'
-    fileInput.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
-      setUploading(true)
-      try {
-        const text = await file.text()
-        const data = file.name.endsWith('.json') ? JSON.parse(text) : text
-        await aiApi.uploadTrainingData({
-          modelType: 'lead-scoring',
-          data: Array.isArray(data) ? data : [data]
-        })
-        toast.success('Success', 'Training data uploaded successfully!')
-        refetch()
-      } catch (error) {
-        toast.error('Error', 'Failed to upload training data')
-      } finally {
-        setUploading(false)
-      }
-    }
-    fileInput.click()
+  // Derive a quick stat for each nav card from features list
+  const getFeatureStat = (keyword: string): string => {
+    const feature = aiFeatures.find(f =>
+      f.title.toLowerCase().includes(keyword.toLowerCase())
+    )
+    if (!feature) return ''
+    if (feature.leadsScored) return `${feature.leadsScored} leads scored`
+    if (feature.predictions) return `${feature.predictions} predictions`
+    if (feature.insights) return `${feature.insights} insights`
+    if (feature.accuracy) return `${feature.accuracy} accuracy`
+    return feature.status === 'active' ? 'Active' : feature.status || ''
   }
 
-  // Show loading state
   if (loading) {
     return <LoadingSkeleton rows={3} showChart={true} />;
   }
-  
-  // Recent insights — no mock fallback (show empty if no data)
-  const recentInsightsData = recentInsights
-  
-  // AI Features with icon mapping
-  // Route mapping: feature title -> actual route path
-  const routeMap: Record<string, string> = {
-    'Lead Scoring': '/ai/lead-scoring',
-    'Customer Segmentation': '/ai/segmentation',
-    'Predictive Analytics': '/ai/predictive',
-    'Model Training': '/ai/training',
-    'Intelligence Insights': '/ai/insights',
-    'Performance Analytics': '/ai/analytics',
-  };
-  const comingSoonFeatureIds = [2, 4] // Customer Segmentation, Model Training
-  const aiFeaturesData = aiFeatures.length > 0 ? aiFeatures.map(feature => ({
-    ...feature,
-    icon: feature.id === 1 ? Target :
-          feature.id === 2 ? Users :
-          feature.id === 3 ? TrendingUp :
-          feature.id === 4 ? Brain :
-          feature.id === 5 ? Sparkles :
-          BarChart3,
-    path: routeMap[feature.title] || `/ai/${feature.title.toLowerCase().replace(/\s+/g, '-')}`,
-    comingSoon: comingSoonFeatureIds.includes(feature.id as number),
-  })) : []
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">AI Hub</h1>
         <p className="text-muted-foreground mt-2">
-          Leverage artificial intelligence to optimize your sales and marketing
+          Your AI control center — monitor, configure, and understand your AI across the platform
         </p>
       </div>
 
-      {/* Stats Overview */}
+      {/* Section A: Navigation Cards (4 sub-pages) */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Link to="/ai/lead-scoring" className="group">
+          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <Target className="h-6 w-6 text-blue-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mt-3">Lead Scoring & Models</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {stats?.activeModels ? `${stats.activeModels} active model${stats.activeModels > 1 ? 's' : ''}, ${stats.avgAccuracy || 0}% accuracy` : getFeatureStat('scoring') || 'Score distribution & model config'}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/ai/insights" className="group">
+          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <Sparkles className="h-6 w-6 text-purple-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mt-3">Intelligence & Insights</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {stats?.activeInsights ? `${stats.activeInsights} active insights, ${stats.highPriorityInsights || 0} high priority` : 'AI-generated recommendations'}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/ai/predictive" className="group">
+          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-green-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mt-3">Predictive Analytics</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {stats?.predictionsToday ? `${stats.predictionsToday.toLocaleString()} predictions today` : 'Conversion & revenue forecasts'}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/ai/settings" className="group">
+          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-orange-500/10 rounded-lg">
+                  <Settings className="h-6 w-6 text-orange-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mt-3">AI Settings</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configure your AI profile & preferences
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Section B: "Where AI is Working" Status Bar */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Brain className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">AI is active across your CRM</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {embeddedFeatures.map((feature) => {
+              // Check if the feature is active from API data
+              const apiFeature = aiFeatures.find(f =>
+                f.title.toLowerCase().includes(feature.name.toLowerCase().split(' ')[0])
+              )
+              const isActive = apiFeature?.status === 'active' || !apiFeature // Assume active if not returned
+              return (
+                <div
+                  key={feature.name}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50 text-sm"
+                >
+                  <feature.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium">{feature.name}</span>
+                  <span className="text-muted-foreground">
+                    ({apiFeature?.leadsScored ? `${apiFeature.leadsScored} scored` : feature.description})
+                  </span>
+                  <div className={`h-2 w-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section C: AI Health Overview Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -281,7 +315,7 @@ const AIHub = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.avgAccuracy != null ? `${stats.avgAccuracy}%` : '—'}</div>
-            <p className="text-xs text-muted-foreground">{stats?.accuracyChange != null ? `+${stats.accuracyChange}% from last month` : 'No data'}</p>
+            <p className="text-xs text-muted-foreground">{stats?.accuracyChange != null ? `${stats.accuracyChange >= 0 ? '+' : ''}${stats.accuracyChange}% from last month` : 'No data'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -291,7 +325,7 @@ const AIHub = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.predictionsToday != null ? stats.predictionsToday.toLocaleString() : '—'}</div>
-            <p className="text-xs text-muted-foreground">{stats?.predictionsChange != null ? `+${stats.predictionsChange}% from yesterday` : 'No data'}</p>
+            <p className="text-xs text-muted-foreground">{stats?.predictionsChange != null ? `${stats.predictionsChange >= 0 ? '+' : ''}${stats.predictionsChange}% from yesterday` : 'No data'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -306,351 +340,192 @@ const AIHub = () => {
         </Card>
       </div>
 
-      {/* AI Features Grid */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">AI Features</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {aiFeaturesData.map((feature) => {
-            // Handle both component references (mock data) and string names (API data)
-            const Icon = typeof feature.icon === 'string' ? iconMap[feature.icon] || Brain : feature.icon;
-            return (
-              <Card key={feature.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{feature.title}</CardTitle>
-                        {feature.comingSoon ? (
-                          <Badge variant="warning" className="mt-1">Coming Soon</Badge>
-                        ) : (
+      {/* Section C.5: AI Usage This Month */}
+      {usage && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">AI Usage This Month</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs font-normal">{usage.tier} tier</Badge>
+                {usage.useOwnKey && <Badge variant="secondary" className="text-xs font-normal">Own API key</Badge>}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                { label: 'AI Messages', used: usage.usage.aiMessages, limit: usage.limits.maxMonthlyAIMessages },
+                { label: 'Content Generations', used: usage.usage.contentGenerations, limit: usage.limits.maxContentGenerations },
+                { label: 'Compose Uses', used: usage.usage.composeUses, limit: usage.limits.maxComposeUses },
+              ].map((item) => {
+                const isUnlimited = item.limit === 'unlimited'
+                const pct = isUnlimited ? 0 : Math.min(100, Math.round((item.used / (item.limit as number)) * 100))
+                const isWarning = !isUnlimited && pct >= 80
+                const isDanger = !isUnlimited && pct >= 95
+                return (
+                  <div key={item.label} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{item.label}</span>
+                      <span className={`font-medium ${isDanger ? 'text-red-600' : isWarning ? 'text-yellow-600' : ''}`}>
+                        {item.used.toLocaleString()} / {isUnlimited ? '∞' : (item.limit as number).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${isDanger ? 'bg-red-500' : isWarning ? 'bg-yellow-500' : 'bg-primary'}`}
+                        style={{ width: isUnlimited ? '0%' : `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {usage.usage.totalCost > 0 && (
+              <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                Total tokens: {usage.usage.totalTokensUsed.toLocaleString()} · Estimated cost: ${usage.usage.totalCost.toFixed(2)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Section D: Recent Insights + Quick Actions */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recent Insights */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recent AI Insights</CardTitle>
+                <CardDescription>Automated insights from your AI models</CardDescription>
+              </div>
+              <Link to="/ai/insights">
+                <Button variant="ghost" size="sm">
+                  View All <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentInsights.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No recent insights available</p>
+              ) : (
+                recentInsights.map((insight) => (
+                  <div key={insight.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                    <div
+                      className={`p-1.5 rounded-lg shrink-0 ${
+                        insight.type === 'opportunity'
+                          ? 'bg-green-100 text-green-600'
+                          : insight.type === 'warning'
+                          ? 'bg-yellow-100 text-yellow-600'
+                          : 'bg-blue-100 text-blue-600'
+                      }`}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-medium text-sm truncate">{insight.title}</h4>
                         <Badge
                           variant={
-                            feature.status === 'active'
-                              ? 'success'
-                              : feature.status === 'training'
+                            insight.priority === 'high'
+                              ? 'destructive'
+                              : insight.priority === 'medium'
                               ? 'warning'
                               : 'secondary'
                           }
-                          className="mt-1"
+                          className="shrink-0"
                         >
-                          {feature.status}
+                          {insight.priority}
                         </Badge>
-                        )}
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{insight.description}</p>
                     </div>
                   </div>
-                  <CardDescription>{feature.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {feature.accuracy && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Accuracy:</span>
-                        <span className="font-medium">{feature.accuracy}</span>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* AI Recommendations */}
+        <Card>
+          <CardHeader>
+            <CardTitle>AI-Powered Recommendations</CardTitle>
+            <CardDescription>Actionable insights based on AI analysis</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recommendations.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No recommendations available</p>
+              ) : (
+                recommendations.map((rec) => {
+                  const Icon = typeof rec.icon === 'string' ? (iconMap[rec.icon] || Target) : (rec.icon || Target)
+                  return (
+                    <div key={rec.id} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-primary/10 rounded-lg">
+                            {Icon && <Icon className="h-4 w-4 text-primary" />}
+                          </div>
+                          <h4 className="font-medium text-sm">{rec.title}</h4>
+                        </div>
+                        <Badge
+                          variant={
+                            rec.impact === 'High'
+                              ? 'destructive'
+                              : rec.impact === 'Medium'
+                              ? 'warning'
+                              : 'secondary'
+                          }
+                        >
+                          {rec.impact}
+                        </Badge>
                       </div>
-                    )}
-                    {feature.leadsScored && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Leads Scored:</span>
-                        <span className="font-medium">{feature.leadsScored}</span>
-                      </div>
-                    )}
-                    {feature.segments && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Segments:</span>
-                        <span className="font-medium">{feature.segments}</span>
-                      </div>
-                    )}
-                    {feature.predictions && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Predictions:</span>
-                        <span className="font-medium">{feature.predictions}</span>
-                      </div>
-                    )}
-                    {feature.models && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Models:</span>
-                        <span className="font-medium">{feature.models}</span>
-                      </div>
-                    )}
-                    {feature.insights && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Insights:</span>
-                        <span className="font-medium">{feature.insights}</span>
-                      </div>
-                    )}
-                    <Link to={feature.path}>
-                      <Button className="w-full mt-2" variant="outline">
-                        Open
+                      <p className="text-xs text-muted-foreground">{rec.description}</p>
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => handleRecommendationAction(rec)}>
+                        <Zap className="mr-1.5 h-3.5 w-3.5" />
+                        {rec.action}
                       </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Recent Insights */}
+      {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent AI Insights</CardTitle>
-          <CardDescription>Automated insights from your AI models</CardDescription>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Common AI operations</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentInsightsData.map((insight) => (
-              <div key={insight.id} className="flex items-start space-x-4 p-4 border rounded-lg">
-                <div
-                  className={`p-2 rounded-lg ${
-                    insight.type === 'opportunity'
-                      ? 'bg-green-100 text-green-600'
-                      : insight.type === 'warning'
-                      ? 'bg-yellow-100 text-yellow-600'
-                      : 'bg-blue-100 text-blue-600'
-                  }`}
-                >
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-medium">{insight.title}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">{insight.description}</p>
-                    </div>
-                    <Badge
-                      variant={
-                        insight.priority === 'high'
-                          ? 'destructive'
-                          : insight.priority === 'medium'
-                          ? 'warning'
-                          : 'secondary'
-                      }
-                    >
-                      {insight.priority}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">{insight.date}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Model Performance Chart */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Model Accuracy Trend</CardTitle>
-            <CardDescription>Prediction accuracy over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={modelPerformance}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="accuracy" stroke="#3b82f6" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Feature Importance</CardTitle>
-            <CardDescription>Factors affecting predictions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={featureImportance}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {featureImportance.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Training Progress */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Model Training</CardTitle>
-              <CardDescription>Active training sessions</CardDescription>
-            </div>
-            <Button onClick={handleUploadData} disabled={uploading}>
-              <Upload className="mr-2 h-4 w-4" />
-              {uploading ? 'Uploading...' : 'Upload Training Data'}
+          <div className="grid gap-3 md:grid-cols-4">
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/lead-scoring')}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Recalculate Scores
+            </Button>
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/insights')}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              View All Insights
+            </Button>
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/predictive')}>
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View Predictions
+            </Button>
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/settings')}>
+              <Settings className="h-4 w-4 mr-2" />
+              Configure AI Profile
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {trainingModels.map((model, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{model.name}</span>
-                    <Badge
-                      variant={
-                        model.status === 'complete'
-                          ? 'success'
-                          : model.status === 'training'
-                          ? 'default'
-                          : 'secondary'
-                      }
-                    >
-                      {model.status}
-                    </Badge>
-                  </div>
-                  <span className="text-sm text-muted-foreground">ETA: {model.eta}</span>
-                </div>
-                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full transition-all ${
-                      model.status === 'complete' ? 'bg-green-500' : 'bg-blue-500'
-                    }`}
-                    style={{ width: `${model.progress}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{model.progress}% complete</span>
-                  {model.status === 'training' && (
-                    <span className="flex items-center gap-1">
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                      Training...
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Data Quality Indicators */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Data Quality Metrics</CardTitle>
-          <CardDescription>Quality assessment of training data</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            {dataQuality.map((item, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{item.metric}</span>
-                  {item.status === 'excellent' ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : item.status === 'good' ? (
-                    <CheckCircle className="h-4 w-4 text-blue-500" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-yellow-500" />
-                  )}
-                </div>
-                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full ${
-                      item.status === 'excellent'
-                        ? 'bg-green-500'
-                        : item.status === 'good'
-                        ? 'bg-blue-500'
-                        : 'bg-yellow-500'
-                    }`}
-                    style={{ width: `${item.score}%` }}
-                  />
-                </div>
-                <div className="text-right">
-                  <span className="text-2xl font-bold">{item.score}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* AI Recommendations */}
-      <Card>
-        <CardHeader>
-          <CardTitle>AI-Powered Recommendations</CardTitle>
-          <CardDescription>Actionable insights based on AI analysis</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            {recommendations.map((rec) => {
-              // Handle both component references (mock data) and string names (API data)
-              const Icon = typeof rec.icon === 'string' ? (iconMap[rec.icon] || Target) : (rec.icon || Target)
-              return (
-                <div key={rec.id} className="rounded-lg border p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      {Icon && <Icon className="h-5 w-5 text-primary" />}
-                    </div>
-                    <Badge
-                      variant={
-                        rec.impact === 'High'
-                          ? 'destructive'
-                          : rec.impact === 'Medium'
-                          ? 'warning'
-                          : 'secondary'
-                      }
-                    >
-                      {rec.impact} Impact
-                    </Badge>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-1">{rec.title}</h4>
-                    <p className="text-sm text-muted-foreground">{rec.description}</p>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => handleRecommendationAction(rec)}>
-                    <Zap className="mr-2 h-4 w-4" />
-                    {rec.action}
-                  </Button>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Prediction Volume Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Predictions</CardTitle>
-          <CardDescription>Total predictions generated per month</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={modelPerformance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="predictions" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>

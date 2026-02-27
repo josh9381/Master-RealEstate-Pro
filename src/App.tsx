@@ -56,6 +56,7 @@ const PredictiveAnalytics = lazy(() => import('./pages/ai/PredictiveAnalytics'))
 const ModelTraining = lazy(() => import('./pages/ai/ModelTraining'))
 const IntelligenceInsights = lazy(() => import('./pages/ai/IntelligenceInsights'))
 const AIAnalytics = lazy(() => import('./pages/ai/AIAnalytics'))
+const AISettings = lazy(() => import('./pages/ai/AISettings'))
 
 // Analytics (lazy loaded)
 const AnalyticsDashboard = lazy(() => import('./pages/analytics/AnalyticsDashboard'))
@@ -195,6 +196,7 @@ function App() {
         <Route path="/ai/training" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Model Training"><ModelTraining /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/insights" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Insights"><IntelligenceInsights /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Settings"><AISettings /></PageErrorBoundary></Suspense>} />
         
         {/* Analytics */}
         <Route path="/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Analytics Dashboard"><AnalyticsDashboard /></PageErrorBoundary></Suspense>} />

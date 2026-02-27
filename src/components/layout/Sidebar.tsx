@@ -19,15 +19,26 @@ import {
   User,
   LogOut,
   ChevronUp,
+  ChevronDown,
   Crown,
   UserCog,
+  Target,
+  Sparkles,
+  TrendingUp,
+  SlidersHorizontal,
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Leads', href: '/leads', icon: Users },
   { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
-  { name: 'AI Hub', href: '/ai', icon: Brain },
+  { name: 'AI Hub', href: '/ai', icon: Brain, children: [
+    { name: 'Overview', href: '/ai', icon: Brain },
+    { name: 'Lead Scoring', href: '/ai/lead-scoring', icon: Target },
+    { name: 'Insights', href: '/ai/insights', icon: Sparkles },
+    { name: 'Predictive', href: '/ai/predictive', icon: TrendingUp },
+    { name: 'AI Settings', href: '/ai/settings', icon: SlidersHorizontal },
+  ]},
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Communications', href: '/communication', icon: MessageSquare },
   { name: 'Automation', href: '/workflows', icon: Zap },
@@ -49,6 +60,7 @@ export function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useUIStore()
   const { user, logout, isAdmin: _isAdmin, isManager: _isManager, getSubscriptionTier } = useAuthStore()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [aiHubExpanded, setAiHubExpanded] = useState(location.pathname.startsWith('/ai'))
 
   const handleLogout = async () => {
     setShowProfileMenu(false)
@@ -104,6 +116,60 @@ export function Sidebar() {
             {navigation.map((item) => {
               const isActive = location.pathname === item.href || 
                 (item.href !== '/' && location.pathname.startsWith(item.href))
+
+              // Items with children (collapsible sub-nav)
+              if (item.children) {
+                const isChildActive = item.children.some(
+                  (child) => location.pathname === child.href
+                )
+                const isExpanded = aiHubExpanded || isChildActive
+
+                return (
+                  <li key={item.name}>
+                    <button
+                      onClick={() => setAiHubExpanded(!isExpanded)}
+                      className={cn(
+                        'flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        isChildActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      )}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </div>
+                      <ChevronDown className={cn(
+                        'h-4 w-4 transition-transform',
+                        isExpanded && 'rotate-180'
+                      )} />
+                    </button>
+                    {isExpanded && (
+                      <ul className="mt-1 ml-4 space-y-1 border-l pl-3">
+                        {item.children.map((child) => {
+                          const isSubActive = location.pathname === child.href
+                          return (
+                            <li key={child.href}>
+                              <Link
+                                to={child.href}
+                                className={cn(
+                                  'flex items-center space-x-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
+                                  isSubActive
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                )}
+                              >
+                                <child.icon className="h-4 w-4" />
+                                <span>{child.name}</span>
+                              </Link>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                )
+              }
               
               return (
                 <li key={item.name}>

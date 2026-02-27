@@ -24,11 +24,24 @@ const AIAnalytics = () => {
         let performanceData: Array<{ date?: string; month?: string; accuracy?: number; latency?: number; throughput?: number }> = []
         let modelComparison: Array<{ model: string; accuracy: number; speed: number; reliability: number }> = []
 
-        if (data?.performance) {
-          performanceData = data.performance
+        if (data?.history || data?.performance) {
+          const raw = data.history || data.performance || []
+          performanceData = raw.map((h: any) => ({
+            date: h.date ? new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : h.month,
+            accuracy: h.accuracyAfter ?? h.accuracy ?? 0,
+            latency: h.trainingDuration ?? h.latency ?? 0,
+            throughput: h.sampleSize ?? h.throughput ?? 0,
+          }))
         }
         // Derive model comparison from real API data
-        if (data?.models && Array.isArray(data.models)) {
+        if (data?.currentModels && Array.isArray(data.currentModels)) {
+          modelComparison = data.currentModels.map((m: any) => ({
+            model: m.user || m.name || m.model || 'Unknown',
+            accuracy: Math.round(m.accuracy || 0),
+            speed: m.speed ?? (m.trainingDataCount ? Math.min(100, m.trainingDataCount) : 0),
+            reliability: m.lastTrainedAt ? 95 : 50,
+          }))
+        } else if (data?.models && Array.isArray(data.models)) {
           modelComparison = data.models.map((m: { name?: string; model?: string; accuracy?: number; speed?: number; latency?: number; reliability?: number; uptime?: number }) => ({
             model: m.name || m.model || 'Unknown',
             accuracy: m.accuracy || 0,

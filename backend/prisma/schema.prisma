@@ -502,6 +502,7 @@ model User {
   refreshTokens        RefreshToken[]
   passwordResetTokens  PasswordResetToken[]
   loginHistory         LoginHistory[]
+  ModelPerformanceHistory ModelPerformanceHistory[]
 
   @@unique([organizationId, email])
   @@index([email])
@@ -768,8 +769,18 @@ model Organization {
   isActive          Boolean             @default(true)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
+  // Phase 3: Org-level AI configuration
+  openaiApiKey          String?         // Encrypted at rest
+  openaiOrgId           String?
+  useOwnAIKey           Boolean         @default(false)
+  aiSystemPrompt        String?         // Custom instructions for org AI
+  aiDefaultTone         String          @default("professional")
+  aiDefaultModel        String?         // Override default model
+  aiMaxTokensPerRequest Int?            // Override max tokens
+  aiMonthlyTokenBudget  Int?            // Optional hard cap
   ABTest            ABTest[]
   AIAssistant       AIAssistant[]
+  AIInsight         AIInsight[]
   Activity          Activity[]
   Appointment       Appointment[]
   Call              Call[]
@@ -780,6 +791,7 @@ model Organization {
   Lead              Lead[]
   LeadScoringModel  LeadScoringModel[]
   Message           Message[]
+  ModelPerformanceHistory ModelPerformanceHistory[]
   Notification      Notification[]
   ScoringConfig     ScoringConfig?
   Segment           Segment[]
@@ -821,18 +833,74 @@ model Subscription {
 }
 
 model UsageTracking {
-  id             String       @id @default(cuid())
-  subscriptionId String
-  month          String
-  aiMessages     Int          @default(0)
-  callMinutes    Float        @default(0)
-  enhancements   Int          @default(0)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  id                    String       @id @default(cuid())
+  subscriptionId        String
+  month                 String       // YYYY-MM format
+  aiMessages            Int          @default(0)
+  contentGenerations    Int          @default(0)
+  composeUses           Int          @default(0)
+  scoringRecalculations Int          @default(0)
+  webSearches           Int          @default(0)
+  callMinutes           Float        @default(0)
+  enhancements          Int          @default(0)
+  totalTokensUsed       Int          @default(0)
+  totalCost             Float        @default(0)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  subscription          Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@unique([subscriptionId, month])
   @@index([month])
+}
+
+// Phase 1A: Track model performance over time (after each recalibration)
+model ModelPerformanceHistory {
+  id               String       @id @default(cuid())
+  organizationId   String
+  userId           String
+  modelType        String       @default("lead_scoring") // lead_scoring, engagement, conversion
+  accuracyBefore   Float?
+  accuracyAfter    Float
+  sampleSize       Int
+  improvements     Json?        // Array of improvement descriptions
+  trainingDuration Int?         // milliseconds
+  metadata         Json?        // Extra data (weights, config used, etc.)
+  createdAt        DateTime     @default(now())
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
+  @@index([modelType])
+}
+
+// Phase 1C: AI-generated insights stored in DB
+model AIInsight {
+  id             String       @id @default(cuid())
+  organizationId String
+  type           String       // lead_followup, scoring_accuracy, email_performance, pipeline_health
+  priority       String       @default("medium") // low, medium, high, critical
+  title          String
+  description    String
+  data           Json?        // Supporting data (lead IDs, metrics, etc.)
+  actionUrl      String?      // Deep link to relevant page
+  dismissed      Boolean      @default(false)
+  dismissedAt    DateTime?
+  dismissedBy    String?
+  actedOn        Boolean      @default(false)
+  actedOnAt      DateTime?
+  actedOnBy      String?
+  actionTaken    String?
+  expiresAt      DateTime?    // Auto-expire stale insights
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, dismissed])
+  @@index([organizationId, type])
+  @@index([organizationId, actedOn])
+  @@index([priority])
+  @@index([expiresAt])
 }
 
 model UserAIPreferences {
@@ -842,8 +910,31 @@ model UserAIPreferences {
   autoSuggestActions   Boolean      @default(true)
   enableProactive      Boolean      @default(true)
   preferredContactTime String?
-  aiInsightsFrequency  String       @default("daily")
-  customInstructions   String?
+  aiInsightsFrequency      String       @default("daily")
+  insightPriorityThreshold  String       @default("all")
+  insightTypes              Json?        @default("[\"lead_followup\",\"scoring_accuracy\",\"email_performance\",\"pipeline_health\"]")
+  customInstructions        String?
+  // Composer preferences (Phase 4)
+  composerDefaultTone          String  @default("professional")
+  composerDefaultLength        String  @default("standard")
+  composerDefaultCTA           Boolean @default(true)
+  composerDefaultPersonalization String @default("standard")
+  composerAutoGenerate         Boolean @default(true)
+  composerShowAdvanced         Boolean @default(false)
+  // AI Profile fields (Phase 2 - AI Hub Rebuild)
+  brandGuidelines        String?
+  businessContext         String?
+  defaultEmailStructure  String    @default("professional")
+  propertyDescStyle      String    @default("balanced")
+  socialMediaPrefs       Json?
+  enhancementLevel       String    @default("moderate")
+  // Feature toggles (user-level)
+  enableLeadScoring      Boolean   @default(true)
+  enableCompose          Boolean   @default(true)
+  enableContentGen       Boolean   @default(true)
+  enableMessageEnhancer  Boolean   @default(true)
+  enableTemplateAI       Boolean   @default(true)
+  enableInsights         Boolean   @default(true)
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
   organizationId       String

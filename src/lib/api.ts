@@ -805,6 +805,9 @@ export interface InsightFilter {
   type?: string
   priority?: string
   limit?: number
+  status?: 'active' | 'dismissed' | 'acted' | 'all'
+  sortBy?: 'newest' | 'priority' | 'impact'
+  showDismissed?: boolean
 }
 
 export interface RecommendationFilter {
@@ -895,6 +898,11 @@ export const aiApi = {
     return response.data
   },
 
+  actOnInsight: async (id: string, actionTaken?: string) => {
+    const response = await api.post(`/ai/insights/${id}/act`, { actionTaken })
+    return response.data
+  },
+
   getRecommendations: async (params?: RecommendationFilter) => {
     const response = await api.get('/ai/recommendations', { params })
     return response.data
@@ -979,6 +987,33 @@ export const aiApi = {
 
   resetScoringConfig: async () => {
     const response = await api.post('/ai/scoring-config/reset')
+    return response.data
+  },
+
+  // AI Preferences (Settings page)
+  getPreferences: async () => {
+    const response = await api.get('/ai/preferences')
+    return response.data
+  },
+
+  savePreferences: async (preferences: Record<string, unknown>) => {
+    const response = await api.post('/ai/preferences', preferences)
+    return response.data
+  },
+
+  resetPreferences: async () => {
+    const response = await api.post('/ai/preferences/reset')
+    return response.data
+  },
+
+  // AI Usage
+  getUsage: async () => {
+    const response = await api.get('/ai/usage')
+    return response.data
+  },
+
+  getUsageLimits: async () => {
+    const response = await api.get('/ai/usage/limits')
     return response.data
   },
 }

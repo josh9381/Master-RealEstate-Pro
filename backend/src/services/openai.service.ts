@@ -1,9 +1,20 @@
 import OpenAI from 'openai';
+import {
+  getOpenAIClient as getOrgOpenAIClient,
+  getModelForTask,
+  calculateCost as calculateModelCost,
+  buildSystemPrompt,
+  AIConfig,
+  MODEL_PRICING,
+} from './ai-config.service';
+import { withRetryAndFallback } from '../utils/ai-retry';
+import { aiLogger } from '../utils/ai-logger';
+import { buildCacheKey, getOrCompute } from './ai-cache.service';
 
 /**
  * OpenAI Service
  * Handles all AI features: chatbot, lead scoring, message enhancement
- * Phase 1 implementation
+ * Integrates with ai-config.service for org-level key/model resolution (Phase 3)
  */
 
 // Tone system for AI assistant personality
@@ -72,17 +83,47 @@ export class OpenAIService {
   private client: OpenAI;
   private model: string;
 
+  /**
+   * Resolve max_tokens: use the smaller of the per-method default and the
+   * per-tier limit from the org's subscription (config.maxTokens).
+   * Scoring/SMS have tiny per-method caps that should always win;
+   * long-form content caps at the tier limit when it's lower.
+   */
+  private capTokens(perMethodDefault: number, config?: AIConfig): number {
+    if (!config?.maxTokens) return perMethodDefault;
+    return Math.min(perMethodDefault, config.maxTokens);
+  }
+
   constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured');
-    }
+    // Platform key is optional — orgs may supply their own via ai-config.service
+    const apiKey = process.env.OPENAI_API_KEY || 'placeholder-will-use-org-key';
 
     this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey,
       organization: process.env.OPENAI_ORG_ID,
     });
 
-    this.model = process.env.OPENAI_MODEL || 'gpt-4-turbo-preview';
+    this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  }
+
+  /**
+   * Resolve the OpenAI client and model for a given organization.
+   * Falls back to the default platform client if org resolution fails.
+   */
+  private async resolveClientForOrg(
+    organizationId?: string,
+    task?: 'chat' | 'compose' | 'content' | 'enhance' | 'sms' | 'score' | 'suggest' | 'deep_analysis' | 'premium'
+  ): Promise<{ client: OpenAI; model: string; config?: AIConfig }> {
+    if (organizationId) {
+      try {
+        const { client, config } = await getOrgOpenAIClient(organizationId);
+        const model = task ? getModelForTask(task, config.model) : config.model;
+        return { client, model, config };
+      } catch (error) {
+        console.warn('Failed to resolve org AI config, falling back to default:', error);
+      }
+    }
+    return { client: this.client, model: this.model };
   }
 
   /**
@@ -97,22 +138,39 @@ export class OpenAIService {
     _userId: string,
     _organizationId: string
   ): Promise<ChatResponse> {
+    const { startTime } = aiLogger.start({ method: 'chat', model: 'pending', organizationId: _organizationId, userId: _userId });
     try {
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+      const { client, model, config } = await this.resolveClientForOrg(_organizationId, 'chat');
+
+      // Prepend org system prompt if configured
+      const resolvedMessages = [...messages];
+      if (config?.systemPrompt && resolvedMessages.length > 0 && resolvedMessages[0].role === 'system') {
+        resolvedMessages[0] = {
+          ...resolvedMessages[0],
+          content: buildSystemPrompt(resolvedMessages[0].content || '', config),
+        };
+      }
+
+      const { result: completion, modelUsed } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: resolvedMessages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+          temperature: 0.7,
+          max_tokens: this.capTokens(1000, config),
+        }),
+        client, model
+      );
 
       const response = completion.choices[0]?.message?.content || '';
       const tokens = completion.usage?.total_tokens || 0;
-      const cost = this.calculateCost(tokens, this.model);
+      const cost = calculateModelCost(tokens, modelUsed);
+
+      aiLogger.success({ method: 'chat', model, modelUsed, organizationId: _organizationId, userId: _userId, tokens, inputTokens: completion.usage?.prompt_tokens, outputTokens: completion.usage?.completion_tokens, cost, startTime });
 
       return { response, tokens, cost };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('OpenAI chat error:', error);
+      aiLogger.error({ method: 'chat', model: 'unknown', organizationId: _organizationId, userId: _userId, error, startTime });
       throw new Error(`AI chat failed: ${errorMessage}`);
     }
   }
@@ -132,24 +190,38 @@ export class OpenAIService {
     _organizationId: string
   ): Promise<ChatResponse> {
     try {
+      const { client, model, config } = await this.resolveClientForOrg(_organizationId, 'chat');
+
       // Convert functions to tools format (OpenAI SDK v4+ requirement)
       const tools = functions.map((fn: any) => ({
         type: 'function' as const,
         function: fn,
       }));
 
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-        tools: tools,
-        tool_choice: 'auto',
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+      // Prepend org system prompt if configured
+      const resolvedMessages = [...messages];
+      if (config?.systemPrompt && resolvedMessages.length > 0 && resolvedMessages[0].role === 'system') {
+        resolvedMessages[0] = {
+          ...resolvedMessages[0],
+          content: buildSystemPrompt(resolvedMessages[0].content || '', config),
+        };
+      }
+
+      const { result: completion, modelUsed } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: resolvedMessages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+          tools: tools,
+          tool_choice: 'auto',
+          temperature: 0.7,
+          max_tokens: this.capTokens(1000, config),
+        }),
+        client, model
+      );
 
       const choice = completion.choices[0];
       const tokens = completion.usage?.total_tokens || 0;
-      const cost = this.calculateCost(tokens, this.model);
+      const cost = calculateModelCost(tokens, modelUsed);
 
       // Check if AI wants to call a function (tool_calls is the new format)
       if (choice?.message?.tool_calls && choice.message.tool_calls.length > 0) {
@@ -191,8 +263,12 @@ export class OpenAIService {
    * @returns Lead score (0-100)
    */
   async analyzeLeadScore(leadData: Record<string, unknown>, _organizationId: string): Promise<number> {
-    try {
-      const prompt = `Analyze this real estate lead and provide a score from 0-100 based on conversion likelihood.
+    const cacheKey = buildCacheKey('scoring', _organizationId, JSON.stringify(leadData));
+    return getOrCompute<number>(cacheKey, 'scoring', async () => {
+      try {
+        const { client, model } = await this.resolveClientForOrg(_organizationId, 'score');
+
+        const prompt = `Analyze this real estate lead and provide a score from 0-100 based on conversion likelihood.
       
 Lead Data:
 ${JSON.stringify(leadData, null, 2)}
@@ -206,21 +282,25 @@ Consider:
 
 Return only a number between 0-100.`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        max_tokens: 10,
-      });
+        const { result: completion } = await withRetryAndFallback(
+          (c, m) => c.chat.completions.create({
+            model: m,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.3,
+            max_tokens: 10,
+          }),
+          client, model
+        );
 
-      const scoreText = completion.choices[0]?.message?.content || '0';
-      const score = parseInt(scoreText.trim(), 10);
+        const scoreText = completion.choices[0]?.message?.content || '0';
+        const score = parseInt(scoreText.trim(), 10);
 
-      return Math.min(Math.max(score, 0), 100); // Clamp between 0-100
-    } catch (error: unknown) {
-      console.error('OpenAI lead scoring error:', error);
-      return 50; // Default to neutral score on error
-    }
+        return Math.min(Math.max(score, 0), 100); // Clamp between 0-100
+      } catch (error: unknown) {
+        console.error('OpenAI lead scoring error:', error);
+        return 50; // Default to neutral score on error
+      }
+    });
   }
 
   /**
@@ -229,8 +309,10 @@ Return only a number between 0-100.`;
    * @param tone - Desired tone (professional, friendly, urgent, etc.)
    * @returns Enhanced message with token/cost info
    */
-  async enhanceMessage(text: string, tone: string): Promise<EnhancedMessage> {
+  async enhanceMessage(text: string, tone: string, organizationId?: string): Promise<EnhancedMessage> {
     try {
+      const { client, model, config } = await this.resolveClientForOrg(organizationId, 'enhance');
+
       const tonePrompts: Record<string, string> = {
         professional:
           'Rewrite this message in a professional, business-appropriate tone:',
@@ -249,16 +331,19 @@ ${text}
 
 Return only the enhanced message, no explanations.`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
+      const { result: completion, modelUsed } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: this.capTokens(500, config),
+        }),
+        client, model
+      );
 
       const enhanced = completion.choices[0]?.message?.content || text;
       const tokens = completion.usage?.total_tokens || 0;
-      const cost = this.calculateCost(tokens, this.model);
+      const cost = calculateModelCost(tokens, modelUsed);
 
       return { enhanced, tokens, cost };
     } catch (error: unknown) {
@@ -279,9 +364,14 @@ Return only the enhanced message, no explanations.`;
     goal: string;
     tone?: string;
     sequenceLength?: number;
+    organizationId?: string;
   }): Promise<Array<{ subject: string; body: string; dayOffset: number }>> {
+    const orgId = context.organizationId || 'platform';
+    const cacheKey = buildCacheKey('content', orgId, 'email:' + JSON.stringify(context));
+    return getOrCompute(cacheKey, 'content', async () => {
     try {
-      const { leadName = 'there', propertyType = 'property', goal, tone = 'professional', sequenceLength = 5 } = context;
+      const { leadName = 'there', propertyType = 'property', goal, tone = 'professional', sequenceLength = 5, organizationId } = context;
+      const { client, model, config } = await this.resolveClientForOrg(organizationId, 'content');
 
       const prompt = `Generate a ${sequenceLength}-email nurture sequence for a real estate ${goal} campaign.
 
@@ -307,13 +397,16 @@ Return as JSON array:
   ...
 ]`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.8,
-        max_tokens: 2000,
-        response_format: { type: 'json_object' },
-      });
+      const { result: completion } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8,
+          max_tokens: this.capTokens(2000, config),
+          response_format: { type: 'json_object' },
+        }),
+        client, model
+      );
 
       const responseText = completion.choices[0]?.message?.content || '{}';
       const parsed = JSON.parse(responseText);
@@ -321,16 +414,17 @@ Return as JSON array:
       // Handle different response formats
       const emails = parsed.emails || parsed.sequence || [];
       
-      return emails.map((email: { subject: string; body: string }, index: number) => ({
+      return emails.map((email: { subject: string; body: string; dayOffset?: number }, index: number) => ({
         subject: email.subject,
         body: email.body,
-        dayOffset: index * 3, // Default: 3 days between emails
+        dayOffset: email.dayOffset ?? index * 3, // Prefer AI-generated offset
       }));
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('OpenAI email sequence generation error:', error);
       throw new Error(`Email sequence generation failed: ${errorMessage}`);
     }
+    }); // end getOrCompute
   }
 
   /**
@@ -343,9 +437,11 @@ Return as JSON array:
     propertyType?: string;
     goal: string;
     tone?: string;
+    organizationId?: string;
   }): Promise<string> {
     try {
-      const { leadName = 'there', propertyType = 'property', goal, tone = 'friendly' } = context;
+      const { leadName = 'there', propertyType = 'property', goal, tone = 'friendly', organizationId } = context;
+      const { client, model, config } = await this.resolveClientForOrg(organizationId, 'sms');
 
       const prompt = `Generate a short SMS message (max 160 characters) for a real estate ${goal} campaign.
 
@@ -363,12 +459,15 @@ Requirements:
 
 Return only the SMS text, no quotes or explanations.`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.8,
-        max_tokens: 100,
-      });
+      const { result: completion } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8,
+          max_tokens: this.capTokens(100, config),
+        }),
+        client, model
+      );
 
       const sms = completion.choices[0]?.message?.content || '';
       // Truncate to 160 characters if needed
@@ -394,9 +493,14 @@ Return only the SMS text, no quotes or explanations.`;
     price?: number;
     features?: string[];
     neighborhood?: string;
+    organizationId?: string;
   }): Promise<string> {
+    const orgId = propertyData.organizationId || 'platform';
+    const cacheKey = buildCacheKey('content', orgId, JSON.stringify(propertyData));
+    return getOrCompute<string>(cacheKey, 'content', async () => {
     try {
-      const { address, propertyType, bedrooms, bathrooms, squareFeet, price, features = [], neighborhood } = propertyData;
+      const { address, propertyType, bedrooms, bathrooms, squareFeet, price, features = [], neighborhood, organizationId } = propertyData;
+      const { client, model, config } = await this.resolveClientForOrg(organizationId, 'content');
 
       const prompt = `Generate a compelling property listing description for:
 
@@ -419,12 +523,15 @@ Create a 150-250 word description that:
 
 Use vivid, descriptive language that helps buyers visualize living there.`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.8,
-        max_tokens: 500,
-      });
+      const { result: completion } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8,
+          max_tokens: this.capTokens(500, config),
+        }),
+        client, model
+      );
 
       return completion.choices[0]?.message?.content || 'Beautiful property available.';
     } catch (error: unknown) {
@@ -432,6 +539,7 @@ Use vivid, descriptive language that helps buyers visualize living there.`;
       console.error('OpenAI property description generation error:', error);
       throw new Error(`Property description generation failed: ${errorMessage}`);
     }
+    }); // end getOrCompute
   }
 
   /**
@@ -444,9 +552,14 @@ Use vivid, descriptive language that helps buyers visualize living there.`;
     propertyAddress?: string;
     platforms: string[];
     tone?: string;
+    organizationId?: string;
   }): Promise<Record<string, string>> {
+    const orgId = context.organizationId || 'platform';
+    const cacheKey = buildCacheKey('content', orgId, 'social:' + JSON.stringify(context));
+    return getOrCompute(cacheKey, 'content', async () => {
     try {
-      const { topic, propertyAddress, platforms, tone = 'engaging' } = context;
+      const { topic, propertyAddress, platforms, tone = 'engaging', organizationId } = context;
+      const { client, model, config } = await this.resolveClientForOrg(organizationId, 'content');
 
       const platformSpecs: Record<string, string> = {
         facebook: '150-200 words, conversational, can include emojis',
@@ -472,13 +585,16 @@ Return as JSON:
   ...
 }`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.8,
-        max_tokens: 1000,
-        response_format: { type: 'json_object' },
-      });
+      const { result: completion } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8,
+          max_tokens: this.capTokens(1000, config),
+          response_format: { type: 'json_object' },
+        }),
+        client, model
+      );
 
       const responseText = completion.choices[0]?.message?.content || '{}';
       return JSON.parse(responseText);
@@ -487,6 +603,7 @@ Return as JSON:
       console.error('OpenAI social post generation error:', error);
       throw new Error(`Social post generation failed: ${errorMessage}`);
     }
+    }); // end getOrCompute
   }
 
   /**
@@ -500,6 +617,7 @@ Return as JSON:
     estimatedValue?: number;
     comparables?: Array<{ address: string; soldPrice: number; soldDate: string }>;
     marketTrends?: string;
+    organizationId?: string;
   }): Promise<{
     introduction: string;
     marketAnalysis: string;
@@ -507,8 +625,12 @@ Return as JSON:
     marketingPlan: string;
     nextSteps: string;
   }> {
+    const orgId = propertyData.organizationId || 'platform';
+    const cacheKey = buildCacheKey('content', orgId, 'listing:' + JSON.stringify(propertyData));
+    return getOrCompute(cacheKey, 'content', async () => {
     try {
-      const { address, propertyType, estimatedValue, comparables = [], marketTrends } = propertyData;
+      const { address, propertyType, estimatedValue, comparables = [], marketTrends, organizationId } = propertyData;
+      const { client, model, config } = await this.resolveClientForOrg(organizationId, 'content');
 
       const prompt = `Generate a professional listing presentation outline for:
 
@@ -537,13 +659,16 @@ Return as JSON:
   "nextSteps": "..."
 }`;
 
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1500,
-        response_format: { type: 'json_object' },
-      });
+      const { result: completion } = await withRetryAndFallback(
+        (c, m) => c.chat.completions.create({
+          model: m,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: this.capTokens(1500, config),
+          response_format: { type: 'json_object' },
+        }),
+        client, model
+      );
 
       const responseText = completion.choices[0]?.message?.content || '{}';
       const parsed = JSON.parse(responseText);
@@ -560,14 +685,12 @@ Return as JSON:
       console.error('OpenAI listing presentation generation error:', error);
       throw new Error(`Listing presentation generation failed: ${errorMessage}`);
     }
+    }); // end getOrCompute
   }
 
   /**
-   * Stream chat responses token by token (Phase 3)
-   * @param messages - Conversation history
-   * @param _userId - User ID for tracking
-   * @param _organizationId - Organization ID for tracking
-   * @returns Async generator yielding tokens
+   * Stream chat responses token by token
+   * Uses org-specific client and model resolution (Phase 3)
    */
   async *chatStream(
     messages: ChatMessage[],
@@ -575,9 +698,20 @@ Return as JSON:
     _organizationId: string
   ): AsyncGenerator<string, void, unknown> {
     try {
-      const stream = await this.client.chat.completions.create({
-        model: this.model,
-        messages: messages as OpenAI.Chat.ChatCompletionMessageParam[],
+      const { client, model, config } = await this.resolveClientForOrg(_organizationId, 'chat');
+
+      // Prepend org system prompt if configured
+      const resolvedMessages = [...messages];
+      if (config?.systemPrompt && resolvedMessages.length > 0 && resolvedMessages[0].role === 'system') {
+        resolvedMessages[0] = {
+          ...resolvedMessages[0],
+          content: buildSystemPrompt(resolvedMessages[0].content || '', config),
+        };
+      }
+
+      const stream = await client.chat.completions.create({
+        model,
+        messages: resolvedMessages as OpenAI.Chat.ChatCompletionMessageParam[],
         temperature: 0.7,
         stream: true,
       })
@@ -597,32 +731,41 @@ Return as JSON:
 
   /**
    * Generate insights and recommendations (for Intelligence Hub)
-   * Phase 3 implementation
+   * Uses org-specific client and model resolution (Phase 3)
    */
-  async generateInsights(_userData: Record<string, unknown>, _organizationId: string): Promise<Record<string, unknown>[]> {
-    // TODO: Implement in Phase 3
-    throw new Error('Not implemented yet - Phase 3');
+  async generateInsights(userData: Record<string, unknown>, organizationId: string): Promise<Record<string, unknown>[]> {
+    const cacheKey = buildCacheKey('content', organizationId, 'insights:' + JSON.stringify(userData));
+    return getOrCompute<Record<string, unknown>[]>(cacheKey, 'content', async () => {
+    const { client, model, config } = await this.resolveClientForOrg(organizationId, 'suggest');
+
+    const prompt = `Analyze this real estate agent's data and provide actionable insights:
+${JSON.stringify(userData, null, 2)}
+
+Return a JSON array of insight objects with: type, title, description, priority (high/medium/low), action.`;
+
+    const { result: completion } = await withRetryAndFallback(
+      (c, m) => c.chat.completions.create({
+        model: m,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.5,
+        max_tokens: this.capTokens(1500, config),
+        response_format: { type: 'json_object' },
+      }),
+      client, model
+    );
+
+    const responseText = completion.choices[0]?.message?.content || '{}';
+    const parsed = JSON.parse(responseText);
+    return parsed.insights || [];
+    }); // end getOrCompute
   }
 
   /**
    * Calculate cost based on tokens used
-   * Prices as of Nov 2024 (update as needed)
-   * @param tokens - Number of tokens used
-   * @param model - Model name
-   * @returns Cost in USD
+   * Uses updated pricing from ai-config.service (Phase 3)
    */
   private calculateCost(tokens: number, model: string): number {
-    const pricing: Record<string, { input: number; output: number }> = {
-      'gpt-4-turbo-preview': { input: 0.01 / 1000, output: 0.03 / 1000 },
-      'gpt-4': { input: 0.03 / 1000, output: 0.06 / 1000 },
-      'gpt-3.5-turbo': { input: 0.0005 / 1000, output: 0.0015 / 1000 },
-    };
-
-    const modelPricing = pricing[model] || pricing['gpt-4-turbo-preview'];
-    // Approximate: assume 50/50 split between input and output
-    const avgCost = (modelPricing.input + modelPricing.output) / 2;
-
-    return tokens * avgCost;
+    return calculateModelCost(tokens, model);
   }
 }
 
@@ -631,7 +774,27 @@ let openAIService: OpenAIService | null = null;
 
 export const getOpenAIService = (): OpenAIService => {
   if (!openAIService) {
-    openAIService = new OpenAIService();
+    try {
+      openAIService = new OpenAIService();
+    } catch (error) {
+      console.error('Failed to initialize OpenAIService:', error);
+      throw error;
+    }
   }
   return openAIService;
+};
+
+/**
+ * Rotate the platform OpenAI key without downtime (Phase 5E).
+ * Destroys the singleton so the next call re-creates it with the new env var.
+ * Also clears the org-level client cache in ai-config.service.
+ *
+ * Usage: Set the new key in process.env.OPENAI_API_KEY, then call this.
+ */
+export const rotatePlatformKey = (newKey?: string): void => {
+  if (newKey) {
+    process.env.OPENAI_API_KEY = newKey;
+  }
+  openAIService = null;
+  console.log('[Key Rotation] OpenAI platform key rotated, singleton reset');
 };
