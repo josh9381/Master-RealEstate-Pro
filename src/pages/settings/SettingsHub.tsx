@@ -1,4 +1,4 @@
-import { Settings, User, Building2, Shield, Bell, CreditCard, Tag, List } from 'lucide-react';
+import { Settings, User, Building2, Shield, Bell, CreditCard, Tag, List, FileCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Link } from 'react-router-dom';
 const SettingsHub = () => {
@@ -66,6 +66,14 @@ const SettingsHub = () => {
       icon: List,
       path: '/settings/custom-fields',
       items: ['Field Types', 'Validation', 'Options', 'Requirements'],
+    },
+    {
+      id: 'compliance',
+      title: 'Compliance',
+      description: 'Manage regulatory compliance and data policies',
+      icon: FileCheck,
+      path: '/settings/compliance',
+      items: ['GDPR Settings', 'Data Retention', 'Consent Management', 'Audit Trail'],
     },
   ];
 

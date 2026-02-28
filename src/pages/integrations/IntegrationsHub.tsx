@@ -1,9 +1,37 @@
-import { Plug, CheckCircle, AlertCircle, Settings } from 'lucide-react';
+import { Plug, CheckCircle, AlertCircle, Settings, Mail, MessageSquare, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { settingsApi } from '@/lib/api';
 
 const IntegrationsHub = () => {
+  // Real API status checks (ported from old Integrations.tsx)
+  const { data: integrationStatus } = useQuery({
+    queryKey: ['settings', 'integrations', 'status'],
+    queryFn: async () => {
+      let emailConfigured = false;
+      let smsConfigured = false;
+      try {
+        const emailConfig = await settingsApi.getEmailConfig();
+        emailConfigured = !!(emailConfig?.config?.isActive && emailConfig?.config?.apiKey !== null);
+      } catch (error) {
+        console.error('Failed to load email config:', error);
+      }
+      try {
+        const smsConfig = await settingsApi.getSMSConfig();
+        smsConfigured = !!(smsConfig?.config?.isActive && smsConfig?.config?.accountSid !== null && smsConfig?.config?.authToken !== null);
+      } catch (error) {
+        console.error('Failed to load SMS config:', error);
+      }
+      return { emailConfigured, smsConfigured };
+    },
+  });
+
+  const emailConfigured = integrationStatus?.emailConfigured ?? false;
+  const smsConfigured = integrationStatus?.smsConfigured ?? false;
+
   const integrations = [
     {
       id: 1,
@@ -134,6 +162,99 @@ const IntegrationsHub = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Required Integrations — real API status */}
+      {(!emailConfigured || !smsConfigured) && (
+        <Card className="border-yellow-500/50 bg-yellow-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              Required Integrations
+            </CardTitle>
+            <CardDescription>These integrations are required for core functionality</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Link to="/settings/email">
+                <div className={`p-4 border rounded-lg hover:bg-accent transition-colors flex items-center justify-between ${emailConfigured ? 'border-green-500/50' : 'border-yellow-500/50'}`}>
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5 text-blue-500" />
+                    <div>
+                      <p className="font-medium">Email (SendGrid)</p>
+                      <p className="text-xs text-muted-foreground">Email sending & templates</p>
+                    </div>
+                  </div>
+                  <Badge variant={emailConfigured ? 'success' : 'secondary'}>
+                    {emailConfigured ? 'Active' : 'Setup Required'}
+                  </Badge>
+                </div>
+              </Link>
+              <Link to="/settings/twilio">
+                <div className={`p-4 border rounded-lg hover:bg-accent transition-colors flex items-center justify-between ${smsConfigured ? 'border-green-500/50' : 'border-yellow-500/50'}`}>
+                  <div className="flex items-center gap-3">
+                    <MessageSquare className="h-5 w-5 text-red-500" />
+                    <div>
+                      <p className="font-medium">Twilio (SMS & Calls)</p>
+                      <p className="text-xs text-muted-foreground">SMS campaigns & calls</p>
+                    </div>
+                  </div>
+                  <Badge variant={smsConfigured ? 'success' : 'secondary'}>
+                    {smsConfigured ? 'Active' : 'Setup Required'}
+                  </Badge>
+                </div>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Configuration Shortcuts */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuration</CardTitle>
+          <CardDescription>Configure your connected integrations</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Link to="/settings/email">
+              <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="font-medium">Email Configuration</p>
+                    <p className="text-xs text-muted-foreground">SendGrid API keys & templates</p>
+                  </div>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </Link>
+            <Link to="/settings/google">
+              <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📊</span>
+                  <div>
+                    <p className="font-medium">Google Integration</p>
+                    <p className="text-xs text-muted-foreground">Calendar, Contacts & Gmail</p>
+                  </div>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </Link>
+            <Link to="/settings/twilio">
+              <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="h-5 w-5 text-red-500" />
+                  <div>
+                    <p className="font-medium">Twilio Setup</p>
+                    <p className="text-xs text-muted-foreground">SMS & calling configuration</p>
+                  </div>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Integrations Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

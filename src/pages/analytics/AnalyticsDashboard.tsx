@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, TrendingUp, Users, DollarSign, Mail, Phone, Target, RefreshCw } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, DollarSign, Mail, Phone, Target, RefreshCw, ArrowRightLeft, Activity, FileBarChart, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -413,6 +413,57 @@ const AnalyticsDashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Explore More Analytics */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Explore More Analytics</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/conversions')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <ArrowRightLeft className="h-6 w-6 text-green-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Conversion Reports</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Funnel analysis, conversion rates & drop-off points
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/usage')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <Activity className="h-6 w-6 text-purple-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Usage Analytics</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Platform usage, feature adoption & user activity
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/custom-reports')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-orange-500/10 rounded-lg">
+                  <FileBarChart className="h-6 w-6 text-orange-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Custom Reports</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Build & save custom reports tailored to your needs
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

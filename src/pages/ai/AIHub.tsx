@@ -193,8 +193,8 @@ const AIHub = () => {
         </p>
       </div>
 
-      {/* Section A: Navigation Cards (4 sub-pages) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Section A: Navigation Cards (6 sub-pages) */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Link to="/ai/lead-scoring" className="group">
           <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
             <CardContent className="pt-6">
@@ -207,6 +207,23 @@ const AIHub = () => {
               <h3 className="font-semibold mt-3">Lead Scoring & Models</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {stats?.activeModels ? `${stats.activeModels} active model${stats.activeModels > 1 ? 's' : ''}, ${stats.avgAccuracy || 0}% accuracy` : getFeatureStat('scoring') || 'Score distribution & model config'}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/ai/segmentation" className="group">
+          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                  <BarChart3 className="h-6 w-6 text-cyan-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mt-3">Segmentation</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {getFeatureStat('segment') || 'AI-powered lead segments & clusters'}
               </p>
             </CardContent>
           </Card>
@@ -258,6 +275,23 @@ const AIHub = () => {
               <h3 className="font-semibold mt-3">AI Settings</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Configure your AI profile & preferences
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/ai/analytics" className="group">
+          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                  <Activity className="h-6 w-6 text-indigo-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h3 className="font-semibold mt-3">AI Analytics</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Performance metrics & usage analytics
               </p>
             </CardContent>
           </Card>

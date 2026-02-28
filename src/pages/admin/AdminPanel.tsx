@@ -1,4 +1,4 @@
-import { Shield, Database, AlertTriangle } from 'lucide-react';
+import { Shield, Database, AlertTriangle, Settings, Download, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -105,10 +105,37 @@ const AdminPanel = () => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => navigate('/admin/backup')}
+                  onClick={() => navigate('/admin/system')}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  System Settings
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/database')}
                 >
                   <Database className="w-4 h-4 mr-2" />
-                  Backup & Restore
+                  Database Maintenance
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/export')}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Data Export Wizard
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin/retry-queue')}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry Queue
                 </Button>
                 
                 <Button 

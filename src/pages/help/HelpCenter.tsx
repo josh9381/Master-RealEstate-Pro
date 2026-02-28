@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom';
 import { Book, Video, MessageCircle, Search, Keyboard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -6,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { KeyboardShortcutsModal } from '@/components/help/KeyboardShortcutsModal';
 
 const HelpCenter = () => {
+  const navigate = useNavigate();
   const [showShortcuts, setShowShortcuts] = useState(false)
   const categories = [
     {
@@ -110,7 +112,7 @@ const HelpCenter = () => {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/docs')}>
           <CardContent className="pt-6">
             <Book className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Documentation</h3>
@@ -123,7 +125,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/videos')}>
           <CardContent className="pt-6">
             <Video className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Video Tutorials</h3>
@@ -136,7 +138,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/support')}>
           <CardContent className="pt-6">
             <MessageCircle className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Contact Support</h3>
@@ -268,7 +270,7 @@ const HelpCenter = () => {
                 Support available: Monday-Friday, 9AM-6PM EST
               </p>
             </div>
-            <Button>
+            <Button onClick={() => navigate('/help/support')}>
               <MessageCircle className="h-4 w-4 mr-2" />
               Contact Support
             </Button>

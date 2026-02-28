@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { 
   Mail, 
@@ -1007,6 +1008,28 @@ const CommunicationInbox = () => {
             Compose New
           </Button>
         </div>
+      </div>
+
+      {/* Sub-Navigation */}
+      <div className="flex gap-2 border-b pb-3">
+        <Link to="/communication">
+          <Button variant="default" size="sm">
+            <Mail className="mr-2 h-4 w-4" />
+            Inbox
+          </Button>
+        </Link>
+        <Link to="/communication/templates">
+          <Button variant="outline" size="sm">
+            <FileText className="mr-2 h-4 w-4" />
+            Email Templates
+          </Button>
+        </Link>
+        <Link to="/communication/calls">
+          <Button variant="outline" size="sm">
+            <Phone className="mr-2 h-4 w-4" />
+            Call Center
+          </Button>
+        </Link>
       </div>
 
       {loading ? (
