@@ -299,6 +299,7 @@ export async function createLead(req: Request, res: Response): Promise<void> {
           content: notes.trim(),
           leadId: lead.id,
           authorId: req.user!.userId,
+          organizationId: req.user!.organizationId,
         },
       });
     } catch (error) {

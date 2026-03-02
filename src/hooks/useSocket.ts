@@ -7,7 +7,7 @@ let listenerCount = 0
 
 function getSocket(): Socket {
   if (!socket) {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('accessToken')
     const baseURL = import.meta.env.VITE_API_URL?.replace('/api', '') || ''
 
     socket = io(baseURL, {
@@ -46,7 +46,7 @@ export function useSocketEvent<T = unknown>(
   handlerRef.current = handler
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('accessToken')
     if (!token) return // Don't connect if not authenticated
 
     const s = getSocket()
@@ -74,7 +74,7 @@ export function useSocketEvent<T = unknown>(
  */
 export function useSocketEmit() {
   const emit = useCallback((event: string, data?: unknown) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('accessToken')
     if (!token) return
     const s = getSocket()
     s.emit(event, data)

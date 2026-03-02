@@ -129,3 +129,106 @@ export const exportLimiter = rateLimit({
   skip: () => isTest,
 });
 
+/**
+ * Admin maintenance rate limiter
+ * DB maintenance (VACUUM FULL, REINDEX) is extremely heavy.
+ * Production: 3 requests per hour per IP
+ * Development: 20 per hour (lenient)
+ */
+export const adminMaintenanceLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: isDevelopment ? 20 : 3,
+  message: {
+    success: false,
+    error: 'Too many maintenance requests, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+});
+
+/**
+ * Rate limiter for message sending (email/SMS/call).
+ * Production: 30 per 15 minutes
+ * Development: 200 per 15 minutes
+ */
+export const messageSendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDevelopment ? 200 : 30,
+  message: {
+    success: false,
+    error: 'Too many messages sent, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+});
+
+/**
+ * Rate limiter for password changes.
+ * Production: 5 per 15 minutes
+ * Development: 30 per 15 minutes
+ */
+export const passwordChangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDevelopment ? 30 : 5,
+  message: {
+    success: false,
+    error: 'Too many password change attempts, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+});
+
+/**
+ * Rate limiter for workflow triggers.
+ * Production: 20 per 15 minutes
+ * Development: 100 per 15 minutes
+ */
+export const workflowTriggerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDevelopment ? 100 : 20,
+  message: {
+    success: false,
+    error: 'Too many workflow triggers, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+});
+
+/**
+ * Rate limiter for public unsubscribe endpoints.
+ * Production: 30 per 15 minutes
+ * Development: 100 per 15 minutes
+ */
+export const unsubscribeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDevelopment ? 100 : 30,
+  message: {
+    success: false,
+    error: 'Too many requests, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+});
+
+/**
+ * Rate limiter for team invitations.
+ * Production: 10 per hour
+ * Development: 50 per hour
+ */
+export const teamInviteLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isDevelopment ? 50 : 10,
+  message: {
+    success: false,
+    error: 'Too many invitations sent, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+});
+

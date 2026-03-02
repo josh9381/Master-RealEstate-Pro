@@ -14,7 +14,7 @@ export function NotificationBell() {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('accessToken')
       if (!token) {
         setUnreadCount(0)
         return

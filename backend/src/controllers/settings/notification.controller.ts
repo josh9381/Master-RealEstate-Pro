@@ -20,6 +20,7 @@ export async function getNotificationSettings(req: Request, res: Response): Prom
     settings = await prisma.notificationSettings.create({
       data: {
         userId: req.user.userId,
+        organizationId: req.user.organizationId,
         emailNotifications: true,
         pushNotifications: true,
         smsNotifications: false
@@ -59,6 +60,7 @@ export async function updateNotificationSettings(req: Request, res: Response): P
     },
     create: {
       userId: req.user.userId,
+      organizationId: req.user.organizationId,
       emailNotifications: emailNotifications ?? true,
       pushNotifications: pushNotifications ?? true,
       smsNotifications: smsNotifications ?? false,

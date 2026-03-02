@@ -19,7 +19,8 @@ export async function getBusinessSettings(req: Request, res: Response): Promise<
   if (!settings) {
     settings = await prisma.businessSettings.create({
       data: {
-        userId: req.user.userId
+        userId: req.user.userId,
+        organizationId: req.user.organizationId
       }
     });
   }
@@ -62,6 +63,7 @@ export async function updateBusinessSettings(req: Request, res: Response): Promi
     },
     create: {
       userId: req.user.userId,
+      organizationId: req.user.organizationId,
       companyName,
       address,
       phone,

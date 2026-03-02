@@ -8,6 +8,9 @@ import {
   healthCheck,
   runMaintenance,
 } from '../controllers/admin.controller';
+import { adminMaintenanceLimiter } from '../middleware/rateLimiter';
+import { validateBody } from '../middleware/validate';
+import { updateSystemSettingsSchema, runMaintenanceSchema } from '../validators/admin.validator';
 
 const router = express.Router();
 
@@ -25,12 +28,12 @@ router.get('/activity-logs', getActivityLogs);
 
 // System settings
 router.get('/system-settings', getSystemSettings);
-router.put('/system-settings', updateSystemSettings);
+router.put('/system-settings', validateBody(updateSystemSettingsSchema), updateSystemSettings);
 
 // Health check
 router.get('/health', healthCheck);
 
 // Database maintenance
-router.post('/maintenance', runMaintenance);
+router.post('/maintenance', adminMaintenanceLimiter, validateBody(runMaintenanceSchema), runMaintenance);
 
 export default router;

@@ -476,6 +476,7 @@ async function executeABTestCampaign(campaign: any, leads: any[]) {
         variant: 'A',
         leadId: lead.id,
         campaignId: campaign.id,
+        organizationId: campaign.organizationId,
       });
     }
     for (const lead of groupB) {
@@ -484,6 +485,7 @@ async function executeABTestCampaign(campaign: any, leads: any[]) {
         variant: 'B',
         leadId: lead.id,
         campaignId: campaign.id,
+        organizationId: campaign.organizationId,
       });
     }
     await prisma.aBTestResult.createMany({ data: createResults });

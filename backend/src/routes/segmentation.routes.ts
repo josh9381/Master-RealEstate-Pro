@@ -6,6 +6,8 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/auth';
+import { validateBody, validateParams } from '../middleware/validate';
+import { createSegmentSchema, updateSegmentSchema, segmentIdParamSchema } from '../validators/segmentation.validator';
 import {
   createSegment,
   getSegments,
@@ -30,7 +32,7 @@ router.get('/', asyncHandler(async (req: any, res: any) => {
 /**
  * POST /api/segments — create a new segment
  */
-router.post('/', asyncHandler(async (req: any, res: any) => {
+router.post('/', validateBody(createSegmentSchema), asyncHandler(async (req: any, res: any) => {
   const { name, description, rules, matchType, color } = req.body;
 
   if (!name || !rules || !Array.isArray(rules) || rules.length === 0) {
@@ -52,7 +54,7 @@ router.post('/', asyncHandler(async (req: any, res: any) => {
 /**
  * GET /api/segments/:id — get a single segment
  */
-router.get('/:id', asyncHandler(async (req: any, res: any) => {
+router.get('/:id', validateParams(segmentIdParamSchema), asyncHandler(async (req: any, res: any) => {
   const segment = await getSegmentById(req.params.id, req.user!.organizationId);
   res.json({ success: true, data: segment });
 }));
@@ -60,7 +62,7 @@ router.get('/:id', asyncHandler(async (req: any, res: any) => {
 /**
  * PATCH /api/segments/:id — update a segment
  */
-router.patch('/:id', asyncHandler(async (req: any, res: any) => {
+router.patch('/:id', validateParams(segmentIdParamSchema), validateBody(updateSegmentSchema), asyncHandler(async (req: any, res: any) => {
   const { name, description, rules, matchType, color, isActive } = req.body;
   const segment = await updateSegment(req.params.id, req.user!.organizationId, {
     name, description, rules, matchType, color, isActive,
@@ -71,7 +73,7 @@ router.patch('/:id', asyncHandler(async (req: any, res: any) => {
 /**
  * DELETE /api/segments/:id — delete a segment
  */
-router.delete('/:id', asyncHandler(async (req: any, res: any) => {
+router.delete('/:id', validateParams(segmentIdParamSchema), asyncHandler(async (req: any, res: any) => {
   await deleteSegment(req.params.id, req.user!.organizationId);
   res.json({ success: true, message: 'Segment deleted' });
 }));
@@ -79,7 +81,7 @@ router.delete('/:id', asyncHandler(async (req: any, res: any) => {
 /**
  * GET /api/segments/:id/members — get leads matching the segment
  */
-router.get('/:id/members', asyncHandler(async (req: any, res: any) => {
+router.get('/:id/members', validateParams(segmentIdParamSchema), asyncHandler(async (req: any, res: any) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 50;
   const result = await getSegmentMembers(req.params.id, req.user!.organizationId, { page, limit });

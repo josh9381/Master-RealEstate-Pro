@@ -96,10 +96,14 @@ export class OpenAIService {
 
   constructor() {
     // Platform key is optional — orgs may supply their own via ai-config.service
-    const apiKey = process.env.OPENAI_API_KEY || 'placeholder-will-use-org-key';
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      console.warn('[OpenAI] OPENAI_API_KEY not set — AI features will be unavailable unless org provides their own key');
+    }
 
     this.client = new OpenAI({
-      apiKey,
+      apiKey: apiKey || 'not-configured',
       organization: process.env.OPENAI_ORG_ID,
     });
 

@@ -693,8 +693,8 @@ async function evaluateActionCondition(config: any, leadId?: string): Promise<bo
   }
 
   // Multiple conditions with AND/OR logic
-  const matchType = config.matchType || 'all';
-  if (matchType === 'all') {
+  const matchType = config.matchType || 'ALL';
+  if (matchType === 'ALL') {
     return conditions.every((c: WorkflowCondition) => evaluateCondition(c, lead));
   } else {
     return conditions.some((c: WorkflowCondition) => evaluateCondition(c, lead));
@@ -922,7 +922,7 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
               notifLead,
               metadata
             ),
-            type: action.config.type || 'workflow',
+            type: action.config.type || 'WORKFLOW',
             read: false,
           },
         });

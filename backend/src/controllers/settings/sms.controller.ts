@@ -54,6 +54,7 @@ export async function getSMSConfig(req: Request, res: Response): Promise<void> {
     config = await prisma.sMSConfig.create({
       data: {
         userId: req.user.userId,
+        organizationId: req.user.organizationId,
         provider: 'twilio'
       }
     });
@@ -67,9 +68,6 @@ export async function getSMSConfig(req: Request, res: Response): Promise<void> {
     if (config.accountSid) {
       // Decrypt the Account SID to return it
       accountSidValue = decryptForUser(req.user.userId, config.accountSid);
-      console.log(`🔐 Returning Account SID: ${accountSidValue}`);
-    } else {
-      console.log('⚠️ No Account SID stored for user');
     }
   } catch (error) {
     console.error('❌ Failed to decrypt Account SID:', error);
@@ -90,7 +88,7 @@ export async function getSMSConfig(req: Request, res: Response): Promise<void> {
 
   // Log access to credentials
   if (config.accountSid && config.authToken) {
-    await logAPIKeyAccess(req.user.userId, 'twilio', 'accessed', req);
+    await logAPIKeyAccess(req.user.userId, 'twilio', 'accessed', req, req.user.organizationId);
   }
 
   res.status(200).json({
@@ -143,6 +141,7 @@ export async function updateSMSConfig(req: Request, res: Response): Promise<void
     },
     create: {
       userId: req.user.userId,
+      organizationId: req.user.organizationId,
       provider: provider || 'twilio',
       accountSid: encryptedAccountSid,
       authToken: encryptedAuthToken,
@@ -180,7 +179,7 @@ export async function updateSMSConfig(req: Request, res: Response): Promise<void
       where: { userId: req.user.userId }
     });
     const action = existingConfig?.accountSid ? 'updated' : 'created';
-    await logAPIKeyAccess(req.user.userId, 'twilio', action, req);
+    await logAPIKeyAccess(req.user.userId, 'twilio', action, req, req.user.organizationId);
   }
 
   res.status(200).json({
@@ -211,7 +210,7 @@ export async function deleteSMSConfig(req: Request, res: Response): Promise<void
   });
 
   // Log credential deletion
-  await logAPIKeyAccess(req.user.userId, 'twilio', 'deleted', req);
+  await logAPIKeyAccess(req.user.userId, 'twilio', 'deleted', req, req.user.organizationId);
 
   res.status(200).json({
     success: true,

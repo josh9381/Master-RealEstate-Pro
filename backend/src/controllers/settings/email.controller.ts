@@ -22,6 +22,7 @@ export async function getEmailConfig(req: Request, res: Response): Promise<void>
     config = await prisma.emailConfig.create({
       data: {
         userId: req.user.userId,
+        organizationId: req.user.organizationId,
         provider: 'sendgrid'
       }
     });
@@ -92,6 +93,7 @@ export async function updateEmailConfig(req: Request, res: Response): Promise<vo
     },
     create: {
       userId: req.user.userId,
+      organizationId: req.user.organizationId,
       provider: provider || 'sendgrid',
       apiKey: encryptedApiKey,
       fromEmail,

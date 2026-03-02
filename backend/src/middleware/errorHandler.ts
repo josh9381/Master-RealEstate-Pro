@@ -125,6 +125,11 @@ export function errorHandler(
     statusCode = 401;
     message = 'Token has expired';
   }
+  // Handle PayloadTooLargeError
+  else if ((err as any).type === 'entity.too.large' || err.message?.includes('entity too large') || (err as any).status === 413) {
+    statusCode = 413;
+    message = 'Request payload too large. Maximum size is 10MB.';
+  }
   // Unknown errors
   else {
     message = process.env.NODE_ENV === 'development' 

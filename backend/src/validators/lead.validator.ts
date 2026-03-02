@@ -94,3 +94,11 @@ export const bulkUpdateLeadsSchema = z.object({
     stage: z.string().max(100).optional(),
   }),
 });
+
+/**
+ * Lead merge validation
+ */
+export const mergeLeadsSchema = z.object({
+  primaryLeadId: z.string().min(1, 'Primary lead ID is required'),
+  secondaryLeadIds: z.array(z.string().min(1)).min(1, 'At least one secondary lead ID is required').max(50),
+});

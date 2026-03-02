@@ -17,8 +17,8 @@ export function verifyTwilioSignature(req: Request, res: Response, next: NextFun
   const authToken = process.env.TWILIO_AUTH_TOKEN;
 
   if (!authToken) {
-    console.warn('[WEBHOOK] TWILIO_AUTH_TOKEN not set — skipping signature verification');
-    next();
+    console.warn('[WEBHOOK] TWILIO_AUTH_TOKEN not set — rejecting webhook request');
+    res.status(401).json({ error: 'Webhook authentication not configured' });
     return;
   }
 
@@ -58,12 +58,8 @@ export function verifySendGridSignature(req: Request, res: Response, next: NextF
   const verificationKey = process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY;
 
   if (!verificationKey) {
-    // No verification key configured — skip (graceful degradation)
-    // Log once to remind operators to configure it
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('[WEBHOOK] SENDGRID_WEBHOOK_VERIFICATION_KEY not set — skipping SendGrid signature verification. Set this in production for security.');
-    }
-    next();
+    console.warn('[WEBHOOK] SENDGRID_WEBHOOK_VERIFICATION_KEY not set — rejecting webhook request');
+    res.status(401).json({ error: 'Webhook authentication not configured' });
     return;
   }
 
@@ -99,11 +95,8 @@ export function verifySendGridSignature(req: Request, res: Response, next: NextF
     }
   } catch (err) {
     console.error('[WEBHOOK] SendGrid signature verification error:', err);
-    // In production, reject. In development, allow through.
-    if (process.env.NODE_ENV === 'production') {
-      res.status(403).json({ error: 'Signature verification failed' });
-      return;
-    }
+    res.status(403).json({ error: 'Signature verification failed' });
+    return;
   }
 
   next();

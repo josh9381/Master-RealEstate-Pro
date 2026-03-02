@@ -1,7 +1,11 @@
 import crypto from 'crypto';
 
 // Master encryption key from environment variable (must be 32 bytes)
-const MASTER_ENCRYPTION_KEY = process.env.MASTER_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY || 'default-32-byte-key-change-this!';
+const _rawKey = process.env.MASTER_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY;
+if (!_rawKey) {
+  throw new Error('FATAL: MASTER_ENCRYPTION_KEY or ENCRYPTION_KEY environment variable must be set. Cannot start without encryption key.');
+}
+const MASTER_ENCRYPTION_KEY: string = _rawKey;
 const ALGORITHM = 'aes-256-gcm';
 
 /**

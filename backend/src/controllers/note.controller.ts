@@ -117,6 +117,7 @@ export const createNote = async (req: Request, res: Response) => {
       content,
       leadId,
       authorId: userId,
+      organizationId,
     },
     include: {
       author: {

@@ -12,8 +12,10 @@ import prisma from './config/database'
 import { corsOptions } from './config/cors'
 import { checkAndExecuteScheduledCampaigns } from './services/campaign-scheduler.service'
 import { startWorkflowJobs, setupGracefulShutdown } from './jobs/workflowProcessor'
+import { startDataCleanup, stopDataCleanup } from './jobs/dataCleanup'
 import { updateAllLeadScores } from './services/leadScoring.service'
 import { getMLOptimizationService } from './services/ml-optimization.service'
+import { acquireLock, releaseLock } from './utils/distributedLock'
 import authRoutes from './routes/auth.routes'
 import leadRoutes from './routes/lead.routes'
 import tagRoutes from './routes/tag.routes'
@@ -103,6 +105,9 @@ app.use(helmet({
 }))
 
 // Middleware
+// Stripe webhooks need raw body for signature verification — mount BEFORE express.json()
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }))
+
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
@@ -168,7 +173,7 @@ app.get('/health', async (req: Request, res: Response) => {
 })
 
 // Service integration status — tells the frontend which APIs are in mock mode
-app.get('/api/system/integration-status', (req: Request, res: Response) => {
+app.get('/api/system/integration-status', authenticate, (req: Request, res: Response) => {
   res.json({
     email: {
       configured: !!process.env.SENDGRID_API_KEY,
@@ -278,7 +283,16 @@ httpServer.listen(PORT, () => {
   
   // Run every minute to check for scheduled campaigns
   cron.schedule('* * * * *', async () => {
-    await checkAndExecuteScheduledCampaigns()
+    const lockAcquired = await acquireLock('cron:campaign-scheduler', 55)
+    if (!lockAcquired) {
+      logger.debug('Campaign scheduler skipped — another instance holds the lock')
+      return
+    }
+    try {
+      await checkAndExecuteScheduledCampaigns()
+    } finally {
+      await releaseLock('cron:campaign-scheduler')
+    }
   })
   logger.info('Campaign scheduler active - checking every minute')
   
@@ -333,6 +347,58 @@ httpServer.listen(PORT, () => {
   startWorkflowJobs()
   setupGracefulShutdown()
   logger.info('Workflow automation engine active')
+
+  // Start data cleanup cron
+  logger.info('Starting stale data cleanup scheduler...')
+  startDataCleanup()
+  logger.info('Data cleanup scheduler active')
 })
+
+// ── Process-level error handlers (0.5) ───────────────────────────────
+process.on('uncaughtException', (error: Error) => {
+  logger.fatal({ error: error.message, stack: error.stack }, 'Uncaught exception — shutting down')
+  gracefulShutdown('uncaughtException')
+})
+
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.fatal({ reason }, 'Unhandled promise rejection — shutting down')
+  gracefulShutdown('unhandledRejection')
+})
+
+// ── Graceful shutdown for Prisma + Redis (0.24) ──────────────────────
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+
+let isShuttingDown = false
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) return
+  isShuttingDown = true
+
+  logger.info({ signal }, 'Graceful shutdown initiated')
+
+  // Stop background jobs
+  stopDataCleanup()
+
+  // Stop accepting new connections
+  httpServer.close(() => {
+    logger.info('HTTP server closed')
+  })
+
+  try {
+    await prisma.$disconnect()
+    logger.info('Prisma disconnected')
+  } catch (err) {
+    logger.error({ err }, 'Error disconnecting Prisma')
+  }
+
+  try {
+    await closeRedis()
+    logger.info('Redis disconnected')
+  } catch (err) {
+    logger.error({ err }, 'Error closing Redis')
+  }
+
+  process.exit(signal === 'SIGTERM' || signal === 'SIGINT' ? 0 : 1)
+}
 
 export default app

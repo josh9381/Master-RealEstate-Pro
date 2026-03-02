@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/store/authStore';
+import { getUserItem, setUserItem } from '@/lib/userStorage';
 
 interface FeatureFlag {
   id: number;
@@ -15,7 +17,6 @@ interface FeatureFlag {
   rollout: number;
 }
 
-const FEATURE_FLAGS_STORAGE_KEY = 'crm_feature_flags';
 
 const DEFAULT_FEATURES: FeatureFlag[] = [
   {
@@ -74,9 +75,9 @@ const DEFAULT_FEATURES: FeatureFlag[] = [
   },
 ];
 
-const loadFeatureFlags = (): FeatureFlag[] => {
+const loadFeatureFlags = (userId: string | undefined): FeatureFlag[] => {
   try {
-    const stored = localStorage.getItem(FEATURE_FLAGS_STORAGE_KEY);
+    const stored = getUserItem(userId, 'crm_feature_flags');
     if (stored) {
       return JSON.parse(stored) as FeatureFlag[];
     }
@@ -86,9 +87,9 @@ const loadFeatureFlags = (): FeatureFlag[] => {
   return DEFAULT_FEATURES;
 };
 
-const saveFeatureFlags = (flags: FeatureFlag[]) => {
+const saveFeatureFlags = (userId: string | undefined, flags: FeatureFlag[]) => {
   try {
-    localStorage.setItem(FEATURE_FLAGS_STORAGE_KEY, JSON.stringify(flags));
+    setUserItem(userId, 'crm_feature_flags', JSON.stringify(flags));
   } catch (e) {
     console.error('Failed to save feature flags to localStorage:', e);
   }
@@ -96,12 +97,13 @@ const saveFeatureFlags = (flags: FeatureFlag[]) => {
 
 const FeatureFlags = () => {
   const { toast } = useToast();
-  const [features, setFeatures] = useState<FeatureFlag[]>(loadFeatureFlags);
+  const userId = useAuthStore(s => s.user?.id);
+  const [features, setFeatures] = useState<FeatureFlag[]>(() => loadFeatureFlags(userId));
 
   // Persist to localStorage whenever features change
   useEffect(() => {
-    saveFeatureFlags(features);
-  }, [features]);
+    saveFeatureFlags(userId, features);
+  }, [features, userId]);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingFeature, setEditingFeature] = useState<number | null>(null);

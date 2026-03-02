@@ -427,6 +427,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       data: {
         token: hashedToken,
         userId: user.id,
+        organizationId: user.organizationId,
         expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
       },
     });

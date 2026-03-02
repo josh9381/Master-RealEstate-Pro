@@ -110,6 +110,7 @@ export class ABTestService {
     variant: 'A' | 'B';
     leadId?: string;
     campaignId?: string;
+    organizationId: string;
     metadata?: Prisma.InputJsonValue;
   }) {
     const result = await prisma.aBTestResult.create({
@@ -118,6 +119,7 @@ export class ABTestService {
         variant: data.variant,
         leadId: data.leadId,
         campaignId: data.campaignId,
+        organizationId: data.organizationId,
         metadata: data.metadata || {},
       },
     });

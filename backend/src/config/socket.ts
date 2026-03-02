@@ -17,7 +17,7 @@ interface AuthenticatedSocket extends Socket {
 export function initSocketServer(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN?.split(',') || [
+      origin: process.env.FRONTEND_URL?.split(',') || [
         'http://localhost:3000',
         'http://localhost:5173',
         /\.app\.github\.dev$/,
@@ -40,7 +40,10 @@ export function initSocketServer(httpServer: HttpServer): Server {
     }
 
     try {
-      const secret = process.env.JWT_SECRET || 'dev-secret'
+      const secret = process.env.JWT_ACCESS_SECRET
+      if (!secret) {
+        return next(new Error('JWT_ACCESS_SECRET not configured'))
+      }
       const decoded = jwt.verify(token, secret) as {
         userId: string
         organizationId: string

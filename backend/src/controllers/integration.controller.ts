@@ -59,6 +59,7 @@ export async function connectIntegration(req: Request, res: Response): Promise<v
     },
     create: {
       userId: req.user.userId,
+      organizationId: req.user.organizationId,
       provider,
       isConnected: true,
       credentials: encryptedCredentials,
@@ -187,7 +188,7 @@ export async function syncIntegration(req: Request, res: Response): Promise<void
       }
     },
     data: {
-      syncStatus: 'syncing',
+      syncStatus: 'SYNCING',
       lastSyncAt: new Date()
     }
   });

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuthStore } from '@/store/authStore'
+import { getUserItem, setUserItem } from '@/lib/userStorage'
 import { useQuery } from '@tanstack/react-query'
 import { 
   Mail, 
@@ -128,12 +130,13 @@ const CommunicationInbox = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [showTemplates, setShowTemplates] = useState(false)
   const [showSignatureEditor, setShowSignatureEditor] = useState(false)
+  const userId = useAuthStore(s => s.user?.id)
   const [signature, setSignature] = useState(() => {
-    return localStorage.getItem('emailSignature') || '\n\n---\nBest regards,\nYour Name\nCompany Name\nyour.email@company.com'
+    return getUserItem(userId, 'emailSignature') || '\n\n---\nBest regards,\nYour Name\nCompany Name\nyour.email@company.com'
   })
   const [editingSignature, setEditingSignature] = useState(signature)
   const [autoAppendSignature, setAutoAppendSignature] = useState(() => {
-    return localStorage.getItem('autoAppendSignature') === 'true'
+    return getUserItem(userId, 'autoAppendSignature') === 'true'
   })
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
@@ -599,8 +602,8 @@ const CommunicationInbox = () => {
 
   const saveSignature = () => {
     setSignature(editingSignature)
-    localStorage.setItem('emailSignature', editingSignature)
-    localStorage.setItem('autoAppendSignature', String(autoAppendSignature))
+    setUserItem(userId, 'emailSignature', editingSignature)
+    setUserItem(userId, 'autoAppendSignature', String(autoAppendSignature))
     setShowSignatureEditor(false)
     toast.success('Signature saved')
   }

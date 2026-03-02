@@ -3,7 +3,29 @@ import rateLimit from 'express-rate-limit'
 import * as aiController from '../controllers/ai.controller'
 import * as scoringConfigController from '../controllers/scoring-config.controller'
 import { authenticate } from '../middleware/auth'
+import { requireAdmin } from '../middleware/admin'
 import { checkAIUsage } from '../middleware/aiUsageLimit'
+import { validateBody, validateParams } from '../middleware/validate'
+import {
+  chatWithAISchema,
+  enhanceMessageSchema,
+  suggestActionsSchema,
+  composeMessageSchema,
+  composeVariationsSchema,
+  composeStreamSchema,
+  generateEmailSequenceSchema,
+  generateSMSSchema,
+  generatePropertyDescriptionSchema,
+  generateSocialPostsSchema,
+  generateListingPresentationSchema,
+  generateTemplateMessageSchema,
+  saveMessageAsTemplateSchema,
+  savePreferencesSchema,
+  uploadTrainingDataSchema,
+  updateScoringConfigSchema,
+  idParamSchema,
+  leadIdParamSchema,
+} from '../validators/ai.validator'
 import { AI_PLAN_LIMITS } from '../config/subscriptions'
 import prisma from '../config/database'
 import { SubscriptionTier } from '@prisma/client'
@@ -53,10 +75,10 @@ router.use(aiRateLimiter)
 router.get('/stats', aiController.getAIStats)
 router.get('/features', aiController.getAIFeatures)
 
-// Model Performance & Training (read-only except upload)
+// Model Performance & Training (read-only except upload; upload is admin-only)
 router.get('/models/performance', aiController.getModelPerformance)
 router.get('/models/training', aiController.getTrainingModels)
-router.post('/models/training/upload', aiController.uploadTrainingData)
+router.post('/models/training/upload', requireAdmin, validateBody(uploadTrainingDataSchema), aiController.uploadTrainingData)
 
 // Data Quality (read-only)
 router.get('/data-quality', aiController.getDataQuality)
@@ -64,17 +86,17 @@ router.get('/data-quality', aiController.getDataQuality)
 // AI Insights & Recommendations (read-only)
 router.get('/insights', aiController.getInsights)
 router.get('/insights/:id', aiController.getInsightById)
-router.post('/insights/:id/dismiss', aiController.dismissInsight)
-router.post('/insights/:id/act', aiController.actOnInsight)
+router.post('/insights/:id/dismiss', validateParams(idParamSchema), aiController.dismissInsight)
+router.post('/insights/:id/act', validateParams(idParamSchema), aiController.actOnInsight)
 router.get('/recommendations', aiController.getRecommendations)
 
 // Lead Scoring
 router.get('/lead-score/:leadId', aiController.getLeadScore)
 router.get('/lead/:leadId/score-factors', aiController.getLeadScoreFactors)
-router.post('/recalculate-scores', checkAIUsage('scoringRecalculations'), aiController.recalculateScores)
+router.post('/recalculate-scores', requireAdmin, checkAIUsage('scoringRecalculations'), aiController.recalculateScores)
 
-// Model Recalibration
-router.post('/recalibrate', checkAIUsage('scoringRecalculations'), aiController.recalibrateModel)
+// Model Recalibration (admin-only)
+router.post('/recalibrate', requireAdmin, checkAIUsage('scoringRecalculations'), aiController.recalibrateModel)
 router.get('/recalibration-status', aiController.getRecalibrationStatus)
 
 // Predictions (read-only)
@@ -82,11 +104,11 @@ router.get('/predictions', aiController.getGlobalPredictions)
 router.get('/predictions/:leadId', aiController.getPredictions)
 
 // AI Assistant Features (usage-tracked)
-router.post('/enhance-message', checkAIUsage('enhancements'), aiController.enhanceMessage)
-router.post('/suggest-actions', aiController.suggestActions)
+router.post('/enhance-message', checkAIUsage('enhancements'), validateBody(enhanceMessageSchema), aiController.enhanceMessage)
+router.post('/suggest-actions', validateBody(suggestActionsSchema), aiController.suggestActions)
 
 // AI Chatbot (OpenAI GPT-4) — usage-tracked
-router.post('/chat', checkAIUsage('aiMessages'), aiController.chatWithAI)
+router.post('/chat', checkAIUsage('aiMessages'), validateBody(chatWithAISchema), aiController.chatWithAI)
 router.get('/chat/history', aiController.getChatHistory)
 router.delete('/chat/history', aiController.clearChatHistory)
 
@@ -95,35 +117,35 @@ router.get('/usage', aiController.getAIUsage)
 router.get('/usage/limits', aiController.getAIUsageLimits)
 
 // Content Generation — usage-tracked
-router.post('/generate/email-sequence', checkAIUsage('contentGenerations'), aiController.generateEmailSequence)
-router.post('/generate/sms', checkAIUsage('contentGenerations'), aiController.generateSMS)
-router.post('/generate/property-description', checkAIUsage('contentGenerations'), aiController.generatePropertyDescription)
-router.post('/generate/social-posts', checkAIUsage('contentGenerations'), aiController.generateSocialPosts)
-router.post('/generate/listing-presentation', checkAIUsage('contentGenerations'), aiController.generateListingPresentation)
+router.post('/generate/email-sequence', checkAIUsage('contentGenerations'), validateBody(generateEmailSequenceSchema), aiController.generateEmailSequence)
+router.post('/generate/sms', checkAIUsage('contentGenerations'), validateBody(generateSMSSchema), aiController.generateSMS)
+router.post('/generate/property-description', checkAIUsage('contentGenerations'), validateBody(generatePropertyDescriptionSchema), aiController.generatePropertyDescription)
+router.post('/generate/social-posts', checkAIUsage('contentGenerations'), validateBody(generateSocialPostsSchema), aiController.generateSocialPosts)
+router.post('/generate/listing-presentation', checkAIUsage('contentGenerations'), validateBody(generateListingPresentationSchema), aiController.generateListingPresentation)
 
 // AI Compose (Phase 1 & 2) — usage-tracked
-router.post('/compose', checkAIUsage('composeUses'), aiController.composeMessage)
-router.post('/compose/variations', checkAIUsage('composeUses'), aiController.composeVariations)
+router.post('/compose', checkAIUsage('composeUses'), validateBody(composeMessageSchema), aiController.composeMessage)
+router.post('/compose/variations', checkAIUsage('composeUses'), validateBody(composeVariationsSchema), aiController.composeVariations)
 
 // AI Compose Phase 3 - Streaming — usage-tracked
-router.post('/compose/stream', checkAIUsage('composeUses'), aiController.composeMessageStream)
+router.post('/compose/stream', checkAIUsage('composeUses'), validateBody(composeStreamSchema), aiController.composeMessageStream)
 
 // Templates (Phase 3) — read/write, no AI usage
 router.get('/templates', aiController.getTemplates)
-router.post('/templates/generate', checkAIUsage('contentGenerations'), aiController.generateTemplateMessage)
-router.post('/templates/save', aiController.saveMessageAsTemplate)
+router.post('/templates/generate', checkAIUsage('contentGenerations'), validateBody(generateTemplateMessageSchema), aiController.generateTemplateMessage)
+router.post('/templates/save', validateBody(saveMessageAsTemplateSchema), aiController.saveMessageAsTemplate)
 
 // User Preferences (Phase 3)
 router.get('/preferences', aiController.getPreferences)
-router.post('/preferences', aiController.savePreferences)
+router.post('/preferences', validateBody(savePreferencesSchema), aiController.savePreferences)
 router.post('/preferences/reset', aiController.resetPreferences)
 
 // Feature Importance
 router.get('/feature-importance', aiController.getFeatureImportance)
 
-// Scoring Configuration
+// Scoring Configuration (admin-only for write operations)
 router.get('/scoring-config', scoringConfigController.getScoringConfig)
-router.put('/scoring-config', scoringConfigController.updateScoringConfig)
-router.post('/scoring-config/reset', scoringConfigController.resetScoringConfig)
+router.put('/scoring-config', requireAdmin, validateBody(updateScoringConfigSchema), scoringConfigController.updateScoringConfig)
+router.post('/scoring-config/reset', requireAdmin, scoringConfigController.resetScoringConfig)
 
 export default router

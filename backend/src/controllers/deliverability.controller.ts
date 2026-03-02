@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import { BounceType } from '@prisma/client'
 import {
   recordBounce,
   recordSpamComplaint,
@@ -27,9 +28,19 @@ export async function handleBounce(req: Request, res: Response): Promise<void> {
       return
     }
 
+    // Normalize bounceType to uppercase enum value
+    const normalizedBounceType = bounceType.toUpperCase() as BounceType
+    if (!Object.values(BounceType).includes(normalizedBounceType)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid bounceType: ${bounceType}. Must be one of: ${Object.values(BounceType).join(', ')}`,
+      })
+      return
+    }
+
     await recordBounce({
       messageId,
-      bounceType,
+      bounceType: normalizedBounceType,
       reason,
       timestamp: timestamp ? new Date(timestamp) : new Date(),
     })

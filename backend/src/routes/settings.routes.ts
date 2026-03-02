@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
+import { passwordChangeLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../middleware/validate';
 import { asyncHandler } from '../utils/asyncHandler';
 
@@ -65,7 +66,7 @@ router.post('/avatar', asyncHandler(uploadAvatar));
  * @desc    Change password
  * @access  Private
  */
-router.put('/password', validateBody(changePasswordSchema), asyncHandler(changePassword));
+router.put('/password', passwordChangeLimiter, validateBody(changePasswordSchema), asyncHandler(changePassword));
 
 // ============================================
 // BUSINESS SETTINGS

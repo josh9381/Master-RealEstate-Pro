@@ -2,6 +2,7 @@ import { Router } from 'express'
 import multer from 'multer'
 import path from 'path'
 import { authenticate } from '../middleware/auth'
+import { messageSendLimiter } from '../middleware/rateLimiter'
 import { validateBody, validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../utils/asyncHandler'
 import {
@@ -135,6 +136,7 @@ router.get('/:id', asyncHandler(getMessage))
  */
 router.post(
   '/email',
+  messageSendLimiter,
   validateBody(sendEmailSchema),
   asyncHandler(sendEmail)
 )
@@ -146,6 +148,7 @@ router.post(
  */
 router.post(
   '/sms',
+  messageSendLimiter,
   validateBody(sendSMSSchema),
   asyncHandler(sendSMS)
 )
@@ -157,6 +160,7 @@ router.post(
  */
 router.post(
   '/call',
+  messageSendLimiter,
   validateBody(makeCallSchema),
   asyncHandler(makeCall)
 )

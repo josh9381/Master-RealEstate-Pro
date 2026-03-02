@@ -17,7 +17,7 @@ export interface CreateSegmentInput {
   name: string;
   description?: string;
   rules: SegmentRule[];
-  matchType?: 'all' | 'any';
+  matchType?: 'ALL' | 'ANY';
   color?: string;
   organizationId: string;
 }
@@ -26,7 +26,7 @@ export interface UpdateSegmentInput {
   name?: string;
   description?: string;
   rules?: SegmentRule[];
-  matchType?: 'all' | 'any';
+  matchType?: 'ALL' | 'ANY';
   color?: string;
   isActive?: boolean;
 }
@@ -79,7 +79,7 @@ function buildWhereFromRules(rules: SegmentRule[], matchType: string, organizati
   });
 
   const where: any = { organizationId };
-  if (matchType === 'any') {
+  if (matchType === 'ANY') {
     where.OR = conditions;
   } else {
     where.AND = conditions;
@@ -92,7 +92,7 @@ function buildWhereFromRules(rules: SegmentRule[], matchType: string, organizati
  * Create a new segment
  */
 export async function createSegment(input: CreateSegmentInput) {
-  const { name, description, rules, matchType = 'all', color, organizationId } = input;
+  const { name, description, rules, matchType = 'ALL', color, organizationId } = input;
 
   // Count matching leads
   const where = buildWhereFromRules(rules, matchType, organizationId);
@@ -155,7 +155,7 @@ export async function updateSegment(segmentId: string, organizationId: string, i
   // Recalculate member count if rules changed
   let memberCount = existing.memberCount;
   if (input.rules) {
-    const matchType = input.matchType || (existing.matchType as 'all' | 'any');
+    const matchType = input.matchType || (existing.matchType as 'ALL' | 'ANY');
     const where = buildWhereFromRules(input.rules, matchType, organizationId);
     memberCount = await prisma.lead.count({ where });
   }
@@ -197,7 +197,7 @@ export async function getSegmentMembers(
 ) {
   const segment = await getSegmentById(segmentId, organizationId);
   const rules = segment.rules as unknown as SegmentRule[];
-  const matchType = segment.matchType as 'all' | 'any';
+  const matchType = segment.matchType as 'ALL' | 'ANY';
   const where = buildWhereFromRules(rules, matchType, organizationId);
 
   const page = options?.page || 1;
@@ -238,7 +238,7 @@ export async function refreshSegmentCounts(organizationId: string) {
 
   for (const segment of segments) {
     const rules = segment.rules as unknown as SegmentRule[];
-    const matchType = segment.matchType as 'all' | 'any';
+    const matchType = segment.matchType as 'ALL' | 'ANY';
     const where = buildWhereFromRules(rules, matchType, organizationId);
     const memberCount = await prisma.lead.count({ where });
 

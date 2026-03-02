@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { authenticate } from '../middleware/auth'
+import { workflowTriggerLimiter } from '../middleware/rateLimiter'
 import { validateBody, validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../utils/asyncHandler'
 import {
@@ -124,13 +125,13 @@ router.get('/:id/analytics', asyncHandler(getWorkflowAnalytics))
  * @desc    Manually trigger a workflow
  * @access  Private
  */
-router.post('/:id/trigger', asyncHandler(triggerWorkflow))
+router.post('/:id/trigger', workflowTriggerLimiter, asyncHandler(triggerWorkflow))
 
 /**
  * @route   POST /api/workflows/trigger-for-lead
  * @desc    Trigger workflows for lead events (internal use)
  * @access  Private
  */
-router.post('/trigger-for-lead', asyncHandler(triggerWorkflowsForLead))
+router.post('/trigger-for-lead', workflowTriggerLimiter, asyncHandler(triggerWorkflowsForLead))
 
 export default router

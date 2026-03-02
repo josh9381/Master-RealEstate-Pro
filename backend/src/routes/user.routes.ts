@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
+import { requireAdmin } from '../middleware/admin';
 import {
   getUsers,
   getUser,
@@ -34,7 +35,7 @@ router.get('/:id', getUser);
  * @desc    Update user role (ADMIN only)
  * @access  Private (ADMIN)
  */
-router.patch('/:id/role', updateUserRole);
+router.patch('/:id/role', requireAdmin, updateUserRole);
 
 /**
  * @route   PATCH /api/users/:id
@@ -48,6 +49,6 @@ router.patch('/:id', updateUser);
  * @desc    Delete user (ADMIN only)
  * @access  Private (ADMIN)
  */
-router.delete('/:id', deleteUser);
+router.delete('/:id', requireAdmin, deleteUser);
 
 export default router;

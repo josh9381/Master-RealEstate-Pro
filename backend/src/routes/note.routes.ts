@@ -34,6 +34,7 @@ router.post('/', asyncHandler(async (req: any, res: any) => {
       content,
       leadId,
       authorId: req.user!.userId,
+      organizationId: req.user!.organizationId,
     },
     include: { author: { select: { id: true, firstName: true, lastName: true } } }
   });

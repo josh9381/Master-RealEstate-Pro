@@ -1,4 +1,6 @@
 import { Router } from 'express'
+import { validateBody, validateParams } from '../middleware/validate'
+import { createSavedReportSchema, updateSavedReportSchema, reportIdParamSchema } from '../validators/savedReport.validator'
 import {
   listSavedReports,
   getSavedReport,
@@ -10,9 +12,9 @@ import {
 const router = Router()
 
 router.get('/', listSavedReports)
-router.get('/:id', getSavedReport)
-router.post('/', createSavedReport)
-router.put('/:id', updateSavedReport)
-router.delete('/:id', deleteSavedReport)
+router.get('/:id', validateParams(reportIdParamSchema), getSavedReport)
+router.post('/', validateBody(createSavedReportSchema), createSavedReport)
+router.put('/:id', validateParams(reportIdParamSchema), validateBody(updateSavedReportSchema), updateSavedReport)
+router.delete('/:id', validateParams(reportIdParamSchema), deleteSavedReport)
 
 export default router

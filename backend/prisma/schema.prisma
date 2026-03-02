@@ -33,17 +33,20 @@ model Activity {
 }
 
 model APIKeyAudit {
-  id        String   @id @default(cuid())
-  userId    String
-  provider  String
-  action    String
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  provider       String
+  action         String
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([provider])
+  @@index([organizationId])
 }
 
 model Appointment {
@@ -81,7 +84,7 @@ model CustomFieldDefinition {
   organizationId String
   name           String
   fieldKey       String
-  type           String   // text, number, date, dropdown, boolean, textarea
+  type           CustomFieldType
   required       Boolean  @default(false)
   options        Json?    // string[] for dropdown options
   order          Int      @default(0)
@@ -97,18 +100,22 @@ model CustomFieldDefinition {
 }
 
 model BusinessSettings {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  companyName   String?
-  address       String?
-  phone         String?
-  website       String?
-  logo          String?
-  billingEmail  String?
-  businessHours Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  organizationId String
+  companyName    String?
+  address        String?
+  phone          String?
+  website        String?
+  logo           String?
+  billingEmail   String?
+  businessHours  Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model Campaign {
@@ -170,20 +177,24 @@ model Campaign {
 }
 
 model EmailConfig {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  provider     String   @default("sendgrid")
-  apiKey       String?
-  fromEmail    String?
-  fromName     String?
-  smtpHost     String?
-  smtpPort     Int?
-  smtpUser     String?
-  smtpPassword String?
-  isActive     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  organizationId String
+  provider       String       @default("sendgrid")
+  apiKey         String?
+  fromEmail      String?
+  fromName       String?
+  smtpHost       String?
+  smtpPort       Int?
+  smtpUser       String?
+  smtpPassword   String?
+  isActive       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model EmailTemplate {
@@ -208,22 +219,25 @@ model EmailTemplate {
 }
 
 model Integration {
-  id          String    @id @default(cuid())
-  userId      String
-  provider    String
-  isConnected Boolean   @default(false)
-  credentials Json?
-  config      Json?
-  lastSyncAt  DateTime?
-  syncStatus  String?
-  syncError   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String                 @id @default(cuid())
+  userId         String
+  organizationId String
+  provider       String
+  isConnected    Boolean                @default(false)
+  credentials    Json?
+  config         Json?
+  lastSyncAt     DateTime?
+  syncStatus     IntegrationSyncStatus?
+  syncError      String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
   @@index([provider])
   @@index([userId])
+  @@index([organizationId])
 }
 
 model Lead {
@@ -256,12 +270,13 @@ model Lead {
   appointments      Appointment[]
   Call              Call[]
   campaignLeads     CampaignLead[]
-  assignedTo        User?          @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo        User?          @relation("LeadAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   messages          Message[]
   notes             Note[]
   tasks             Task[]
   tags              Tag[]          @relation("LeadToTag")
+  workflowExecutions WorkflowExecution[]
 
   @@unique([organizationId, email])
   @@index([assignedToId])
@@ -296,7 +311,7 @@ model Message {
   createdAt       DateTime         @default(now())
   sentAt          DateTime?
   bounceReason    String?
-  bounceType      String?
+  bounceType      BounceType?
   bouncedAt       DateTime?
   deliveredAt     DateTime?
   lastRetryAt     DateTime?
@@ -323,45 +338,58 @@ model Message {
   @@index([bounceType])
   @@index([spamComplaintAt])
   @@index([organizationId])
+  @@index([organizationId, type])
 }
 
 model Note {
-  id        String   @id @default(cuid())
-  content   String
-  leadId    String
-  authorId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User?    @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  content        String
+  leadId         String
+  authorId       String?
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  author         User?        @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
   @@index([leadId])
+  @@index([organizationId])
+  @@index([createdAt])
 }
 
 model NotificationSettings {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  emailNotifications Boolean  @default(true)
-  pushNotifications  Boolean  @default(true)
-  smsNotifications   Boolean  @default(false)
+  id                 String       @id @default(cuid())
+  userId             String       @unique
+  organizationId     String
+  emailNotifications Boolean      @default(true)
+  pushNotifications  Boolean      @default(true)
+  smsNotifications   Boolean      @default(false)
   channels           Json?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model SMSConfig {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  provider    String   @default("twilio")
-  accountSid  String?
-  authToken   String?
-  phoneNumber String?
-  isActive    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  organizationId String
+  provider       String       @default("twilio")
+  accountSid     String?
+  authToken      String?
+  phoneNumber    String?
+  isActive       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model SMSTemplate {
@@ -537,9 +565,9 @@ model Segment {
   id             String       @id @default(cuid())
   name           String
   description    String?
-  rules          Json         // Array of { field, operator, value } filter rules
-  matchType      String       @default("all") // "all" = AND, "any" = OR
-  memberCount    Int          @default(0)
+  rules          Json             // Array of { field, operator, value } filter rules
+  matchType      SegmentMatchType @default(ALL)
+  memberCount    Int              @default(0)
   isActive       Boolean      @default(true)
   color          String?      @default("#3B82F6")
   createdAt      DateTime     @default(now())
@@ -561,10 +589,12 @@ model WorkflowExecution {
   startedAt   DateTime        @default(now())
   completedAt DateTime?
   workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  lead        Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   @@index([startedAt])
   @@index([status])
   @@index([workflowId])
+  @@index([leadId])
 }
 
 model ABTest {
@@ -595,26 +625,29 @@ model ABTest {
 }
 
 model ABTestResult {
-  id         String    @id @default(cuid())
-  testId     String
-  variant    String
-  leadId     String?
-  campaignId String?
-  converted  Boolean   @default(false)
-  openedAt   DateTime?
-  clickedAt  DateTime?
-  repliedAt  DateTime?
-  metadata   Json?
-  createdAt  DateTime  @default(now())
-  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  lead       Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  abtest     ABTest    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  testId         String
+  variant        String
+  leadId         String?
+  campaignId     String?
+  organizationId String
+  converted      Boolean      @default(false)
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  repliedAt      DateTime?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  campaign       Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  abtest         ABTest       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([converted])
   @@index([leadId])
   @@index([testId])
   @@index([variant])
+  @@index([organizationId])
 }
 
 model AIAssistant {
@@ -638,26 +671,26 @@ model AIAssistant {
 }
 
 model Call {
-  id                String       @id @default(cuid())
+  id                String        @id @default(cuid())
   organizationId    String
   leadId            String?
   assistantId       String?
-  vapiCallId        String       @unique
-  direction         String
+  vapiCallId        String        @unique
+  direction         CallDirection
   phoneNumber       String
-  status            String
+  status            CallStatus
   duration          Int?
   cost              Float?
   transcript        String?
   recording         String?
   sentiment         String?
-  appointmentBooked Boolean      @default(false)
+  appointmentBooked Boolean       @default(false)
   metadata          Json?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  aiassistant       AIAssistant? @relation(fields: [assistantId], references: [id], onDelete: SetNull)
-  lead              Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  aiassistant       AIAssistant?  @relation(fields: [assistantId], references: [id], onDelete: SetNull)
+  lead              Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([direction])
   @@index([leadId])
@@ -738,22 +771,23 @@ model ScoringConfig {
 }
 
 model Notification {
-  id             String       @id @default(cuid())
+  id             String           @id @default(cuid())
   userId         String
   organizationId String
-  type           String
+  type           NotificationType
   title          String
   message        String
   link           String?
-  read           Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  read           Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([organizationId])
   @@index([read])
   @@index([userId])
+  @@index([userId, read])
 }
 
 model Organization {
@@ -807,6 +841,16 @@ model Organization {
   CampaignLead      CampaignLead[]
   CampaignAnalytics CampaignAnalytics[]
   LoginHistory      LoginHistory[]
+  Note              Note[]
+  BusinessSettings  BusinessSettings[]
+  EmailConfig       EmailConfig[]
+  Integration       Integration[]
+  SMSConfig         SMSConfig[]
+  NotificationSettings NotificationSettings[]
+  APIKeyAudit       APIKeyAudit[]
+  PasswordResetToken PasswordResetToken[]
+  RefreshToken      RefreshToken[]
+  ABTestResult      ABTestResult[]
 
   @@index([isActive])
   @@index([slug])
@@ -876,25 +920,25 @@ model ModelPerformanceHistory {
 
 // Phase 1C: AI-generated insights stored in DB
 model AIInsight {
-  id             String       @id @default(cuid())
+  id             String            @id @default(cuid())
   organizationId String
-  type           String       // lead_followup, scoring_accuracy, email_performance, pipeline_health
-  priority       String       @default("medium") // low, medium, high, critical
+  type           AIInsightType
+  priority       AIInsightPriority @default(MEDIUM)
   title          String
   description    String
-  data           Json?        // Supporting data (lead IDs, metrics, etc.)
-  actionUrl      String?      // Deep link to relevant page
-  dismissed      Boolean      @default(false)
+  data           Json?
+  actionUrl      String?
+  dismissed      Boolean           @default(false)
   dismissedAt    DateTime?
   dismissedBy    String?
-  actedOn        Boolean      @default(false)
+  actedOn        Boolean           @default(false)
   actedOnAt      DateTime?
   actedOnBy      String?
   actionTaken    String?
-  expiresAt      DateTime?    // Auto-expire stale insights
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, dismissed])
   @@index([organizationId, type])
@@ -962,30 +1006,35 @@ model SavedReport {
 }
 
 model RefreshToken {
-  id             String    @id @default(cuid())
-  token          String    @unique
+  id             String       @id @default(cuid())
+  token          String       @unique
   userId         String
   organizationId String
   expiresAt      DateTime
   revokedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
+  @@index([expiresAt])
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  token          String       @unique
+  userId         String
+  organizationId String
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
+  @@index([expiresAt])
 }
 
 enum ActivityType {
@@ -1158,6 +1207,92 @@ enum SubscriptionStatus {
   INCOMPLETE
 }
 
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  DROPDOWN
+  BOOLEAN
+  TEXTAREA
+}
+
+enum NotificationType {
+  LEAD_ASSIGNED
+  LEAD_STATUS_CHANGED
+  CAMPAIGN_COMPLETED
+  TASK_DUE
+  TASK_ASSIGNED
+  MESSAGE_RECEIVED
+  SYSTEM
+  WORKFLOW
+  WORKFLOW_COMPLETED
+  REMINDER
+  INBOUND_EMAIL
+  INBOUND_SMS
+}
+
+enum IntegrationSyncStatus {
+  IDLE
+  SYNCING
+  SYNCED
+  CONNECTED
+  DISCONNECTED
+  FAILED
+}
+
+enum SegmentMatchType {
+  ALL
+  ANY
+}
+
+enum BounceType {
+  HARD
+  SOFT
+  COMPLAINT
+  UNKNOWN
+}
+
+enum CampaignLeadStatus {
+  PENDING
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  UNSUBSCRIBED
+  CONVERTED
+}
+
+enum CallStatus {
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  BUSY
+  NO_ANSWER
+  VOICEMAIL
+  CANCELLED
+}
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum AIInsightType {
+  LEAD_FOLLOWUP
+  SCORING_ACCURACY
+  EMAIL_PERFORMANCE
+  PIPELINE_HEALTH
+}
+
+enum AIInsightPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 // Per-lead campaign tracking — records individual lead engagement with campaigns
 model CampaignLead {
   id             String    @id @default(cuid())
@@ -1171,7 +1306,7 @@ model CampaignLead {
   convertedAt    DateTime?
   bouncedAt      DateTime?
   unsubscribedAt DateTime?
-  status         String    @default("PENDING") // PENDING, SENT, DELIVERED, OPENED, CLICKED, BOUNCED, UNSUBSCRIBED
+  status         CampaignLeadStatus @default(PENDING)
   metadata       Json?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -1235,6 +1370,8 @@ model LoginHistory {
   @@index([userId])
   @@index([organizationId])
   @@index([isActive])
+  @@index([userId, isActive])
+  @@index([createdAt])
 }
 
 // Sprint 9.1 #102: Bounce suppression list — prevents sending to addresses that have bounced or reported spam

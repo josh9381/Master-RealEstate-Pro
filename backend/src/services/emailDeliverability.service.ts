@@ -1,5 +1,5 @@
 import prisma from '../config/database'
-import { MessageStatus } from '@prisma/client'
+import { MessageStatus, BounceType } from '@prisma/client'
 
 /**
  * Email Deliverability Monitoring Service
@@ -14,7 +14,7 @@ import { MessageStatus } from '@prisma/client'
 
 interface BounceEvent {
   messageId: string
-  bounceType: 'hard' | 'soft' | 'complaint'
+  bounceType: BounceType
   reason: string
   timestamp: Date
 }
@@ -48,7 +48,7 @@ export async function recordBounce(event: BounceEvent): Promise<void> {
   })
 
   // If hard bounce or spam complaint, suppress the email address
-  if (bounceType === 'hard' || bounceType === 'complaint') {
+  if (bounceType === BounceType.HARD || bounceType === BounceType.COMPLAINT) {
     const message = await prisma.message.findUnique({
       where: { id: messageId },
       select: { toAddress: true, leadId: true },
@@ -71,7 +71,7 @@ export async function recordSpamComplaint(
     where: { id: messageId },
     data: {
       spamComplaintAt: timestamp,
-      bounceType: 'complaint',
+      bounceType: BounceType.COMPLAINT,
     },
   })
 
@@ -160,8 +160,8 @@ export async function getCampaignDeliverability(
   const sent = messages.length
   const delivered = messages.filter((m) => m.deliveredAt !== null).length
   const bounced = messages.filter((m) => m.bouncedAt !== null).length
-  const hardBounces = messages.filter((m) => m.bounceType === 'hard').length
-  const softBounces = messages.filter((m) => m.bounceType === 'soft').length
+  const hardBounces = messages.filter((m) => m.bounceType === BounceType.HARD).length
+  const softBounces = messages.filter((m) => m.bounceType === BounceType.SOFT).length
   const spamComplaints = messages.filter((m) => m.spamComplaintAt !== null).length
 
   const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0
@@ -211,8 +211,8 @@ export async function getOverallDeliverability(
   const sent = messages.length
   const delivered = messages.filter((m) => m.deliveredAt !== null).length
   const bounced = messages.filter((m) => m.bouncedAt !== null).length
-  const hardBounces = messages.filter((m) => m.bounceType === 'hard').length
-  const softBounces = messages.filter((m) => m.bounceType === 'soft').length
+  const hardBounces = messages.filter((m) => m.bounceType === BounceType.HARD).length
+  const softBounces = messages.filter((m) => m.bounceType === BounceType.SOFT).length
   const spamComplaints = messages.filter((m) => m.spamComplaintAt !== null).length
 
   const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0
@@ -251,7 +251,7 @@ export async function retryFailedMessage(messageId: string): Promise<boolean> {
   }
 
   // Don't retry hard bounces or spam complaints
-  if (message.bounceType === 'hard' || message.bounceType === 'complaint') {
+  if (message.bounceType === BounceType.HARD || message.bounceType === BounceType.COMPLAINT) {
     return false
   }
 
@@ -289,7 +289,7 @@ export async function getRetryableMessages(limit = 100): Promise<
   const messages = await prisma.message.findMany({
     where: {
       status: MessageStatus.FAILED,
-      bounceType: 'soft', // Only retry soft bounces
+      bounceType: BounceType.SOFT, // Only retry soft bounces
       retryCount: {
         lt: prisma.message.fields.maxRetries,
       },
@@ -368,7 +368,7 @@ export async function getBounceReport(
       if (!acc[key]) {
         acc[key] = {
           reason: bounce.bounceReason || 'Unknown',
-          type: bounce.bounceType || 'unknown',
+          type: bounce.bounceType || 'UNKNOWN',
           count: 0,
         }
       }

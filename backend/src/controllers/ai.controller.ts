@@ -9,6 +9,7 @@ import * as preferencesService from '../services/user-preferences.service'
 import { updateMultipleLeadScores, getLeadScoreBreakdown } from '../services/leadScoring.service'
 import { incrementAIUsage, getUsageWithLimits, getCostBreakdown } from '../services/usage-tracking.service'
 import prisma from '../config/database'
+import { AIInsightType, AIInsightPriority } from '@prisma/client'
 
 /**
  * Generate actionable insights from real DB data and store in AIInsight table.
@@ -20,7 +21,7 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
   // Helper: only create if no recent duplicate of same type exists
-  async function upsertInsight(type: string, priority: string, title: string, description: string, data?: any, actionUrl?: string) {
+  async function upsertInsight(type: AIInsightType, priority: AIInsightPriority, title: string, description: string, data?: any, actionUrl?: string) {
     const existing = await prisma.aIInsight.findFirst({
       where: {
         organizationId,
@@ -62,8 +63,8 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
 
     if (staleLeads.length > 0) {
       await upsertInsight(
-        'lead_followup',
-        staleLeads.length > 5 ? 'high' : 'medium',
+        'LEAD_FOLLOWUP',
+        staleLeads.length > 5 ? 'HIGH' : 'MEDIUM',
         `${staleLeads.length} leads haven't been contacted in 14+ days`,
         `These leads may disengage without follow-up. Consider reaching out to re-engage them.`,
         { leadIds: staleLeads.map(l => l.id), leadNames: staleLeads.slice(0, 5).map(l => `${l.firstName} ${l.lastName}`) },
@@ -78,8 +79,8 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
     for (const model of models) {
       if (model.accuracy !== null && model.accuracy < 70) {
         await upsertInsight(
-          'scoring_accuracy',
-          'high',
+          'SCORING_ACCURACY',
+          'HIGH',
           `Lead scoring model accuracy is below 70% (${model.accuracy?.toFixed(1)}%)`,
           `Your lead scoring model has low accuracy. Consider recalibrating with more conversion data.`,
           { modelId: model.id, accuracy: model.accuracy },
@@ -102,8 +103,8 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
 
     if (stuckLeads.length > 0) {
       await upsertInsight(
-        'pipeline_health',
-        stuckLeads.length > 3 ? 'high' : 'medium',
+        'PIPELINE_HEALTH',
+        stuckLeads.length > 3 ? 'HIGH' : 'MEDIUM',
         `${stuckLeads.length} leads stuck in pipeline for 21+ days`,
         `These leads haven't progressed stages in 3+ weeks. They may need attention or should be marked lost.`,
         { leadIds: stuckLeads.map(l => l.id), stages: stuckLeads.slice(0, 5).map(l => `${l.firstName} ${l.lastName} (${l.stage})`) },
@@ -122,8 +123,8 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
       const latestRate = recentCampaigns[0].openRate || 0
       if (latestRate < avgOpenRate * 0.85 && avgOpenRate > 0) {
         await upsertInsight(
-          'email_performance',
-          'medium',
+          'EMAIL_PERFORMANCE',
+          'MEDIUM',
           `Email open rate dropped ${Math.round((1 - latestRate / avgOpenRate) * 100)}% vs average`,
           `Your latest campaign open rate (${(latestRate * 100).toFixed(1)}%) is below your average (${(avgOpenRate * 100).toFixed(1)}%). Consider A/B testing subject lines.`,
           { latestRate, avgOpenRate },
@@ -141,8 +142,8 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
     })
     if (unscoredLeads > 0) {
       await upsertInsight(
-        'lead_followup',
-        unscoredLeads > 10 ? 'medium' : 'low',
+        'LEAD_FOLLOWUP',
+        unscoredLeads > 10 ? 'MEDIUM' : 'LOW',
         `${unscoredLeads} leads don't have a score yet`,
         `Run score recalculation to prioritize your pipeline effectively.`,
         { count: unscoredLeads },
@@ -168,8 +169,8 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
     if (highValueAtRisk.length > 0) {
       const totalValue = highValueAtRisk.reduce((s, l) => s + (l.value || 0), 0)
       await upsertInsight(
-        'lead_followup',
-        'critical',
+        'LEAD_FOLLOWUP',
+        'CRITICAL',
         `${highValueAtRisk.length} high-value leads ($${totalValue.toLocaleString()}) need attention`,
         `These high-value leads haven't been contacted in 7+ days. Prioritize outreach to protect this pipeline value.`,
         { leadIds: highValueAtRisk.map(l => l.id), totalValue },
@@ -260,7 +261,7 @@ export const getAIStats = async (req: Request, res: Response) => {
       where: { organizationId, dismissed: false, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
     })
     const highPriorityInsights = await prisma.aIInsight.count({
-      where: { organizationId, dismissed: false, priority: { in: ['high', 'critical'] }, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+      where: { organizationId, dismissed: false, priority: { in: ['HIGH', 'CRITICAL'] }, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
     })
 
     // Total tokens/cost this month

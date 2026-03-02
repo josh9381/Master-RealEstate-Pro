@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
+import { useAuthStore } from '@/store/authStore'
+import { getUserItem, setUserItem } from '@/lib/userStorage'
 import { Mail, Layout, Type, Image, Link, Code, Eye, RefreshCw, Edit, Trash2, Plus, X, Send } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -18,6 +20,7 @@ const EmailTemplatesLibrary = () => {
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
+  const userId = useAuthStore(s => s.user?.id)
   const [activeCategory, setActiveCategory] = useState('All Templates')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
@@ -42,7 +45,7 @@ const EmailTemplatesLibrary = () => {
       includeSocialSharing: false
     }
     try {
-      const saved = localStorage.getItem('email-template-settings')
+      const saved = getUserItem(userId, 'email-template-settings')
       if (saved) return { ...defaults, ...JSON.parse(saved) }
     } catch (e) {
       console.error('Failed to load saved template settings:', e)
@@ -488,7 +491,7 @@ const EmailTemplatesLibrary = () => {
             </div>
           </div>
           <Button onClick={() => {
-            localStorage.setItem('email-template-settings', JSON.stringify(templateSettings))
+            setUserItem(userId, 'email-template-settings', JSON.stringify(templateSettings))
             toast.success('Template settings saved')
           }}>Save Settings</Button>
         </CardContent>

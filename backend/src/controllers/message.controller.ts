@@ -432,7 +432,7 @@ export const makeCall = async (req: Request, res: Response) => {
       type: 'CALL',
       direction: 'OUTBOUND',
       body: 'Outbound call initiated',
-      fromAddress: process.env.TWILIO_PHONE_NUMBER || '+1234567890',
+      fromAddress: process.env.TWILIO_PHONE_NUMBER || (() => { throw new Error('TWILIO_PHONE_NUMBER environment variable is required') })(),
       toAddress: to,
       status: 'PENDING',
       leadId: leadId || null,
@@ -677,9 +677,7 @@ export const replyToMessage = async (req: Request, res: Response) => {
 
 // Mark multiple messages as read
 export const markMessagesAsRead = async (req: Request, res: Response) => {
-  console.log('📥 Mark as read request body:', JSON.stringify(req.body))
   const { messageIds } = req.body
-  console.log('📥 Extracted messageIds:', messageIds)
 
   const organizationId = req.user!.organizationId
 

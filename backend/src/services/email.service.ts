@@ -11,10 +11,13 @@ import { logger } from '../lib/logger';
 
 // Initialize SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@realestate.com';
-const FROM_NAME = process.env.FROM_NAME || 'RealEstate Pro';
+const FROM_EMAIL = process.env.FROM_EMAIL;
+const FROM_NAME = process.env.FROM_NAME;
+if (!FROM_EMAIL || !FROM_NAME) {
+  console.warn('[EMAIL] FROM_EMAIL and/or FROM_NAME not set in environment. Email sending may fail or use empty sender.');
+}
 const APP_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
-const UNSUBSCRIBE_EMAIL = process.env.UNSUBSCRIBE_EMAIL || `unsubscribe@${FROM_EMAIL.split('@')[1] || 'realestate.com'}`;
+const UNSUBSCRIBE_EMAIL = process.env.UNSUBSCRIBE_EMAIL || `unsubscribe@${(FROM_EMAIL || 'realestate.com').split('@')[1] || 'realestate.com'}`;
 
 // #105: Default daily email sending limit per org (configurable via env)
 const DAILY_EMAIL_LIMIT = parseInt(process.env.DAILY_EMAIL_LIMIT || '1000', 10);

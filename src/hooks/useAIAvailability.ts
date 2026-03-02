@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import api from '@/lib/api'
 
 interface AIAvailability {
   available: boolean
@@ -31,20 +32,14 @@ export function useAIAvailability(): AIAvailability {
 
     const checkAvailability = async () => {
       try {
-        const response = await fetch('/api/system/integration-status')
-        if (response.ok) {
-          const data = await response.json()
-          cachedStatus = { available: data.ai.configured, checked: true }
-          setStatus({
-            available: data.ai.configured,
-            loading: false,
-            message: data.ai.configured ? '' : 'Configure OpenAI API key in Settings to enable AI features',
-          })
-        } else {
-          // Can't determine — assume available
-          cachedStatus = { available: true, checked: true }
-          setStatus({ available: true, loading: false, message: '' })
-        }
+        const response = await api.get('/system/integration-status')
+        const data = response.data
+        cachedStatus = { available: data.ai.configured, checked: true }
+        setStatus({
+          available: data.ai.configured,
+          loading: false,
+          message: data.ai.configured ? '' : 'Configure OpenAI API key in Settings to enable AI features',
+        })
       } catch {
         // Can't reach backend — assume available
         cachedStatus = { available: true, checked: true }

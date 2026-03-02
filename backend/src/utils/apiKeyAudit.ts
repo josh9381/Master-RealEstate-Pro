@@ -12,12 +12,14 @@ export async function logAPIKeyAccess(
   userId: string,
   provider: string,
   action: 'created' | 'updated' | 'accessed' | 'deleted',
-  req?: Request
+  req?: Request,
+  organizationId?: string
 ): Promise<void> {
   try {
     await prisma.aPIKeyAudit.create({
       data: {
         userId,
+        organizationId: organizationId || 'unknown',
         provider,
         action,
         ipAddress: req?.ip || req?.headers['x-forwarded-for'] as string || req?.socket?.remoteAddress || null,

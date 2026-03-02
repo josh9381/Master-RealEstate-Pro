@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { MainLayout } from './components/layout/MainLayout'
 import { AuthLayout } from './components/layout/AuthLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { RequireAdmin } from './components/auth/RequireRole'
 import { PageErrorBoundary } from './components/PageErrorBoundary'
 
 // Loading fallback for lazy components
@@ -232,16 +233,16 @@ function App() {
         <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Notifications"><NotificationsPage /></PageErrorBoundary></Suspense>} />
         
         {/* Admin */}
-        <Route path="/admin" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Admin Panel"><AdminPanel /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/team" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Team Management"><TeamManagement /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/subscription" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Subscription Management"><SubscriptionPage /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/system" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="System Settings"><SystemSettings /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/features" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Feature Flags"><FeatureFlags /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/debug" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Debug Console"><DebugConsole /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/export" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Data Export"><DataExportWizard /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/retry-queue" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Retry Queue"><RetryQueue /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/health" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Health Check"><HealthCheckDashboard /></PageErrorBoundary></Suspense>} />
-        <Route path="/admin/database" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Database Maintenance"><DatabaseMaintenance /></PageErrorBoundary></Suspense>} />
+        <Route path="/admin" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Admin Panel"><AdminPanel /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/team" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Team Management"><TeamManagement /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/subscription" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Subscription Management"><SubscriptionPage /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/system" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="System Settings"><SystemSettings /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/features" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Feature Flags"><FeatureFlags /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/debug" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Debug Console"><DebugConsole /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/export" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Data Export"><DataExportWizard /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/retry-queue" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Retry Queue"><RetryQueue /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/health" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Health Check"><HealthCheckDashboard /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/database" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Database Maintenance"><DatabaseMaintenance /></PageErrorBoundary></Suspense></RequireAdmin>} />
         
         {/* Billing */}
         <Route path="/billing" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Billing"><BillingPage /></PageErrorBoundary></Suspense>} />

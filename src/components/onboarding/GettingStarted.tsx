@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { useAuthStore } from '@/store/authStore'
+import { getUserItem, setUserItem } from '@/lib/userStorage'
 import {
   Users,
   Megaphone,
@@ -36,8 +38,9 @@ interface Step {
 
 export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults }: GettingStartedProps) {
   const navigate = useNavigate()
+  const userId = useAuthStore(s => s.user?.id)
   const [dismissed, setDismissed] = useState(() => {
-    return localStorage.getItem(STORAGE_KEY) === 'true'
+    return getUserItem(userId, STORAGE_KEY) === 'true'
   })
 
   // Don't show if dismissed or if user has completed all steps
@@ -80,7 +83,7 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
   const progressPercent = Math.round((completedCount / steps.length) * 100)
 
   const handleDismiss = () => {
-    localStorage.setItem(STORAGE_KEY, 'true')
+    setUserItem(userId, STORAGE_KEY, 'true')
     setDismissed(true)
   }
 

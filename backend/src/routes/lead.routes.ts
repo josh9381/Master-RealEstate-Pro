@@ -11,6 +11,7 @@ import {
   listLeadsQuerySchema,
   bulkDeleteLeadsSchema,
   bulkUpdateLeadsSchema,
+  mergeLeadsSchema,
 } from '../validators/lead.validator';
 import {
   getLeads,
@@ -95,7 +96,7 @@ router.post('/import', upload.single('file'), asyncHandler(importLeads));
  * @desc    Merge multiple leads into one
  * @access  Private
  */
-router.post('/merge', asyncHandler(async (req, res) => {
+router.post('/merge', validateBody(mergeLeadsSchema), asyncHandler(async (req, res) => {
   const { primaryLeadId, secondaryLeadIds } = req.body;
   const orgId = req.user!.organizationId;
 

@@ -92,7 +92,7 @@ router.post('/compare', asyncHandler(compareCampaignsEndpoint));
  * @desc    Get per-campaign statistics
  * @access  Private
  */
-router.get('/:id/stats', asyncHandler(async (req: any, res: any) => {
+router.get('/:id/stats', validateParams(campaignIdSchema), asyncHandler(async (req: any, res: any) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id, organizationId: req.user!.organizationId }
   });
@@ -117,7 +117,7 @@ router.get('/:id/stats', asyncHandler(async (req: any, res: any) => {
  * @desc    Get real-time campaign execution progress
  * @access  Private
  */
-router.get('/:id/execution-status', asyncHandler(async (req: any, res: any) => {
+router.get('/:id/execution-status', validateParams(campaignIdSchema), asyncHandler(async (req: any, res: any) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id, organizationId: req.user!.organizationId },
     select: {
@@ -184,7 +184,7 @@ router.get('/:id/execution-status', asyncHandler(async (req: any, res: any) => {
  * @desc    Add recipients to a campaign
  * @access  Private
  */
-router.post('/:id/recipients', asyncHandler(async (req: any, res: any) => {
+router.post('/:id/recipients', validateParams(campaignIdSchema), asyncHandler(async (req: any, res: any) => {
   const { leadIds } = req.body;
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id, organizationId: req.user!.organizationId }

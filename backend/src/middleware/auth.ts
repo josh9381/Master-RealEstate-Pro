@@ -58,17 +58,10 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     // Continue to next middleware/handler
     next();
   } catch (error) {
-    if (error instanceof Error) {
-      res.status(401).json({
-        success: false,
-        error: error.message
-      });
-    } else {
-      res.status(401).json({
-        success: false,
-        error: 'Authentication failed'
-      });
-    }
+    res.status(401).json({
+      success: false,
+      error: 'Invalid or expired token'
+    });
   }
 }
 

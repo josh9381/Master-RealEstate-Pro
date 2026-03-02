@@ -963,6 +963,7 @@ export class AIFunctionsService {
             content: args.notes,
             leadId: lead.id,
             authorId: userId,
+            organizationId,
           },
         });
       }
@@ -1088,6 +1089,7 @@ export class AIFunctionsService {
           content: args.content,
           leadId: args.leadId,
           authorId: userId,
+          organizationId,
         },
       });
 
@@ -2803,7 +2805,7 @@ Generate the script:`;
             credentials: { apiKey: args.apiKey },
             config: args.additionalConfig || {},
             lastSyncAt: new Date(),
-            syncStatus: 'connected',
+            syncStatus: 'CONNECTED',
           },
         });
         
@@ -2817,12 +2819,13 @@ Generate the script:`;
         const integration = await prisma.integration.create({
           data: {
             userId,
+            organizationId,
             provider,
             isConnected: true,
             credentials: { apiKey: args.apiKey },
             config: args.additionalConfig || {},
             lastSyncAt: new Date(),
-            syncStatus: 'connected',
+            syncStatus: 'CONNECTED',
           },
         });
         
@@ -2868,7 +2871,7 @@ Generate the script:`;
         where: { id: integration.id },
         data: {
           isConnected: false,
-          syncStatus: 'disconnected',
+          syncStatus: 'DISCONNECTED',
         },
       });
       
@@ -2915,7 +2918,7 @@ Generate the script:`;
         where: { id: integration.id },
         data: {
           lastSyncAt: new Date(),
-          syncStatus: 'synced',
+          syncStatus: 'SYNCED',
           syncError: null,
         },
       });

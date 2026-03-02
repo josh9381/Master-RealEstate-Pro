@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
+import { unsubscribeLimiter } from '../middleware/rateLimiter';
 import {
   unsubscribe,
   resubscribe,
@@ -11,6 +12,8 @@ const router = Router();
 
 // Note: These routes are PUBLIC - no authentication required
 // Users should be able to unsubscribe without logging in
+// Rate-limited to prevent abuse
+router.use(unsubscribeLimiter);
 
 /**
  * @route   GET /api/unsubscribe/:token

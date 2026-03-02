@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { User, UserPermissions } from '@/types'
 import { authApi, type LoginData, type RegisterData } from '@/lib/api'
 import { disconnectSocket } from '@/hooks/useSocket'
+import { clearUserStorage } from '@/lib/userStorage'
 
 interface AuthState {
   user: User | null
@@ -54,6 +55,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearAuth: () => {
+        // Clear user-scoped data before losing the userId
+        const userId = get().user?.id
+        clearUserStorage(userId)
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
         disconnectSocket()
