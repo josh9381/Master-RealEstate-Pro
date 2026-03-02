@@ -1,9 +1,9 @@
 # Master Real Estate Pro — 100% Completion Plan
 
 > **Created:** February 28, 2026
-> **Updated:** March 1, 2026 (post-audit revision — corrected counts, removed redundant/unnecessary work, added consolidation phase)
+> **Updated:** March 2, 2026 (deferred Admin Panel, Team Management, Subscription & Billing to end — decisions pending)
 > **Total Estimated Days:** ~45 working days
-> **Billing, AI, Social Media, and Enterprise are intentionally scheduled last.**
+> **Admin Panel, Team Management, Subscription, Billing, AI, and Enterprise are intentionally scheduled last — many design/scope decisions still pending.**
 
 ---
 
@@ -75,47 +75,45 @@
 | 2.4 | Add `organizationId` to `ABTestResult` model for direct org-scoped queries | 30 min | ☐ |
 | 2.5 | Convert inconsistent String status fields to enums: `CustomFieldDefinition.type`, `Notification.type`, `Integration.syncStatus`, `Segment.matchType`, `Message.bounceType` | 1.5 hr | ☐ |
 | 2.6 | Add composite indexes for high-frequency queries: `Notification(userId, read)`, `Message(organizationId, type)`, `LoginHistory(userId, isActive)` | 30 min | ☐ |
-| 2.7 | Create `SystemSettings` Prisma model — currently stored in an in-memory JS object (`Record<string, any>` in `admin.controller.ts`), lost on every restart | 1 hr | ☐ |
-| 2.8 | Add stale data cleanup cron jobs: prune expired `RefreshToken`, `PasswordResetToken`, `LoginHistory`, and `AIInsight` (has `expiresAt` field but nothing ever deletes expired records) | 2 hr | ☐ |
+| 2.7 | Add stale data cleanup cron jobs: prune expired `RefreshToken`, `PasswordResetToken`, `LoginHistory`, and `AIInsight` (has `expiresAt` field but nothing ever deletes expired records) | 2 hr | ☐ |
 
-**Phase Total: ~8 hours (1 day)**
+**Phase Total: ~7 hours (1 day)**
+
+> **Note:** `SystemSettings` Prisma model creation (was 2.7) moved to Phase 14 — depends on admin panel design decisions.
 
 ---
 
-## PHASE 3: BROKEN/FAKE PAGES + CONSOLIDATION (Days 4–7)
+## PHASE 3: BROKEN/FAKE PAGES + CONSOLIDATION (Days 4–6)
 *Fix dishonest pages, remove fakes, and consolidate overlapping features.*
+*Admin, Team, Billing, and Subscription page fixes deferred to Phase 14.*
 
 ### 3A: Fix or Remove Fake Pages
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 3.1 | **Help Section** — Delete all 4 fake help pages (`HelpCenter`, `SupportTicketSystem`, `VideoTutorialLibrary`, `DocumentationPages` — 1,431 lines of hardcoded content, zero API calls). Replace with a single "Help & Support" page linking to external docs/support tool (Intercom, Zendesk, or docs site) | 1 hr | ☐ |
-| 3.2 | **Integrations Hub** — Remove fake connect/disconnect buttons for Salesforce/HubSpot/etc. (no real OAuth); keep the real email/SMS config status checks that already call the API | 1 hr | ☐ |
-| 3.3 | **Fix CampaignsList error swallowing** — remove `catch { return null }`, let errors propagate to ErrorBoundary + toast | 30 min | ☐ |
-| 3.4 | **Fix all 38+ silent `catch {}` blocks** — add error logging/toasts throughout frontend and backend | 3 hr | ☐ |
-| 3.5 | **ServiceConfiguration** — Wire remaining stub sections to real settings API (uses `SystemSettings` model from Phase 2) | 2 hr | ☐ |
-| 3.6 | **SystemSettings page** — Wire remaining sections that don't save (uses `SystemSettings` model from Phase 2) | 1.5 hr | ☐ |
-| 3.7 | **SecuritySettings** — Wire real session management (LoginHistory table exists); sessions list is still hardcoded | 1 hr | ☐ |
-| 3.8 | **BillingPage invoices** — Replace hardcoded mock invoices with honest "no invoices yet" until Stripe is wired | 30 min | ☐ |
-| 3.9 | Remove/fix fake `setTimeout` operations in `BillingPage` | 15 min | ☐ |
-| 3.10 | Replace all hardcoded placeholder URLs (`crm.yourcompany.com`, `acmecorp.com`, `support@company.com`) with config-driven values or env vars | 30 min | ☐ |
-| 3.11 | Remove or implement stub backend routes (endpoints that return 501) — mark billing stubs honestly | 1 hr | ☐ |
+| 3.1 | **Integrations Hub** — Remove fake connect/disconnect buttons for Salesforce/HubSpot/etc. (no real OAuth); keep the real email/SMS config status checks that already call the API | 1 hr | ☐ |
+| 3.2 | **Fix CampaignsList error swallowing** — remove `catch { return null }`, let errors propagate to ErrorBoundary + toast | 30 min | ☐ |
+| 3.3 | **Fix all 38+ silent `catch {}` blocks** — add error logging/toasts throughout frontend and backend | 3 hr | ☐ |
+| 3.4 | **SecuritySettings** — Wire real session management (LoginHistory table exists); sessions list is still hardcoded | 1 hr | ☐ |
+| 3.5 | Replace all hardcoded placeholder URLs (`crm.yourcompany.com`, `acmecorp.com`, `support@company.com`) with config-driven values or env vars | 30 min | ☐ |
+| 3.6 | Remove or implement non-billing/subscription stub backend routes that return 501 (billing stubs left for Phase 14) | 30 min | ☐ |
 
 ### 3B: Consolidate Overlapping Pages
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 3.12 | Fix duplicate routes — redirect: `/analytics/report-builder` → `/analytics/custom-reports`, `/communication` → `/communication/inbox`, `/settings/team` → `/admin/team` | 30 min | ☐ |
-| 3.13 | Merge 3 billing pages (`BillingPage`, `BillingSubscriptionPage`, `admin/Subscription`) into 1 tabbed Billing page (Plan / Invoices / Payment Methods) | 3 hr | ☐ |
-| 3.14 | Merge `CampaignReports` + `CampaignAnalytics` into 1 "Campaign Performance" page (nearly identical metrics) | 2 hr | ☐ |
-| 3.15 | Merge `AIAnalytics` + `IntelligenceInsights` + `PredictiveAnalytics` into 1 tabbed "AI Insights" page | 2 hr | ☐ |
-| 3.16 | Convert `EmailCampaigns`, `SMSCampaigns`, `PhoneCampaigns` from separate pages to filter tabs on `CampaignsList` | 2 hr | ☐ |
+| 3.7 | Fix duplicate routes — redirect: `/analytics/report-builder` → `/analytics/custom-reports`, `/communication` → `/communication/inbox` (team/admin redirects deferred to Phase 14) | 20 min | ☐ |
+| 3.8 | Merge `CampaignReports` + `CampaignAnalytics` into 1 "Campaign Performance" page (nearly identical metrics) | 2 hr | ☐ |
+| 3.9 | Merge `AIAnalytics` + `IntelligenceInsights` + `PredictiveAnalytics` into 1 tabbed "AI Insights" page | 2 hr | ☐ |
+| 3.10 | Convert `EmailCampaigns`, `SMSCampaigns`, `PhoneCampaigns` from separate pages to filter tabs on `CampaignsList` | 2 hr | ☐ |
 
-**Phase Total: ~22 hours (3 days)**
+**Phase Total: ~13 hours (1.5 days)**
+
+> **Deferred to Phase 14:** Help pages (keeping current design — user decision), ServiceConfiguration wiring, SystemSettings page wiring, BillingPage fixes, billing page consolidation.
 
 ---
 
-## PHASE 4: UX ESSENTIALS (Days 7–9)
+## PHASE 4: UX ESSENTIALS (Days 6–8)
 *Core usability that every user will notice.*
 
 | # | Task | Time | Status |
@@ -141,7 +139,7 @@
 
 ---
 
-## PHASE 5: CODE QUALITY + TESTING FOUNDATION (Days 9–12)
+## PHASE 5: CODE QUALITY + TESTING FOUNDATION (Days 8–11)
 *Split mega-files, set up testing, enforce standards.*
 
 | # | Task | Time | Status |
@@ -149,22 +147,22 @@
 | 5.1 | Split `CommunicationInbox.tsx` (2,240 lines) into composable modules | 3 hr | ☐ |
 | 5.2 | Split `LeadsList.tsx` (2,199 lines) into composable modules | 3 hr | ☐ |
 | 5.3 | Fix rampant `any` types in backend (20+ instances in controllers) | 2 hr | ☐ |
-| 5.4 | Extract inline business logic from route files into proper controllers: `billing.controller.ts`, `export.controller.ts`, `segmentation.controller.ts` | 2 hr | ☐ |
-| 5.5 | Add consistent pagination to all list endpoints: segments, saved reports, billing invoices, deliverability lists | 1.5 hr | ☐ |
+| 5.4 | Extract inline business logic from route files into proper controllers: `export.controller.ts`, `segmentation.controller.ts` (billing controller deferred to Phase 14) | 1.5 hr | ☐ |
+| 5.5 | Add consistent pagination to all list endpoints: segments, saved reports, deliverability lists (billing pagination deferred to Phase 14) | 1 hr | ☐ |
 | 5.6 | Set up ESLint for backend (frontend already has it configured; backend has zero linting) | 1 hr | ☐ |
 | 5.7 | Add pre-commit hooks with husky + lint-staged (lint + type-check on commit) | 1 hr | ☐ |
 | 5.8 | Set up Vitest for frontend (zero test tooling currently installed — no vitest, no @testing-library) | 1.5 hr | ☐ |
 | 5.9 | Write tests for critical paths: auth flow, lead CRUD, campaign CRUD | 4 hr | ☐ |
-| 5.10 | Add backend integration tests for 11 untested route groups: billing, export, segmentation, savedReport, deliverability, intelligence, webhook, team, AI, custom-field, subscription | 6 hr | ☐ |
+| 5.10 | Add backend integration tests for untested route groups: export, segmentation, savedReport, deliverability, intelligence, webhook, AI, custom-field (billing/subscription/team tests deferred to Phase 14) | 5 hr | ☐ |
 | 5.11 | Add error boundaries around modals/drawers (AI Composer, Workflow Builder canvas, Calendar sidebar) | 1.5 hr | ☐ |
 | 5.12 | Consolidate Redis clients — remove `redis` package, standardize on `ioredis` | 1 hr | ☐ |
 | 5.13 | Upgrade vulnerable dependencies (axios, react-router-dom, vite/rollup, express/qs) | 2 hr | ☐ |
 
-**Phase Total: ~30 hours (3.5 days)**
+**Phase Total: ~28 hours (3.5 days)**
 
 ---
 
-## PHASE 6: ACCESSIBILITY + MOBILE (Days 12–14)
+## PHASE 6: ACCESSIBILITY + MOBILE (Days 11–13)
 
 | # | Task | Time | Status |
 |---|------|------|--------|
@@ -183,7 +181,7 @@
 
 ---
 
-## PHASE 7: REAL FEATURE WIRING (Days 14–17)
+## PHASE 7: REAL FEATURE WIRING (Days 13–15)
 *Connect frontend and backend for things that are half-built.*
 
 | # | Task | Time | Status |
@@ -192,18 +190,18 @@
 | 7.2 | Integrate email service into AI functions | 2 hr | ☐ |
 | 7.3 | Integrate SMS service into AI functions | 2 hr | ☐ |
 | 7.4 | Implement local disk file upload with cleanup for profile photos + business logos (S3/R2 deferred to Phase 16) | 2 hr | ☐ |
-| 7.5 | Send real invitation emails on team invite | 2 hr | ☐ |
-| 7.6 | Implement integration sync logic (per provider) | 4 hr | ☐ |
-| 7.7 | Fix `BusinessSettings` / `Integration` / `EmailConfig` / `SMSConfig` ownership — tied to User instead of Organization (schema design debt) | 4 hr | ☐ |
-| 7.8 | Wire `/api/deliverability/*` endpoints into a Deliverability Dashboard (9 endpoints exist with no UI) | 3 hr | ☐ |
-| 7.9 | Wire `/api/reports/saved/*` into a saved reports UI | 2 hr | ☐ |
-| 7.10 | Ensure `/api/intelligence/*` prefix is correctly used by `IntelligenceInsights.tsx` | 30 min | ☐ |
+| 7.5 | Implement integration sync logic (per provider) | 4 hr | ☐ |
+| 7.6 | Wire `/api/deliverability/*` endpoints into a Deliverability Dashboard (9 endpoints exist with no UI) | 3 hr | ☐ |
+| 7.7 | Wire `/api/reports/saved/*` into a saved reports UI | 2 hr | ☐ |
+| 7.8 | Ensure `/api/intelligence/*` prefix is correctly used by `IntelligenceInsights.tsx` | 30 min | ☐ |
 
-**Phase Total: ~23 hours (3 days)**
+**Phase Total: ~17 hours (2 days)**
+
+> **Deferred to Phase 14:** Send real invitation emails on team invite, fix BusinessSettings/Integration/EmailConfig/SMSConfig ownership (User → Organization).
 
 ---
 
-## PHASE 8: ONBOARDING + POLISH (Days 17–19)
+## PHASE 8: ONBOARDING + POLISH (Days 15–17)
 
 | # | Task | Time | Status |
 |---|------|------|--------|
@@ -218,7 +216,7 @@
 
 ---
 
-## PHASE 9: LEAD MANAGEMENT FEATURES (Days 19–26)
+## PHASE 9: LEAD MANAGEMENT FEATURES (Days 17–24)
 
 | # | Task | Time | Status |
 |---|------|------|--------|
@@ -243,7 +241,7 @@
 
 ---
 
-## PHASE 10: CAMPAIGNS & WORKFLOWS (Days 26–32)
+## PHASE 10: CAMPAIGNS & WORKFLOWS (Days 24–30)
 
 | # | Task | Time | Status |
 |---|------|------|--------|
@@ -266,7 +264,7 @@
 
 ---
 
-## PHASE 11: ANALYTICS + CALENDAR (Days 32–36)
+## PHASE 11: ANALYTICS + CALENDAR (Days 30–34)
 
 | # | Task | Time | Status |
 |---|------|------|--------|
@@ -284,7 +282,7 @@
 
 ---
 
-## PHASE 12: SETTINGS & AUTH (Days 36–39)
+## PHASE 12: AUTH & POLISH (Days 34–35)
 
 | # | Task | Time | Status |
 |---|------|------|--------|
@@ -292,17 +290,15 @@
 | 12.2 | Password strength indicator | 1 hr | ☐ |
 | 12.3 | Email verification on register — `emailVerified` field exists on User (defaults `false`), security score checks it, but `register()` never sends verification email | 3 hr | ☐ |
 | 12.4 | Terms of Service checkbox on register | 30 min | ☐ |
-| 12.5 | Admin audit trail (full activity logging) | 4 hr | ☐ |
-| 12.6 | Data backup & restore UI (button exists, not wired) | 4 hr | ☐ |
-| 12.7 | API documentation polish (verify Swagger) | 2 hr | ☐ |
-| 12.8 | Subscription tier sync — add consistency checks or DB triggers for the 3 cached `subscriptionTier` fields | 2 hr | ☐ |
-| 12.9 | Add `createdById` audit trail to `Task`, `Segment`, `Workflow`, `Tag` models | 2 hr | ☐ |
+| 12.5 | API documentation polish (verify Swagger) | 2 hr | ☐ |
 
-**Phase Total: ~21 hours (2.5 days)**
+**Phase Total: ~9 hours (1 day)**
+
+> **Deferred to Phase 14:** Admin audit trail, data backup/restore UI, subscription tier sync, `createdById` audit trails.
 
 ---
 
-## PHASE 13: AI FEATURES (Days 39–42)
+## PHASE 13: AI FEATURES (Days 35–38)
 *Uses your OpenAI key as default. Teams/orgs can optionally provide their own key and personalize their AI.*
 
 | # | Task | Time | Status |
@@ -321,18 +317,49 @@
 
 ---
 
-## PHASE 14: BILLING / STRIPE (Days 42–44)
+## PHASE 14: ADMIN, TEAM, BILLING & SUBSCRIPTION (Days 38–44)
+*Deferred here intentionally — many design and scope decisions still pending (e.g., help page layout, billing page structure, admin panel features, team management flow). Build once decisions are finalized.*
+
+### 14A: Admin Panel
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 14.1 | Wire Stripe checkout session creation | 4 hr | ☐ |
-| 14.2 | Wire Stripe billing portal | 2 hr | ☐ |
-| 14.3 | Wire Stripe payment methods retrieval | 2 hr | ☐ |
-| 14.4 | Implement usage recording for metered billing | 3 hr | ☐ |
-| 14.5 | Replace hardcoded invoices with real Stripe invoice API | 2 hr | ☐ |
-| 14.6 | Subscription upgrade/downgrade flow | 3 hr | ☐ |
+| 14.1 | Create `SystemSettings` Prisma model — currently stored in an in-memory JS object (`Record<string, any>` in `admin.controller.ts`), lost on every restart | 1 hr | ☐ |
+| 14.2 | Wire `ServiceConfiguration` page to real settings API (depends on SystemSettings model) | 2 hr | ☐ |
+| 14.3 | Wire `SystemSettings` page — remaining sections that don't save (depends on SystemSettings model) | 1.5 hr | ☐ |
+| 14.4 | Admin audit trail (full activity logging) | 4 hr | ☐ |
+| 14.5 | Data backup & restore UI (button exists, not wired) | 4 hr | ☐ |
+| 14.6 | Add `createdById` audit trail to `Task`, `Segment`, `Workflow`, `Tag` models | 2 hr | ☐ |
+| 14.7 | Help pages — review current design, decide what to keep/change/remove (currently 4 pages with stat cards, 1,431 lines of hardcoded content — user likes current look, needs final decision) | TBD | ☐ |
 
-**Phase Total: ~16 hours (2 days)**
+### 14B: Team Management
+
+| # | Task | Time | Status |
+|---|------|------|--------|
+| 14.8 | Send real invitation emails on team invite | 2 hr | ☐ |
+| 14.9 | Fix `BusinessSettings` / `Integration` / `EmailConfig` / `SMSConfig` ownership — tied to User instead of Organization (schema design debt) | 4 hr | ☐ |
+| 14.10 | Fix duplicate route: `/settings/team` → `/admin/team` redirect | 10 min | ☐ |
+
+### 14C: Billing & Subscription
+
+| # | Task | Time | Status |
+|---|------|------|--------|
+| 14.11 | Decide billing page structure — merge 3 pages (`BillingPage`, `BillingSubscriptionPage`, `admin/Subscription`) into 1 tabbed page, or keep separate | 3 hr | ☐ |
+| 14.12 | BillingPage — replace hardcoded mock invoices with real data or honest empty state | 30 min | ☐ |
+| 14.13 | Remove/fix fake `setTimeout` operations in `BillingPage` | 15 min | ☐ |
+| 14.14 | Implement or remove stub billing/subscription backend routes that return 501 | 1 hr | ☐ |
+| 14.15 | Extract inline billing business logic into `billing.controller.ts` | 40 min | ☐ |
+| 14.16 | Add billing pagination to list endpoints | 30 min | ☐ |
+| 14.17 | Wire Stripe checkout session creation | 4 hr | ☐ |
+| 14.18 | Wire Stripe billing portal | 2 hr | ☐ |
+| 14.19 | Wire Stripe payment methods retrieval | 2 hr | ☐ |
+| 14.20 | Implement usage recording for metered billing | 3 hr | ☐ |
+| 14.21 | Replace hardcoded invoices with real Stripe invoice API | 2 hr | ☐ |
+| 14.22 | Subscription upgrade/downgrade flow | 3 hr | ☐ |
+| 14.23 | Subscription tier sync — add consistency checks or DB triggers for the 3 cached `subscriptionTier` fields | 2 hr | ☐ |
+| 14.24 | Add backend integration tests for billing, subscription, and team route groups | 2 hr | ☐ |
+
+**Phase Total: ~45 hours (5.5 days)**
 
 ---
 
@@ -395,14 +422,14 @@ These were discovered during deep codebase analysis and are incorporated into th
 | M | **Admin pages with no frontend role guard** — pages render for regular users. | MEDIUM | 1.16 |
 | N | **localStorage not cleaned on logout** — settings leak between users. | MEDIUM | 1.19 |
 | O | **localStorage keys not user-scoped** — user A's data shows for user B. | MEDIUM | 1.20 |
-| P | **SystemSettings in-memory store** — lost on restart, no Prisma model. | MEDIUM | 2.7 |
-| Q | **No stale data cleanup** — 4 tables with expirable data, no pruning cron. | MEDIUM | 2.8 |
+| P | **SystemSettings in-memory store** — lost on restart, no Prisma model. | MEDIUM | 14.1 |
+| Q | **No stale data cleanup** — 4 tables with expirable data, no pruning cron. | MEDIUM | 2.7 |
 | R | **Missing composite indexes** — 3+ high-frequency query patterns. | MEDIUM | 2.6 |
 | S | **`/tmp/uploads` never cleaned** — disk exhaustion risk. | MEDIUM | 1.22 |
 | T | **Backend `.env.example` missing ~16 vars**. | MEDIUM | 0.12 |
 | U | **5 dev-only pages shipping to production** — DemoDataGenerator, DebugConsole, DatabaseMaintenance, RetryQueue, FeatureFlags. | MEDIUM | 0.15 |
 | V | **Feature overload** — 84 pages / 91 routes (~4x competing CRMs). Consolidation added to Phase 3B. | DESIGN | 3B |
-| W | **3 billing pages with significant overlap** — consolidated in Phase 3B. | DESIGN | 3.13 |
+| W | **3 billing pages with significant overlap** — decision deferred. | DESIGN | 14.11 |
 | X | **AI SSE streaming already implemented** — removed from plan (was 4 wasted hours). | INFO | — |
 | Y | **HealthCheckDashboard already wired** to real API — removed from plan. | INFO | — |
 | Z | **Newsletter already has "Coming Soon" banner** — removed from plan. | INFO | — |
@@ -419,28 +446,54 @@ These were discovered during deep codebase analysis and are incorporated into th
 | 0 | Codebase hygiene + delete dev pages | 1 | 1 |
 | 1 | Critical security | 1.5 | 2.5 |
 | 2 | Data & schema integrity | 1 | 3.5 |
-| 3 | Fix fake pages + consolidate overlaps | 3 | 6.5 |
-| 4 | UX essentials | 2 | 8.5 |
-| **MILESTONE** | **Launchable product** | | **8.5 days** |
-| 5 | Code quality + testing | 3.5 | 12 |
-| 6 | Accessibility + mobile | 1.5 | 13.5 |
-| 7 | Real feature wiring | 3 | 16.5 |
-| 8 | Onboarding + polish | 1.5 | 18 |
-| **MILESTONE** | **Professional quality** | | **18 days** |
-| 9 | Lead management | 7.5 | 25.5 |
-| 10 | Campaigns & workflows | 5.5 | 31 |
-| 11 | Analytics + calendar | 4 | 35 |
-| 12 | Settings & auth | 2.5 | 37.5 |
-| **MILESTONE** | **Feature complete** | | **37.5 days** |
-| 13 | AI features | 3 | 40.5 |
-| 14 | Billing (Stripe) | 2 | 42.5 |
-| 15 | Telephony + remaining | 3 | 45.5 |
+| 3 | Fix fake pages + consolidate overlaps | 1.5 | 5 |
+| 4 | UX essentials | 2 | 7 |
+| **MILESTONE** | **Launchable product** | | **7 days** |
+| 5 | Code quality + testing | 3.5 | 10.5 |
+| 6 | Accessibility + mobile | 1.5 | 12 |
+| 7 | Real feature wiring | 2 | 14 |
+| 8 | Onboarding + polish | 1.5 | 15.5 |
+| **MILESTONE** | **Professional quality** | | **15.5 days** |
+| 9 | Lead management | 7.5 | 23 |
+| 10 | Campaigns & workflows | 5.5 | 28.5 |
+| 11 | Analytics + calendar | 4 | 32.5 |
+| 12 | Auth & polish | 1 | 33.5 |
+| **MILESTONE** | **Feature complete (core)** | | **33.5 days** |
+| 13 | AI features | 3 | 36.5 |
+| 14 | Admin, Team, Billing & Subscription | 5.5 | 42 |
+| 15 | Telephony + remaining | 3 | 45 |
 | **MILESTONE** | **100% complete** | | **~45 days** |
 | 16 | Deferred + Enterprise | TBD | — |
 
 ---
 
 ## AUDIT CHANGELOG
+
+**March 2, 2026 — Admin/Team/Billing/Subscription deferral:**
+
+*Deferred to Phase 14 (decisions pending):*
+- Help pages — user likes current design with stat cards; needs final decision before changing
+- SystemSettings Prisma model (was Phase 2.7)
+- ServiceConfiguration page wiring (was Phase 3.5)
+- SystemSettings page wiring (was Phase 3.6)
+- BillingPage mock invoice fix (was Phase 3.8)
+- BillingPage setTimeout fix (was Phase 3.9)
+- Billing page consolidation (was Phase 3.13)
+- Billing controller extraction (was partial Phase 5.4)
+- Team invite emails (was Phase 7.5)
+- BusinessSettings/Integration ownership fix (was Phase 7.7)
+- Admin audit trail (was Phase 12.5)
+- Data backup & restore UI (was Phase 12.6)
+- Subscription tier sync (was Phase 12.8)
+- `createdById` audit trails (was Phase 12.9)
+- `/settings/team` → `/admin/team` redirect (was partial Phase 3.12)
+- Billing/subscription/team integration tests (was partial Phase 5.10)
+
+*Rationale:* These four areas (Admin Panel, Team Management, Subscription, Billing) involve many design decisions that haven't been finalized yet. Building them prematurely risks rework. Consolidated into Phase 14 so they can be designed and built as a cohesive unit once decisions are made.
+
+*Impact on milestones:* "Launchable product" milestone moved from 8.5 days to 7 days (earlier). "Feature complete (core)" milestone moved from 37.5 to 33.5 days (earlier). Total remains ~45 days.
+
+---
 
 **March 1, 2026 — Post-audit revision:**
 
@@ -476,7 +529,7 @@ These were discovered during deep codebase analysis and are incorporated into th
 
 *Added:*
 - Phase 0.15: Delete 5 dev-only pages (~2,093 lines)
-- Phase 3B: Consolidation sub-phase (merge billing, campaign, analytics, AI overlapping pages)
+- Phase 3B: Consolidation sub-phase (merge campaign, analytics, AI overlapping pages)
 - Phase 2.5: Correct enum fields (5 models using plain strings instead of enums)
 
 *Net savings: ~51 hours (~6.5 working days). Total: 57 days → 45 days.*
