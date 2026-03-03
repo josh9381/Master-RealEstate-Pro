@@ -2,6 +2,8 @@ import { Prisma, TaskPriority, LeadStatus } from '@prisma/client';
 import { prisma } from '../config/database';
 import { getOpenAIService } from './openai.service';
 import { getIntelligenceService } from './intelligence.service';
+import { sendEmail as sendRealEmail, type EmailResult } from './email.service';
+import { sendSMS as sendRealSMS, type SMSResult } from './sms.service';
 
 export const AI_FUNCTIONS = [
   {
@@ -1219,6 +1221,26 @@ export class AIFunctionsService {
         return JSON.stringify({ error: 'Lead not found or has no email' });
       }
 
+      // Send email via the real email service
+      const emailResult: EmailResult = await sendRealEmail({
+        to: lead.email,
+        subject: args.subject,
+        html: args.body,
+        text: args.body.replace(/<[^>]*>/g, ''), // strip HTML for plain text fallback
+        organizationId,
+        userId,
+        leadId: args.leadId,
+        trackOpens: true,
+        trackClicks: true,
+      });
+
+      if (!emailResult.success) {
+        return JSON.stringify({
+          success: false,
+          error: `Failed to send email: ${emailResult.error || 'Unknown error'}`,
+        });
+      }
+
       // Log the email as an activity
       await prisma.activity.create({
         data: {
@@ -1231,13 +1253,10 @@ export class AIFunctionsService {
         },
       });
 
-      // TODO: Integrate with actual email service (SendGrid, AWS SES, etc.)
-      // For now, just log the activity
-
       return JSON.stringify({
         success: true,
         message: `✅ Email sent to ${lead.firstName} ${lead.lastName} (${lead.email})`,
-        note: 'Email logged as activity. Integration with email service needed for actual sending.',
+        messageId: emailResult.messageId,
       });
     } catch (error) {
       return JSON.stringify({ error: 'Failed to send email' });
@@ -1258,8 +1277,24 @@ export class AIFunctionsService {
         return JSON.stringify({ error: 'Lead not found or has no phone number' });
       }
 
-      if (args.message.length > 160) {
-        return JSON.stringify({ error: 'SMS message must be 160 characters or less' });
+      if (args.message.length > 1600) {
+        return JSON.stringify({ error: 'SMS message must be 1600 characters or less' });
+      }
+
+      // Send SMS via the real SMS service (Twilio)
+      const smsResult: SMSResult = await sendRealSMS({
+        to: lead.phone,
+        message: args.message,
+        organizationId,
+        userId,
+        leadId: args.leadId,
+      });
+
+      if (!smsResult.success) {
+        return JSON.stringify({
+          success: false,
+          error: `Failed to send SMS: ${smsResult.error || 'Unknown error'}`,
+        });
       }
 
       // Log the SMS as an activity
@@ -1267,19 +1302,17 @@ export class AIFunctionsService {
         data: {
           type: 'SMS_SENT',
           title: 'SMS Sent',
-          description: `Sent SMS: "${args.message.substring(0, 50)}..."`,
+          description: `Sent SMS: "${args.message.substring(0, 50)}${args.message.length > 50 ? '...' : ''}"`,
           leadId: args.leadId,
           organizationId,
           userId,
         },
       });
 
-      // TODO: Integrate with SMS service (Twilio, etc.)
-
       return JSON.stringify({
         success: true,
         message: `✅ SMS sent to ${lead.firstName} ${lead.lastName} (${lead.phone})`,
-        note: 'SMS logged as activity. Integration with SMS service needed for actual sending.',
+        messageId: smsResult.messageId,
       });
     } catch (error) {
       return JSON.stringify({ error: 'Failed to send SMS' });

@@ -72,8 +72,27 @@ const ProfileSettings = () => {
   };
   
   const handlePhotoUpload = async () => {
-    toast.info('Photo upload feature coming soon!');
-    // In a real app, this would open a file picker
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp,image/gif';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File is too large. Maximum size is 10 MB.');
+        return;
+      }
+      try {
+        const result = await settingsApi.uploadAvatar(file);
+        setAvatar(result.data?.avatar || result.avatar || '');
+        queryClient.invalidateQueries({ queryKey: ['settings', 'profile'] });
+        toast.success('Profile photo updated!');
+      } catch (err) {
+        console.error('Avatar upload failed:', err);
+        toast.error('Failed to upload photo. Please try again.');
+      }
+    };
+    input.click();
   };
 
   const saveMutation = useMutation({
@@ -206,7 +225,7 @@ const ProfileSettings = () => {
             <div className="space-y-2">
               <Button variant="outline" onClick={handlePhotoUpload}>Upload Photo</Button>
               <p className="text-xs text-muted-foreground">
-                JPG, GIF or PNG. Max size of 2MB.
+                JPG, PNG, WebP, or GIF. Max size of 10 MB.
               </p>
             </div>
           </div>

@@ -586,6 +586,56 @@ export const campaignsApi = {
 }
 
 // ============================================================================
+// DELIVERABILITY API
+// ============================================================================
+
+export interface DeliverabilityStats {
+  sent: number
+  delivered: number
+  bounced: number
+  hardBounces: number
+  softBounces: number
+  spamComplaints: number
+  deliveryRate: number
+  bounceRate: number
+  complaintRate: number
+}
+
+export interface SuppressedContact {
+  id: string
+  email: string
+  suppressedAt: string
+  reason: string
+}
+
+export const deliverabilityApi = {
+  getStats: async (params?: { startDate?: string; endDate?: string }) => {
+    const response = await api.get('/deliverability/stats', { params })
+    return response.data
+  },
+
+  getCampaignStats: async (campaignId: string) => {
+    const response = await api.get(`/deliverability/campaign/${campaignId}`)
+    return response.data
+  },
+
+  getSuppressedContacts: async () => {
+    const response = await api.get('/deliverability/suppressed')
+    return response.data
+  },
+
+  getRetryable: async () => {
+    const response = await api.get('/deliverability/retryable')
+    return response.data
+  },
+
+  retryMessage: async (messageId: string) => {
+    const response = await api.post(`/deliverability/retry/${messageId}`)
+    return response.data
+  },
+}
+
+// ============================================================================
 // ACTIVITIES API
 // ============================================================================
 
@@ -635,7 +685,7 @@ export const activitiesApi = {
   },
 
   getLeadActivities: async (leadId: string, params?: { page?: number; limit?: number }) => {
-    const response = await api.get(`/leads/${leadId}/activities`, { params })
+    const response = await api.get(`/activities/lead/${leadId}`, { params })
     return response.data
   },
 
@@ -1256,6 +1306,15 @@ export const settingsApi = {
 
   updateBusinessSettings: async (data: Record<string, unknown>) => {
     const response = await api.put('/settings/business', data)
+    return response.data
+  },
+
+  uploadLogo: async (file: File) => {
+    const formData = new FormData()
+    formData.append('logo', file)
+    const response = await api.post('/settings/business/logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
     return response.data
   },
 

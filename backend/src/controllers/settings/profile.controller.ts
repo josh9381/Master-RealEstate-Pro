@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../../config/database';
 import { ConflictError, NotFoundError, UnauthorizedError } from '../../middleware/errorHandler';
+import { getUploadUrl, deleteUploadFile } from '../../config/upload';
 
 /**
  * Get user profile
@@ -111,24 +112,33 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
 /**
  * Upload avatar
  * POST /api/settings/avatar
+ * Accepts multipart/form-data with field name 'avatar'
  */
 export async function uploadAvatar(req: Request, res: Response): Promise<void> {
   if (!req.user) {
     throw new UnauthorizedError('Authentication required');
   }
 
-  // TODO: Implement file upload to S3/Cloudflare R2
-  // For now, we'll accept a base64 data URL or external URL
-  
-  const { avatar } = req.body;
+  const file = req.file;
+  if (!file) {
+    throw new Error('No file uploaded. Please select an image file (jpg, png, webp, gif, max 10 MB).');
+  }
 
-  if (!avatar) {
-    throw new Error('Avatar URL is required');
+  // Build the public URL for the uploaded file
+  const avatarUrl = getUploadUrl(`avatars/${file.filename}`);
+
+  // Delete old avatar file if it exists
+  const currentUser = await prisma.user.findUnique({
+    where: { id: req.user.userId },
+    select: { avatar: true },
+  });
+  if (currentUser?.avatar) {
+    deleteUploadFile(currentUser.avatar);
   }
 
   const updatedUser = await prisma.user.update({
     where: { id: req.user.userId },
-    data: { avatar },
+    data: { avatar: avatarUrl },
     select: {
       id: true,
       avatar: true

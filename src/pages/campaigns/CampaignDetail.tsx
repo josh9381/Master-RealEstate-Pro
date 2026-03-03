@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
-import { Edit, Pause, Trash2, X, Copy } from 'lucide-react'
+import { Edit, Pause, Trash2, X, Copy, ShieldCheck, AlertTriangle, ShieldAlert } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-import { campaignsApi, analyticsApi, CreateCampaignData } from '@/lib/api'
+import { campaignsApi, analyticsApi, deliverabilityApi, CreateCampaignData } from '@/lib/api'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { CampaignExecutionStatus } from '@/components/campaigns/CampaignExecutionStatus'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
@@ -88,6 +88,17 @@ function CampaignDetail() {
     queryKey: ['campaign-analytics', id],
     queryFn: async () => {
       const response = await campaignsApi.getCampaignAnalytics(id!)
+      return response.data || response
+    },
+    enabled: !!id && !!campaignResponse,
+    retry: false,
+  })
+
+  // Fetch per-campaign deliverability stats
+  const { data: deliverabilityData } = useQuery({
+    queryKey: ['campaign-deliverability', id],
+    queryFn: async () => {
+      const response = await deliverabilityApi.getCampaignStats(id!)
       return response.data || response
     },
     enabled: !!id && !!campaignResponse,
@@ -466,6 +477,54 @@ function CampaignDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Deliverability Stats */}
+      {deliverabilityData && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Delivery Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{deliverabilityData.deliveryRate ?? 0}%</div>
+              <p className="text-xs text-muted-foreground">{(deliverabilityData.delivered ?? 0).toLocaleString()} of {(deliverabilityData.sent ?? 0).toLocaleString()} delivered</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Bounce Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${(deliverabilityData.bounceRate ?? 0) > 5 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                {deliverabilityData.bounceRate ?? 0}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {(deliverabilityData.hardBounces ?? 0)} hard / {(deliverabilityData.softBounces ?? 0)} soft
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Spam Complaints
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${(deliverabilityData.complaintRate ?? 0) > 0.1 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                {deliverabilityData.complaintRate ?? 0}%
+              </div>
+              <p className="text-xs text-muted-foreground">{(deliverabilityData.spamComplaints ?? 0).toLocaleString()} complaints</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Real-time Execution Status */}
       {(['SENDING', 'ACTIVE', 'SCHEDULED'].includes((campaign.status || '').toUpperCase())) && (

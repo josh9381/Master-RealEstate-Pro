@@ -33,7 +33,7 @@ import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { ActiveFilterChips } from '@/components/filters/ActiveFilterChips'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi, usersApi, notesApi, messagesApi, CreateLeadData, UpdateLeadData, BulkUpdateData } from '@/lib/api'
+import { leadsApi, usersApi, notesApi, messagesApi, activitiesApi, CreateLeadData, UpdateLeadData, BulkUpdateData } from '@/lib/api'
 import { exportToCSV, leadExportColumns } from '@/lib/exportService'
 import { Lead } from '@/types'
 import type { AssignedUser, TeamMember } from '@/types'
@@ -551,6 +551,8 @@ function LeadsList() {
           ...prev,
           [leadId]: [...(prev[leadId] || []), quickNote.text]
         }))
+        // Invalidate activities query so it refetches with the new note
+        queryClient.invalidateQueries({ queryKey: ['lead-activities', leadId] })
         toast.success('Note added successfully')
       } catch {
         toast.error('Failed to save note. Please try again.')
@@ -723,21 +725,6 @@ function LeadsList() {
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']
 
-  const getRecentActivities = (leadId: number) => {
-    // TODO: Fetch activities from API for this lead
-    // For now, just return notes from local state
-    const notes = (leadNotes[leadId] || []).map((note) => ({
-      type: 'note',
-      desc: note,
-      time: 'Just now',
-      details: ''
-    }))
-
-    return notes
-  }
-
-  // Commented out for now - will be used when we fetch activities from API
-  /*
   const getTimeAgo = (timestamp: string) => {
     const now = new Date()
     const then = new Date(timestamp)
@@ -749,7 +736,34 @@ function LeadsList() {
     if (diff < 2592000) return `${Math.floor(diff / 86400)} days ago`
     return then.toLocaleDateString()
   }
-  */
+
+  // Fetch activities from API when a row is expanded
+  const { data: expandedActivitiesData, isLoading: activitiesLoading } = useQuery({
+    queryKey: ['lead-activities', expandedRow],
+    queryFn: () => activitiesApi.getLeadActivities(String(expandedRow), { limit: 10 }),
+    enabled: !!expandedRow,
+    staleTime: 30_000,
+  })
+
+  const getRecentActivities = (leadId: number) => {
+    // Combine API activities with local quick notes
+    const apiActivities = (expandedActivitiesData?.data?.activities || []).map((a: any) => ({
+      type: a.type || 'note',
+      desc: a.description || a.type || 'Activity',
+      time: getTimeAgo(a.createdAt),
+      details: a.metadata ? JSON.stringify(a.metadata) : ''
+    }))
+
+    // Append any local quick notes that haven't been fetched yet
+    const localNotes = (leadNotes[leadId] || []).map((note) => ({
+      type: 'note',
+      desc: note,
+      time: 'Just now',
+      details: ''
+    }))
+
+    return [...apiActivities, ...localNotes]
+  }
 
   // Show loading skeleton
   if (isLoading) {
@@ -1859,19 +1873,28 @@ function LeadsList() {
                         </div>
                         
                         <div className="space-y-3">
-                          {getRecentActivities(lead.id).map((activity, idx) => (
-                            <div key={idx} className="flex items-start gap-3 text-sm">
-                              <div className="mt-1">
-                                {activity.type === 'email' && <Mail className="h-4 w-4 text-blue-600" />}
-                                {activity.type === 'call' && <Phone className="h-4 w-4 text-green-600" />}
-                                {activity.type === 'note' && <FileText className="h-4 w-4 text-orange-600" />}
+                          {activitiesLoading && expandedRow === lead.id ? (
+                            <div className="text-sm text-muted-foreground">Loading activities...</div>
+                          ) : getRecentActivities(lead.id).length === 0 ? (
+                            <div className="text-sm text-muted-foreground">No activities yet</div>
+                          ) : (
+                            getRecentActivities(lead.id).map((activity, idx) => (
+                              <div key={idx} className="flex items-start gap-3 text-sm">
+                                <div className="mt-1">
+                                  {activity.type === 'email' && <Mail className="h-4 w-4 text-blue-600" />}
+                                  {activity.type === 'call' && <Phone className="h-4 w-4 text-green-600" />}
+                                  {activity.type === 'note' && <FileText className="h-4 w-4 text-orange-600" />}
+                                  {activity.type === 'meeting' && <Users className="h-4 w-4 text-purple-600" />}
+                                  {activity.type === 'task' && <Target className="h-4 w-4 text-indigo-600" />}
+                                  {activity.type === 'status_change' && <TrendingUp className="h-4 w-4 text-yellow-600" />}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-medium">{activity.desc}</p>
+                                  <p className="text-xs text-muted-foreground">{activity.time}</p>
+                                </div>
                               </div>
-                              <div className="flex-1">
-                                <p className="font-medium">{activity.desc}</p>
-                                <p className="text-xs text-muted-foreground">{activity.time}</p>
-                              </div>
-                            </div>
-                          ))}
+                            ))
+                          )}
                         </div>
 
                         {/* Quick Note */}

@@ -7,7 +7,7 @@
 >
 > **Legend:** ⚠️ = Decision point — stop and ask user before proceeding | ✅ = Complete | 🔀 = Deferred
 >
-> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). DS-1 + DS-2 resolved. Ready for Phase 2. 
+> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). DS-1 + DS-2 + DS-3 resolved. Ready for Phase 3A.
 
 ---
 
@@ -19,7 +19,7 @@
 |---------|------|-----------|-------------------|
 | **DS-1** | ✅ RESOLVED | 6 | AI: split (prefs=user, scoring/training=admin). Rate limits: all 5 endpoints done. asyncHandler: skipped (Express 5 native). Dead code + upload cleanup: deferred to Phase 14. |
 | **DS-2** | ✅ RESOLVED | 2 | Enum values for all String→enum conversions (10 fields) — all UPPERCASE convention. Data retention: RefreshToken=0d, PasswordResetToken=7d, LoginHistory=90d, AIInsight=30d |
-| **DS-3** | Before Phase 2 | 4 | File upload limits/types, integration provider priority, Deliverability Dashboard UI, Saved Reports UI |
+| **DS-3** | ✅ RESOLVED | 4 | File upload: 10MB max, jpg/png/webp/gif. Integrations: all "Coming Soon" (no fake OAuth). Deliverability: contextual (campaign detail + email settings). Saved Reports: card grid with edit-in-place. |
 | **DS-4** | Before Phase 3A | 5 | Pipeline default stages, pipeline types (buyer/seller/rental), follow-up delivery channels, call logging outcomes, lead field columns |
 | **DS-5** | Before Phase 3B | 5 | Import duplicate criteria, relationship types, lead assignment strategy, real-estate-specific fields, deduplication behavior |
 | **DS-6** | Before Phase 4 | 5 | Editor choice (TipTap vs Quill), send-time algorithm, workflow conditions, delay options, retry strategy |
@@ -207,21 +207,48 @@
 
 ---
 
-## PHASE 2: FEATURE WIRING (Days 3–5)
+## PHASE 2: FEATURE WIRING (Days 3–5) ✅ COMPLETE
 *Connect frontend and backend for things that are half-built, so we can build on a solid base.*
+
+> **DS-3 Decisions Resolved:**
+> - **2.4 (File uploads):** 10 MB max, jpg/png/webp/gif allowed. Multer v2 disk storage.
+> - **2.5 (Integrations):** All third-party integrations marked "Coming Soon" — no fake OAuth/sync.
+> - **2.6 (Deliverability):** No standalone page — per-campaign stats on CampaignDetail + suppressed contacts in EmailConfiguration.
+> - **2.7 (Saved Reports):** Already wired as card grid. Added edit-in-place (load into builder, update vs create).
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 2.1 | Fetch activities from API in LeadsList (currently TODO) | 1.5 hr | ☐ |
-| 2.2 | Integrate email service into AI functions | 2 hr | ☐ |
-| 2.3 | Integrate SMS service into AI functions | 2 hr | ☐ |
-| 2.4 | ⚠️ Implement local disk file upload for profile photos + business logos — **DECISION: max file size? allowed types? (e.g., 5MB, jpg/png/webp?)** | 2 hr | ☐ |
-| 2.5 | ⚠️ Implement integration sync logic — **DECISION: which providers to support first? (current list has Salesforce, HubSpot, etc. but none have real OAuth)** | 4 hr | ☐ |
-| 2.6 | ⚠️ Wire `/api/deliverability/*` endpoints into a Deliverability Dashboard — **DECISION: UI layout/design for the dashboard** | 3 hr | ☐ |
-| 2.7 | ⚠️ Wire `/api/reports/saved/*` into a saved reports UI — **DECISION: UI layout/design** | 2 hr | ☐ |
-| 2.8 | Ensure `/api/intelligence/*` prefix is correctly used by `IntelligenceInsights.tsx` | 30 min | ☐ |
+| 2.1 | Fetch activities from API in LeadsList — fixed URL mismatch, wired real `activitiesApi.getLeadActivities()` with useQuery | 1.5 hr | ✅ |
+| 2.2 | Integrate email service into AI functions — `sendEmail()` now calls real `sendRealEmail()` with HTML/tracking/suppression | 2 hr | ✅ |
+| 2.3 | Integrate SMS service into AI functions — `sendSMS()` now calls real Twilio `sendRealSMS()`, limit raised to 1600 chars | 2 hr | ✅ |
+| 2.4 | ~~⚠️~~ File upload for profile photos + business logos — created `upload.ts` multer config, wired avatar/logo endpoints + frontend file pickers | 2 hr | ✅ |
+| 2.5 | ~~⚠️~~ Integration sync — replaced fake connected statuses with "Coming Soon" labels, sync endpoint returns 501, removed fake API keys section | 1 hr | ✅ |
+| 2.6 | ~~⚠️~~ Deliverability — added per-campaign stats row (delivery/bounce/spam) to CampaignDetail + SuppressedContactsCard to EmailConfiguration | 2 hr | ✅ |
+| 2.7 | ~~⚠️~~ Saved Reports UI — already wired (list/create/delete). Added edit-in-place: Edit button loads config into builder, Save/Update toggle, Cancel Edit | 1 hr | ✅ |
+| 2.8 | Verified `/api/intelligence/*` prefix — already correctly used by IntelligenceInsights.tsx, no changes needed | 10 min | ✅ |
 
-**Phase Total: ~17 hours (2 days)**
+**Phase Total: ~12 hours (1.5 days) — ✅ COMPLETE**
+
+### New Files Created in Phase 2
+| File | Purpose |
+|------|--------|
+| `backend/src/config/upload.ts` | Multer v2 config — avatarUpload/logoUpload middlewares, disk storage with crypto filenames, 10MB limit, cleanup helpers |
+
+### Files Modified in Phase 2
+- `src/lib/api.ts` — Fixed `getLeadActivities` URL, added `deliverabilityApi`, added `uploadLogo` to `settingsApi`
+- `src/pages/leads/LeadsList.tsx` — Real activities API with useQuery, loading/empty states, query invalidation
+- `backend/src/services/ai-functions.service.ts` — Real email/SMS service integration
+- `backend/src/controllers/settings/profile.controller.ts` — Multer file handling for avatar uploads
+- `backend/src/controllers/settings/business.controller.ts` — New `uploadLogo()` function
+- `backend/src/routes/settings.routes.ts` — Multer middleware on avatar/logo routes
+- `backend/src/server.ts` — Static file serving for `/uploads`
+- `src/pages/settings/ProfileSettings.tsx` — Real file picker + upload flow
+- `src/pages/settings/BusinessSettings.tsx` — Logo upload + display
+- `src/pages/integrations/IntegrationsHub.tsx` — "Coming Soon" honest status, dynamic stats
+- `backend/src/controllers/integration.controller.ts` — Sync returns 501
+- `src/pages/campaigns/CampaignDetail.tsx` — Deliverability stats row
+- `src/pages/settings/EmailConfiguration.tsx` — SuppressedContactsCard component
+- `src/pages/analytics/CustomReports.tsx` — Edit/Update flow for saved reports
 
 ---
 

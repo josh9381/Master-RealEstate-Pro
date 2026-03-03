@@ -43,6 +43,7 @@ const CustomReports = () => {
   const [reportConfig, setReportConfig] = useState<ReportConfig>({ name: '', type: 'leads', groupBy: 'none', metrics: [], dateRange: '30d' });
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [generatedReport, setGeneratedReport] = useState<Record<string, unknown> | null>(null);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
 
   // ——— Report Builder state ———
   const [widgets, setWidgets] = useState<ReportWidget[]>([]);
@@ -558,7 +559,18 @@ const CustomReports = () => {
                         Run Report
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => {
-                        toast.info(`Editing report: ${report.name}`);
+                        const config = (report as any).config || {};
+                        setReportConfig({
+                          name: report.name,
+                          type: config.type || report.type || 'leads',
+                          groupBy: config.groupBy || 'none',
+                          metrics: config.metrics || [],
+                          dateRange: config.dateRange || '30d',
+                        });
+                        setEditingReportId(report.id);
+                        // Scroll to the Quick Report Builder
+                        document.getElementById('report-builder')?.scrollIntoView({ behavior: 'smooth' });
+                        toast.info(`Editing: ${report.name}`);
                       }}>
                         Edit
                       </Button>
@@ -712,18 +724,28 @@ const CustomReports = () => {
                 <Button variant="outline" onClick={async () => {
                   if (!reportConfig.name?.trim()) { toast.error('Please enter a report name'); return; }
                   try {
-                    await savedReportsApi.create({
+                    const payload = {
                       name: reportConfig.name || 'Untitled Report',
                       description: `Custom ${reportConfig.type} report`,
                       type: reportConfig.type,
                       config: { type: reportConfig.type, groupBy: reportConfig.groupBy, metrics: reportConfig.metrics, dateRange: reportConfig.dateRange },
-                    });
+                    };
+                    if (editingReportId) {
+                      await savedReportsApi.update(editingReportId, payload);
+                      setEditingReportId(null);
+                      toast.success('Report template updated');
+                    } else {
+                      await savedReportsApi.create(payload);
+                      toast.success('Report template saved');
+                    }
                     refetchSaved();
-                    toast.success('Report template saved');
                   } catch (err) {
                     toast.error(err instanceof Error ? err.message : 'Failed to save report');
                   }
-                }}>Save Template</Button>
+                }}>{editingReportId ? 'Update Template' : 'Save Template'}</Button>
+                {editingReportId && (
+                  <Button variant="ghost" onClick={() => setEditingReportId(null)}>Cancel Edit</Button>
+                )}
               </div>
             </CardContent>
           </Card>

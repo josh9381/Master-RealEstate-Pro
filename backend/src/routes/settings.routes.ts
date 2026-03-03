@@ -3,13 +3,14 @@ import { authenticate } from '../middleware/auth';
 import { passwordChangeLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../middleware/validate';
 import { asyncHandler } from '../utils/asyncHandler';
+import { avatarUpload, logoUpload } from '../config/upload';
 
 // Profile
 import { getProfile, updateProfile, uploadAvatar, changePassword } from '../controllers/settings/profile.controller';
 import { updateProfileSchema, changePasswordSchema } from '../validators/settings/profile.validator';
 
 // Business
-import { getBusinessSettings, updateBusinessSettings } from '../controllers/settings/business.controller';
+import { getBusinessSettings, updateBusinessSettings, uploadLogo } from '../controllers/settings/business.controller';
 import { updateBusinessSettingsSchema } from '../validators/settings/business.validator';
 
 // Email
@@ -56,10 +57,10 @@ router.put('/profile', validateBody(updateProfileSchema), asyncHandler(updatePro
 
 /**
  * @route   POST /api/settings/avatar
- * @desc    Upload avatar
+ * @desc    Upload avatar (multipart/form-data, field: 'avatar')
  * @access  Private
  */
-router.post('/avatar', asyncHandler(uploadAvatar));
+router.post('/avatar', avatarUpload, asyncHandler(uploadAvatar));
 
 /**
  * @route   PUT /api/settings/password
@@ -85,6 +86,13 @@ router.get('/business', asyncHandler(getBusinessSettings));
  * @access  Private
  */
 router.put('/business', validateBody(updateBusinessSettingsSchema), asyncHandler(updateBusinessSettings));
+
+/**
+ * @route   POST /api/settings/business/logo
+ * @desc    Upload business logo (multipart/form-data, field: 'logo')
+ * @access  Private
+ */
+router.post('/business/logo', logoUpload, asyncHandler(uploadLogo));
 
 // ============================================
 // EMAIL CONFIGURATION

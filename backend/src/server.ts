@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import express, { Express, Request, Response } from 'express'
+import path from 'path'
 import { createServer } from 'http'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -110,6 +111,9 @@ app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }))
 
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+// Serve uploaded files (avatars, logos) statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
 
 // Input sanitization
 app.use(sanitizeInput)

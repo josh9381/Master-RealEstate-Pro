@@ -178,24 +178,10 @@ export async function syncIntegration(req: Request, res: Response): Promise<void
     throw new NotFoundError(`${provider} integration not found or not connected`);
   }
 
-  // TODO: Implement actual sync logic per provider
-  // For now, just update sync status
-  await prisma.integration.update({
-    where: {
-      userId_provider: {
-        userId: req.user.userId,
-        provider
-      }
-    },
-    data: {
-      syncStatus: 'SYNCING',
-      lastSyncAt: new Date()
-    }
-  });
-
-  res.status(200).json({
-    success: true,
-    message: `${provider} sync started (mock mode)`
+  // Integration sync is not yet implemented — return honest status
+  res.status(501).json({
+    success: false,
+    message: `Sync for ${provider} is not yet available. This feature is coming soon.`
   });
 }
 

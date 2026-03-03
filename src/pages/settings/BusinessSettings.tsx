@@ -32,6 +32,7 @@ const BusinessSettings = () => {
   const [timezone, setTimezone] = useState('America/Los_Angeles');
   const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
   const [currency, setCurrency] = useState('USD');
+  const [logo, setLogo] = useState('');
   
   const { data: businessData, isLoading: loading, isFetching: refreshing, refetch } = useQuery({
     queryKey: ['settings', 'business'],
@@ -59,6 +60,7 @@ const BusinessSettings = () => {
       setTimezone(businessData.timezone || 'America/Los_Angeles');
       setDateFormat(businessData.dateFormat || 'MM/DD/YYYY');
       setCurrency(businessData.currency || 'USD');
+      setLogo(businessData.logo || businessData.settings?.logo || '');
     }
   }, [businessData]);
 
@@ -67,7 +69,27 @@ const BusinessSettings = () => {
   };
   
   const handleLogoUpload = () => {
-    toast.info('Logo upload feature coming soon!');
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp,image/gif';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File is too large. Maximum size is 10 MB.');
+        return;
+      }
+      try {
+        const result = await settingsApi.uploadLogo(file);
+        setLogo(result.data?.logo || result.logo || '');
+        queryClient.invalidateQueries({ queryKey: ['settings', 'business'] });
+        toast.success('Logo uploaded successfully!');
+      } catch (err) {
+        console.error('Logo upload failed:', err);
+        toast.error('Failed to upload logo. Please try again.');
+      }
+    };
+    input.click();
   };
   
   const saveMutation = useMutation({
@@ -134,13 +156,17 @@ const BusinessSettings = () => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-6">
-            <div className="h-24 w-24 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted">
-              <Building className="h-10 w-10 text-muted-foreground" />
+            <div className="h-24 w-24 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted overflow-hidden">
+              {logo ? (
+                <img src={logo} alt="Company logo" className="h-full w-full object-contain" />
+              ) : (
+                <Building className="h-10 w-10 text-muted-foreground" />
+              )}
             </div>
             <div className="space-y-2">
               <Button variant="outline" onClick={handleLogoUpload}>Upload Logo</Button>
               <p className="text-xs text-muted-foreground">
-                PNG or JPG. Max 2MB. Recommended: 200x200px
+                JPG, PNG, WebP, or GIF. Max 10 MB.
               </p>
             </div>
           </div>

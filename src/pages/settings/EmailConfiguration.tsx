@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Server, Shield, CheckCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Mail, Server, Shield, CheckCircle, RefreshCw, Eye, EyeOff, AlertTriangle, Ban } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
-import { settingsApi, messagesApi } from '@/lib/api';
+import { settingsApi, messagesApi, deliverabilityApi, type SuppressedContact } from '@/lib/api';
 
 const EmailConfiguration = () => {
   const { toast } = useToast();
@@ -757,10 +757,74 @@ const EmailConfiguration = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Suppressed Contacts */}
+      <SuppressedContactsCard />
         </>
       )}
     </div>
   );
 };
+
+/** Suppressed contacts sub-component — loaded lazily only inside the settings page */
+function SuppressedContactsCard() {
+  const { data: suppressedData, isLoading } = useQuery({
+    queryKey: ['deliverability', 'suppressed'],
+    queryFn: async () => {
+      const response = await deliverabilityApi.getSuppressedContacts();
+      return response;
+    },
+  });
+
+  const suppressed: SuppressedContact[] = suppressedData?.data || [];
+  const count = suppressedData?.count ?? suppressed.length;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5" />
+              Suppressed Contacts
+            </CardTitle>
+            <CardDescription>Email addresses auto-suppressed due to bounces or spam complaints</CardDescription>
+          </div>
+          {count > 0 && (
+            <Badge variant="secondary">{count} suppressed</Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground">Loading suppressed contacts...</div>
+        ) : suppressed.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+            <p className="font-medium">No suppressed contacts</p>
+            <p className="text-sm mt-1">All email addresses are currently deliverable</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {suppressed.map((contact) => (
+              <div key={contact.id || contact.email} className="flex items-center justify-between p-3 border rounded-lg text-sm">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">{contact.email}</p>
+                    <p className="text-xs text-muted-foreground">{contact.reason}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground whitespace-nowrap">
+                  {contact.suppressedAt ? new Date(contact.suppressedAt).toLocaleDateString() : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default EmailConfiguration;
