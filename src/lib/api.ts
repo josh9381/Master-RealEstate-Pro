@@ -243,10 +243,22 @@ export interface CreateLeadData {
   notes?: string
   customFields?: Record<string, any>
   tags?: string[]
+  // Real-estate specific fields
+  propertyType?: string
+  transactionType?: string
+  budgetMin?: number
+  budgetMax?: number
+  preApprovalStatus?: string
+  moveInTimeline?: string
+  desiredLocation?: string
+  bedsMin?: number
+  bathsMin?: number
 }
 
 export interface UpdateLeadData extends Partial<CreateLeadData> {
   score?: number
+  pipelineId?: string
+  pipelineStageId?: string
 }
 
 export interface BulkUpdateData {
@@ -295,10 +307,11 @@ export const leadsApi = {
     return response.data
   },
 
-  mergeLeads: async (data: { primaryLeadId: string; secondaryLeadId: string }) => {
+  mergeLeads: async (data: { primaryLeadId: string; secondaryLeadId: string; fieldSelections?: Record<string, 'primary' | 'secondary'> }) => {
     const response = await api.post('/leads/merge', {
       primaryLeadId: data.primaryLeadId,
       secondaryLeadIds: [data.secondaryLeadId],
+      fieldSelections: data.fieldSelections,
     })
     return response.data
   },
@@ -306,6 +319,19 @@ export const leadsApi = {
   importLeads: (formData: FormData) => api.post('/leads/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }).then(r => r.data),
+
+  previewImport: (formData: FormData) => api.post('/leads/import/preview', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }).then(r => r.data),
+
+  checkImportDuplicates: (formData: FormData) => api.post('/leads/import/duplicates', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }).then(r => r.data),
+
+  scanDuplicates: async (config: { matchEmail?: boolean; matchPhone?: boolean; matchName?: boolean }) => {
+    const response = await api.post('/leads/duplicates/scan', config)
+    return response.data
+  },
 }
 
 // ============================================================================
@@ -472,6 +498,11 @@ export interface CreateCampaignData {
     time?: string
   }
   maxOccurrences?: number
+  attachments?: Array<{ filename: string; path: string; size: number; type: string }>
+  mediaUrl?: string // MMS media URL for SMS campaigns
+  sendTimeOptimization?: 'none' | 'timezone' | 'engagement' | 'both'
+  abTestWinnerMetric?: 'open_rate' | 'click_rate'
+  abTestEvalHours?: number
 }
 
 export const campaignsApi = {
@@ -483,6 +514,22 @@ export const campaignsApi = {
   getCampaign: async (id: string) => {
     const response = await api.get(`/campaigns/${id}`)
     return response.data
+  },
+
+  /** Compile email blocks JSON to final HTML via MJML (for preview) */
+  compileEmail: async (content: string, subject?: string, previewText?: string) => {
+    const response = await api.post('/campaigns/compile-email', { content, subject, previewText })
+    return response.data as { html: string; errors: { message: string; line: number }[]; subject: string; previewText: string }
+  },
+
+  /** Upload email attachments (returns file metadata) */
+  uploadAttachments: async (files: File[]) => {
+    const formData = new FormData()
+    files.forEach(f => formData.append('attachments', f))
+    const response = await api.post('/campaigns/upload-attachments', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data as { attachments: Array<{ filename: string; path: string; url: string; size: number; type: string }> }
   },
 
   createCampaign: async (data: CreateCampaignData) => {
@@ -581,6 +628,16 @@ export const campaignsApi = {
 
   getCampaignLinkStats: async (id: string) => {
     const response = await api.get(`/campaigns/${id}/analytics/links`)
+    return response.data
+  },
+
+  getCampaignRecipients: async (id: string, params?: { page?: number; limit?: number; status?: string }) => {
+    const response = await api.get(`/campaigns/${id}/recipients`, { params })
+    return response.data
+  },
+
+  getABTestResults: async (id: string) => {
+    const response = await api.get(`/campaigns/${id}/abtest-results`)
     return response.data
   },
 }
@@ -1064,6 +1121,59 @@ export const aiApi = {
 
   getUsageLimits: async () => {
     const response = await api.get('/ai/usage/limits')
+    return response.data
+  },
+}
+
+// Calls API — manual call logging
+export const callsApi = {
+  logCall: async (data: {
+    leadId: string
+    phoneNumber: string
+    direction: 'INBOUND' | 'OUTBOUND'
+    outcome: string
+    duration?: number
+    notes?: string
+    followUpDate?: string
+  }) => {
+    const response = await api.post('/calls', data)
+    return response.data
+  },
+
+  getCalls: async (params?: {
+    leadId?: string
+    direction?: string
+    outcome?: string
+    limit?: number
+    offset?: number
+  }) => {
+    const response = await api.get('/calls', { params })
+    return response.data
+  },
+
+  getCall: async (id: string) => {
+    const response = await api.get(`/calls/${id}`)
+    return response.data
+  },
+
+  updateCall: async (id: string, data: {
+    outcome?: string
+    duration?: number
+    notes?: string
+    followUpDate?: string | null
+    status?: string
+  }) => {
+    const response = await api.patch(`/calls/${id}`, data)
+    return response.data
+  },
+
+  deleteCall: async (id: string) => {
+    const response = await api.delete(`/calls/${id}`)
+    return response.data
+  },
+
+  getStats: async (params?: { leadId?: string }) => {
+    const response = await api.get('/calls/stats', { params })
     return response.data
   },
 }
@@ -1846,6 +1956,231 @@ export const savedReportsApi = {
   delete: async (id: string) => {
     const response = await api.delete(`/reports/saved/${id}`);
     return response.data;
+  },
+}
+
+export interface PipelineStage {
+  id: string
+  name: string
+  order: number
+  color?: string
+  description?: string
+  isWinStage: boolean
+  isLostStage: boolean
+  pipelineId: string
+}
+
+export interface PipelineData {
+  id: string
+  name: string
+  type: 'DEFAULT' | 'BUYER' | 'SELLER' | 'RENTAL' | 'COMMERCIAL' | 'CUSTOM'
+  description?: string
+  isDefault: boolean
+  stages: PipelineStage[]
+  _count?: { leads: number }
+}
+
+export const pipelinesApi = {
+  getPipelines: async (): Promise<{ success: boolean; data: PipelineData[] }> => {
+    const response = await api.get('/pipelines')
+    return response.data
+  },
+  getPipeline: async (id: string): Promise<{ success: boolean; data: PipelineData }> => {
+    const response = await api.get(`/pipelines/${id}`)
+    return response.data
+  },
+  createPipeline: async (data: {
+    name: string
+    type?: string
+    description?: string
+    stages?: Array<{ name: string; color?: string; isWinStage?: boolean; isLostStage?: boolean }>
+  }): Promise<{ success: boolean; data: PipelineData }> => {
+    const response = await api.post('/pipelines', data)
+    return response.data
+  },
+  updatePipeline: async (id: string, data: {
+    name?: string
+    description?: string
+    isDefault?: boolean
+  }): Promise<{ success: boolean; data: PipelineData }> => {
+    const response = await api.put(`/pipelines/${id}`, data)
+    return response.data
+  },
+  deletePipeline: async (id: string): Promise<{ success: boolean; message: string }> => {
+    const response = await api.delete(`/pipelines/${id}`)
+    return response.data
+  },
+  duplicatePipeline: async (id: string, name?: string): Promise<{ success: boolean; data: PipelineData }> => {
+    const response = await api.post(`/pipelines/${id}/duplicate`, { name })
+    return response.data
+  },
+  getPipelineLeads: async (id: string) => {
+    const response = await api.get(`/pipelines/${id}/leads`)
+    return response.data
+  },
+  moveLeadToStage: async (leadId: string, data: { pipelineId?: string; pipelineStageId: string }) => {
+    const response = await api.patch(`/pipelines/leads/${leadId}/move`, data)
+    return response.data
+  },
+  // Stage CRUD
+  createStage: async (pipelineId: string, data: {
+    name: string
+    color?: string
+    description?: string
+    isWinStage?: boolean
+    isLostStage?: boolean
+    insertAfterOrder?: number
+  }): Promise<{ success: boolean; data: PipelineStage }> => {
+    const response = await api.post(`/pipelines/${pipelineId}/stages`, data)
+    return response.data
+  },
+  updateStage: async (pipelineId: string, stageId: string, data: {
+    name?: string
+    color?: string
+    description?: string
+    isWinStage?: boolean
+    isLostStage?: boolean
+  }): Promise<{ success: boolean; data: PipelineStage }> => {
+    const response = await api.put(`/pipelines/${pipelineId}/stages/${stageId}`, data)
+    return response.data
+  },
+  deleteStage: async (pipelineId: string, stageId: string, moveLeadsToStageId?: string): Promise<{ success: boolean; message: string }> => {
+    const response = await api.delete(`/pipelines/${pipelineId}/stages/${stageId}`, {
+      data: { moveLeadsToStageId },
+    })
+    return response.data
+  },
+  reorderStages: async (pipelineId: string, stageIds: string[]): Promise<{ success: boolean; data: PipelineStage[] }> => {
+    const response = await api.patch(`/pipelines/${pipelineId}/stages/reorder`, { stageIds })
+    return response.data
+  },
+}
+
+export interface SavedFilterView {
+  id: string
+  name: string
+  icon?: string
+  color?: string
+  filterConfig: {
+    status?: string[]
+    source?: string[]
+    scoreRange?: [number, number]
+    dateRange?: { from: string; to: string }
+    tags?: string[]
+    assignedTo?: string[]
+  }
+  scoreFilter: string
+  sortField?: string
+  sortDirection?: string
+  isDefault: boolean
+  isShared: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export const savedFiltersApi = {
+  list: async (): Promise<{ success: boolean; data: SavedFilterView[] }> => {
+    const response = await api.get('/saved-filters')
+    return response.data
+  },
+  create: async (data: Omit<SavedFilterView, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const response = await api.post('/saved-filters', data)
+    return response.data
+  },
+  update: async (id: string, data: Partial<Omit<SavedFilterView, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    const response = await api.patch(`/saved-filters/${id}`, data)
+    return response.data
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/saved-filters/${id}`)
+    return response.data
+  },
+}
+
+// ============================================================================
+// FOLLOW-UP REMINDERS API
+// ============================================================================
+
+export interface FollowUpReminder {
+  id: string
+  leadId: string
+  userId: string
+  organizationId: string
+  title: string
+  note?: string
+  dueAt: string
+  status: 'PENDING' | 'FIRED' | 'COMPLETED' | 'SNOOZED' | 'CANCELLED'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+  channelInApp: boolean
+  channelEmail: boolean
+  channelSms: boolean
+  channelPush: boolean
+  firedAt?: string
+  completedAt?: string
+  snoozedUntil?: string
+  createdAt: string
+  updatedAt: string
+  lead?: {
+    id: string
+    firstName: string
+    lastName: string
+    email?: string
+    phone?: string
+    company?: string
+  }
+}
+
+export interface CreateReminderData {
+  leadId: string
+  title: string
+  note?: string
+  dueAt: string
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+  channelInApp?: boolean
+  channelEmail?: boolean
+  channelSms?: boolean
+  channelPush?: boolean
+}
+
+export const remindersApi = {
+  getReminders: async (params?: { leadId?: string; status?: string; page?: number; limit?: number }) => {
+    const response = await api.get('/reminders', { params })
+    return response.data
+  },
+
+  getUpcoming: async () => {
+    const response = await api.get('/reminders/upcoming')
+    return response.data
+  },
+
+  getReminder: async (id: string) => {
+    const response = await api.get(`/reminders/${id}`)
+    return response.data
+  },
+
+  createReminder: async (data: CreateReminderData) => {
+    const response = await api.post('/reminders', data)
+    return response.data
+  },
+
+  updateReminder: async (id: string, data: Partial<CreateReminderData>) => {
+    const response = await api.patch(`/reminders/${id}`, data)
+    return response.data
+  },
+
+  completeReminder: async (id: string) => {
+    const response = await api.patch(`/reminders/${id}/complete`)
+    return response.data
+  },
+
+  snoozeReminder: async (id: string, snoozedUntil: string) => {
+    const response = await api.patch(`/reminders/${id}/snooze`, { snoozedUntil })
+    return response.data
+  },
+
+  deleteReminder: async (id: string) => {
+    const response = await api.delete(`/reminders/${id}`)
+    return response.data
   },
 }
 

@@ -28,6 +28,10 @@ import {
   recalculateAllScores,
   getLeadsByScore,
   importLeads,
+  previewImport,
+  checkImportDuplicates,
+  mergeLeads,
+  scanDuplicates,
 } from '../controllers/lead.controller';
 import {
   addTagsToLead,
@@ -45,24 +49,28 @@ import {
 import {
   getActivities,
 } from '../controllers/activity.controller';
-import prisma from '../config/database';
 
 const router = Router();
 
 // CSV import multer config with fileFilter (#97)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB (increased for Excel files)
   fileFilter: (_req, file, cb) => {
-    // Accept only CSV files by mimetype and extension
-    const allowedMimes = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
-    const allowedExts = ['.csv'];
+    // Accept CSV, Excel, and vCard files
+    const allowedMimes = [
+      'text/csv', 'application/vnd.ms-excel', 'text/plain',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/vcard', 'text/x-vcard', // .vcf
+    ];
+    const allowedExts = ['.csv', '.xlsx', '.xls', '.vcf'];
     const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
 
-    if (allowedMimes.includes(file.mimetype) && allowedExts.includes(ext)) {
+    if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Only CSV files are allowed') as any, false);
+      cb(new Error('Only CSV, Excel (.xlsx/.xls), and vCard (.vcf) files are allowed') as any, false);
     }
   },
 });
@@ -85,40 +93,33 @@ router.get('/stats', asyncHandler(getLeadStats));
 router.post('/count-filtered', asyncHandler(countFilteredLeads));
 
 /**
+ * @route   POST /api/leads/import/preview
+ * @desc    Parse file and return headers + preview rows for column mapping
+ * @access  Private
+ */
+router.post('/import/preview', upload.single('file'), asyncHandler(previewImport));
+
+/**
+ * @route   POST /api/leads/import/duplicates
+ * @desc    Check for duplicates in uploaded file before importing
+ * @access  Private
+ */
+router.post('/import/duplicates', upload.single('file'), asyncHandler(checkImportDuplicates));
+
+/**
  * @route   POST /api/leads/import
- * @desc    Import leads from CSV file
+ * @desc    Import leads from CSV/Excel/vCard file
  * @access  Private
  */
 router.post('/import', upload.single('file'), asyncHandler(importLeads));
 
 /**
  * @route   POST /api/leads/merge
- * @desc    Merge multiple leads into one
+ * @desc    Merge multiple leads into one with field-level resolution
  * @access  Private
  */
-router.post('/merge', validateBody(mergeLeadsSchema), asyncHandler(async (req, res) => {
-  const { primaryLeadId, secondaryLeadIds } = req.body;
-  const orgId = req.user!.organizationId;
-
-  // Verify all leads belong to the org
-  const leads = await prisma.lead.findMany({
-    where: { id: { in: [primaryLeadId, ...secondaryLeadIds] }, organizationId: orgId }
-  });
-  if (leads.length !== secondaryLeadIds.length + 1) {
-    return res.status(400).json({ success: false, message: 'One or more leads not found' });
-  }
-
-  // Move related records to primary lead
-  await prisma.$transaction([
-    prisma.note.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
-    prisma.task.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
-    prisma.activity.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
-    prisma.lead.deleteMany({ where: { id: { in: secondaryLeadIds } } })
-  ]);
-
-  const merged = await prisma.lead.findUnique({ where: { id: primaryLeadId } });
-  res.json({ success: true, data: merged });
-}));
+router.post('/merge', validateBody(mergeLeadsSchema), asyncHandler(mergeLeads));
+router.post('/duplicates/scan', asyncHandler(scanDuplicates));
 
 /**
  * @route   GET /api/leads

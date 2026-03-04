@@ -7,7 +7,54 @@ import { prisma } from '../config/database';
 import { sendBulkEmails } from './email.service';
 import { sendBulkSMS } from './sms.service';
 import { pushCampaignUpdate } from '../config/socket';
+import { compileEmailBlocks, compilePlainText, CanSpamOptions } from '../utils/mjmlCompiler';
+import { readAttachmentAsBase64 } from '../config/upload';
+import { ensureUnsubscribeToken } from '../controllers/unsubscribe.controller';
+import { calculateOptimalSendTimes, groupLeadsBySendSlot, OptimizationStrategy } from './send-time-optimizer.service';
 import Handlebars from 'handlebars';
+
+/**
+ * Create CampaignLead tracking rows for per-recipient activity logging
+ */
+async function createCampaignLeadRows(campaignId: string, organizationId: string, leadIds: string[]) {
+  if (leadIds.length === 0) return;
+  try {
+    await prisma.campaignLead.createMany({
+      data: leadIds.map((leadId) => ({
+        campaignId,
+        leadId,
+        organizationId,
+        status: 'PENDING' as const,
+      })),
+      skipDuplicates: true,
+    });
+    console.log(`[CAMPAIGN] Created ${leadIds.length} CampaignLead tracking rows`);
+  } catch (err) {
+    console.error('[CAMPAIGN] Failed to create CampaignLead rows:', err);
+  }
+}
+
+/**
+ * Update CampaignLead status after sending
+ */
+async function updateCampaignLeadStatus(
+  campaignId: string,
+  leadId: string,
+  status: 'SENT' | 'BOUNCED',
+  timestamp: Date = new Date()
+) {
+  try {
+    await prisma.campaignLead.updateMany({
+      where: { campaignId, leadId },
+      data: {
+        status,
+        ...(status === 'SENT' ? { sentAt: timestamp } : { bouncedAt: timestamp }),
+      },
+    });
+  } catch {
+    // Non-critical — don't fail the send
+  }
+}
 
 interface CampaignExecutionOptions {
   campaignId: string;
@@ -68,6 +115,58 @@ export async function executeCampaign(
     }
 
     console.log(`[CAMPAIGN] Executing campaign ${campaign.name} to ${leads.length} leads`);
+
+    // Send-time optimization: If enabled, calculate per-lead optimal times
+    const optimizationStrategy = (campaign.sendTimeOptimization || 'none') as OptimizationStrategy;
+    if (optimizationStrategy !== 'none') {
+      console.log(`[CAMPAIGN] Send-time optimization: ${optimizationStrategy}`);
+      
+      const optimResult = await calculateOptimalSendTimes(
+        leads.map((l) => l.id),
+        optimizationStrategy
+      );
+      
+      const groups = groupLeadsBySendSlot(optimResult.slots);
+      console.log(`[CAMPAIGN] ${optimResult.uniqueTimeSlots} time slots across ${optimResult.totalSlots} recipients`);
+      
+      const now = new Date();
+      const immediateLeadIds = new Set<string>();
+      const deferredGroups: Array<{ sendAt: Date; leadIds: string[] }> = [];
+      
+      for (const [isoTime, groupLeadIds] of groups) {
+        const sendAt = new Date(isoTime);
+        // If within 5 minutes of now, send immediately
+        if (sendAt.getTime() - now.getTime() < 5 * 60 * 1000) {
+          groupLeadIds.forEach((id) => immediateLeadIds.add(id));
+        } else {
+          deferredGroups.push({ sendAt, leadIds: groupLeadIds });
+        }
+      }
+      
+      // Store deferred sends in CampaignLead metadata for the scheduler to pick up
+      for (const group of deferredGroups) {
+        await prisma.campaignLead.updateMany({
+          where: {
+            campaignId,
+            leadId: { in: group.leadIds },
+          },
+          data: {
+            metadata: { scheduledSendAt: group.sendAt.toISOString(), optimizationStrategy },
+          },
+        });
+      }
+      
+      // Filter leads for immediate sending only
+      if (immediateLeadIds.size < leads.length) {
+        const deferredCount = leads.length - immediateLeadIds.size;
+        console.log(`[CAMPAIGN] Sending ${immediateLeadIds.size} now, ${deferredCount} deferred for optimal times`);
+        
+        // Only keep leads that should be sent now
+        const immLeads = leads.filter((l) => immediateLeadIds.has(l.id));
+        leads.length = 0;
+        leads.push(...immLeads);
+      }
+    }
 
     // Set campaign status to SENDING before execution begins
     // This prevents confusion if execution crashes mid-send
@@ -222,14 +321,74 @@ function chunkArray<T>(array: T[], chunkSize: number): T[][] {
  * Send email campaign to leads with batch processing
  */
 async function sendEmailCampaign(campaign: any, leads: any[]) {
-  // Compile email template
-  const subjectTemplate = Handlebars.compile(campaign.subject || '');
-  const bodyTemplate = Handlebars.compile(campaign.body || '');
+  // Load business settings for CAN-SPAM footer
+  const businessSettings = await prisma.businessSettings.findFirst({
+    where: { organizationId: campaign.organizationId },
+    select: { companyName: true, address: true },
+  });
+  
+  const APP_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+  
+  // CAN-SPAM options — use Handlebars variables as placeholders
+  // (the actual unsubscribe URL is per-lead, injected via template vars below)
+  const canSpam: CanSpamOptions = {
+    companyName: businessSettings?.companyName || campaign.organization?.name || '{{company.name}}',
+    physicalAddress: businessSettings?.address || '{{company.address}}',
+  };
 
-  // Prepare emails for bulk send
-  const emails = leads
-    .filter((lead) => lead.email) // Only leads with email
-    .map((lead) => {
+  // Detect block-based vs legacy content
+  let isBlockBased = false;
+  try {
+    const parsed = JSON.parse(campaign.body || '');
+    isBlockBased = parsed && parsed.__emailBlocks;
+  } catch {
+    // Legacy plain text content
+  }
+
+  // For block-based emails, compile blocks to HTML via MJML first,
+  // then run Handlebars on the result for variable substitution.
+  // CAN-SPAM footer with {{unsubscribeUrl}} is injected at compile time.
+  let compiledBodyTemplate: string;
+  if (isBlockBased) {
+    const mjmlResult = compileEmailBlocks(campaign.body, { canSpam });
+    if (mjmlResult.errors.length > 0) {
+      console.warn(`[CAMPAIGN] MJML compilation warnings:`, mjmlResult.errors);
+    }
+    compiledBodyTemplate = mjmlResult.html;
+  } else {
+    // Legacy: plain text or raw HTML — wrap in MJML for consistent rendering
+    const mjmlResult = compilePlainText(campaign.body || '', canSpam);
+    compiledBodyTemplate = mjmlResult.html;
+  }
+
+  // Compile templates with Handlebars for variable substitution
+  const subjectTemplate = Handlebars.compile(campaign.subject || '');
+  const bodyTemplate = Handlebars.compile(compiledBodyTemplate);
+
+  // Load campaign attachments (base64 encoded for SendGrid)
+  let campaignAttachments: Array<{ content: string; filename: string; type?: string }> = [];
+  if (campaign.attachments && Array.isArray(campaign.attachments)) {
+    for (const att of campaign.attachments as Array<{ path: string; filename: string }>) {
+      const encoded = readAttachmentAsBase64(att.path);
+      if (encoded) {
+        campaignAttachments.push(encoded);
+      }
+    }
+  }
+
+  // Prepare emails for bulk send — generate unsubscribe tokens for each lead
+  const emails = [];
+  for (const lead of leads.filter((l) => l.email)) {
+      // Ensure lead has an unsubscribe token for CAN-SPAM compliance
+      let unsubscribeToken: string;
+      try {
+        unsubscribeToken = await ensureUnsubscribeToken(lead.id);
+      } catch {
+        // If token generation fails, use a fallback URL with leadId
+        unsubscribeToken = lead.id;
+      }
+      const unsubscribeUrl = `${APP_URL}/api/unsubscribe/${unsubscribeToken}`;
+
       // Prepare template data
       const nameParts = `${lead.firstName} ${lead.lastName}`.split(' ')
       const firstName = nameParts[0] || `${lead.firstName} ${lead.lastName}`
@@ -257,6 +416,11 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
               lastName: '',
               email: 'team@company.com',
             },
+        company: {
+          name: businessSettings?.companyName || campaign.organization?.name || 'Our Company',
+          address: businessSettings?.address || '',
+        },
+        unsubscribeUrl,
         currentDate: new Date().toLocaleDateString(),
         currentTime: new Date().toLocaleTimeString(),
       };
@@ -265,13 +429,14 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
       const subject = subjectTemplate(templateData);
       const html = bodyTemplate(templateData);
 
-      return {
+      emails.push({
         to: lead.email,
         subject,
         html,
         leadId: lead.id,
-      };
-    });
+        ...(campaignAttachments.length > 0 ? { attachments: campaignAttachments } : {}),
+      });
+  }
 
   // Process in batches of 100
   const BATCH_SIZE = 100;
@@ -282,6 +447,13 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
   let totalFailed = 0;
 
   console.log(`[CAMPAIGN] Processing ${emails.length} emails in ${batches.length} batches of ${BATCH_SIZE}`);
+
+  // Create CampaignLead tracking rows for per-recipient activity
+  await createCampaignLeadRows(
+    campaign.id,
+    campaign.organizationId,
+    emails.map((e) => e.leadId).filter(Boolean) as string[]
+  );
 
   // Process batches in parallel (3 at a time to avoid overwhelming the email service)
   const PARALLEL_BATCHES = 3;
@@ -325,9 +497,15 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
   // Compile SMS template
   const bodyTemplate = Handlebars.compile(campaign.body || '');
 
-  // Prepare SMS for bulk send
+  // TCPA compliance footer
+  const TCPA_FOOTER = '\n\nReply STOP to opt out.';
+
+  // MMS media URL from campaign
+  const campaignMediaUrl = campaign.mediaUrl ? [campaign.mediaUrl] : undefined;
+
+  // Prepare SMS for bulk send — filter out opted-out leads
   const messages = leads
-    .filter((lead) => lead.phone) // Only leads with phone
+    .filter((lead) => lead.phone && lead.smsOptIn !== false) // Only leads with phone AND not opted out
     .map((lead) => {
       // Prepare template data
       const nameParts = `${lead.firstName} ${lead.lastName}`.split(' ')
@@ -362,8 +540,9 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
 
       return {
         to: lead.phone,
-        message,
+        message: message + TCPA_FOOTER,
         leadId: lead.id,
+        ...(campaignMediaUrl ? { mediaUrl: campaignMediaUrl } : {}),
       };
     });
 
@@ -376,6 +555,13 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
   let totalFailed = 0;
 
   console.log(`[CAMPAIGN] Processing ${messages.length} SMS in ${batches.length} batches of ${BATCH_SIZE}`);
+
+  // Create CampaignLead tracking rows for per-recipient activity
+  await createCampaignLeadRows(
+    campaign.id,
+    campaign.organizationId,
+    messages.map((m) => m.leadId).filter(Boolean) as string[]
+  );
 
   // Process batches in parallel (3 at a time to avoid overwhelming the SMS service)
   const PARALLEL_BATCHES = 3;
@@ -535,8 +721,24 @@ export async function previewCampaign(
   const campaignTagId = campaign.tags && campaign.tags.length > 0 ? campaign.tags[0].id : null;
   const leads = await getTargetLeads(campaign.organizationId, leadIds, undefined, campaignTagId);
   const sampleLeads = leads.slice(0, 5);  if (campaign.type === 'EMAIL') {
+    // Compile blocks/legacy content through MJML
+    let isBlockBased = false;
+    try {
+      const parsed = JSON.parse(campaign.body || '');
+      isBlockBased = parsed && parsed.__emailBlocks;
+    } catch { /* legacy text */ }
+
+    let compiledBody: string;
+    if (isBlockBased) {
+      const mjmlResult = compileEmailBlocks(campaign.body || '');
+      compiledBody = mjmlResult.html;
+    } else {
+      const mjmlResult = compilePlainText(campaign.body || '');
+      compiledBody = mjmlResult.html;
+    }
+
     const subjectTemplate = Handlebars.compile(campaign.subject || '');
-    const bodyTemplate = Handlebars.compile(campaign.body || '');
+    const bodyTemplate = Handlebars.compile(compiledBody);
 
     return sampleLeads.map((lead) => {
       const nameParts = `${lead.firstName} ${lead.lastName}`.split(' ')

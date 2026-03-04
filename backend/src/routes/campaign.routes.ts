@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/auth';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate';
@@ -38,6 +38,8 @@ import {
   updateCampaignMetricsSchema,
 } from '../validators/campaign.validator';
 import { sensitiveLimiter } from '../middleware/rateLimiter';
+import { compileEmailBlocks } from '../utils/mjmlCompiler';
+import { attachmentUpload, getUploadUrl } from '../config/upload';
 import prisma from '../config/database';
 
 const router = Router();
@@ -51,6 +53,45 @@ router.use(authenticate);
  * @access  Private
  */
 router.get('/stats', asyncHandler(getCampaignStats));
+
+/**
+ * @route   POST /api/campaigns/compile-email
+ * @desc    Compile email blocks JSON to final HTML via MJML (for preview)
+ * @access  Private
+ */
+router.post('/compile-email', asyncHandler(async (req, res) => {
+  const { content, subject, previewText } = req.body;
+  if (!content) {
+    return res.status(400).json({ error: 'content is required' });
+  }
+  const result = compileEmailBlocks(content);
+  res.json({
+    html: result.html,
+    errors: result.errors,
+    subject: subject || '',
+    previewText: previewText || '',
+  });
+}));
+
+/**
+ * @route   POST /api/campaigns/upload-attachments
+ * @desc    Upload email attachments for a campaign (max 5 files, 10MB each)
+ * @access  Private
+ */
+router.post('/upload-attachments', attachmentUpload, asyncHandler(async (req: any, res) => {
+  const files = req.files as Express.Multer.File[];
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'No files uploaded' });
+  }
+  const attachments = files.map(f => ({
+    filename: f.originalname,
+    path: `attachments/${f.filename}`,
+    url: getUploadUrl(`attachments/${f.filename}`),
+    size: f.size,
+    type: f.mimetype,
+  }));
+  res.json({ attachments });
+}));
 
 /**
  * @route   GET /api/campaigns/templates
@@ -409,6 +450,141 @@ router.post(
   '/:id/track/conversion',
   validateParams(campaignIdSchema),
   asyncHandler(trackConversionEvent)
+);
+
+/**
+ * @route   GET /api/campaigns/:id/recipients
+ * @desc    Get per-recipient activity log for a campaign
+ * @access  Private
+ */
+router.get(
+  '/:id/recipients',
+  validateParams(campaignIdSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { page = '1', limit = '50', status } = req.query;
+    const orgId = (req as any).user?.organizationId;
+
+    const pageNum = Math.max(1, parseInt(page as string, 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = { campaignId: id };
+    if (orgId) where.organizationId = orgId;
+    if (status && typeof status === 'string') where.status = status;
+
+    const [recipients, total] = await Promise.all([
+      prisma.campaignLead.findMany({
+        where,
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          lead: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+            },
+          },
+        },
+      }),
+      prisma.campaignLead.count({ where }),
+    ]);
+
+    // Status summary counts
+    const statusCounts = await prisma.campaignLead.groupBy({
+      by: ['status'],
+      where: { campaignId: id, ...(orgId ? { organizationId: orgId } : {}) },
+      _count: { status: true },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        recipients,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        statusSummary: statusCounts.reduce((acc: any, s: any) => {
+          acc[s.status] = s._count.status;
+          return acc;
+        }, {}),
+      },
+    });
+  })
+);
+
+/**
+ * @route   GET /api/campaigns/:id/abtest-results
+ * @desc    Get A/B test per-variant stats for a campaign
+ * @access  Private
+ */
+router.get(
+  '/:id/abtest-results',
+  validateParams(campaignIdSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const orgId = (req as any).user?.organizationId;
+
+    // Find the ABTest linked to this campaign via ABTestResult
+    const abTestResult = await prisma.aBTestResult.findFirst({
+      where: { campaignId: id, ...(orgId ? { organizationId: orgId } : {}) },
+      select: { testId: true },
+    });
+
+    if (!abTestResult) {
+      return res.json({ success: true, data: null });
+    }
+
+    const { evaluateABTest } = await import('../services/ab-test-evaluator.service');
+
+    // Get the test record
+    const abTest = await prisma.aBTest.findUnique({
+      where: { id: abTestResult.testId },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        variantA: true,
+        variantB: true,
+        winnerVariant: true,
+        winnerMetric: true,
+        confidence: true,
+        startDate: true,
+        endDate: true,
+        participantCount: true,
+      },
+    });
+
+    if (!abTest) {
+      return res.json({ success: true, data: null });
+    }
+
+    // Get the campaign to read eval settings
+    const campaign = await prisma.campaign.findUnique({
+      where: { id },
+      select: { abTestWinnerMetric: true, abTestEvalHours: true },
+    });
+
+    const metric = (campaign?.abTestWinnerMetric || 'open_rate') as 'open_rate' | 'click_rate';
+
+    // Evaluate current state
+    const evaluation = await evaluateABTest(abTestResult.testId, metric);
+
+    res.json({
+      success: true,
+      data: {
+        test: abTest,
+        evaluation,
+        evalHours: campaign?.abTestEvalHours || 24,
+        winnerMetric: metric,
+      },
+    });
+  })
 );
 
 /**

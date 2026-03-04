@@ -94,7 +94,7 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
       where: {
         organizationId,
         status: { notIn: ['WON', 'LOST'] },
-        stage: { in: ['CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION'] },
+        stage: { in: ['CONTACTED', 'NURTURING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION'] },
         updatedAt: { lt: new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000) },
       },
       select: { id: true, firstName: true, lastName: true, stage: true },
@@ -1217,7 +1217,7 @@ export const getGlobalPredictions = async (req: Request, res: Response) => {
     }
 
     // 2. Pipeline velocity — avg days per stage transition
-    const stageOrder = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON']
+    const stageOrder = ['NEW', 'CONTACTED', 'NURTURING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON']
     const stageLeads = leads.filter(l => l.stage && stageOrder.includes(l.stage))
     const avgDaysInPipeline = stageLeads.length > 0
       ? Math.round(stageLeads.reduce((sum, l) => {

@@ -39,7 +39,7 @@ const FILTER_FIELDS = [
   { value: 'customFields.budget', label: 'Budget', type: 'number' },
 ]
 
-const STATUS_OPTIONS = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']
+const STATUS_OPTIONS = ['new', 'contacted', 'nurturing', 'qualified', 'proposal', 'negotiation', 'won', 'lost']
 
 const OPERATORS = {
   text: [

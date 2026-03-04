@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { 
   Workflow, Play, Plus, TrendingUp, Save, TestTube2, 
   CheckCircle2, XCircle, Activity, Download, Upload,
-  Copy, Zap, Mail, MessageSquare,
+  Copy, Zap, Mail, MessageSquare, Clock,
   Calendar, FileText, ChevronDown, ChevronRight,
   ArrowRight, Filter, Terminal, GripVertical, MousePointer2, X,
   AlertCircle
@@ -21,15 +21,29 @@ import { WorkflowComponentLibrary, WorkflowComponent } from '@/components/workfl
 import { NodeConfigPanel } from '@/components/workflows/NodeConfigPanel';
 import type { WorkflowAction, WorkflowExecution } from '@/types';
 
+interface ExecutionStep {
+  id: string;
+  stepIndex: number;
+  actionType: string;
+  actionLabel?: string;
+  status: 'SUCCESS' | 'FAILED' | 'RUNNING' | 'PENDING';
+  error?: string;
+  retryCount: number;
+  durationMs?: number;
+  branchTaken?: string;
+  startedAt: string;
+  completedAt?: string;
+}
+
 interface ExecutionLog {
   id: string;
   timestamp: string;
-  nodeId?: string;
-  nodeName?: string;
   status: 'success' | 'failed' | 'running' | 'info';
-  message?: string;
+  leadName?: string;
+  leadEmail?: string;
+  error?: string;
   duration: number;
-  details?: string;
+  steps: ExecutionStep[];
 }
 
 interface WorkflowTemplate {
@@ -192,6 +206,10 @@ const WorkflowBuilder = () => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+  // Retry & failure notification settings
+  const [maxRetries, setMaxRetries] = useState(3);
+  const [notifyOnFailure, setNotifyOnFailure] = useState(true);
+
   // Execution logs
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
 
@@ -208,6 +226,8 @@ const WorkflowBuilder = () => {
         const workflow = response.data.workflow;
         setWorkflowName(workflow.name || 'Workflow');
         setWorkflowStatus(workflow.isActive ? 'active' : 'idle');
+        setMaxRetries(workflow.maxRetries ?? 3);
+        setNotifyOnFailure(workflow.notifyOnFailure ?? true);
 
         // Reconstruct nodes from workflow data
         const reconstructedNodes: WorkflowNodeData[] = [];
@@ -298,14 +318,27 @@ const WorkflowBuilder = () => {
         if (runningCount > 0) {
           setWorkflowStatus('running');
         }
-        setExecutionLogs(executionsData.executions.map((exec: WorkflowExecution) => ({
+        setExecutionLogs(executionsData.executions.map((exec: any) => ({
           id: exec.id,
-          timestamp: exec.startedAt || exec.createdAt || new Date().toISOString(),
-          nodeId: exec.nodeId || '',
-          nodeName: exec.nodeName || exec.workflowName || 'Unknown',
+          timestamp: exec.startedAt || new Date().toISOString(),
           status: exec.status === 'COMPLETED' || exec.status === 'SUCCESS' ? 'success' : exec.status === 'FAILED' ? 'failed' : exec.status === 'IN_PROGRESS' || exec.status === 'RUNNING' ? 'running' : 'info',
-          message: exec.result || exec.error || `Execution ${exec.status?.toLowerCase() || 'unknown'}`,
-          duration: exec.duration || 0
+          error: exec.error || undefined,
+          leadName: exec.lead ? `${exec.lead.firstName || ''} ${exec.lead.lastName || ''}`.trim() : undefined,
+          leadEmail: exec.lead?.email,
+          duration: exec.completedAt ? Math.round((new Date(exec.completedAt).getTime() - new Date(exec.startedAt).getTime()) / 1000) : 0,
+          steps: (exec.steps || []).map((step: any) => ({
+            id: step.id,
+            stepIndex: step.stepIndex,
+            actionType: step.actionType,
+            actionLabel: step.actionLabel,
+            status: step.status,
+            error: step.error,
+            retryCount: step.retryCount || 0,
+            durationMs: step.durationMs,
+            branchTaken: step.branchTaken,
+            startedAt: step.startedAt,
+            completedAt: step.completedAt,
+          })),
         })));
       }
     } catch (error) {
@@ -490,6 +523,8 @@ const WorkflowBuilder = () => {
           }
         })),
         nodes: nodes,
+        maxRetries,
+        notifyOnFailure,
         status: 'draft'
       };
 
@@ -851,6 +886,44 @@ const WorkflowBuilder = () => {
         </Card>
       )}
 
+      {/* Retry & Failure Notification Settings */}
+      <Card>
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium whitespace-nowrap">Max Retries:</span>
+              <div className="flex gap-1">
+                {[1, 2, 3].map((n) => (
+                  <Button
+                    key={n}
+                    variant={maxRetries === n ? 'default' : 'outline'}
+                    size="sm"
+                    className="w-8 h-8 p-0"
+                    onClick={() => setMaxRetries(n)}
+                  >
+                    {n}
+                  </Button>
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">per action step</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="notifyOnFailure"
+                checked={notifyOnFailure}
+                onChange={(e) => setNotifyOnFailure(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label htmlFor="notifyOnFailure" className="text-sm font-medium cursor-pointer">
+                Notify on failure
+              </label>
+              <span className="text-xs text-muted-foreground">— get notified when a step fails after all retries</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Main Workflow Canvas & Panels */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Visual Workflow Canvas */}
@@ -1131,13 +1204,9 @@ const WorkflowBuilder = () => {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Execution Logs</CardTitle>
-                <CardDescription>Recent workflow execution history</CardDescription>
+                <CardDescription>Per-step execution history for recent runs</CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowLogsPanel(false)}>
                   Close
                 </Button>
@@ -1145,32 +1214,81 @@ const WorkflowBuilder = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {executionLogs.map((log) => (
-                <div key={log.id} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {log.status === 'success' && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                      {log.status === 'failed' && <XCircle className="h-4 w-4 text-red-600" />}
-                      {log.status === 'running' && <Activity className="h-4 w-4 text-blue-600 animate-pulse" />}
-                      <span className="font-medium capitalize">{log.status}</span>
+            {executionLogs.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No executions recorded yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {executionLogs.map((log) => (
+                  <div key={log.id} className="border rounded-lg overflow-hidden">
+                    {/* Execution header */}
+                    <div className={`p-3 flex items-center justify-between ${
+                      log.status === 'success' ? 'bg-green-50 dark:bg-green-950/20' :
+                      log.status === 'failed' ? 'bg-red-50 dark:bg-red-950/20' :
+                      log.status === 'running' ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-muted/30'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        {log.status === 'success' && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        {log.status === 'failed' && <XCircle className="h-4 w-4 text-red-600" />}
+                        {log.status === 'running' && <Activity className="h-4 w-4 text-blue-600 animate-pulse" />}
+                        {log.status === 'info' && <Activity className="h-4 w-4 text-muted-foreground" />}
+                        <span className="font-medium text-sm capitalize">{log.status}</span>
+                        {log.leadName && (
+                          <span className="text-xs text-muted-foreground">— {log.leadName} {log.leadEmail ? `(${log.leadEmail})` : ''}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {log.duration > 0 && <Badge variant="outline">{log.duration}s</Badge>}
+                        <span>{new Date(log.timestamp).toLocaleString()}</span>
+                      </div>
                     </div>
-                    <Badge variant={log.status === 'success' ? 'default' : 'destructive'}>
-                      {log.duration}s
-                    </Badge>
+
+                    {/* Per-step detail */}
+                    {log.steps.length > 0 ? (
+                      <div className="divide-y">
+                        {log.steps.map((step) => (
+                          <div key={step.id} className="px-4 py-2 flex items-start gap-3 text-sm">
+                            <div className="pt-0.5 flex-shrink-0">
+                              {step.status === 'SUCCESS' && <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
+                              {step.status === 'FAILED' && <XCircle className="h-3.5 w-3.5 text-red-500" />}
+                              {step.status === 'RUNNING' && <Activity className="h-3.5 w-3.5 text-blue-500 animate-pulse" />}
+                              {step.status === 'PENDING' && <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{step.actionLabel || step.actionType}</span>
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  {step.actionType}
+                                </Badge>
+                                {step.branchTaken && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                    branch: {step.branchTaken}
+                                  </Badge>
+                                )}
+                                {step.retryCount > 0 && (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                    {step.retryCount} {step.retryCount === 1 ? 'retry' : 'retries'}
+                                  </Badge>
+                                )}
+                              </div>
+                              {step.error && (
+                                <p className="text-xs text-red-600 mt-0.5 truncate">{step.error}</p>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {step.durationMs != null ? `${step.durationMs}ms` : '—'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-3 text-xs text-muted-foreground">
+                        {log.error ? `Error: ${log.error}` : log.status === 'running' ? 'Execution in progress…' : 'No step details available'}
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-1">{log.details}</p>
-                  <p className="text-xs text-muted-foreground">{log.timestamp}</p>
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" className="w-full mt-4" onClick={() => {
-              setShowLogsPanel(!showLogsPanel);
-              toast.info('Debug console expanded — check execution logs above');
-            }}>
-              <Terminal className="h-4 w-4 mr-2" />
-              View Full Debug Console
-            </Button>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

@@ -6,6 +6,16 @@ import { workflowTriggerService } from '../services/workflow-trigger.service';
 import { updateLeadScore, updateMultipleLeadScores, updateAllLeadScores, getScoreCategory, getLeadsByScoreCategory } from '../services/leadScoring.service';
 import { getLeadsFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
 import { parse as csvParse } from 'csv-parse/sync';
+import {
+  parseCSV,
+  parseExcel,
+  parseVCard,
+  autoMapHeaders,
+  detectDuplicates,
+  executeImport,
+  MAPPABLE_FIELDS,
+} from '../services/import.service';
+import type { ColumnMapping, DuplicateAction } from '../services/import.service';
 
 /**
  * Get all leads with filtering, pagination, and sorting
@@ -215,7 +225,8 @@ export async function getLead(req: Request, res: Response): Promise<void> {
  * POST /api/leads
  */
 export async function createLead(req: Request, res: Response): Promise<void> {
-  const { firstName, lastName, email, phone, company, position, status, source, value, stage, assignedToId, customFields, notes, tags } = req.body;
+  const { firstName, lastName, email, phone, company, position, status, source, value, stage, assignedToId, customFields, notes, tags,
+    propertyType, transactionType, budgetMin, budgetMax, preApprovalStatus, moveInTimeline, desiredLocation, bedsMin, bathsMin } = req.body;
 
   // Check if email already exists within the organization (not globally)
   const existingLead = await prisma.lead.findFirst({
@@ -259,6 +270,15 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       stage,
       assignedToId,
       customFields,
+      propertyType,
+      transactionType,
+      budgetMin: budgetMin ? parseFloat(budgetMin) : undefined,
+      budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
+      preApprovalStatus,
+      moveInTimeline,
+      desiredLocation,
+      bedsMin: bedsMin ? parseInt(bedsMin) : undefined,
+      bathsMin: bathsMin ? parseInt(bathsMin) : undefined,
       // Connect existing tags by name if provided
       ...(Array.isArray(tags) && tags.length > 0 ? {
         tags: {
@@ -916,7 +936,7 @@ export async function recalculateAllScores(req: Request, res: Response): Promise
 }
 
 /**
- * Import leads from CSV
+ * Import leads from CSV (legacy endpoint — still works for simple CSV uploads)
  * POST /api/leads/import
  */
 export async function importLeads(req: Request, res: Response): Promise<void> {
@@ -928,9 +948,56 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  // Check if this is an enhanced import (with column mappings)
+  const bodyMappings = req.body?.columnMappings;
+  const bodyAction = req.body?.duplicateAction;
+
+  if (bodyMappings) {
+    // Enhanced import with column mappings
+    try {
+      const ext = file.originalname?.toLowerCase() || '';
+      let parsed;
+      if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
+        parsed = await parseExcel(file.buffer);
+      } else if (ext.endsWith('.vcf')) {
+        parsed = parseVCard(file.buffer);
+      } else {
+        parsed = parseCSV(file.buffer);
+      }
+
+      if (parsed.rows.length === 0) {
+        res.status(400).json({ success: false, message: 'File is empty or has no data rows' });
+        return;
+      }
+
+      let mappings: ColumnMapping[];
+      try {
+        mappings = typeof bodyMappings === 'string' ? JSON.parse(bodyMappings) : bodyMappings;
+      } catch {
+        res.status(400).json({ success: false, message: 'Invalid columnMappings format' });
+        return;
+      }
+
+      const duplicateAction: DuplicateAction = (['skip', 'overwrite', 'create'].includes(bodyAction) ? bodyAction : 'skip') as DuplicateAction;
+
+      const result = await executeImport(parsed.rows, {
+        organizationId,
+        userId: req.user!.userId,
+        columnMappings: mappings,
+        duplicateAction,
+      });
+
+      res.json({ success: true, data: result });
+      return;
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: `Import failed: ${err.message}` });
+      return;
+    }
+  }
+
+  // Legacy CSV-only import (no column mapping)
   const csv = file.buffer.toString('utf-8');
 
-  // Parse CSV properly (handles quoted fields like "Smith, John")
   let records: Record<string, string>[];
   try {
     records = csvParse(csv, {
@@ -976,7 +1043,6 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
         continue;
       }
 
-      // L5: Validate email format if provided
       if (leadData.email && !emailRegex.test(leadData.email)) {
         skipped++;
         errors.push(`Row ${i + 2}: Invalid email format "${leadData.email}"`);
@@ -995,6 +1061,105 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
     success: true,
     data: { imported, skipped, total: records.length, errors: errors.slice(0, 10) },
   });
+}
+
+/**
+ * Preview an import file — parse headers + first N rows, return auto-mapped columns
+ * POST /api/leads/import/preview
+ */
+export async function previewImport(req: Request, res: Response): Promise<void> {
+  const file = (req as any).file;
+
+  if (!file) {
+    res.status(400).json({ success: false, message: 'No file uploaded' });
+    return;
+  }
+
+  try {
+    const ext = (file.originalname || '').toLowerCase();
+    let parsed;
+
+    if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
+      parsed = await parseExcel(file.buffer);
+    } else if (ext.endsWith('.vcf')) {
+      parsed = parseVCard(file.buffer);
+    } else {
+      parsed = parseCSV(file.buffer);
+    }
+
+    if (parsed.headers.length === 0) {
+      res.status(400).json({ success: false, message: 'File has no headers or is empty' });
+      return;
+    }
+
+    // Auto-map headers to lead fields
+    const suggestedMappings = autoMapHeaders(parsed.headers);
+
+    // Return preview (first 5 rows)
+    res.json({
+      success: true,
+      data: {
+        headers: parsed.headers,
+        previewRows: parsed.rows.slice(0, 5),
+        totalRows: parsed.totalRows,
+        fileType: parsed.fileType,
+        suggestedMappings,
+        mappableFields: MAPPABLE_FIELDS,
+      },
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: `Failed to parse file: ${err.message}` });
+  }
+}
+
+/**
+ * Detect duplicates in an uploaded file before importing
+ * POST /api/leads/import/duplicates
+ */
+export async function checkImportDuplicates(req: Request, res: Response): Promise<void> {
+  const organizationId = req.user!.organizationId;
+  const file = (req as any).file;
+
+  if (!file) {
+    res.status(400).json({ success: false, message: 'No file uploaded' });
+    return;
+  }
+
+  let bodyMappings = req.body?.columnMappings;
+
+  try {
+    const ext = (file.originalname || '').toLowerCase();
+    let parsed;
+
+    if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
+      parsed = await parseExcel(file.buffer);
+    } else if (ext.endsWith('.vcf')) {
+      parsed = parseVCard(file.buffer);
+    } else {
+      parsed = parseCSV(file.buffer);
+    }
+
+    let mappings: ColumnMapping[];
+    try {
+      mappings = typeof bodyMappings === 'string' ? JSON.parse(bodyMappings) : bodyMappings;
+    } catch {
+      res.status(400).json({ success: false, message: 'Invalid columnMappings format' });
+      return;
+    }
+
+    const duplicates = await detectDuplicates(parsed.rows, mappings, organizationId);
+
+    res.json({
+      success: true,
+      data: {
+        totalRows: parsed.totalRows,
+        duplicatesFound: duplicates.length,
+        duplicates: duplicates.slice(0, 50), // Limit to first 50
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: `Duplicate check failed: ${err.message}` });
+  }
 }
 
 /**
@@ -1028,5 +1193,217 @@ export async function getLeadsByScore(req: Request, res: Response): Promise<void
       message: 'Failed to get leads by score category',
       error: error.message,
     });
+  }
+}
+
+/**
+ * Scan for duplicate leads within the organization (server-side)
+ * POST /api/leads/duplicates/scan
+ *
+ * Accepts query config:
+ * - matchEmail: boolean (default true)
+ * - matchPhone: boolean (default true)
+ * - matchName: boolean (default true)
+ * - threshold: number (minimum similarity %, default 80)
+ */
+export async function scanDuplicates(req: Request, res: Response): Promise<void> {
+  const orgId = req.user!.organizationId;
+  const { matchEmail = true, matchPhone = true, matchName = true } = req.body;
+
+  const leads = await prisma.lead.findMany({
+    where: { organizationId: orgId },
+    select: {
+      id: true, firstName: true, lastName: true, email: true, phone: true,
+      company: true, position: true, source: true, score: true, status: true, value: true,
+      propertyType: true, transactionType: true, budgetMin: true, budgetMax: true,
+      preApprovalStatus: true, moveInTimeline: true, desiredLocation: true, bedsMin: true, bathsMin: true,
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  interface DupPair {
+    lead1: typeof leads[0];
+    lead2: typeof leads[0];
+    similarity: number;
+    reason: string;
+  }
+
+  const pairs: DupPair[] = [];
+  const seen = new Set<string>();
+
+  const pairKey = (a: string, b: string) => a < b ? `${a}|${b}` : `${b}|${a}`;
+
+  // Email matching
+  if (matchEmail) {
+    const emailMap = new Map<string, typeof leads[0]>();
+    for (const lead of leads) {
+      const email = lead.email?.toLowerCase();
+      if (!email) continue;
+      const existing = emailMap.get(email);
+      if (existing) {
+        const k = pairKey(existing.id, lead.id);
+        if (!seen.has(k)) {
+          seen.add(k);
+          pairs.push({ lead1: existing, lead2: lead, similarity: 95, reason: 'Same email address' });
+        }
+      } else {
+        emailMap.set(email, lead);
+      }
+    }
+  }
+
+  // Phone matching
+  if (matchPhone) {
+    const phoneMap = new Map<string, typeof leads[0]>();
+    for (const lead of leads) {
+      const phone = lead.phone?.replace(/\D/g, '');
+      if (!phone || phone.length < 10) continue;
+      const existing = phoneMap.get(phone);
+      if (existing) {
+        const k = pairKey(existing.id, lead.id);
+        if (!seen.has(k)) {
+          seen.add(k);
+          pairs.push({ lead1: existing, lead2: lead, similarity: 90, reason: 'Same phone number' });
+        }
+      } else {
+        phoneMap.set(phone, lead);
+      }
+    }
+  }
+
+  // Name matching
+  if (matchName) {
+    const nameMap = new Map<string, typeof leads[0]>();
+    for (const lead of leads) {
+      const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim().toLowerCase();
+      if (fullName.length <= 1) continue;
+      const existing = nameMap.get(fullName);
+      if (existing) {
+        const k = pairKey(existing.id, lead.id);
+        if (!seen.has(k)) {
+          seen.add(k);
+          pairs.push({ lead1: existing, lead2: lead, similarity: 80, reason: 'Same full name' });
+        }
+      } else {
+        nameMap.set(fullName, lead);
+      }
+    }
+  }
+
+  res.json({
+    success: true,
+    data: {
+      duplicates: pairs,
+      totalLeadsScanned: leads.length,
+      duplicatesFound: pairs.length,
+    },
+  });
+}
+
+/**
+ * Merge leads with field-level resolution
+ * POST /api/leads/merge
+ *
+ * Accepts:
+ * - primaryLeadId: the lead to keep
+ * - secondaryLeadIds: leads to merge into primary (then delete)
+ * - fieldSelections: { fieldName: 'primary' | 'secondary' } — which lead's value to keep per field
+ */
+export async function mergeLeads(req: Request, res: Response): Promise<void> {
+  const { primaryLeadId, secondaryLeadIds, fieldSelections } = req.body;
+  const orgId = req.user!.organizationId;
+
+  try {
+    // Verify all leads belong to the org
+    const allIds = [primaryLeadId, ...secondaryLeadIds];
+    const leads = await prisma.lead.findMany({
+      where: { id: { in: allIds }, organizationId: orgId },
+      include: { tags: true },
+    });
+
+    if (leads.length !== allIds.length) {
+      res.status(400).json({ success: false, message: 'One or more leads not found in your organization' });
+      return;
+    }
+
+    const primaryLead = leads.find(l => l.id === primaryLeadId)!;
+    const secondaryLeads = leads.filter(l => l.id !== primaryLeadId);
+
+    // Build field updates from field selections
+    const mergeableFields = ['firstName', 'lastName', 'email', 'phone', 'company', 'position', 'source', 'value', 'stage', 'score', 'status'] as const;
+    const updateData: Record<string, any> = {};
+
+    if (fieldSelections && typeof fieldSelections === 'object') {
+      for (const field of mergeableFields) {
+        const selection = fieldSelections[field];
+        if (selection === 'secondary' && secondaryLeads.length > 0) {
+          // Use the first secondary lead's value
+          const secValue = (secondaryLeads[0] as any)[field];
+          if (secValue !== undefined && secValue !== null) {
+            updateData[field] = secValue;
+          }
+        }
+        // 'primary' = keep current value (no update needed)
+      }
+    }
+
+    // Merge tags (collect unique tags from all leads)
+    const allTagIds = new Set<string>();
+    for (const lead of leads) {
+      for (const tag of (lead as any).tags || []) {
+        allTagIds.add(tag.id);
+      }
+    }
+
+    // Execute merge in a transaction
+    await prisma.$transaction([
+      // Transfer all related records to primary lead
+      prisma.note.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
+      prisma.task.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
+      prisma.activity.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
+      prisma.message.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
+      prisma.appointment.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
+      prisma.call.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
+      prisma.followUpReminder.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
+      prisma.workflowExecution.updateMany({ where: { leadId: { in: secondaryLeadIds } }, data: { leadId: primaryLeadId } }),
+      // CampaignLead — can't just reassign because of unique constraints. Delete secondary ones.
+      prisma.campaignLead.deleteMany({ where: { leadId: { in: secondaryLeadIds } } }),
+      // ABTestResult — delete secondary ones
+      prisma.aBTestResult.deleteMany({ where: { leadId: { in: secondaryLeadIds } } }),
+      // Update primary lead fields if field selections provided
+      ...(Object.keys(updateData).length > 0
+        ? [prisma.lead.update({ where: { id: primaryLeadId }, data: updateData })]
+        : []),
+      // Delete secondary leads (cascade will handle remaining)
+      prisma.lead.deleteMany({ where: { id: { in: secondaryLeadIds } } }),
+    ]);
+
+    // Reconnect merged tags to primary lead
+    if (allTagIds.size > 0) {
+      await prisma.lead.update({
+        where: { id: primaryLeadId },
+        data: {
+          tags: {
+            set: Array.from(allTagIds).map(id => ({ id })),
+          },
+        },
+      });
+    }
+
+    // Return updated primary lead
+    const merged = await prisma.lead.findUnique({
+      where: { id: primaryLeadId },
+      include: {
+        tags: true,
+        assignedTo: { select: { id: true, firstName: true, lastName: true } },
+        pipeline: { select: { id: true, name: true } },
+        pipelineStage: { select: { id: true, name: true } },
+      },
+    });
+
+    res.json({ success: true, data: merged });
+  } catch (error: any) {
+    console.error('Error merging leads:', error);
+    res.status(500).json({ success: false, message: `Merge failed: ${error.message}` });
   }
 }

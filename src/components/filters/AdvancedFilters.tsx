@@ -23,7 +23,7 @@ interface AdvancedFiltersProps {
   currentFilters: FilterConfig
 }
 
-const statusOptions = ['New', 'Contacted', 'Qualified', 'Proposal', 'Won', 'Lost']
+const statusOptions = ['New', 'Contacted', 'Nurturing', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost']
 const sourceOptions = ['Website', 'Referral', 'LinkedIn', 'Cold Call', 'Campaign', 'Direct']
 
 export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: AdvancedFiltersProps) {

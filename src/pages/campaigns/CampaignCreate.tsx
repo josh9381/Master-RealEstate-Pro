@@ -16,6 +16,7 @@ import { DaysOfWeekPicker } from '@/components/ui/DaysOfWeekPicker'
 import { AdvancedAudienceFilters } from '@/components/campaigns/AdvancedAudienceFilters'
 import { MockModeBanner } from '@/components/shared/MockModeBanner'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
+import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
 import type { CampaignPreviewData, EmailTemplateResponse } from '@/types'
 
 const campaignTypes = [
@@ -138,6 +139,8 @@ function CampaignCreate() {
     budget: '',
     enableABTest: false,
     abTestVariant: '',
+    abTestWinnerMetric: 'open_rate' as 'open_rate' | 'click_rate',
+    abTestEvalHours: 24,
     // Recurring campaign fields
     isRecurring: false,
     frequency: 'weekly' as 'daily' | 'weekly' | 'monthly',
@@ -148,6 +151,12 @@ function CampaignCreate() {
     maxOccurrences: 10,
     // Advanced audience filters
     audienceFilters: [] as Array<{ field: string; operator: string; value: string | number | string[] }>,
+    // Email attachments
+    attachments: [] as Array<{ filename: string; path: string; url: string; size: number; type: string }>,
+    // MMS media URL
+    mediaUrl: '',
+    // Send-time optimization
+    sendTimeOptimization: 'none' as 'none' | 'timezone' | 'engagement' | 'both',
   })
   const [campaignErrors, setCampaignErrors] = useState<Record<string, string>>({})
   
@@ -224,6 +233,8 @@ function CampaignCreate() {
       abTestData: formData.enableABTest && formData.abTestVariant 
         ? { variantSubject: formData.abTestVariant } 
         : undefined,
+      abTestWinnerMetric: formData.enableABTest ? formData.abTestWinnerMetric : undefined,
+      abTestEvalHours: formData.enableABTest ? formData.abTestEvalHours : undefined,
       // Recurring campaign fields
       isRecurring: formData.isRecurring,
       frequency: formData.isRecurring ? formData.frequency : undefined,
@@ -242,6 +253,14 @@ function CampaignCreate() {
       maxOccurrences: formData.isRecurring && formData.recurringEndType === 'count'
         ? formData.maxOccurrences
         : undefined,
+      // Email attachments
+      ...(formData.attachments.length > 0 ? {
+        attachments: formData.attachments.map(a => ({ filename: a.filename, path: a.path, size: a.size, type: a.type }))
+      } : {}),
+      // MMS media URL
+      ...(formData.mediaUrl.trim() ? { mediaUrl: formData.mediaUrl.trim() } : {}),
+      // Send-time optimization
+      ...(formData.sendTimeOptimization !== 'none' ? { sendTimeOptimization: formData.sendTimeOptimization } : {}),
     }
   }
 
@@ -583,15 +602,54 @@ function CampaignCreate() {
                         </Button>
                       </div>
                     </div>
-                    <textarea
-                      className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      placeholder="Enter your email content here..."
+                    <EmailBlockEditor
                       value={formData.content}
-                      onChange={(e) => updateFormData({ content: e.target.value })}
+                      onChange={(value) => updateFormData({ content: value })}
+                      placeholder="Click a block type to start building your email"
+                      minHeight="350px"
+                      showTemplates={true}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Tip: Use {`{{lead.firstName}}`} to personalize with lead's first name
-                    </p>
+                  </div>
+                  {/* Attachments */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Attachments <span className="text-muted-foreground font-normal">(optional, max 5 files, 10MB each)</span></label>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.attachments.map((att, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1.5 text-sm">
+                          <span className="truncate max-w-[200px]">{att.filename}</span>
+                          <span className="text-xs text-muted-foreground">({(att.size / 1024).toFixed(0)} KB)</span>
+                          <button
+                            type="button"
+                            onClick={() => updateFormData({ attachments: formData.attachments.filter((_, i) => i !== idx) })}
+                            className="text-red-500 hover:text-red-700"
+                          >×</button>
+                        </div>
+                      ))}
+                    </div>
+                    {formData.attachments.length < 5 && (
+                      <label className="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed rounded-md text-sm text-muted-foreground hover:border-primary hover:text-primary cursor-pointer transition-colors">
+                        <span>+ Add file</span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.webp,.gif"
+                          multiple
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files || [])
+                            if (files.length === 0) return
+                            const maxAllowed = 5 - formData.attachments.length
+                            const toUpload = files.slice(0, maxAllowed)
+                            try {
+                              const result = await campaignsApi.uploadAttachments(toUpload)
+                              updateFormData({ attachments: [...formData.attachments, ...result.attachments] })
+                            } catch (err) {
+                              toast.error('Could not upload attachments')
+                            }
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                    )}
                   </div>
                 </>
               )}
@@ -634,6 +692,35 @@ function CampaignCreate() {
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{formData.content.length}/320 characters</span>
                     <span>{formData.content.length > 160 ? `${Math.ceil(formData.content.length / 160)} segments` : '1 segment'}</span>
+                  </div>
+                  <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-200">
+                    <p className="font-medium mb-1">TCPA Compliance</p>
+                    <p>&quot;Reply STOP to opt out.&quot; will be automatically appended to every SMS sent. Recipients who reply STOP will be automatically unsubscribed.</p>
+                  </div>
+                  
+                  {/* MMS Media URL */}
+                  <div className="space-y-1 pt-2">
+                    <label className="text-sm font-medium">MMS Media URL <span className="text-muted-foreground font-normal">(optional)</span></label>
+                    <input
+                      type="url"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      placeholder="https://example.com/image.jpg"
+                      value={formData.mediaUrl}
+                      onChange={(e) => updateFormData({ mediaUrl: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Add an image, GIF, or video URL to send as MMS. Supported: JPEG, PNG, GIF (up to 5MB). Must be publicly accessible.
+                    </p>
+                    {formData.mediaUrl && (
+                      <div className="mt-2 border rounded-md p-2 max-w-[200px]">
+                        <img
+                          src={formData.mediaUrl}
+                          alt="MMS preview"
+                          className="max-w-full h-auto rounded"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -893,6 +980,44 @@ function CampaignCreate() {
                     </div>
                   </div>
 
+                  {/* Send-Time Optimization */}
+                  {(selectedType === 'email' || selectedType === 'sms') && (
+                    <div className="space-y-3 pt-3 border-t">
+                      <label className="text-sm font-medium">Send-Time Optimization</label>
+                      <p className="text-xs text-muted-foreground">
+                        Optimize send times per recipient for better engagement. Messages will be staggered to reach each lead at their optimal time.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { value: 'none', label: 'None', desc: 'Send all at once' },
+                          { value: 'timezone', label: 'Timezone', desc: 'Send at 10 AM in each recipient\'s timezone' },
+                          { value: 'engagement', label: 'Engagement', desc: 'Send when each recipient typically opens' },
+                          { value: 'both', label: 'Combined', desc: 'Best of timezone + engagement data' },
+                        ].map(opt => (
+                          <label
+                            key={opt.value}
+                            className={`flex flex-col p-3 rounded-lg border cursor-pointer transition-colors ${
+                              formData.sendTimeOptimization === opt.value
+                                ? 'border-primary bg-primary/5'
+                                : 'border-input hover:border-primary/50'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="sendTimeOpt"
+                              value={opt.value}
+                              checked={formData.sendTimeOptimization === opt.value}
+                              onChange={() => updateFormData({ sendTimeOptimization: opt.value as any })}
+                              className="sr-only"
+                            />
+                            <span className="text-sm font-medium">{opt.label}</span>
+                            <span className="text-xs text-muted-foreground">{opt.desc}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Recurring Campaign Options */}
                   <div className="space-y-3 pt-3 border-t">
                     <label className="flex items-center space-x-2 cursor-pointer">
@@ -1094,16 +1219,71 @@ function CampaignCreate() {
                 </label>
 
                 {formData.enableABTest && (
-                  <div className="ml-7 space-y-2">
-                    <label className="text-sm font-medium">Variant Subject Line</label>
-                    <Input
-                      placeholder="Enter alternative subject line"
-                      value={formData.abTestVariant}
-                      onChange={(e) => updateFormData({ abTestVariant: e.target.value })}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      50% of your audience will receive this variant
-                    </p>
+                  <div className="ml-7 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Variant Subject Line</label>
+                      <Input
+                        placeholder="Enter alternative subject line"
+                        value={formData.abTestVariant}
+                        onChange={(e) => updateFormData({ abTestVariant: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        50% of your audience will receive this variant
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Winner Metric</label>
+                      <div className="flex gap-3">
+                        {(['open_rate', 'click_rate'] as const).map((metric) => (
+                          <label
+                            key={metric}
+                            className={`flex-1 flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                              formData.abTestWinnerMetric === metric
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="abTestWinnerMetric"
+                              value={metric}
+                              checked={formData.abTestWinnerMetric === metric}
+                              onChange={() => updateFormData({ abTestWinnerMetric: metric })}
+                              className="sr-only"
+                            />
+                            <div>
+                              <div className="font-medium text-sm">
+                                {metric === 'open_rate' ? 'Open Rate' : 'Click Rate'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {metric === 'open_rate'
+                                  ? 'Best for subject line tests'
+                                  : 'Best for content tests'}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Evaluation Period</label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="168"
+                          value={formData.abTestEvalHours}
+                          onChange={(e) => updateFormData({ abTestEvalHours: Math.max(1, Math.min(168, parseInt(e.target.value) || 24)) })}
+                          className="w-24"
+                        />
+                        <span className="text-sm text-muted-foreground">hours after send</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        The winning variant will be automatically selected after this period (1-168 hours)
+                      </p>
+                    </div>
                   </div>
                 )}
               </CardContent>

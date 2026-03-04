@@ -43,6 +43,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { ScoreBadge } from '@/components/ai/ScoreBadge'
 import { getScoreCategory } from '@/utils/scoringUtils'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
+import { SavedFilterViews } from '@/components/leads/SavedFilterViews'
+import type { SavedFilterView } from '@/lib/api'
 
 // Helper types for handling API data that might be objects
 interface TagObject {
@@ -465,7 +467,31 @@ function LeadsList() {
       assignedTo: [],
     })
     setActiveFilterChips([])
+    setScoreFilter('ALL')
   }
+
+  const handleLoadSavedView = (view: SavedFilterView) => {
+    const fc = view.filterConfig
+    setFilters({
+      status: fc.status || [],
+      source: fc.source || [],
+      scoreRange: fc.scoreRange || [0, 100],
+      dateRange: fc.dateRange || { from: '', to: '' },
+      tags: fc.tags || [],
+      assignedTo: fc.assignedTo || [],
+    })
+    if (view.scoreFilter) setScoreFilter(view.scoreFilter as typeof scoreFilter)
+    if (view.sortField) setSortField(view.sortField as SortField)
+    if (view.sortDirection) setSortDirection(view.sortDirection as SortDirection)
+    setCurrentPage(1)
+    toast.success(`Loaded view: ${view.name || 'Saved View'}`)
+  }
+
+  const hasActiveFilters = activeFilterChips.length > 0 || scoreFilter !== 'ALL' ||
+    filters.status.length > 0 || filters.source.length > 0 ||
+    filters.tags.length > 0 || filters.assignedTo.length > 0 ||
+    filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100 ||
+    filters.dateRange.from !== '' || filters.dateRange.to !== ''
 
   const handleBulkAction = (action: string) => {
     if (action === 'Bulk email') {
@@ -716,9 +742,12 @@ function LeadsList() {
     switch (status) {
       case 'qualified': return 'success'
       case 'contacted': return 'warning'
+      case 'nurturing': return 'warning'
       case 'new': return 'secondary'
       case 'proposal': return 'default'
       case 'negotiation': return 'default'
+      case 'won': return 'success'
+      case 'lost': return 'destructive'
       default: return 'secondary'
     }
   }
@@ -1598,6 +1627,18 @@ function LeadsList() {
         onClearAll={handleClearAllFilters}
         resultCount={filteredAndSortedLeads.length}
       />
+
+      {/* Saved Filter Views */}
+      <div className="px-1">
+        <SavedFilterViews
+          currentFilters={filters}
+          currentScoreFilter={scoreFilter}
+          currentSortField={sortField}
+          currentSortDirection={sortDirection ?? undefined}
+          onLoadView={handleLoadSavedView}
+          hasActiveFilters={hasActiveFilters}
+        />
+      </div>
 
       {/* Leads Table or Grid */}
       {filteredAndSortedLeads.length === 0 ? (

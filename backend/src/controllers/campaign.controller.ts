@@ -187,7 +187,7 @@ export const getCampaign = async (req: Request, res: Response) => {
  * POST /api/campaigns
  */
 export const createCampaign = async (req: Request, res: Response) => {
-  const { name, type, status, subject, body, previewText, startDate, endDate, budget, audience, isABTest, abTestData, tagIds, isRecurring, frequency, recurringPattern, maxOccurrences } = req.body;
+  const { name, type, status, subject, body, previewText, startDate, endDate, budget, audience, isABTest, abTestData, tagIds, isRecurring, frequency, recurringPattern, maxOccurrences, abTestWinnerMetric, abTestEvalHours } = req.body;
   const userId = req.user?.userId;
   const organizationId = req.user?.organizationId;
 
@@ -211,6 +211,8 @@ export const createCampaign = async (req: Request, res: Response) => {
       audience: audience || null,
       isABTest: isABTest || false,
       abTestData: abTestData || null,
+      abTestWinnerMetric: isABTest ? (abTestWinnerMetric || 'open_rate') : null,
+      abTestEvalHours: isABTest ? (abTestEvalHours || 24) : null,
       isRecurring: isRecurring || false,
       frequency: frequency || null,
       recurringPattern: recurringPattern || null,

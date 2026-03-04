@@ -152,52 +152,202 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
       );
     }
 
+    if (triggerType.includes('webhook')) {
+      return (
+        <div className="space-y-3">
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-sm">
+            <strong>Webhook Trigger</strong> — This workflow will be triggered by an external HTTP POST request.
+            The webhook URL will be available after saving the workflow.
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Send a POST request with an optional <code>leadId</code> and <code>data</code> in the JSON body.
+          </p>
+        </div>
+      );
+    }
+
     return null;
   };
 
   const renderConditionConfig = () => {
+    const conditionType = (config.conditionType as string) || 'lead_field';
+
     return (
       <>
+        {/* Condition Type Selector */}
         <div className="space-y-2">
-          <Label htmlFor="field">Field to Check</Label>
+          <Label htmlFor="conditionType">Condition Type</Label>
           <select
-            id="field"
+            id="conditionType"
             className="w-full p-2 border rounded-md"
-            value={config.field as string || ''}
-            onChange={(e) => updateConfig('field', e.target.value)}
+            value={conditionType}
+            onChange={(e) => updateConfig('conditionType', e.target.value)}
           >
-            <option value="">Select field</option>
-            <option value="score">Lead Score</option>
-            <option value="status">Lead Status</option>
-            <option value="source">Lead Source</option>
-            <option value="email">Email</option>
-            <option value="phone">Phone</option>
+            <option value="lead_field">Lead Field</option>
+            <option value="email_opened">Email Opened</option>
+            <option value="link_clicked">Link Clicked</option>
+            <option value="time_elapsed">Time Elapsed</option>
           </select>
         </div>
+
+        {/* Lead Field Condition */}
+        {conditionType === 'lead_field' && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="field">Field to Check</Label>
+              <select
+                id="field"
+                className="w-full p-2 border rounded-md"
+                value={config.field as string || ''}
+                onChange={(e) => updateConfig('field', e.target.value)}
+              >
+                <option value="">Select field</option>
+                <option value="score">Lead Score</option>
+                <option value="status">Lead Status</option>
+                <option value="source">Lead Source</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="firstName">First Name</option>
+                <option value="lastName">Last Name</option>
+                <option value="city">City</option>
+                <option value="state">State</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="operator">Operator</Label>
+              <select
+                id="operator"
+                className="w-full p-2 border rounded-md"
+                value={config.operator as string || 'equals'}
+                onChange={(e) => updateConfig('operator', e.target.value)}
+              >
+                <option value="equals">Equals</option>
+                <option value="notEquals">Not Equals</option>
+                <option value="greaterThan">Greater Than</option>
+                <option value="lessThan">Less Than</option>
+                <option value="greaterThanOrEqual">Greater Than or Equal</option>
+                <option value="lessThanOrEqual">Less Than or Equal</option>
+                <option value="contains">Contains</option>
+                <option value="notContains">Does Not Contain</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="value">Value</Label>
+              <Input
+                id="value"
+                placeholder="Enter value"
+                value={config.value as string || ''}
+                onChange={(e) => updateConfig('value', e.target.value)}
+              />
+            </div>
+          </>
+        )}
+
+        {/* Email Opened Condition */}
+        {conditionType === 'email_opened' && (
+          <div className="space-y-3">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-sm">
+              Checks if the lead has opened any email.
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="withinHours">Within (hours, optional)</Label>
+              <Input
+                id="withinHours"
+                type="number"
+                min="0"
+                placeholder="Leave empty for all time"
+                value={config.withinHours as string || ''}
+                onChange={(e) => updateConfig('withinHours', e.target.value ? parseInt(e.target.value) : '')}
+              />
+              <p className="text-xs text-muted-foreground">
+                Only count opens within this many hours. Leave blank to check all time.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Link Clicked Condition */}
+        {conditionType === 'link_clicked' && (
+          <div className="space-y-3">
+            <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg text-sm">
+              Checks if the lead has clicked any link in an email.
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="withinHours">Within (hours, optional)</Label>
+              <Input
+                id="withinHours"
+                type="number"
+                min="0"
+                placeholder="Leave empty for all time"
+                value={config.withinHours as string || ''}
+                onChange={(e) => updateConfig('withinHours', e.target.value ? parseInt(e.target.value) : '')}
+              />
+              <p className="text-xs text-muted-foreground">
+                Only count clicks within this many hours. Leave blank to check all time.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Time Elapsed Condition */}
+        {conditionType === 'time_elapsed' && (
+          <div className="space-y-3">
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-sm">
+              Checks if enough time has passed since a reference event.
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="elapsedAmount">Duration</Label>
+                <Input
+                  id="elapsedAmount"
+                  type="number"
+                  min="1"
+                  value={config.elapsedAmount as number || 1}
+                  onChange={(e) => updateConfig('elapsedAmount', parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="elapsedUnit">Unit</Label>
+                <select
+                  id="elapsedUnit"
+                  className="w-full p-2 border rounded-md"
+                  value={config.elapsedUnit as string || 'hours'}
+                  onChange={(e) => updateConfig('elapsedUnit', e.target.value)}
+                >
+                  <option value="minutes">Minutes</option>
+                  <option value="hours">Hours</option>
+                  <option value="days">Days</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sinceEvent">Since Event</Label>
+              <select
+                id="sinceEvent"
+                className="w-full p-2 border rounded-md"
+                value={config.sinceEvent as string || 'workflow_start'}
+                onChange={(e) => updateConfig('sinceEvent', e.target.value)}
+              >
+                <option value="workflow_start">Workflow Started</option>
+                <option value="lead_created">Lead Created</option>
+                <option value="last_activity">Last Activity</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Match type for multiple conditions */}
         <div className="space-y-2">
-          <Label htmlFor="operator">Operator</Label>
+          <Label htmlFor="matchType">Logic (for multiple conditions)</Label>
           <select
-            id="operator"
+            id="matchType"
             className="w-full p-2 border rounded-md"
-            value={config.operator as string || 'equals'}
-            onChange={(e) => updateConfig('operator', e.target.value)}
+            value={config.matchType as string || 'ALL'}
+            onChange={(e) => updateConfig('matchType', e.target.value)}
           >
-            <option value="equals">Equals</option>
-            <option value="notEquals">Not Equals</option>
-            <option value="greaterThan">Greater Than</option>
-            <option value="lessThan">Less Than</option>
-            <option value="contains">Contains</option>
-            <option value="notContains">Does Not Contain</option>
+            <option value="ALL">All conditions must match (AND)</option>
+            <option value="ANY">Any condition can match (OR)</option>
           </select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="value">Value</Label>
-          <Input
-            id="value"
-            placeholder="Enter value"
-            value={config.value as string || ''}
-            onChange={(e) => updateConfig('value', e.target.value)}
-          />
         </div>
       </>
     );
@@ -386,32 +536,66 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
   };
 
   const renderDelayConfig = () => {
+    const isScheduleMode = node.label.toLowerCase().includes('schedule') || config.delayMode === 'schedule';
+    const delayMode = (config.delayMode as string) || (isScheduleMode ? 'schedule' : 'relative');
+
     return (
       <>
+        {/* Mode selector */}
         <div className="space-y-2">
-          <Label htmlFor="duration">Duration</Label>
-          <Input
-            id="duration"
-            type="number"
-            min="1"
-            value={config.duration as number || 1}
-            onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="unit">Unit</Label>
+          <Label htmlFor="delayMode">Delay Type</Label>
           <select
-            id="unit"
+            id="delayMode"
             className="w-full p-2 border rounded-md"
-            value={config.unit as string || 'minutes'}
-            onChange={(e) => updateConfig('unit', e.target.value)}
+            value={delayMode}
+            onChange={(e) => updateConfig('delayMode', e.target.value)}
           >
-            <option value="minutes">Minutes</option>
-            <option value="hours">Hours</option>
-            <option value="days">Days</option>
-            <option value="weeks">Weeks</option>
+            <option value="relative">Wait for (relative duration)</option>
+            <option value="schedule">Wait until (specific date/time)</option>
           </select>
         </div>
+
+        {delayMode === 'relative' ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duration</Label>
+              <Input
+                id="duration"
+                type="number"
+                min="1"
+                value={config.duration as number || 1}
+                onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unit">Unit</Label>
+              <select
+                id="unit"
+                className="w-full p-2 border rounded-md"
+                value={config.unit as string || 'minutes'}
+                onChange={(e) => updateConfig('unit', e.target.value)}
+              >
+                <option value="minutes">Minutes</option>
+                <option value="hours">Hours</option>
+                <option value="days">Days</option>
+                <option value="weeks">Weeks</option>
+              </select>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="scheduledFor">Wait Until</Label>
+            <Input
+              id="scheduledFor"
+              type="datetime-local"
+              value={config.scheduledFor as string || ''}
+              onChange={(e) => updateConfig('scheduledFor', e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              The workflow will pause until this exact date and time, then continue.
+            </p>
+          </div>
+        )}
       </>
     );
   };

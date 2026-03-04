@@ -71,6 +71,11 @@ router.post('/twilio/sms/:userId', verifyTwilioSignature, async (req, res) => {
     
     const { MessageSid, From, To, Body, NumMedia } = parseResult.data;
     
+    // TCPA STOP-word detection
+    const STOP_WORDS = ['stop', 'unsubscribe', 'cancel', 'end', 'quit', 'stopall', 'stop all'];
+    const normalizedBody = Body.trim().toLowerCase();
+    const isOptOut = STOP_WORDS.includes(normalizedBody);
+    
     // Find SMS config for this user
     const config = await prisma.sMSConfig.findUnique({
       where: { 
@@ -122,6 +127,74 @@ router.post('/twilio/sms/:userId', verifyTwilioSignature, async (req, res) => {
     });
     
     logger.info({ messageId: message.id }, '[WEBHOOK] Inbound SMS saved');
+
+    // TCPA: Process opt-out if STOP word detected
+    if (isOptOut) {
+      logger.info({ from: From, body: Body }, '[WEBHOOK] SMS opt-out (STOP word) detected');
+      
+      // Update all leads matching this phone number
+      const optedOutLeads = await prisma.lead.updateMany({
+        where: { phone: From },
+        data: {
+          smsOptIn: false,
+          smsOptOutAt: new Date(),
+          smsOptOutReason: `STOP keyword received: "${Body.trim()}"`,
+        },
+      });
+      
+      logger.info({ count: optedOutLeads.count, from: From }, '[WEBHOOK] Leads opted out of SMS');
+
+      // Send confirmation reply per TCPA requirements using the SMS service
+      try {
+        const { sendSMS } = await import('../services/sms.service');
+        const orgId = lead?.organizationId || config.user?.organizationId || config.organizationId;
+        await sendSMS({
+          to: From,
+          message: 'You have been unsubscribed and will no longer receive SMS messages from us. Reply START to resubscribe.',
+          userId: config.userId,
+          organizationId: orgId,
+        });
+        logger.info({ to: From }, '[WEBHOOK] STOP confirmation sent');
+      } catch (confirmErr) {
+        logger.error({ error: confirmErr }, '[WEBHOOK] Failed to send STOP confirmation');
+      }
+      
+      // Respond with TwiML
+      res.type('text/xml');
+      return res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <!-- STOP processed -->
+</Response>`);
+    }
+    
+    // TCPA: Process re-subscribe if START keyword
+    const START_WORDS = ['start', 'yes', 'unstop'];
+    const isOptIn = START_WORDS.includes(normalizedBody);
+    if (isOptIn) {
+      logger.info({ from: From }, '[WEBHOOK] SMS re-subscribe (START) detected');
+      await prisma.lead.updateMany({
+        where: { phone: From },
+        data: {
+          smsOptIn: true,
+          smsOptOutAt: null,
+          smsOptOutReason: null,
+        },
+      });
+      
+      // Send confirmation
+      try {
+        const { sendSMS } = await import('../services/sms.service');
+        const orgId = lead?.organizationId || config.user?.organizationId || config.organizationId;
+        await sendSMS({
+          to: From,
+          message: 'You have been resubscribed and will receive SMS messages from us again. Reply STOP to opt out at any time.',
+          userId: config.userId,
+          organizationId: orgId,
+        });
+      } catch (startErr) {
+        logger.error({ error: startErr }, '[WEBHOOK] Failed to send START confirmation');
+      }
+    }
 
     // Create notification for the user who owns this SMS config (#83)
     try {
@@ -347,6 +420,79 @@ router.post('/sendgrid', verifySendGridSignature, async (req, res) => {
         logger.info({ sg_message_id, eventType }, '[WEBHOOK] Email status updated');
       }
 
+      // Update CampaignLead per-recipient tracking
+      const msgMetadata = (message.metadata as Record<string, any>) || {};
+      const clCampaignId = msgMetadata?.campaignId;
+      if (clCampaignId && message.leadId) {
+        try {
+          const clUpdates: any = {};
+          switch (eventType) {
+            case 'delivered':
+              clUpdates.status = 'DELIVERED';
+              clUpdates.deliveredAt = new Date();
+              break;
+            case 'open':
+              clUpdates.status = 'OPENED';
+              clUpdates.openedAt = new Date();
+              break;
+            case 'click':
+              clUpdates.status = 'CLICKED';
+              clUpdates.clickedAt = new Date();
+              break;
+            case 'bounce':
+            case 'dropped':
+              clUpdates.status = 'BOUNCED';
+              clUpdates.bouncedAt = new Date();
+              break;
+            case 'spamreport':
+              clUpdates.status = 'UNSUBSCRIBED';
+              clUpdates.unsubscribedAt = new Date();
+              break;
+          }
+          if (Object.keys(clUpdates).length > 0) {
+            await prisma.campaignLead.updateMany({
+              where: { campaignId: clCampaignId, leadId: message.leadId },
+              data: clUpdates,
+            });
+          }
+        } catch (clErr) {
+          logger.warn({ error: clErr }, '[WEBHOOK] CampaignLead update failed (non-critical)');
+        }
+      }
+
+      // Update ABTestResult engagement tracking for A/B test auto-winner
+      if (message.leadId && (eventType === 'open' || eventType === 'click')) {
+        try {
+          const abTestUpdate: any = {};
+          if (eventType === 'open') abTestUpdate.openedAt = new Date();
+          if (eventType === 'click') abTestUpdate.clickedAt = new Date();
+
+          // Find ABTestResult rows for this lead (in any campaign)
+          const abResults = await prisma.aBTestResult.findMany({
+            where: {
+              leadId: message.leadId,
+              ...(clCampaignId ? { campaignId: clCampaignId } : {}),
+            },
+            select: { id: true, openedAt: true, clickedAt: true },
+          });
+
+          for (const abr of abResults) {
+            // Only update if not already set (first event wins)
+            const shouldUpdate =
+              (eventType === 'open' && !abr.openedAt) ||
+              (eventType === 'click' && !abr.clickedAt);
+            if (shouldUpdate) {
+              await prisma.aBTestResult.update({
+                where: { id: abr.id },
+                data: abTestUpdate,
+              });
+            }
+          }
+        } catch (abErr) {
+          logger.warn({ error: abErr }, '[WEBHOOK] ABTestResult engagement update failed (non-critical)');
+        }
+      }
+
       // Phase 5.11: Wire to campaign analytics tracking
       // Check if this message is associated with a campaign via Activity records or metadata
       const metadata = (message.metadata as Record<string, any>) || {};
@@ -546,6 +692,63 @@ router.post('/sendgrid/inbound', async (req, res) => {
     }
   } catch (error) {
     logger.error({ error }, '[WEBHOOK] Error processing SendGrid inbound email');
+  }
+});
+
+/**
+ * Inbound Workflow Webhook Trigger
+ * POST /api/webhooks/workflow/:webhookKey
+ * Allows external systems to trigger a workflow execution.
+ * No authentication required — the unique webhookKey acts as the credential.
+ */
+router.post('/workflow/:webhookKey', async (req, res) => {
+  const { webhookKey } = req.params;
+
+  if (!webhookKey || webhookKey.length < 10) {
+    return res.status(400).json({ success: false, message: 'Invalid webhook key' });
+  }
+
+  try {
+    // Find the workflow by its webhookKey
+    const workflow = await prisma.workflow.findFirst({
+      where: {
+        webhookKey,
+        triggerType: 'WEBHOOK',
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        organizationId: true,
+      },
+    });
+
+    if (!workflow) {
+      return res.status(404).json({ success: false, message: 'Workflow not found or inactive' });
+    }
+
+    logger.info({ workflowId: workflow.id, webhookKey }, '[WEBHOOK] Workflow trigger received');
+
+    // Extract leadId from body if provided, otherwise the workflow runs without a lead
+    const { leadId, data } = req.body || {};
+
+    // Execute the workflow asynchronously
+    const { executeWorkflow } = await import('../services/workflow.service');
+    executeWorkflow(workflow.id, leadId || undefined, {
+      trigger: 'webhook',
+      webhookPayload: data || req.body || {},
+    }).catch((err: Error) => {
+      logger.error({ error: err, workflowId: workflow.id }, '[WEBHOOK] Workflow execution failed');
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Workflow triggered',
+      workflowId: workflow.id,
+    });
+  } catch (error) {
+    logger.error({ error }, '[WEBHOOK] Error handling workflow trigger');
+    res.status(500).json({ success: false, message: 'Internal error' });
   }
 });
 

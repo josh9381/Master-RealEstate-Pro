@@ -1236,7 +1236,7 @@ export async function getPipelineMetrics(req: any, res: any) {
       return res.status(400).json({ success: false, message: 'Organization required' })
     }
 
-    const stages = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']
+    const stages = ['NEW', 'CONTACTED', 'NURTURING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']
 
     // Get status change activities to compute time-in-stage
     const statusChanges = await prisma.activity.findMany({

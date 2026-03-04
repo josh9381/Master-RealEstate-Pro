@@ -45,7 +45,7 @@ export interface Lead {
   phone?: string
   company?: string
   position?: string
-  status: 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost' | 'negotiation'
+  status: 'new' | 'contacted' | 'nurturing' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost'
   score: number
   source: string
   value?: number
@@ -56,6 +56,16 @@ export interface Lead {
   lastContact?: string | null
   tags?: string[]
   notes?: string | Note[]
+  // Real-estate specific fields
+  propertyType?: string | null
+  transactionType?: string | null
+  budgetMin?: number | null
+  budgetMax?: number | null
+  preApprovalStatus?: string | null
+  moveInTimeline?: string | null
+  desiredLocation?: string | null
+  bedsMin?: number | null
+  bathsMin?: number | null
   customFields?: {
     industry?: string
     companySize?: number

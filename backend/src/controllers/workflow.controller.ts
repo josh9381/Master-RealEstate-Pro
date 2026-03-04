@@ -75,7 +75,7 @@ export const getWorkflow = async (req: Request, res: Response) => {
 
 // Create workflow
 export const createWorkflow = async (req: Request, res: Response) => {
-  const { name, description, triggerType, triggerData, actions, isActive } = req.body
+  const { name, description, triggerType, triggerData, actions, isActive, maxRetries, notifyOnFailure } = req.body
 
   if (!name || !triggerType || !actions) {
     throw new ValidationError('Name, triggerType, and actions are required')
@@ -94,6 +94,8 @@ export const createWorkflow = async (req: Request, res: Response) => {
       triggerData: triggerData || {},
       actions,
       isActive: isActive !== undefined ? isActive : false, // Default to false if not specified
+      maxRetries: maxRetries != null ? Math.min(Math.max(Number(maxRetries), 1), 3) : 3,
+      notifyOnFailure: notifyOnFailure !== undefined ? Boolean(notifyOnFailure) : true,
     },
   })
 
@@ -106,7 +108,7 @@ export const createWorkflow = async (req: Request, res: Response) => {
 // Update workflow
 export const updateWorkflow = async (req: Request, res: Response) => {
   const { id } = req.params
-  const { name, description, triggerType, triggerData, actions, isActive } = req.body
+  const { name, description, triggerType, triggerData, actions, isActive, maxRetries, notifyOnFailure } = req.body
 
   const existingWorkflow = await prisma.workflow.findFirst({
     where: { 
@@ -132,6 +134,8 @@ export const updateWorkflow = async (req: Request, res: Response) => {
       ...(triggerData !== undefined && { triggerData }),
       ...(actions && { actions }),
       ...(isActive !== undefined && { isActive }),
+      ...(maxRetries != null && { maxRetries: Math.min(Math.max(Number(maxRetries), 1), 3) }),
+      ...(notifyOnFailure !== undefined && { notifyOnFailure: Boolean(notifyOnFailure) }),
     },
   })
 

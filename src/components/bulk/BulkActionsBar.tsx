@@ -27,12 +27,10 @@ export function BulkActionsBar({
   className,
 }: BulkActionsBarProps) {
   const [showStatusMenu, setShowStatusMenu] = useState(false)
-  const [showAssignMenu, setShowAssignMenu] = useState(false)
 
   if (selectedCount === 0) return null
 
-  const statusOptions = ['New', 'Contacted', 'Qualified', 'Proposal', 'Won', 'Lost']
-  const assignOptions = ['Sarah Johnson', 'Mike Davis', 'Emily Wilson', 'Unassigned']
+  const statusOptions = ['New', 'Contacted', 'Nurturing', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost']
 
   return (
     <div
@@ -107,40 +105,15 @@ export function BulkActionsBar({
 
             {/* Assign To */}
             {onAssignTo && (
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAssignMenu(!showAssignMenu)}
-                  className="text-primary-foreground hover:bg-primary-foreground/10"
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Assign To
-                </Button>
-
-                {showAssignMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowAssignMenu(false)}
-                    />
-                    <div className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border bg-background p-2 shadow-lg">
-                      {assignOptions.map((person) => (
-                        <button
-                          key={person}
-                          onClick={() => {
-                            onAssignTo(person)
-                            setShowAssignMenu(false)
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-sm text-foreground hover:bg-muted transition-colors"
-                        >
-                          {person}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onAssignTo('')}
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Assign To
+              </Button>
             )}
 
             {/* Bulk Email */}

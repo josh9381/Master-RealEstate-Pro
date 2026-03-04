@@ -1,6 +1,6 @@
 import {
   Filter, Mail, MessageSquare, UserPlus, Tag, Clock, Bell,
-  UserCircle, BarChart, Calendar, FileText, Send, Shield, Star
+  UserCircle, BarChart, Calendar, FileText, Send, Shield, Star, Globe
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -64,40 +64,52 @@ const triggers: WorkflowComponent[] = [
     description: 'Triggers at scheduled times (daily, weekly, etc.)',
     icon: Clock,
   },
+  {
+    id: 'webhook',
+    type: 'trigger',
+    category: 'triggers',
+    label: 'Webhook',
+    description: 'Triggered by an external HTTP request',
+    icon: Globe,
+  },
 ];
 
 const conditions: WorkflowComponent[] = [
   {
-    id: 'check-lead-score',
+    id: 'check-lead-field',
     type: 'condition',
     category: 'conditions',
-    label: 'Check Lead Score',
-    description: 'Evaluate if lead score meets criteria',
+    label: 'Check Lead Field',
+    description: 'Evaluate lead score, status, source, or any field',
     icon: Filter,
+    config: { conditionType: 'lead_field' },
   },
   {
-    id: 'check-lead-status',
+    id: 'email-opened',
     type: 'condition',
     category: 'conditions',
-    label: 'Check Lead Status',
-    description: 'Check current lead status',
-    icon: Shield,
-  },
-  {
-    id: 'has-tag',
-    type: 'condition',
-    category: 'conditions',
-    label: 'Has Tag',
-    description: 'Check if lead has specific tag',
-    icon: Tag,
-  },
-  {
-    id: 'email-engagement',
-    type: 'condition',
-    category: 'conditions',
-    label: 'Email Engagement',
-    description: 'Check email open/click history',
+    label: 'Email Opened',
+    description: 'Check if lead opened an email',
     icon: Mail,
+    config: { conditionType: 'email_opened' },
+  },
+  {
+    id: 'link-clicked',
+    type: 'condition',
+    category: 'conditions',
+    label: 'Link Clicked',
+    description: 'Check if lead clicked a link in an email',
+    icon: Shield,
+    config: { conditionType: 'link_clicked' },
+  },
+  {
+    id: 'time-elapsed',
+    type: 'condition',
+    category: 'conditions',
+    label: 'Time Elapsed',
+    description: 'Check if enough time has passed since an event',
+    icon: Tag,
+    config: { conditionType: 'time_elapsed', elapsedAmount: 1, elapsedUnit: 'hours', sinceEvent: 'workflow_start' },
   },
 ];
 
@@ -176,14 +188,16 @@ const utilities: WorkflowComponent[] = [
     label: 'Delay',
     description: 'Wait for a specified duration before continuing',
     icon: Clock,
+    config: { delayMode: 'relative', duration: 1, unit: 'hours' },
   },
   {
     id: 'schedule',
     type: 'delay',
     category: 'utilities',
     label: 'Schedule',
-    description: 'Schedule next action for specific date/time',
+    description: 'Wait until a specific date/time before continuing',
     icon: Calendar,
+    config: { delayMode: 'schedule' },
   },
 ];
 

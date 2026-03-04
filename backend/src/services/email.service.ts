@@ -391,6 +391,7 @@ export async function sendBulkEmails(
     subject: string;
     html: string;
     leadId?: string;
+    attachments?: Array<{ content: string; filename: string; type?: string }>;
   }>,
   campaignId?: string,
   userId?: string,

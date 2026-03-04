@@ -15,12 +15,16 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/Dialog'
-import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, Brain, TrendingUp, Target, Clock, AlertTriangle, ArrowLeft, Save, Plus } from 'lucide-react'
+import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, Brain, TrendingUp, Target, Clock, AlertTriangle, ArrowLeft, Save, Plus, LayoutDashboard, History, CheckSquare } from 'lucide-react'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { AIEmailComposer } from '@/components/ai/AIEmailComposer'
 import { AISMSComposer } from '@/components/ai/AISMSComposer'
 import { AISuggestedActions } from '@/components/ai/AISuggestedActions'
 import { ActivityTimeline } from '@/components/activity/ActivityTimeline'
+import { CommunicationHistory } from '@/components/leads/CommunicationHistory'
+import { LeadTasks } from '@/components/leads/LeadTasks'
+import { FollowUpReminders } from '@/components/leads/FollowUpReminders'
+import { LogCallDialog } from '@/components/leads/LogCallDialog'
 import { PredictionBadge } from '@/components/ai/PredictionBadge'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import intelligenceService, { type LeadPrediction, type EngagementAnalysis, type NextActionSuggestion } from '@/services/intelligenceService'
@@ -38,6 +42,7 @@ function LeadDetail() {
   const queryClient = useQueryClient()
   const [showEmailComposer, setShowEmailComposer] = useState(false)
   const [showSMSComposer, setShowSMSComposer] = useState(false)
+  const [showLogCall, setShowLogCall] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
@@ -46,7 +51,7 @@ function LeadDetail() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteText, setEditingNoteText] = useState('')
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
-  
+  const [activeTab, setActiveTab] = useState<'overview' | 'communications' | 'notes' | 'tasks'>('overview')
   // AI Intelligence state
   const [aiPrediction, setAiPrediction] = useState<LeadPrediction | null>(null)
   const [aiEngagement, setAiEngagement] = useState<EngagementAnalysis | null>(null)
@@ -397,7 +402,7 @@ function LeadDetail() {
       </div>
 
       {/* Quick Actions with AI */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Button onClick={() => setShowEmailComposer(true)} className="h-auto flex-col py-4">
           <Mail className="mb-2 h-6 w-6" />
           <span className="font-medium">Email</span>
@@ -423,11 +428,66 @@ function LeadDetail() {
           <span className="font-medium">Call</span>
           <span className="text-xs opacity-75">{lead?.phone ? 'Quick dial' : 'No phone'}</span>
         </Button>
+        <Button
+          variant="outline"
+          className="h-auto flex-col py-4"
+          onClick={() => setShowLogCall(true)}
+        >
+          <Phone className="mb-2 h-6 w-6" />
+          <span className="font-medium">Log Call</span>
+          <span className="text-xs opacity-75">Record outcome</span>
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Main Info */}
-        <div className="md:col-span-2 space-y-6">
+        {/* Main Info - Tabbed */}
+        <div className="md:col-span-2 space-y-4">
+          {/* Tab Navigation */}
+          <div className="flex gap-1 rounded-lg border bg-muted/30 p-1">
+            <Button
+              size="sm"
+              variant={activeTab === 'overview' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('overview')}
+              className="h-9"
+            >
+              <LayoutDashboard className="h-4 w-4 mr-1.5" />
+              Overview
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === 'communications' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('communications')}
+              className="h-9"
+            >
+              <History className="h-4 w-4 mr-1.5" />
+              Communications
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === 'notes' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('notes')}
+              className="h-9"
+            >
+              <FileText className="h-4 w-4 mr-1.5" />
+              Notes
+              {notes.length > 0 && (
+                <Badge variant="secondary" className="ml-1.5 text-xs h-5 px-1.5">{notes.length}</Badge>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === 'tasks' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('tasks')}
+              className="h-9"
+            >
+              <CheckSquare className="h-4 w-4 mr-1.5" />
+              Tasks
+            </Button>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
           {/* Contact Info Card */}
           <Card>
             <CardHeader>
@@ -471,6 +531,67 @@ function LeadDetail() {
             </CardContent>
           </Card>
 
+          {/* Real Estate Details */}
+          {(lead.propertyType || lead.transactionType || lead.budgetMin || lead.budgetMax || lead.preApprovalStatus || lead.moveInTimeline || lead.desiredLocation || lead.bedsMin || lead.bathsMin) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Real Estate Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {lead.propertyType && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Property Type</span>
+                      <span className="text-sm font-medium">{lead.propertyType}</span>
+                    </div>
+                  )}
+                  {lead.transactionType && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Transaction Type</span>
+                      <span className="text-sm font-medium">{lead.transactionType}</span>
+                    </div>
+                  )}
+                  {(lead.budgetMin || lead.budgetMax) && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Budget Range</span>
+                      <span className="text-sm font-medium">
+                        {lead.budgetMin ? `$${Number(lead.budgetMin).toLocaleString()}` : '?'}
+                        {' – '}
+                        {lead.budgetMax ? `$${Number(lead.budgetMax).toLocaleString()}` : '?'}
+                      </span>
+                    </div>
+                  )}
+                  {lead.preApprovalStatus && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Pre-Approval</span>
+                      <span className="text-sm font-medium">{lead.preApprovalStatus}</span>
+                    </div>
+                  )}
+                  {lead.moveInTimeline && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Timeline</span>
+                      <span className="text-sm font-medium">{lead.moveInTimeline}</span>
+                    </div>
+                  )}
+                  {lead.desiredLocation && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Desired Location</span>
+                      <span className="text-sm font-medium">{lead.desiredLocation}</span>
+                    </div>
+                  )}
+                  {(lead.bedsMin || lead.bathsMin) && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Beds / Baths (min)</span>
+                      <span className="text-sm font-medium">
+                        {lead.bedsMin ?? '–'} bed / {lead.bathsMin ?? '–'} bath
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Activity Timeline */}
           <Card>
             <CardHeader>
@@ -480,8 +601,33 @@ function LeadDetail() {
               <ActivityTimeline leadName={`${lead.firstName} ${lead.lastName}`} leadId={id} />
             </CardContent>
           </Card>
+            </div>
+          )}
 
-          {/* Notes */}
+          {/* Communications Tab */}
+          {activeTab === 'communications' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Communication History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CommunicationHistory
+                  leadId={id!}
+                  leadName={`${lead.firstName} ${lead.lastName}`}
+                  leadPhone={lead?.phone}
+                  onComposeEmail={() => setShowEmailComposer(true)}
+                  onComposeSMS={() => setShowSMSComposer(true)}
+                  onLogCall={() => setShowLogCall(true)}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes Tab */}
+          {activeTab === 'notes' && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -606,6 +752,25 @@ function LeadDetail() {
               </div>
             </CardContent>
           </Card>
+          )}
+
+          {/* Tasks Tab */}
+          {activeTab === 'tasks' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckSquare className="h-5 w-5" />
+                  Tasks
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LeadTasks
+                  leadId={id!}
+                  leadName={`${lead.firstName} ${lead.lastName}`}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -624,6 +789,12 @@ function LeadDetail() {
             onBookDemo={() => {
               toast.info('Demo scheduling — navigate to calendar to book a meeting')
             }}
+          />
+
+          {/* Follow-Up Reminders */}
+          <FollowUpReminders
+            leadId={id || ''}
+            leadName={`${lead?.firstName || ''} ${lead?.lastName || ''}`}
           />
 
           {/* Lead Score */}
@@ -862,6 +1033,15 @@ function LeadDetail() {
         leadName={lead?.firstName || ''}
         leadPhone={lead?.phone || ''}
         leadId={id}
+      />
+
+      {/* Log Call Dialog */}
+      <LogCallDialog
+        open={showLogCall}
+        onOpenChange={setShowLogCall}
+        leadId={id || ''}
+        leadName={lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown'}
+        leadPhone={lead?.phone}
       />
 
       {/* Edit Lead Modal */}
@@ -1163,6 +1343,125 @@ function LeadDetail() {
                       })}
                       className="mt-1"
                       placeholder="75000"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Real Estate Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Real Estate Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Property Type</label>
+                    <select
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.propertyType || ''}
+                      onChange={(e) => setEditingLead({...editingLead, propertyType: e.target.value || null})}
+                    >
+                      <option value="">Not specified</option>
+                      <option value="Single Family">Single Family</option>
+                      <option value="Condo">Condo</option>
+                      <option value="Townhouse">Townhouse</option>
+                      <option value="Multi-Family">Multi-Family</option>
+                      <option value="Land">Land</option>
+                      <option value="Commercial">Commercial</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Transaction Type</label>
+                    <select
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.transactionType || ''}
+                      onChange={(e) => setEditingLead({...editingLead, transactionType: e.target.value || null})}
+                    >
+                      <option value="">Not specified</option>
+                      <option value="Buyer">Buyer</option>
+                      <option value="Seller">Seller</option>
+                      <option value="Both">Both (Buy + Sell)</option>
+                      <option value="Investor">Investor</option>
+                      <option value="Renter">Renter</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Budget Min ($)</label>
+                    <input
+                      type="number"
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.budgetMin ?? ''}
+                      onChange={(e) => setEditingLead({...editingLead, budgetMin: e.target.value ? parseFloat(e.target.value) : null})}
+                      placeholder="200000"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Budget Max ($)</label>
+                    <input
+                      type="number"
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.budgetMax ?? ''}
+                      onChange={(e) => setEditingLead({...editingLead, budgetMax: e.target.value ? parseFloat(e.target.value) : null})}
+                      placeholder="500000"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Pre-Approval Status</label>
+                    <select
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.preApprovalStatus || ''}
+                      onChange={(e) => setEditingLead({...editingLead, preApprovalStatus: e.target.value || null})}
+                    >
+                      <option value="">Not specified</option>
+                      <option value="Not Started">Not Started</option>
+                      <option value="In-Process">In-Process</option>
+                      <option value="Pre-Approved">Pre-Approved</option>
+                      <option value="Cash Buyer">Cash Buyer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Move-In Timeline</label>
+                    <select
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.moveInTimeline || ''}
+                      onChange={(e) => setEditingLead({...editingLead, moveInTimeline: e.target.value || null})}
+                    >
+                      <option value="">Not specified</option>
+                      <option value="ASAP">ASAP</option>
+                      <option value="1-3 Months">1-3 Months</option>
+                      <option value="3-6 Months">3-6 Months</option>
+                      <option value="6-12 Months">6-12 Months</option>
+                      <option value="Just Browsing">Just Browsing</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium">Desired Location</label>
+                    <input
+                      type="text"
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.desiredLocation || ''}
+                      onChange={(e) => setEditingLead({...editingLead, desiredLocation: e.target.value || null})}
+                      placeholder="City, neighborhood, or zip code"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Min Bedrooms</label>
+                    <input
+                      type="number"
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.bedsMin ?? ''}
+                      onChange={(e) => setEditingLead({...editingLead, bedsMin: e.target.value ? parseInt(e.target.value) : null})}
+                      min="0"
+                      placeholder="3"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Min Bathrooms</label>
+                    <input
+                      type="number"
+                      className="w-full mt-1 p-2 border rounded-md"
+                      value={editingLead.bathsMin ?? ''}
+                      onChange={(e) => setEditingLead({...editingLead, bathsMin: e.target.value ? parseInt(e.target.value) : null})}
+                      min="0"
+                      placeholder="2"
                     />
                   </div>
                 </div>

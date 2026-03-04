@@ -91,4 +91,79 @@ export function deleteUploadFile(urlPath: string): void {
   }
 }
 
+// ─── Attachment Upload ──────────────────────────────────────────
+
+const ATTACHMENT_DIR = path.join(UPLOAD_DIR, 'attachments');
+if (!fs.existsSync(ATTACHMENT_DIR)) {
+  fs.mkdirSync(ATTACHMENT_DIR, { recursive: true });
+}
+
+const ATTACHMENT_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'text/csv',
+  'text/plain',
+];
+
+const ATTACHMENT_EXTENSIONS = [
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt',
+  '.jpg', '.jpeg', '.png', '.webp', '.gif',
+];
+
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10 MB per file
+
+function attachmentFileFilter(_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!ATTACHMENT_MIME_TYPES.includes(file.mimetype) || !ATTACHMENT_EXTENSIONS.includes(ext)) {
+    cb(new Error(`Invalid attachment type. Allowed: ${ATTACHMENT_EXTENSIONS.join(', ')}`));
+    return;
+  }
+  cb(null, true);
+}
+
+/**
+ * Multer middleware for campaign attachment uploads.
+ * Field name: 'attachments' (multiple files, max 5)
+ */
+export const attachmentUpload = multer({
+  storage: makeStorage('attachments'),
+  limits: { fileSize: MAX_ATTACHMENT_SIZE, files: 5 },
+  fileFilter: attachmentFileFilter,
+}).array('attachments', 5);
+
+/**
+ * Read attachment files from disk and return as base64 for SendGrid.
+ */
+export function readAttachmentAsBase64(filePath: string): { content: string; filename: string; type: string } | null {
+  try {
+    const fullPath = filePath.startsWith('/') ? filePath : path.join(UPLOAD_DIR, filePath);
+    if (!fs.existsSync(fullPath)) return null;
+    const content = fs.readFileSync(fullPath).toString('base64');
+    const ext = path.extname(fullPath).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.pdf': 'application/pdf', '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.csv': 'text/csv', '.txt': 'text/plain',
+      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+      '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif',
+    };
+    return {
+      content,
+      filename: path.basename(fullPath),
+      type: mimeMap[ext] || 'application/octet-stream',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export { UPLOAD_DIR, MAX_FILE_SIZE, ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS };

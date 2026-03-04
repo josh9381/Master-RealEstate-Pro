@@ -6,6 +6,7 @@ import { z } from 'zod';
 const leadStatusSchema = z.enum([
   'NEW',
   'CONTACTED',
+  'NURTURING',
   'QUALIFIED',
   'PROPOSAL',
   'NEGOTIATION',
@@ -29,6 +30,16 @@ export const createLeadSchema = z.object({
   stage: z.string().max(100).optional(),
   assignedToId: z.string().cuid().optional(),
   customFields: z.record(z.string(), z.any()).optional(),
+  // Real-estate specific fields
+  propertyType: z.string().max(100).optional(),
+  transactionType: z.string().max(100).optional(),
+  budgetMin: z.number().min(0).optional(),
+  budgetMax: z.number().min(0).optional(),
+  preApprovalStatus: z.string().max(100).optional(),
+  moveInTimeline: z.string().max(100).optional(),
+  desiredLocation: z.string().max(500).optional(),
+  bedsMin: z.number().int().min(0).optional(),
+  bathsMin: z.number().int().min(0).optional(),
 });
 
 /**
@@ -49,6 +60,16 @@ export const updateLeadSchema = z.object({
   assignedToId: z.string().cuid().optional().nullable(),
   customFields: z.record(z.string(), z.any()).optional().nullable(),
   lastContactAt: z.string().datetime().optional().nullable(),
+  // Real-estate specific fields
+  propertyType: z.string().max(100).optional().nullable(),
+  transactionType: z.string().max(100).optional().nullable(),
+  budgetMin: z.number().min(0).optional().nullable(),
+  budgetMax: z.number().min(0).optional().nullable(),
+  preApprovalStatus: z.string().max(100).optional().nullable(),
+  moveInTimeline: z.string().max(100).optional().nullable(),
+  desiredLocation: z.string().max(500).optional().nullable(),
+  bedsMin: z.number().int().min(0).optional().nullable(),
+  bathsMin: z.number().int().min(0).optional().nullable(),
 });
 
 /**
@@ -101,4 +122,5 @@ export const bulkUpdateLeadsSchema = z.object({
 export const mergeLeadsSchema = z.object({
   primaryLeadId: z.string().min(1, 'Primary lead ID is required'),
   secondaryLeadIds: z.array(z.string().min(1)).min(1, 'At least one secondary lead ID is required').max(50),
+  fieldSelections: z.record(z.string(), z.enum(['primary', 'secondary'])).optional(),
 });

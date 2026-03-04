@@ -2,7 +2,8 @@ import { prisma } from '../config/database';
 import { WorkflowTrigger, ExecutionStatus } from '@prisma/client';
 import { sendEmail } from './email.service';
 import { sendSMS } from './sms.service';
-import { pushWorkflowEvent } from '../config/socket';
+import { pushWorkflowEvent, pushNotification } from '../config/socket';
+import crypto from 'crypto';
 
 /**
  * Workflow Service
@@ -203,7 +204,11 @@ export async function createWorkflow(input: CreateWorkflowInput) {
         conditions: input.conditions || [],
         actions: input.actions,
       } as any,
-      organizationId: input.organizationId
+      organizationId: input.organizationId,
+      // Auto-generate a webhook key for WEBHOOK trigger workflows
+      ...(input.triggerType === 'WEBHOOK' ? {
+        webhookKey: crypto.randomBytes(24).toString('hex'),
+      } : {}),
     },
   });
 
@@ -477,7 +482,12 @@ export async function executeWorkflow(
     const actionsConfig = workflow.actions as any;
     const actions = actionsConfig.actions || [];
 
-    await executeActionSequence(actions, leadId, metadata, undefined, dryRun, execution.id);
+    await executeActionSequence(actions, leadId, metadata, workflow.organizationId, dryRun, execution.id, undefined, {
+      maxRetries: workflow.maxRetries ?? 3,
+      notifyOnFailure: workflow.notifyOnFailure ?? true,
+      workflowId,
+      workflowName: workflow.name,
+    });
 
     // Update execution as successful
     await prisma.workflowExecution.update({
@@ -521,6 +531,115 @@ export async function executeWorkflow(
 }
 
 /**
+ * Log a workflow execution step to the database
+ */
+async function logExecutionStep(data: {
+  executionId: string;
+  stepIndex: number;
+  actionType: string;
+  actionLabel?: string;
+  actionConfig?: any;
+  status: ExecutionStatus;
+  error?: string;
+  retryCount?: number;
+  startedAt: Date;
+  completedAt?: Date;
+  durationMs?: number;
+  branchTaken?: string;
+  output?: any;
+}): Promise<void> {
+  try {
+    await prisma.workflowExecutionStep.create({
+      data: {
+        executionId: data.executionId,
+        stepIndex: data.stepIndex,
+        actionType: data.actionType,
+        actionLabel: data.actionLabel || null,
+        actionConfig: data.actionConfig || undefined,
+        status: data.status,
+        error: data.error || null,
+        retryCount: data.retryCount || 0,
+        startedAt: data.startedAt,
+        completedAt: data.completedAt || null,
+        durationMs: data.durationMs || null,
+        branchTaken: data.branchTaken || null,
+        output: data.output || undefined,
+      },
+    });
+  } catch (err) {
+    // Never let step-logging break the workflow
+    console.error('[Workflow] Failed to log execution step:', err);
+  }
+}
+
+/**
+ * Notify organization users when a workflow action fails after all retries.
+ * Creates a persistent Notification record + pushes real-time socket event.
+ */
+async function notifyWorkflowFailure(params: {
+  organizationId: string;
+  workflowId: string;
+  workflowName: string;
+  actionType: string;
+  actionLabel: string;
+  error: string;
+  retries: number;
+  leadId?: string;
+  executionId?: string;
+}): Promise<void> {
+  try {
+    // Find org users to notify (admins + the workflow's org members)
+    const orgUsers = await prisma.user.findMany({
+      where: { organizationId: params.organizationId },
+      select: { id: true },
+    });
+
+    const title = `Workflow "${params.workflowName}" — step failed`;
+    const message = `Action "${params.actionLabel}" (${params.actionType}) failed after ${params.retries} ${params.retries === 1 ? 'attempt' : 'attempts'}: ${params.error}`;
+    const link = `/workflows/${params.workflowId}`;
+
+    for (const user of orgUsers) {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          organizationId: params.organizationId,
+          type: 'WORKFLOW',
+          title,
+          message,
+          link,
+          read: false,
+        },
+      });
+
+      // Push real-time notification
+      pushNotification(user.id, {
+        id: notification.id,
+        type: 'WORKFLOW',
+        title,
+        message,
+        read: false,
+        createdAt: notification.createdAt.toISOString(),
+        data: {
+          workflowId: params.workflowId,
+          executionId: params.executionId,
+          actionType: params.actionType,
+        },
+      });
+    }
+
+    console.log(`[Workflow] Failure notification sent to ${orgUsers.length} user(s) for workflow ${params.workflowId}`);
+  } catch (err) {
+    // Never let notification failures break the workflow
+    console.error('[Workflow] Failed to send failure notification:', err);
+  }
+}
+
+/** Mutable counter passed through recursive calls */
+interface StepCounter {
+  value: number;
+}
+
+/**
  * Execute a sequence of workflow actions, handling DELAY and CONDITION types
  */
 async function executeActionSequence(
@@ -529,10 +648,22 @@ async function executeActionSequence(
   metadata?: any,
   organizationId?: string,
   dryRun: boolean = false,
-  executionId?: string
+  executionId?: string,
+  stepCounter?: StepCounter,
+  retryConfig?: {
+    maxRetries: number;
+    notifyOnFailure: boolean;
+    workflowId: string;
+    workflowName: string;
+  }
 ): Promise<void> {
+  const counter = stepCounter || { value: 0 };
+  const maxRetries = Math.min(Math.max(retryConfig?.maxRetries ?? 3, 1), 3);
+
   for (let i = 0; i < actions.length; i++) {
     const action = actions[i];
+    const stepIdx = counter.value++;
+    const stepStart = new Date();
 
     if (action.type === 'DELAY') {
       // Calculate delay duration in milliseconds
@@ -544,6 +675,22 @@ async function executeActionSequence(
       }
       
       console.log(`[Workflow] Scheduling remaining ${actions.length - i - 1} actions after ${delayMs}ms delay`);
+
+      // Log the delay step
+      if (executionId) {
+        await logExecutionStep({
+          executionId,
+          stepIndex: stepIdx,
+          actionType: 'DELAY',
+          actionLabel: (action as any).label || 'Delay',
+          actionConfig: action.config,
+          status: ExecutionStatus.SUCCESS,
+          startedAt: stepStart,
+          completedAt: new Date(),
+          durationMs: Date.now() - stepStart.getTime(),
+          output: { delayMs, remainingActions: actions.length - i - 1 },
+        });
+      }
       
       // Schedule remaining actions for later execution
       const remainingActions = actions.slice(i + 1);
@@ -563,29 +710,47 @@ async function executeActionSequence(
       }
       
       console.log(`[Workflow] Condition evaluated: ${conditionMet}`);
+
+      // Log the condition step
+      if (executionId) {
+        await logExecutionStep({
+          executionId,
+          stepIndex: stepIdx,
+          actionType: 'CONDITION',
+          actionLabel: (action as any).label || 'Condition',
+          actionConfig: action.config,
+          status: ExecutionStatus.SUCCESS,
+          startedAt: stepStart,
+          completedAt: new Date(),
+          durationMs: Date.now() - stepStart.getTime(),
+          branchTaken: conditionMet ? 'true' : 'false',
+          output: { conditionResult: conditionMet },
+        });
+      }
       
       if (conditionMet) {
         // Execute "true" branch actions if defined
         const trueBranch = action.config.trueBranch || [];
         if (trueBranch.length > 0) {
-          await executeActionSequence(trueBranch, leadId, metadata, organizationId, dryRun, executionId);
+          await executeActionSequence(trueBranch, leadId, metadata, organizationId, dryRun, executionId, counter, retryConfig);
         }
       } else {
         // Execute "false" branch actions if defined
         const falseBranch = action.config.falseBranch || [];
         if (falseBranch.length > 0) {
-          await executeActionSequence(falseBranch, leadId, metadata, organizationId, dryRun, executionId);
+          await executeActionSequence(falseBranch, leadId, metadata, organizationId, dryRun, executionId, counter, retryConfig);
         }
       }
       continue;
     }
 
-    // Per-action retry: attempt up to 3 times with exponential backoff
-    const MAX_RETRIES = 3;
+    // Per-action retry: configurable retries (1-3) with exponential backoff
     const RETRY_DELAYS = [1000, 3000, 9000]; // 1s, 3s, 9s
     let lastError: Error | undefined;
+    let attempts = 0;
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      attempts = attempt + 1;
       try {
         await executeAction(action, leadId, metadata, organizationId, dryRun);
         lastError = undefined;
@@ -593,27 +758,71 @@ async function executeActionSequence(
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         console.warn(
-          `[Workflow] Action ${action.type} attempt ${attempt + 1}/${MAX_RETRIES} failed: ${lastError.message}`
+          `[Workflow] Action ${action.type} attempt ${attempt + 1}/${maxRetries} failed: ${lastError.message}`
         );
-        if (attempt < MAX_RETRIES - 1) {
+        if (attempt < maxRetries - 1) {
           await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
         }
       }
     }
 
+    // Log action step result
+    if (executionId) {
+      const stepEnd = new Date();
+      await logExecutionStep({
+        executionId,
+        stepIndex: stepIdx,
+        actionType: action.type,
+        actionLabel: (action as any).label || action.type,
+        actionConfig: action.config,
+        status: lastError ? ExecutionStatus.FAILED : ExecutionStatus.SUCCESS,
+        error: lastError?.message,
+        retryCount: attempts - 1,
+        startedAt: stepStart,
+        completedAt: stepEnd,
+        durationMs: stepEnd.getTime() - stepStart.getTime(),
+      });
+    }
+
     if (lastError) {
       console.error(
-        `[Workflow] Action ${action.type} failed after ${MAX_RETRIES} retries – skipping and continuing sequence`
+        `[Workflow] Action ${action.type} failed after ${maxRetries} retries – notifying user and continuing`
       );
+
+      // Notify the user about the failure
+      if (retryConfig?.notifyOnFailure && organizationId) {
+        await notifyWorkflowFailure({
+          organizationId,
+          workflowId: retryConfig.workflowId,
+          workflowName: retryConfig.workflowName,
+          actionType: action.type,
+          actionLabel: (action as any).label || action.type,
+          error: lastError.message,
+          retries: maxRetries,
+          leadId,
+          executionId,
+        });
+      }
       // Continue with next action instead of aborting the whole sequence
     }
   }
 }
 
 /**
- * Calculate delay duration in milliseconds from config
+ * Calculate delay duration in milliseconds from config.
+ * Supports two modes:
+ *  - Relative: { duration, unit } — wait for N minutes/hours/days/weeks
+ *  - Absolute: { scheduledFor } — wait until a specific date/time
  */
 function calculateDelayMs(config: any): number {
+  // Absolute "wait until" mode
+  if (config.scheduledFor) {
+    const target = new Date(config.scheduledFor).getTime();
+    const now = Date.now();
+    return Math.max(0, target - now);
+  }
+
+  // Relative "wait for" mode
   const amount = parseInt(config.duration || config.amount || '1', 10);
   const unit = (config.unit || 'hours').toLowerCase();
   
@@ -670,10 +879,86 @@ function scheduleDelayedActions(
 }
 
 /**
- * Evaluate a condition against lead data for conditional branching
+ * Evaluate a condition against lead data for conditional branching.
+ * Supports four condition types:
+ *  - lead_field (default): Check a lead property
+ *  - email_opened: Check if the lead opened any email (optionally within N hours)
+ *  - link_clicked: Check if the lead clicked any link (optionally within N hours)
+ *  - time_elapsed: Check if N hours/days have passed since a reference event
  */
 async function evaluateActionCondition(config: any, leadId?: string): Promise<boolean> {
   if (!leadId) return false;
+
+  const conditionType = config.conditionType || 'lead_field';
+
+  // ---------- EMAIL OPENED ----------
+  if (conditionType === 'email_opened') {
+    const withinHours = config.withinHours ? Number(config.withinHours) : null;
+    const where: any = {
+      leadId,
+      readAt: { not: null },
+    };
+    if (withinHours) {
+      where.readAt = { gte: new Date(Date.now() - withinHours * 60 * 60 * 1000) };
+    }
+    const count = await prisma.message.count({ where });
+    return count > 0;
+  }
+
+  // ---------- LINK CLICKED ----------
+  if (conditionType === 'link_clicked') {
+    const withinHours = config.withinHours ? Number(config.withinHours) : null;
+    // Check for CLICKED status messages
+    const where: any = {
+      leadId,
+      status: 'CLICKED',
+    };
+    if (withinHours) {
+      where.updatedAt = { gte: new Date(Date.now() - withinHours * 60 * 60 * 1000) };
+    }
+    const count = await prisma.message.count({ where });
+    return count > 0;
+  }
+
+  // ---------- TIME ELAPSED ----------
+  if (conditionType === 'time_elapsed') {
+    const amount = Number(config.elapsedAmount || 0);
+    const unit = config.elapsedUnit || 'hours';
+    const sinceEvent = config.sinceEvent || 'workflow_start';
+
+    let referenceTime: Date | null = null;
+
+    if (sinceEvent === 'workflow_start') {
+      // Use the current execution's startedAt or fall back to now
+      // The metadata may carry workflowStartedAt from the executor
+      referenceTime = config._workflowStartedAt ? new Date(config._workflowStartedAt) : null;
+    } else if (sinceEvent === 'lead_created') {
+      const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { createdAt: true } });
+      referenceTime = lead?.createdAt || null;
+    } else if (sinceEvent === 'last_activity') {
+      const lastActivity = await prisma.activity.findFirst({
+        where: { leadId },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      });
+      referenceTime = lastActivity?.createdAt || null;
+    }
+
+    if (!referenceTime) return false;
+
+    let elapsedMs = Date.now() - referenceTime.getTime();
+    let thresholdMs: number;
+    switch (unit) {
+      case 'minutes': thresholdMs = amount * 60 * 1000; break;
+      case 'hours': thresholdMs = amount * 60 * 60 * 1000; break;
+      case 'days': thresholdMs = amount * 24 * 60 * 60 * 1000; break;
+      default: thresholdMs = amount * 60 * 60 * 1000;
+    }
+
+    return elapsedMs >= thresholdMs;
+  }
+
+  // ---------- LEAD FIELD (default) ----------
 
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
@@ -1031,6 +1316,17 @@ export async function getWorkflowExecutions(
           name: true,
         },
       },
+      steps: {
+        orderBy: { stepIndex: 'asc' },
+      },
+      lead: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      },
     },
   });
 
@@ -1087,4 +1383,71 @@ export async function getWorkflowAnalytics(workflowId: string, days: number = 30
  */
 export async function manualTriggerWorkflow(workflowId: string, leadId?: string) {
   return executeWorkflow(workflowId, leadId, { trigger: 'manual' });
+}
+
+/**
+ * Recover and resume delayed workflow actions that were lost due to server restart.
+ * Scans WorkflowExecution records with RUNNING status that have scheduledFor metadata.
+ * Should be called on server startup and/or periodically.
+ */
+export async function recoverDelayedWorkflowActions(): Promise<number> {
+  const now = new Date();
+  let recovered = 0;
+
+  try {
+    // Find RUNNING executions (these might have pending delays)
+    const executions = await prisma.workflowExecution.findMany({
+      where: {
+        status: 'RUNNING',
+      },
+      select: {
+        id: true,
+        workflowId: true,
+        leadId: true,
+        metadata: true,
+      },
+      take: 200,
+    });
+
+    for (const exec of executions) {
+      const meta = exec.metadata as any;
+      if (!meta?.scheduledActions || !meta?.scheduledFor) continue;
+
+      const scheduledFor = new Date(meta.scheduledFor);
+      const actions = meta.scheduledActions as WorkflowAction[];
+
+      if (!Array.isArray(actions) || actions.length === 0) continue;
+
+      // Get the workflow's organizationId
+      const workflow = await prisma.workflow.findUnique({
+        where: { id: exec.workflowId },
+        select: { organizationId: true },
+      });
+
+      if (scheduledFor <= now) {
+        // Already past due — execute immediately
+        console.log(`[Workflow Recovery] Executing ${actions.length} overdue delayed actions for execution ${exec.id}`);
+        try {
+          await executeActionSequence(actions, exec.leadId || undefined, meta, workflow?.organizationId, false, exec.id);
+          recovered++;
+        } catch (err) {
+          console.error(`[Workflow Recovery] Failed to execute overdue actions for ${exec.id}:`, err);
+        }
+      } else {
+        // Still in the future — reschedule via setTimeout
+        const remainingMs = scheduledFor.getTime() - now.getTime();
+        console.log(`[Workflow Recovery] Rescheduling ${actions.length} actions for execution ${exec.id} (${Math.round(remainingMs / 60000)}min from now)`);
+        scheduleDelayedActions(actions, remainingMs, exec.leadId || undefined, meta, workflow?.organizationId, exec.id);
+        recovered++;
+      }
+    }
+
+    if (recovered > 0) {
+      console.log(`[Workflow Recovery] Recovered ${recovered} delayed workflow executions`);
+    }
+  } catch (err) {
+    console.error('[Workflow Recovery] Error recovering delayed actions:', err);
+  }
+
+  return recovered;
 }

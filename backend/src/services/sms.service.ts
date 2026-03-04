@@ -259,6 +259,7 @@ export async function sendBulkSMS(
     to: string;
     message: string;
     leadId?: string;
+    mediaUrl?: string[];
   }>,
   campaignId?: string,
   userId?: string,

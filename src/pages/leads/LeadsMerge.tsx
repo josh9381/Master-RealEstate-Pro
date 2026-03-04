@@ -1,4 +1,4 @@
-import { Merge, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Merge, AlertTriangle, CheckCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -7,15 +7,28 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { leadsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
-import type { Lead } from '@/types';
 
 interface LeadData {
   id: number | string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  phone?: string;
-  company?: string;
-  score?: number;
+  phone?: string | null;
+  company?: string | null;
+  position?: string | null;
+  source?: string | null;
+  score?: number | null;
+  status?: string | null;
+  value?: number | null;
+  propertyType?: string | null;
+  transactionType?: string | null;
+  budgetMin?: number | null;
+  budgetMax?: number | null;
+  preApprovalStatus?: string | null;
+  moveInTimeline?: string | null;
+  desiredLocation?: string | null;
+  bedsMin?: number | null;
+  bathsMin?: number | null;
 }
 
 interface DuplicatePair {
@@ -26,6 +39,30 @@ interface DuplicatePair {
   reason: string;
 }
 
+type FieldSelection = Record<string, 'primary' | 'secondary'>;
+
+const MERGE_FIELDS: { key: keyof LeadData; label: string }[] = [
+  { key: 'firstName', label: 'First Name' },
+  { key: 'lastName', label: 'Last Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'phone', label: 'Phone' },
+  { key: 'company', label: 'Company' },
+  { key: 'position', label: 'Position' },
+  { key: 'source', label: 'Source' },
+  { key: 'score', label: 'Score' },
+  { key: 'status', label: 'Status' },
+  { key: 'value', label: 'Value' },
+  { key: 'propertyType', label: 'Property Type' },
+  { key: 'transactionType', label: 'Transaction Type' },
+  { key: 'budgetMin', label: 'Budget Min' },
+  { key: 'budgetMax', label: 'Budget Max' },
+  { key: 'preApprovalStatus', label: 'Pre-Approval' },
+  { key: 'moveInTimeline', label: 'Move-In Timeline' },
+  { key: 'desiredLocation', label: 'Desired Location' },
+  { key: 'bedsMin', label: 'Min Beds' },
+  { key: 'bathsMin', label: 'Min Baths' },
+];
+
 const LeadsMerge = () => {
   const [mergeSettings, setMergeSettings] = useState({
     matchEmail: true,
@@ -34,173 +71,89 @@ const LeadsMerge = () => {
     matchCompany: false,
     threshold: 80,
   });
+  const [expandedPair, setExpandedPair] = useState<number | null>(null);
+  const [fieldSelections, setFieldSelections] = useState<Record<number, FieldSelection>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: duplicatesData, isLoading, refetch: loadDuplicates } = useQuery({
-    queryKey: ['lead-duplicates'],
+    queryKey: ['lead-duplicates', mergeSettings],
     queryFn: async () => {
-      const response = await leadsApi.getLeads({ limit: 200 });
-      const leads = response.data?.leads || response.data || [];
-      
-      // Find potential duplicates based on merge settings
-      const duplicatePairs: DuplicatePair[] = [];
-      const emailMap = new Map<string, Lead>();
-      const phoneMap = new Map<string, Lead>();
-      const nameMap = new Map<string, Lead>();
-      const companyMap = new Map<string, Lead>();
-      
-      leads.forEach((lead: Lead) => {
-        const email = lead.email?.toLowerCase();
-        const phone = lead.phone?.replace(/\D/g, '');
-        const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim().toLowerCase();
-        const company = lead.company?.toLowerCase();
-        
-        // Check for email duplicates
-        if (mergeSettings.matchEmail && email && emailMap.has(email)) {
-          const existing = emailMap.get(email)!;
-          duplicatePairs.push({
-            id: duplicatePairs.length + 1,
-            lead1: {
-              id: existing.id,
-              name: `${existing.firstName} ${existing.lastName}`,
-              email: existing.email,
-              phone: existing.phone,
-              company: existing.company,
-              score: existing.score || 0,
-            },
-            lead2: {
-              id: lead.id,
-              name: `${lead.firstName} ${lead.lastName}`,
-              email: lead.email,
-              phone: lead.phone,
-              company: lead.company,
-              score: lead.score || 0,
-            },
-            similarity: 95,
-            reason: 'Same email address',
-          });
-        } else if (mergeSettings.matchEmail && email) {
-          emailMap.set(email, lead);
-        }
-        
-        // Check for phone duplicates
-        if (mergeSettings.matchPhone && phone && phone.length >= 10 && phoneMap.has(phone)) {
-          const existing = phoneMap.get(phone)!;
-          // Only add if not already added by email match
-          const alreadyMatched = duplicatePairs.some(
-            d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
-                 (d.lead1.id === lead.id && d.lead2.id === existing.id)
-          );
-          
-          if (!alreadyMatched) {
-            duplicatePairs.push({
-              id: duplicatePairs.length + 1,
-              lead1: {
-                id: existing.id,
-                name: `${existing.firstName} ${existing.lastName}`,
-                email: existing.email,
-                phone: existing.phone,
-                company: existing.company,
-                score: existing.score || 0,
-              },
-              lead2: {
-                id: lead.id,
-                name: `${lead.firstName} ${lead.lastName}`,
-                email: lead.email,
-                phone: lead.phone,
-                company: lead.company,
-                score: lead.score || 0,
-              },
-              similarity: 90,
-              reason: 'Same phone number',
-            });
-          }
-        } else if (mergeSettings.matchPhone && phone && phone.length >= 10) {
-          phoneMap.set(phone, lead);
-        }
+      try {
+        const result = await leadsApi.scanDuplicates({
+          matchEmail: mergeSettings.matchEmail,
+          matchPhone: mergeSettings.matchPhone,
+          matchName: mergeSettings.matchName,
+        });
 
-        // Check for name duplicates
-        if (mergeSettings.matchName && fullName.length > 1 && nameMap.has(fullName)) {
-          const existing = nameMap.get(fullName)!;
-          const alreadyMatched = duplicatePairs.some(
-            d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
-                 (d.lead1.id === lead.id && d.lead2.id === existing.id)
-          );
-          if (!alreadyMatched) {
-            duplicatePairs.push({
-              id: duplicatePairs.length + 1,
-              lead1: { id: existing.id, name: `${existing.firstName} ${existing.lastName}`, email: existing.email, phone: existing.phone, company: existing.company, score: existing.score || 0 },
-              lead2: { id: lead.id, name: `${lead.firstName} ${lead.lastName}`, email: lead.email, phone: lead.phone, company: lead.company, score: lead.score || 0 },
-              similarity: 80,
-              reason: 'Same full name',
-            });
-          }
-        } else if (mergeSettings.matchName && fullName.length > 1) {
-          nameMap.set(fullName, lead);
-        }
+        const serverPairs = result.data?.duplicates || [];
+        const pairs: DuplicatePair[] = serverPairs
+          .filter((p: { similarity: number }) => p.similarity >= mergeSettings.threshold)
+          .map((p: { lead1: LeadData; lead2: LeadData; similarity: number; reason: string }, i: number) => ({
+            id: i + 1,
+            lead1: p.lead1,
+            lead2: p.lead2,
+            similarity: p.similarity,
+            reason: p.reason,
+          }));
 
-        // Check for company duplicates
-        if (mergeSettings.matchCompany && company && company.length > 1 && companyMap.has(company)) {
-          const existing = companyMap.get(company)!;
-          const alreadyMatched = duplicatePairs.some(
-            d => (d.lead1.id === existing.id && d.lead2.id === lead.id) ||
-                 (d.lead1.id === lead.id && d.lead2.id === existing.id)
-          );
-          if (!alreadyMatched) {
-            duplicatePairs.push({
-              id: duplicatePairs.length + 1,
-              lead1: { id: existing.id, name: `${existing.firstName} ${existing.lastName}`, email: existing.email, phone: existing.phone, company: existing.company, score: existing.score || 0 },
-              lead2: { id: lead.id, name: `${lead.firstName} ${lead.lastName}`, email: lead.email, phone: lead.phone, company: lead.company, score: lead.score || 0 },
-              similarity: 70,
-              reason: 'Same company',
-            });
-          }
-        } else if (mergeSettings.matchCompany && company && company.length > 1) {
-          companyMap.set(company, lead);
-        }
-      });
-
-      // Filter by similarity threshold
-      const filteredPairs = duplicatePairs.filter(d => d.similarity >= mergeSettings.threshold);
-      return {
-        duplicates: filteredPairs,
-        stats: {
-          potential: filteredPairs.length,
-          mergedMonth: 0,
-          autoMerged: 0,
-        },
-      };
+        return {
+          duplicates: pairs,
+          stats: {
+            potential: pairs.length,
+            mergedMonth: 0,
+            autoMerged: 0,
+          },
+        };
+      } catch {
+        toast.error('Failed to scan for duplicates');
+        return { duplicates: [], stats: { potential: 0, mergedMonth: 0, autoMerged: 0 } };
+      }
     },
   });
 
   const duplicates = duplicatesData?.duplicates ?? [];
   const stats = duplicatesData?.stats ?? { potential: 0, mergedMonth: 0, autoMerged: 0 };
 
+  // Initialize field selections for a pair (default all to 'primary')
+  const getFieldSelections = (pairId: number): FieldSelection => {
+    if (fieldSelections[pairId]) return fieldSelections[pairId];
+    const defaults: FieldSelection = {};
+    MERGE_FIELDS.forEach(f => { defaults[f.key] = 'primary'; });
+    return defaults;
+  };
+
+  const setFieldSelection = (pairId: number, field: string, value: 'primary' | 'secondary') => {
+    setFieldSelections(prev => ({
+      ...prev,
+      [pairId]: { ...getFieldSelections(pairId), [field]: value },
+    }));
+  };
+
   const handleMerge = async (duplicateId: number) => {
     const duplicate = duplicates.find(d => d.id === duplicateId);
     if (!duplicate) return;
 
     try {
-      // Call the merge API endpoint
+      const selections = getFieldSelections(duplicateId);
       await leadsApi.mergeLeads({
         primaryLeadId: String(duplicate.lead1.id),
         secondaryLeadId: String(duplicate.lead2.id),
+        fieldSelections: selections,
       });
       
-      toast.success(`Merged leads #${duplicate.lead1.id} and #${duplicate.lead2.id}`);
+      toast.success(`Successfully merged leads`);
       
-      // Remove from list
       queryClient.setQueryData(['lead-duplicates'], (old: typeof duplicatesData) => {
         if (!old) return old;
         const updated = old.duplicates.filter(d => d.id !== duplicateId);
         return { duplicates: updated, stats: { ...old.stats, potential: old.stats.potential - 1, mergedMonth: old.stats.mergedMonth + 1 } };
       });
+      setExpandedPair(null);
     } catch (error: unknown) {
-      // Handle 404 gracefully — merge endpoint may not be deployed yet
       const err = error as { response?: { status?: number } }
       if (err?.response?.status === 404) {
-        toast.error('Merge endpoint not available yet. Please try again later.');
+        toast.error('Merge endpoint not available yet.');
       } else {
         console.error('Error merging leads:', error);
         toast.error('Failed to merge leads');
@@ -228,14 +181,13 @@ const LeadsMerge = () => {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
       <LeadsSubNav />
 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Merge Duplicate Leads</h1>
           <p className="text-muted-foreground mt-2">
-            Find and merge duplicate lead records
+            Find and merge duplicate lead records with field-level control
           </p>
         </div>
         <Button onClick={() => { loadDuplicates(); }} disabled={isLoading}>
@@ -341,7 +293,7 @@ const LeadsMerge = () => {
         </CardContent>
       </Card>
 
-      {/* Potential Duplicates */}
+      {/* No Duplicates */}
       {duplicates.length === 0 && !isLoading && (
         <Card>
           <CardContent className="py-8 text-center">
@@ -352,99 +304,146 @@ const LeadsMerge = () => {
         </Card>
       )}
       
-      {duplicates.map((duplicate) => (
-        <Card key={duplicate.id}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center space-x-2">
-                  <span>Potential Duplicate Match</span>
-                  <Badge variant="warning">{duplicate.similarity}% similar</Badge>
-                </CardTitle>
-                <CardDescription>Reason: {duplicate.reason}</CardDescription>
-              </div>
-              <Button onClick={() => handleMerge(duplicate.id)}>
-                <Merge className="h-4 w-4 mr-2" />
-                Merge Leads
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Lead 1 */}
-              <div className="p-4 border rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold">Lead #{duplicate.lead1.id}</h4>
-                  <Badge variant="default">Keep This</Badge>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Name:</span>{' '}
-                    <span className="font-medium">{duplicate.lead1.name}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Email:</span>{' '}
-                    <span className="font-medium">{duplicate.lead1.email}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Phone:</span>{' '}
-                    <span className="font-medium">{duplicate.lead1.phone}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Company:</span>{' '}
-                    <span className="font-medium">{duplicate.lead1.company}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Lead Score:</span>{' '}
-                    <span className="font-medium">{duplicate.lead1.score}/100</span>
-                  </div>
-                </div>
-              </div>
+      {/* Duplicate Pairs */}
+      {duplicates.map((duplicate) => {
+        const isExpanded = expandedPair === duplicate.id;
+        const selections = getFieldSelections(duplicate.id);
 
-              {/* Lead 2 */}
-              <div className="p-4 border rounded-lg bg-muted/30">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold">Lead #{duplicate.lead2.id}</h4>
-                  <Badge variant="secondary">Merge Into Primary</Badge>
+        return (
+          <Card key={duplicate.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <span>Potential Duplicate Match</span>
+                    <Badge variant="warning">{duplicate.similarity}% similar</Badge>
+                  </CardTitle>
+                  <CardDescription>Reason: {duplicate.reason}</CardDescription>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Name:</span>{' '}
-                    <span className="font-medium">{duplicate.lead2.name}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Email:</span>{' '}
-                    <span className="font-medium">{duplicate.lead2.email}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Phone:</span>{' '}
-                    <span className="font-medium">{duplicate.lead2.phone}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Company:</span>{' '}
-                    <span className="font-medium">{duplicate.lead2.company}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Lead Score:</span>{' '}
-                    <span className="font-medium">{duplicate.lead2.score}/100</span>
-                  </div>
-                </div>
+                {!isExpanded && (
+                  <Button onClick={() => setExpandedPair(duplicate.id)}>
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                    Review & Merge
+                  </Button>
+                )}
               </div>
-            </div>
+            </CardHeader>
+            <CardContent>
+              {!isExpanded ? (
+                /* Compact view */
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-semibold mb-2">{duplicate.lead1.firstName} {duplicate.lead1.lastName}</h4>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <div>{duplicate.lead1.email}</div>
+                      {duplicate.lead1.phone && <div>{duplicate.lead1.phone}</div>}
+                      {duplicate.lead1.company && <div>{duplicate.lead1.company}</div>}
+                    </div>
+                  </div>
+                  <div className="p-4 border rounded-lg bg-muted/30">
+                    <h4 className="font-semibold mb-2">{duplicate.lead2.firstName} {duplicate.lead2.lastName}</h4>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <div>{duplicate.lead2.email}</div>
+                      {duplicate.lead2.phone && <div>{duplicate.lead2.phone}</div>}
+                      {duplicate.lead2.company && <div>{duplicate.lead2.company}</div>}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Expanded: Field-level merge resolution */
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Click on a value to select which one to keep for each field. The selected value (highlighted) will be used in the merged lead.
+                  </p>
 
-            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <div className="flex space-x-2">
-                <Button variant="outline" onClick={() => handleDismiss(duplicate.id)}>Not Duplicates</Button>
-                <Button variant="outline" onClick={() => handleSkip(duplicate.id)}>Skip for Now</Button>
+                  <div className="rounded-lg border overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="px-4 py-3 text-left font-medium w-[20%]">Field</th>
+                          <th className="px-4 py-3 text-left font-medium w-[40%]">
+                            Lead A (Primary)
+                            <Badge variant="default" className="ml-2 text-xs">Keep</Badge>
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium w-[40%]">
+                            Lead B (Secondary)
+                            <Badge variant="secondary" className="ml-2 text-xs">Merge In</Badge>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {MERGE_FIELDS.map(({ key, label }) => {
+                          const val1 = String(duplicate.lead1[key] ?? '');
+                          const val2 = String(duplicate.lead2[key] ?? '');
+                          const selected = selections[key] || 'primary';
+                          const isDifferent = val1 !== val2;
+
+                          return (
+                            <tr key={key} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-950/10' : ''}>
+                              <td className="px-4 py-2.5 font-medium text-muted-foreground">{label}</td>
+                              <td className="px-4 py-2.5">
+                                <button
+                                  onClick={() => setFieldSelection(duplicate.id, key, 'primary')}
+                                  className={`w-full text-left px-3 py-1.5 rounded transition-colors ${
+                                    selected === 'primary'
+                                      ? 'bg-primary/10 border border-primary text-foreground font-medium'
+                                      : 'hover:bg-muted/50 text-muted-foreground'
+                                  }`}
+                                >
+                                  {val1 || <span className="italic text-muted-foreground/50">empty</span>}
+                                </button>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <button
+                                  onClick={() => setFieldSelection(duplicate.id, key, 'secondary')}
+                                  className={`w-full text-left px-3 py-1.5 rounded transition-colors ${
+                                    selected === 'secondary'
+                                      ? 'bg-primary/10 border border-primary text-foreground font-medium'
+                                      : 'hover:bg-muted/50 text-muted-foreground'
+                                  }`}
+                                >
+                                  {val2 || <span className="italic text-muted-foreground/50">empty</span>}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm">
+                    <Merge className="h-4 w-4 text-primary shrink-0" />
+                    <span>
+                      All related records (notes, tasks, calls, messages, appointments, follow-ups, workflow history) will be transferred to the merged lead. Lead B will be deleted.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="flex space-x-2">
+                  <Button variant="outline" onClick={() => handleDismiss(duplicate.id)}>Not Duplicates</Button>
+                  <Button variant="outline" onClick={() => { handleSkip(duplicate.id); setExpandedPair(null); }}>Skip for Now</Button>
+                  {isExpanded && (
+                    <Button variant="outline" onClick={() => setExpandedPair(null)}>Collapse</Button>
+                  )}
+                </div>
+                <Button onClick={() => {
+                  if (!isExpanded) {
+                    setExpandedPair(duplicate.id);
+                  } else {
+                    handleMerge(duplicate.id);
+                  }
+                }}>
+                  <Merge className="h-4 w-4 mr-2" />
+                  {isExpanded ? 'Merge These Leads' : 'Review & Merge'}
+                </Button>
               </div>
-              <Button onClick={() => handleMerge(duplicate.id)}>
-                <Merge className="h-4 w-4 mr-2" />
-                Merge These Leads
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Merge History */}
       <Card>

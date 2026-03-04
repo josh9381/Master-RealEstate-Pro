@@ -6,6 +6,60 @@
 
 import { prisma } from '../config/database';
 import { executeCampaign } from './campaign-executor.service';
+import { processABTestAutoWinners } from './ab-test-evaluator.service';
+
+/**
+ * Process deferred send-time optimization sends.
+ * Looks for CampaignLead rows with status=PENDING and metadata.scheduledSendAt <= now.
+ */
+async function processDeferredSendTimeOptimization() {
+  const now = new Date();
+  
+  try {
+    // Find campaigns that have pending deferred sends
+    const pendingLeads = await prisma.campaignLead.findMany({
+      where: {
+        status: 'PENDING',
+        metadata: { not: { equals: undefined } },
+      },
+      select: {
+        id: true,
+        campaignId: true,
+        leadId: true,
+        metadata: true,
+      },
+      take: 500, // Process up to 500 per cycle
+    });
+
+    // Group by campaign and filter by scheduledSendAt
+    const campaignGroups = new Map<string, string[]>();
+    for (const cl of pendingLeads) {
+      const meta = cl.metadata as any;
+      if (!meta?.scheduledSendAt) continue;
+      
+      const scheduledAt = new Date(meta.scheduledSendAt);
+      if (scheduledAt > now) continue; // Not yet time
+      
+      if (!campaignGroups.has(cl.campaignId)) campaignGroups.set(cl.campaignId, []);
+      campaignGroups.get(cl.campaignId)!.push(cl.leadId);
+    }
+
+    if (campaignGroups.size === 0) return;
+
+    console.log(`[CAMPAIGN SCHEDULER] Processing ${campaignGroups.size} campaigns with deferred sends`);
+
+    for (const [campaignId, leadIds] of campaignGroups) {
+      try {
+        console.log(`[CAMPAIGN SCHEDULER] Sending deferred batch: ${leadIds.length} leads for campaign ${campaignId}`);
+        await executeCampaign({ campaignId, leadIds });
+      } catch (err) {
+        console.error(`[CAMPAIGN SCHEDULER] Deferred send failed for campaign ${campaignId}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error('[CAMPAIGN SCHEDULER] Error processing deferred sends:', err);
+  }
+}
 
 /**
  * Calculate the next send date for a recurring campaign
@@ -275,6 +329,12 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
     }
 
     console.log(`[CAMPAIGN SCHEDULER] ✅ Finished processing ${campaignsToSend.length} campaign(s)`);
+    
+    // Process deferred send-time optimization sends
+    await processDeferredSendTimeOptimization();
+    
+    // Process A/B test auto-winner evaluations
+    await processABTestAutoWinners();
   } catch (error) {
     console.error('[CAMPAIGN SCHEDULER] ❌ Error in scheduler:', error);
   }

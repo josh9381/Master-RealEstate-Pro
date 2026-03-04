@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { ArrowLeft, Save } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
+import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
 import { mockCampaigns } from '@/data/mockData'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 
@@ -272,12 +273,21 @@ function CampaignEdit() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Content / Body</label>
-            <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[250px] font-mono text-sm"
-              value={editForm.body}
-              onChange={(e) => setEditForm({ ...editForm, body: e.target.value })}
-              placeholder="Enter campaign body content"
-            />
+            {editForm.type === 'EMAIL' ? (
+              <EmailBlockEditor
+                value={editForm.body}
+                onChange={(value) => setEditForm({ ...editForm, body: value })}
+                minHeight="300px"
+                showTemplates={false}
+              />
+            ) : (
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[250px] font-mono text-sm"
+                value={editForm.body}
+                onChange={(e) => setEditForm({ ...editForm, body: e.target.value })}
+                placeholder="Enter campaign body content"
+              />
+            )}
           </div>
         </CardContent>
       </Card>

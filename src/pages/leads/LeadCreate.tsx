@@ -31,7 +31,17 @@ export default function LeadCreate() {
     status: 'new',
     assignedTo: '',
     tags: [] as string[],
-    notes: ''
+    notes: '',
+    // Real-estate specific
+    propertyType: '',
+    transactionType: '',
+    budgetMin: '',
+    budgetMax: '',
+    preApprovalStatus: '',
+    moveInTimeline: '',
+    desiredLocation: '',
+    bedsMin: '',
+    bathsMin: '',
   })
   const [newTagInput, setNewTagInput] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -108,7 +118,17 @@ export default function LeadCreate() {
         state: formData.state || undefined,
         zipCode: formData.zipCode || undefined,
         country: formData.country || undefined,
-      }
+      },
+      // Real-estate specific fields
+      propertyType: formData.propertyType || undefined,
+      transactionType: formData.transactionType || undefined,
+      budgetMin: formData.budgetMin ? parseFloat(formData.budgetMin) : undefined,
+      budgetMax: formData.budgetMax ? parseFloat(formData.budgetMax) : undefined,
+      preApprovalStatus: formData.preApprovalStatus || undefined,
+      moveInTimeline: formData.moveInTimeline || undefined,
+      desiredLocation: formData.desiredLocation || undefined,
+      bedsMin: formData.bedsMin ? parseInt(formData.bedsMin) : undefined,
+      bathsMin: formData.bathsMin ? parseInt(formData.bathsMin) : undefined,
     }
     
     createMutation.mutate(leadData)
@@ -339,6 +359,143 @@ export default function LeadCreate() {
                     onChange={handleInputChange}
                     placeholder="United States"
                     className="mt-1"
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* Real Estate Details */}
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Real Estate Details</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="lead-propertyType" className="text-sm font-medium">Property Type</label>
+                  <select
+                    id="lead-propertyType"
+                    name="propertyType"
+                    value={formData.propertyType}
+                    onChange={handleInputChange}
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Not specified</option>
+                    <option value="Single Family">Single Family</option>
+                    <option value="Condo">Condo</option>
+                    <option value="Townhouse">Townhouse</option>
+                    <option value="Multi-Family">Multi-Family</option>
+                    <option value="Land">Land</option>
+                    <option value="Commercial">Commercial</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="lead-transactionType" className="text-sm font-medium">Transaction Type</label>
+                  <select
+                    id="lead-transactionType"
+                    name="transactionType"
+                    value={formData.transactionType}
+                    onChange={handleInputChange}
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Not specified</option>
+                    <option value="Buyer">Buyer</option>
+                    <option value="Seller">Seller</option>
+                    <option value="Both">Both (Buy + Sell)</option>
+                    <option value="Investor">Investor</option>
+                    <option value="Renter">Renter</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="lead-budgetMin" className="text-sm font-medium">Budget Min ($)</label>
+                  <input
+                    id="lead-budgetMin"
+                    type="number"
+                    name="budgetMin"
+                    value={formData.budgetMin}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 200000"
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lead-budgetMax" className="text-sm font-medium">Budget Max ($)</label>
+                  <input
+                    id="lead-budgetMax"
+                    type="number"
+                    name="budgetMax"
+                    value={formData.budgetMax}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 500000"
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lead-preApprovalStatus" className="text-sm font-medium">Pre-Approval Status</label>
+                  <select
+                    id="lead-preApprovalStatus"
+                    name="preApprovalStatus"
+                    value={formData.preApprovalStatus}
+                    onChange={handleInputChange}
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Not specified</option>
+                    <option value="Not Started">Not Started</option>
+                    <option value="In-Process">In-Process</option>
+                    <option value="Pre-Approved">Pre-Approved</option>
+                    <option value="Cash Buyer">Cash Buyer</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="lead-moveInTimeline" className="text-sm font-medium">Move-In Timeline</label>
+                  <select
+                    id="lead-moveInTimeline"
+                    name="moveInTimeline"
+                    value={formData.moveInTimeline}
+                    onChange={handleInputChange}
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Not specified</option>
+                    <option value="ASAP">ASAP</option>
+                    <option value="1-3 Months">1-3 Months</option>
+                    <option value="3-6 Months">3-6 Months</option>
+                    <option value="6-12 Months">6-12 Months</option>
+                    <option value="Just Browsing">Just Browsing</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="lead-desiredLocation" className="text-sm font-medium">Desired Location</label>
+                  <input
+                    id="lead-desiredLocation"
+                    type="text"
+                    name="desiredLocation"
+                    value={formData.desiredLocation}
+                    onChange={handleInputChange}
+                    placeholder="City, neighborhood, or zip code"
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lead-bedsMin" className="text-sm font-medium">Min Bedrooms</label>
+                  <input
+                    id="lead-bedsMin"
+                    type="number"
+                    name="bedsMin"
+                    value={formData.bedsMin}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="e.g. 3"
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lead-bathsMin" className="text-sm font-medium">Min Bathrooms</label>
+                  <input
+                    id="lead-bathsMin"
+                    type="number"
+                    name="bathsMin"
+                    value={formData.bathsMin}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="e.g. 2"
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </div>
               </div>

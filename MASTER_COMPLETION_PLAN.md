@@ -1,13 +1,13 @@
 # Master Real Estate Pro — 100% Completion Plan
 
 > **Created:** February 28, 2026
-> **Updated:** March 3, 2026 (v7: Phase 0 + Phase 1 complete, DS-1 + DS-2 resolved)
+> **Updated:** March 3, 2026 (v10: Phase 3B complete — 8/9 tasks done, 1 deferred)
 > **Total Estimated Days:** ~51 working days
 > **Philosophy: Build everything first, then polish and consolidate. Keep all routes/pages during building so we can see what exists. Admin/Team/Billing/Subscription deferred — decisions pending.**
 >
 > **Legend:** ⚠️ = Decision point — stop and ask user before proceeding | ✅ = Complete | 🔀 = Deferred
 >
-> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). DS-1 + DS-2 + DS-3 resolved. Ready for Phase 3A.
+> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). Phase 3A complete (7/7 tasks). Phase 3B complete (8/9 tasks, 1 deferred). DS-1 + DS-2 + DS-3 + DS-4 + DS-5 resolved.
 
 ---
 
@@ -20,7 +20,7 @@
 | **DS-1** | ✅ RESOLVED | 6 | AI: split (prefs=user, scoring/training=admin). Rate limits: all 5 endpoints done. asyncHandler: skipped (Express 5 native). Dead code + upload cleanup: deferred to Phase 14. |
 | **DS-2** | ✅ RESOLVED | 2 | Enum values for all String→enum conversions (10 fields) — all UPPERCASE convention. Data retention: RefreshToken=0d, PasswordResetToken=7d, LoginHistory=90d, AIInsight=30d |
 | **DS-3** | ✅ RESOLVED | 4 | File upload: 10MB max, jpg/png/webp/gif. Integrations: all "Coming Soon" (no fake OAuth). Deliverability: contextual (campaign detail + email settings). Saved Reports: card grid with edit-in-place. |
-| **DS-4** | Before Phase 3A | 5 | Pipeline default stages, pipeline types (buyer/seller/rental), follow-up delivery channels, call logging outcomes, lead field columns |
+| **DS-4** | ✅ RESOLVED | 5 | Pipeline default stages (8 stages incl. Nurturing), pipeline types (Buyer/Seller/Rental/Commercial/General + Custom), follow-up delivery channels (resolved in 3.1), call logging outcomes (resolved in 3.2), lead field columns (deferred) |
 | **DS-5** | Before Phase 3B | 5 | Import duplicate criteria, relationship types, lead assignment strategy, real-estate-specific fields, deduplication behavior |
 | **DS-6** | Before Phase 4 | 5 | Editor choice (TipTap vs Quill), send-time algorithm, workflow conditions, delay options, retry strategy |
 | **DS-7** | Before Phase 5 | 4 | Attribution model, report scheduling/format, goal types, recurrence patterns |
@@ -252,22 +252,56 @@
 
 ---
 
-## PHASE 3A: LEAD MANAGEMENT — CORE PIPELINE (Days 5–9)
+## PHASE 3A: LEAD MANAGEMENT — CORE PIPELINE (Days 5–9) ✅ COMPLETE
 *Core CRM feature — the heart of the product. Split into 3A (core) and 3B (import/merge/automation) with a checkpoint between them.*
+
+> **DS-4 Decisions Resolved:**
+> - **3.4 (Default pipeline stages):** New → Contacted → Nurturing → Qualified → Proposal → Negotiation → Closed Won / Closed Lost
+> - **3.5 (Pipeline types):** Buyer, Seller, Rental, Commercial, General (5 types + Custom type for user-created)
+> - **3.7 (Lead columns):** Deferred — will expand upon when we build the actual column customization UI
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 3.1 | ⚠️ Follow-up reminders — **DECISION: which delivery channels? (email, push notification, in-app, SMS?)** | 6 hr | ☐ |
-| 3.2 | ⚠️ Call logging on lead detail — **DECISION: what outcome options? (e.g., answered, voicemail, no answer, busy, wrong number?)** | 4 hr | ☐ |
-| 3.3 | Communication history tab on lead detail | 4 hr | ☐ |
-| 3.4 | ⚠️ Custom pipeline stages — **DECISION: what are the default stages? (e.g., New → Contacted → Qualified → Proposal → Closed Won / Closed Lost?)** | 4 hr | ☐ |
-| 3.5 | ⚠️ Multiple pipelines — **DECISION: which pipeline types? (buyer, seller, rental, other?)** | 6 hr | ☐ |
-| 3.6 | Saved filter views on leads list | 3 hr | ☐ |
-| 3.7 | ⚠️ Column customization on leads list — **DECISION: which columns should be available?** | 3 hr | ☐ |
+| 3.1 | ~~⚠️~~ Follow-up reminders — **DECIDED:** In-app + push notification + email channels. Created `FollowUpReminder` model, `reminder.routes.ts`, `reminderProcessor.ts` cron, `FollowUpReminders` component on lead detail, push subscription via service worker | 6 hr | ✅ |
+| 3.2 | ~~⚠️~~ Call logging on lead detail — **DECIDED:** 9 outcomes (Answered, Voicemail, Left Message, No Answer, Busy, Wrong Number, Callback Scheduled, Not Interested, DNC Request). Made `vapiCallId` optional, added `CallOutcome` enum, `outcome`/`notes`/`followUpDate`/`calledById` fields. Created `call.routes.ts`, `call.controller.ts`, `LogCallDialog` component, wired into LeadDetail + CommunicationHistory | 4 hr | ✅ |
+| 3.3 | Communication history tab on lead detail — **Already fully implemented:** `CommunicationHistory` component (504 lines) with merged messages + calls timeline, type filtering, search, stats summary, expandable cards, quick actions. Wired into LeadDetail with all props connected. | 0 hr | ✅ (already done) |
+| 3.4 | ~~⚠️~~ Custom pipeline stages — **DECIDED:** 8 default stages (New → Contacted → Nurturing → Qualified → Proposal → Negotiation → Closed Won / Closed Lost). Added `NURTURING` to `LeadStatus` enum. Full stage CRUD: create, update, delete (with lead reassignment), reorder. Backend endpoints + `PipelineManager` UI component. | 4 hr | ✅ |
+| 3.5 | ~~⚠️~~ Multiple pipelines — **DECIDED:** 5 types (Buyer, Seller, Rental, Commercial, General) + Custom. Added `COMMERCIAL` + `CUSTOM` to `PipelineType` enum. Relaxed unique constraint for multiple custom pipelines. Full pipeline CRUD: create, update, delete, duplicate. Updated default stage configs per type incl. new Commercial pipeline. | 6 hr | ✅ |
+| 3.6 | Saved filter views on leads list — **Already fully implemented:** `SavedFilterViews` component with create/delete/load views, backend CRUD at `/api/saved-filters`, wired into LeadsList. | 0 hr | ✅ (already done) |
+| 3.7 | ~~⚠️~~ Column customization on leads list — **DECIDED:** Deferred to expand upon later when we build the actual UI | 0 hr | 🔀 (deferred) |
 
-**Phase 3A Total: ~30 hours (4 days)**
+**Phase 3A Total: ~30 hours (4 days) — ✅ COMPLETE**
 
-> **Checkpoint:** Review 3A progress before starting 3B. All core pipeline features should be working.
+### New Files Created in Phase 3A
+| File | Purpose |
+|------|--------|
+| `src/components/leads/PipelineManager.tsx` | Full pipeline & stage management UI — create/edit/delete pipelines, add/edit/delete/reorder stages, color picker, duplicate pipeline, set default |
+
+### Schema Changes in Phase 3A
+| Change | Details |
+|--------|---------|
+| `PipelineType` enum | Added `COMMERCIAL`, `CUSTOM` values |
+| `LeadStatus` enum | Added `NURTURING` value |
+| `Pipeline` model | Relaxed `@@unique([organizationId, type])` to `@@index` — allows multiple pipelines of same type |
+
+### Backend Files Modified in Phase 3A
+- `backend/src/controllers/pipeline.controller.ts` — Added `createPipeline`, `updatePipeline`, `deletePipeline`, `createStage`, `updateStage`, `deleteStage`, `reorderStages`, `duplicatePipeline` handlers. Updated default stages with Nurturing. Added Commercial pipeline defaults.
+- `backend/src/routes/pipeline.routes.ts` — Wired all new CRUD endpoints
+- `backend/src/validators/lead.validator.ts` — Added `NURTURING` to status schema
+- `backend/src/controllers/ai.controller.ts` — Added `NURTURING` to stage order arrays
+- `backend/src/controllers/analytics.controller.ts` — Added `NURTURING` to stages array
+- `backend/src/config/swagger.ts` — Added `NURTURING` to LeadStatus enum docs
+
+### Frontend Files Modified in Phase 3A
+- `src/lib/api.ts` — Added `createPipeline`, `updatePipeline`, `deletePipeline`, `duplicatePipeline`, `createStage`, `updateStage`, `deleteStage`, `reorderStages` to `pipelinesApi`. Added `COMMERCIAL` + `CUSTOM` to `PipelineData.type`.
+- `src/pages/leads/LeadsPipeline.tsx` — Added "Manage" button with `PipelineManager` modal
+- `src/pages/leads/LeadsList.tsx` — Added `nurturing`, `won`, `lost` to `getStatusVariant`
+- `src/types/index.ts` — Added `nurturing` to Lead status union
+- `src/components/campaigns/AdvancedAudienceFilters.tsx` — Added `nurturing` to status options
+- `src/components/filters/AdvancedFilters.tsx` — Added `Nurturing`, `Negotiation` to status options
+- `src/components/bulk/BulkActionsBar.tsx` — Added `Nurturing`, `Negotiation` to status options
+
+> **Checkpoint:** Phase 3A complete. All core pipeline features working — pipeline CRUD, stage management, Kanban board, communication history, call logging, follow-up reminders, saved filter views. Ready to proceed to Phase 3B.
 
 ---
 
@@ -275,17 +309,46 @@
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 3.8 | Lead import column mapping UI | 4 hr | ☐ |
-| 3.9 | ⚠️ Lead import duplicate detection — **DECISION: matching criteria? (email, phone, name+address, combination?)** | 3 hr | ☐ |
-| 3.10 | Lead import Excel/vCard support | 4 hr | ☐ |
-| 3.11 | Lead merge field-level resolution | 3 hr | ☐ |
-| 3.12 | Lead merge backend endpoint (verify + fix 404 handling) | 2 hr | ☐ |
-| 3.13 | ⚠️ Related contacts on leads — **DECISION: what relationship types? (spouse, co-buyer, attorney, lender, agent, other?)** | 3 hr | ☐ |
-| 3.14 | ⚠️ Lead assignment automation — **DECISION: round-robin only, or also by territory/capacity/skill?** | 3 hr | ☐ |
-| 3.15 | ⚠️ Real-estate-specific lead fields — **DECISION: which fields? (property type, beds, baths, budget range, pre-approval status, move-in timeline, current address?)** | 4 hr | ☐ |
-| 3.16 | ⚠️ Intra-org lead deduplication tool — **DECISION: matching criteria and merge behavior?** | 3 hr | ☐ |
+| 3.8 | Lead import column mapping UI — 4-step wizard (Upload → Map → Duplicates → Results) | 4 hr | ✅ |
+| 3.9 | Lead import duplicate detection — **DS-5.1: Email OR Phone OR (First+Last Name)** | 3 hr | ✅ |
+| 3.10 | Lead import Excel/vCard support — CSV, XLSX, XLS, VCF parsers | 4 hr | ✅ |
+| 3.11 | Lead merge field-level resolution — side-by-side picker UI with clickable field selection | 3 hr | ✅ |
+| 3.12 | Lead merge backend — transfers ALL relations (notes, tasks, activities, messages, appointments, calls, follow-ups, workflows), field-level selection | 2 hr | ✅ |
+| 3.13 | Related contacts on leads — **DS-5.2: DEFERRED** to a later phase | 3 hr | ⏭️ |
+| 3.14 | Lead assignment — **DS-5.3: Manual only for now** (already had assignedToId + team member dropdowns; fixed BulkActionsBar hardcoded names) | 3 hr | ✅ |
+| 3.15 | Real-estate-specific lead fields — **DS-5.4: Full 9 columns** (propertyType, transactionType, budgetMin/Max, preApprovalStatus, moveInTimeline, desiredLocation, bedsMin, bathsMin) + DB migration + create/edit/detail UI | 4 hr | ✅ |
+| 3.16 | Intra-org lead deduplication tool — **DS-5.5: Review & merge manually** — server-side scanning endpoint + server-side merge with field resolution | 3 hr | ✅ |
 
 **Phase 3B Total: ~29 hours (3.5 days)**
+
+### DS-5 Decisions Resolved
+| Decision | Choice |
+|----------|--------|
+| DS-5.1 Duplicate detection criteria | Email OR Phone OR (First+Last Name) — most aggressive matching |
+| DS-5.2 Related contacts | **Deferred** — user wants explanation later; decided to skip for now |
+| DS-5.3 Lead assignment strategy | Manual only for now, auto-assign later |
+| DS-5.4 Real-estate fields | Full 9 columns added to schema |
+| DS-5.5 Deduplication behavior | Review & merge manually (side-by-side comparison) |
+
+### Files Created/Modified in Phase 3B
+**New files:**
+- `backend/src/services/import.service.ts` — CSV/Excel/vCard parsing, auto-column-mapping, duplicate detection, batch import
+- `backend/src/types/vcf.d.ts` — TypeScript declarations for vcf module
+
+**Modified files:**
+- `backend/prisma/schema.prisma` — Added 9 RE-specific fields to Lead model
+- `backend/src/controllers/lead.controller.ts` — `previewImport`, `checkImportDuplicates`, `mergeLeads`, `scanDuplicates` endpoints; RE fields in create
+- `backend/src/routes/lead.routes.ts` — New import/merge/scan routes, expanded multer config
+- `backend/src/validators/lead.validator.ts` — RE fields in create/update schemas, `fieldSelections` in merge schema
+- `src/pages/leads/LeadsImport.tsx` — Complete rewrite: 4-step import wizard
+- `src/pages/leads/LeadsMerge.tsx` — Complete rewrite: server-side scanning, field-level merge resolution UI
+- `src/pages/leads/LeadCreate.tsx` — RE fields in form and submission
+- `src/pages/leads/LeadDetail.tsx` — RE fields in detail view card and edit form
+- `src/lib/api.ts` — `CreateLeadData` RE fields, `previewImport`, `checkImportDuplicates`, `scanDuplicates` methods
+- `src/types/index.ts` — RE fields on Lead interface
+- `src/components/bulk/BulkActionsBar.tsx` — Removed hardcoded assign names, simplified to direct button
+
+> **Checkpoint:** Phase 3B complete. Lead import supports CSV/Excel/vCard with column mapping and duplicate detection. Merge has server-side field-level resolution. 9 RE-specific fields added across schema/API/UI. Server-side dedup scanning. Ready to proceed to Phase 4.
 
 **Phase 3 Combined Total: ~59 hours (7.5 days)**
 

@@ -48,6 +48,12 @@ import billingRoutes from './routes/billing.routes'
 import segmentationRoutes from './routes/segmentation.routes'
 import exportRoutes from './routes/export.routes'
 import savedReportRoutes from './routes/savedReport.routes'
+import savedFilterRoutes from './routes/savedFilter.routes'
+import pipelineRoutes from './routes/pipeline.routes'
+import reminderRoutes from './routes/reminder.routes'
+import pushRoutes from './routes/push.routes'
+import callRoutes from './routes/call.routes'
+import { processRemindersDue } from './jobs/reminderProcessor'
 import { correlationId, requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { sanitizeInput } from './middleware/sanitize'
@@ -257,6 +263,11 @@ app.use('/api/billing', billingRoutes)
 app.use('/api/segments', authenticate, segmentationRoutes)
 app.use('/api/export', authenticate, exportRoutes)
 app.use('/api/reports/saved', authenticate, savedReportRoutes)
+app.use('/api/saved-filters', savedFilterRoutes)
+app.use('/api/pipelines', pipelineRoutes)
+app.use('/api/reminders', reminderRoutes)
+app.use('/api/push', pushRoutes)
+app.use('/api/calls', callRoutes)
 
 // 404 handler
 app.use(notFoundHandler)
@@ -299,6 +310,44 @@ httpServer.listen(PORT, () => {
     }
   })
   logger.info('Campaign scheduler active - checking every minute')
+  
+  // Run every minute to check for due follow-up reminders
+  cron.schedule('* * * * *', async () => {
+    const lockAcquired = await acquireLock('cron:reminder-processor', 55)
+    if (!lockAcquired) return
+    try {
+      await processRemindersDue()
+    } catch (error) {
+      logger.error({ error }, 'Reminder processor failed')
+    } finally {
+      await releaseLock('cron:reminder-processor')
+    }
+  })
+  logger.info('Reminder processor active - checking every minute')
+
+  // Recover delayed workflow actions that were lost due to restart
+  import('./services/workflow.service').then(async ({ recoverDelayedWorkflowActions }) => {
+    try {
+      const count = await recoverDelayedWorkflowActions()
+      if (count > 0) logger.info({ recovered: count }, 'Workflow delayed actions recovered')
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to recover delayed workflow actions')
+    }
+  })
+
+  // Run every 5 minutes to check for delayed workflow actions that need resuming
+  cron.schedule('*/5 * * * *', async () => {
+    const lockAcquired = await acquireLock('cron:workflow-delay-recovery', 280)
+    if (!lockAcquired) return
+    try {
+      const { recoverDelayedWorkflowActions } = await import('./services/workflow.service')
+      await recoverDelayedWorkflowActions()
+    } catch (error) {
+      logger.error({ error }, 'Workflow delay recovery failed')
+    } finally {
+      await releaseLock('cron:workflow-delay-recovery')
+    }
+  })
   
   // Run daily at 2 AM to recalculate all lead scores
   cron.schedule('0 2 * * *', async () => {

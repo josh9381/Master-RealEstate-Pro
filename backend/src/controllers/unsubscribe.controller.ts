@@ -4,13 +4,53 @@ import { NotFoundError } from '../middleware/errorHandler';
 import crypto from 'crypto';
 
 /**
- * Generate unsubscribe token for a lead
- * Helper function used when creating campaigns
+ * Generate unsubscribe token for a lead and store it
+ * Returns the full token (leadId-randomHex)
  */
-export const generateUnsubscribeToken = (leadId: string): string => {
-  const token = crypto.randomBytes(32).toString('hex');
-  return `${leadId}-${token}`;
+export const generateUnsubscribeToken = async (leadId: string): Promise<string> => {
+  const randomPart = crypto.randomBytes(32).toString('hex');
+  const token = `${leadId}-${randomPart}`;
+  
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: { unsubscribeToken: token },
+  });
+  
+  return token;
 };
+
+/**
+ * Ensure a lead has an unsubscribe token, generating one if needed
+ */
+export const ensureUnsubscribeToken = async (leadId: string): Promise<string> => {
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { unsubscribeToken: true },
+  });
+  
+  if (lead?.unsubscribeToken) return lead.unsubscribeToken;
+  return generateUnsubscribeToken(leadId);
+};
+
+/**
+ * Validate an unsubscribe token — find the lead it belongs to
+ */
+async function validateToken(token: string) {
+  if (!token || token.length < 10) {
+    throw new NotFoundError('Invalid unsubscribe token');
+  }
+  
+  // Look up by the full stored token (secure)
+  const lead = await prisma.lead.findFirst({
+    where: { unsubscribeToken: token },
+  });
+  
+  if (!lead) {
+    throw new NotFoundError('Invalid or expired unsubscribe token');
+  }
+  
+  return lead;
+}
 
 /**
  * Unsubscribe a lead from email communications
@@ -20,21 +60,7 @@ export const unsubscribe = async (req: Request, res: Response) => {
   const { token } = req.params;
   const { reason } = req.query;
 
-  // Parse token to get lead ID
-  const leadId = token.split('-')[0];
-
-  if (!leadId) {
-    throw new NotFoundError('Invalid unsubscribe token');
-  }
-
-  // Find the lead
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
-  });
-
-  if (!lead) {
-    throw new NotFoundError('Lead not found');
-  }
+  const lead = await validateToken(token);
 
   // Check if already unsubscribed
   if (!lead.emailOptIn) {
@@ -48,7 +74,7 @@ export const unsubscribe = async (req: Request, res: Response) => {
 
   // Update lead to opt out
   const updatedLead = await prisma.lead.update({
-    where: { id: leadId },
+    where: { id: lead.id },
     data: {
       emailOptIn: false,
       emailOptOutAt: new Date(),
@@ -76,25 +102,11 @@ export const unsubscribe = async (req: Request, res: Response) => {
 export const resubscribe = async (req: Request, res: Response) => {
   const { token } = req.params;
 
-  // Parse token to get lead ID
-  const leadId = token.split('-')[0];
-
-  if (!leadId) {
-    throw new NotFoundError('Invalid token');
-  }
-
-  // Find the lead
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
-  });
-
-  if (!lead) {
-    throw new NotFoundError('Lead not found');
-  }
+  const lead = await validateToken(token);
 
   // Update lead to opt back in
   const updatedLead = await prisma.lead.update({
-    where: { id: leadId },
+    where: { id: lead.id },
     data: {
       emailOptIn: true,
       emailOptOutAt: null,
@@ -122,34 +134,21 @@ export const resubscribe = async (req: Request, res: Response) => {
 export const getPreferences = async (req: Request, res: Response) => {
   const { token } = req.params;
 
-  // Parse token to get lead ID
-  const leadId = token.split('-')[0];
-
-  if (!leadId) {
-    throw new NotFoundError('Invalid token');
-  }
-
-  // Find the lead
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      emailOptIn: true,
-      emailOptOutAt: true,
-      emailOptOutReason: true,
-    },
-  });
-
-  if (!lead) {
-    throw new NotFoundError('Lead not found');
-  }
+  const lead = await validateToken(token);
 
   res.json({
     success: true,
-    data: { lead },
+    data: {
+      lead: {
+        id: lead.id,
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        email: lead.email,
+        emailOptIn: lead.emailOptIn,
+        emailOptOutAt: lead.emailOptOutAt,
+        emailOptOutReason: lead.emailOptOutReason,
+      },
+    },
   });
 };
 
@@ -161,25 +160,11 @@ export const updatePreferences = async (req: Request, res: Response) => {
   const { token } = req.params;
   const { emailOptIn, reason } = req.body;
 
-  // Parse token to get lead ID
-  const leadId = token.split('-')[0];
-
-  if (!leadId) {
-    throw new NotFoundError('Invalid token');
-  }
-
-  // Find the lead
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
-  });
-
-  if (!lead) {
-    throw new NotFoundError('Lead not found');
-  }
+  const lead = await validateToken(token);
 
   // Update preferences
   const updatedLead = await prisma.lead.update({
-    where: { id: leadId },
+    where: { id: lead.id },
     data: {
       emailOptIn: emailOptIn !== undefined ? emailOptIn : lead.emailOptIn,
       emailOptOutAt: emailOptIn === false ? new Date() : null,

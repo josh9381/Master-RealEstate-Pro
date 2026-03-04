@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/hooks/useToast'
 import { templatesApi } from '@/lib/api'
+import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
 import type { EmailTemplate } from '@/types'
 
 const CATEGORIES = ['Onboarding', 'Marketing', 'Content', 'Ecommerce', 'Transactional', 'Events', 'Custom'];
@@ -539,17 +540,13 @@ const EmailTemplatesLibrary = () => {
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Body (HTML) *</label>
-                <textarea
-                  rows={10}
-                  placeholder="Enter your email template HTML content..."
-                  className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
+                <label className="text-sm font-medium mb-2 block">Body *</label>
+                <EmailBlockEditor
                   value={formBody}
-                  onChange={(e) => setFormBody(e.target.value)}
+                  onChange={setFormBody}
+                  minHeight="300px"
+                  showTemplates={true}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Use {'{{variableName}}'} for template variables (e.g., {'{{lead.firstName}}'}, {'{{lead.email}}'})
-                </p>
               </div>
             </div>
             <div className="flex justify-end gap-2 p-6 border-t">

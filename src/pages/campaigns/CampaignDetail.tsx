@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
-import { Edit, Pause, Trash2, X, Copy, ShieldCheck, AlertTriangle, ShieldAlert } from 'lucide-react'
+import { Edit, Pause, Trash2, X, Copy, ShieldCheck, AlertTriangle, ShieldAlert, ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, analyticsApi, deliverabilityApi, CreateCampaignData } from '@/lib/api'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { CampaignExecutionStatus } from '@/components/campaigns/CampaignExecutionStatus'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
-import type { TimelineDataPoint, HourlyEngagementEntry, DeviceBreakdownEntry, GeoBreakdownEntry, ABTestResultEntry } from '@/types'
+import type { TimelineDataPoint, HourlyEngagementEntry, DeviceBreakdownEntry, GeoBreakdownEntry } from '@/types'
 import {
   LineChart,
   Line,
@@ -221,21 +221,6 @@ function CampaignDetail() {
       conversions: 0,
     }))
   }, [geoBreakdownData, geoData])
-
-  // Fetch A/B test results for this campaign
-  const { data: abTestResults } = useQuery({
-    queryKey: ['campaign-abtest', id],
-    queryFn: async () => {
-      if (!campaignData?.isABTest) return null
-      const abRes = await campaignsApi.getCampaignAnalytics(id!)
-      if (abRes?.data?.abTests) {
-        return Array.isArray(abRes.data.abTests) ? abRes.data.abTests : null
-      }
-      return null
-    },
-    enabled: !!id && !!campaignData?.isABTest,
-    retry: false,
-  })
 
   const [editForm, setEditForm] = useState(campaignData)
 
@@ -734,41 +719,7 @@ function CampaignDetail() {
       </div>
 
       {/* A/B Test Results */}
-      {campaignData?.isABTest && (
-        <Card>
-          <CardHeader>
-            <CardTitle>A/B Test Results</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {abTestResults && abTestResults.length > 0 ? (
-              <div className="space-y-4">
-                {abTestResults.map((test: ABTestResultEntry) => (
-                  <div key={test.id} className="grid gap-4 md:grid-cols-2">
-                    <div className="p-4 border rounded-lg">
-                      <Badge variant="secondary" className="mb-2">Variant A</Badge>
-                      <h4 className="font-medium">{test.variantA?.subject || 'Original'}</h4>
-                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                        <div>Participants: {test._count?.results ? Math.ceil(test._count.results / 2) : 0}</div>
-                      </div>
-                    </div>
-                    <div className="p-4 border rounded-lg">
-                      <Badge variant="secondary" className="mb-2">Variant B</Badge>
-                      <h4 className="font-medium">{test.variantB?.subject || 'Variant'}</h4>
-                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                        <div>Participants: {test._count?.results ? Math.floor(test._count.results / 2) : 0}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[100px] text-muted-foreground">
-                A/B test results will appear here once the campaign sends.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {campaignData?.isABTest && <ABTestResultsSection campaignId={id!} />}
 
       {/* Additional Performance Metrics */}
       <Card>
@@ -819,6 +770,9 @@ function CampaignDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Per-Recipient Activity Log */}
+      <RecipientActivitySection campaignId={id || ''} />
 
       {/* Full Content Modal */}
       {showContentModal && (
@@ -1068,3 +1022,269 @@ function CampaignDetail() {
 }
 
 export default CampaignDetail
+
+// ─── Per-Recipient Activity Section ─────────────────────────────
+
+const STATUS_BADGES: Record<string, { label: string; className: string }> = {
+  PENDING: { label: 'Pending', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+  SENT: { label: 'Sent', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
+  DELIVERED: { label: 'Delivered', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
+  OPENED: { label: 'Opened', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },
+  CLICKED: { label: 'Clicked', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
+  BOUNCED: { label: 'Bounced', className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
+  UNSUBSCRIBED: { label: 'Unsubscribed', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' },
+  CONVERTED: { label: 'Converted', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' },
+}
+
+/**
+ * ABTestResultsSection — Shows per-variant stats, winner badge, and confidence
+ */
+function ABTestResultsSection({ campaignId }: { campaignId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['campaign-abtest-results', campaignId],
+    queryFn: async () => {
+      const res = await campaignsApi.getABTestResults(campaignId)
+      return res?.data || null
+    },
+    refetchInterval: 30000, // Refresh every 30s while viewing
+  })
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>A/B Test Results</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-[100px] text-muted-foreground">Loading...</div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!data?.evaluation) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>A/B Test Results</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-[100px] text-muted-foreground">
+            A/B test results will appear here once the campaign sends.
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const { test, evaluation, evalHours, winnerMetric } = data
+  const { variantA, variantB, winner, confidence, marginPercent } = evaluation
+  const isCompleted = test?.status === 'COMPLETED'
+
+  const renderVariantCard = (variant: 'A' | 'B', stats: typeof variantA, subjectLabel: string) => {
+    const isWinner = winner === variant
+    return (
+      <div className={`p-4 border rounded-lg relative ${isWinner && isCompleted ? 'border-green-500 bg-green-50 dark:bg-green-950/30' : ''}`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Badge variant={isWinner && isCompleted ? 'default' : 'secondary'}>
+            Variant {variant}
+          </Badge>
+          {isWinner && isCompleted && (
+            <Badge className="bg-green-600 text-white">Winner</Badge>
+          )}
+        </div>
+        <h4 className="font-medium mb-3">{subjectLabel}</h4>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <div className="text-muted-foreground">Sent</div>
+            <div className="font-semibold text-lg">{stats.total}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Opened</div>
+            <div className="font-semibold text-lg">{stats.opened}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Open Rate</div>
+            <div className={`font-semibold text-lg ${isWinner && winnerMetric === 'open_rate' ? 'text-green-600' : ''}`}>
+              {stats.openRate.toFixed(1)}%
+            </div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Click Rate</div>
+            <div className={`font-semibold text-lg ${isWinner && winnerMetric === 'click_rate' ? 'text-green-600' : ''}`}>
+              {stats.clickRate.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>A/B Test Results</CardTitle>
+          <div className="flex items-center gap-2">
+            <Badge variant={isCompleted ? 'default' : 'secondary'}>
+              {isCompleted ? 'Completed' : 'Running'}
+            </Badge>
+            {!isCompleted && (
+              <span className="text-xs text-muted-foreground">
+                Auto-evaluates after {evalHours}h
+              </span>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          {renderVariantCard('A', variantA, (test?.variantA as any)?.subject || 'Original')}
+          {renderVariantCard('B', variantB, (test?.variantB as any)?.subject || 'Variant')}
+        </div>
+
+        {/* Summary bar */}
+        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm">
+          <div>
+            <span className="font-medium">Metric:</span>{' '}
+            {winnerMetric === 'open_rate' ? 'Open Rate' : 'Click Rate'}
+          </div>
+          <div>
+            <span className="font-medium">Margin:</span> {marginPercent}%
+          </div>
+          <div>
+            <span className="font-medium">Confidence:</span>{' '}
+            <span className={confidence >= 0.95 ? 'text-green-600 font-semibold' : confidence >= 0.8 ? 'text-yellow-600' : 'text-muted-foreground'}>
+              {(confidence * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div>
+            <span className="font-medium">Winner:</span>{' '}
+            {winner === 'TIE' ? 'No clear winner' : `Variant ${winner}`}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function RecipientActivitySection({ campaignId }: { campaignId: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const [page, setPage] = useState(1)
+  const [statusFilter, setStatusFilter] = useState('')
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['campaign-recipients', campaignId, page, statusFilter],
+    queryFn: () => campaignsApi.getCampaignRecipients(campaignId, {
+      page,
+      limit: 25,
+      ...(statusFilter ? { status: statusFilter } : {}),
+    }),
+    enabled: expanded && !!campaignId,
+  })
+
+  const recipients = data?.data?.recipients || []
+  const total = data?.data?.total || 0
+  const totalPages = data?.data?.totalPages || 1
+  const statusSummary = data?.data?.statusSummary || {}
+
+  const formatDate = (d: string | null) => d ? new Date(d).toLocaleString() : '—'
+
+  return (
+    <Card>
+      <CardHeader
+        className="cursor-pointer select-none"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <CardTitle>Per-Recipient Activity</CardTitle>
+            {total > 0 && <Badge variant="secondary">{total} recipients</Badge>}
+          </div>
+          {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+        </div>
+      </CardHeader>
+      {expanded && (
+        <CardContent>
+          {/* Status filter pills */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!statusFilter ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+              onClick={() => { setStatusFilter(''); setPage(1) }}
+            >
+              All
+            </button>
+            {Object.entries(STATUS_BADGES).map(([key, { label }]) => {
+              const count = statusSummary[key] || 0
+              if (count === 0 && !statusFilter) return null
+              return (
+                <button
+                  key={key}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                  onClick={() => { setStatusFilter(statusFilter === key ? '' : key); setPage(1) }}
+                >
+                  {label} {count > 0 && `(${count})`}
+                </button>
+              )
+            })}
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading recipients...</div>
+          ) : recipients.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No recipient activity data yet. Data will appear after the campaign is sent.</div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-2 font-medium">Recipient</th>
+                      <th className="pb-2 font-medium">Status</th>
+                      <th className="pb-2 font-medium">Sent</th>
+                      <th className="pb-2 font-medium">Delivered</th>
+                      <th className="pb-2 font-medium">Opened</th>
+                      <th className="pb-2 font-medium">Clicked</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recipients.map((r: any) => {
+                      const badge = STATUS_BADGES[r.status] || STATUS_BADGES.PENDING
+                      return (
+                        <tr key={r.id} className="border-b last:border-0">
+                          <td className="py-2">
+                            <div className="font-medium">{r.lead?.firstName} {r.lead?.lastName}</div>
+                            <div className="text-xs text-muted-foreground">{r.lead?.email || r.lead?.phone || '—'}</div>
+                          </td>
+                          <td className="py-2">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          </td>
+                          <td className="py-2 text-xs text-muted-foreground">{formatDate(r.sentAt)}</td>
+                          <td className="py-2 text-xs text-muted-foreground">{formatDate(r.deliveredAt)}</td>
+                          <td className="py-2 text-xs text-muted-foreground">{formatDate(r.openedAt)}</td>
+                          <td className="py-2 text-xs text-muted-foreground">{formatDate(r.clickedAt)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <span className="text-xs text-muted-foreground">
+                    Page {page} of {totalPages} ({total} total)
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
+                    <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  )
+}

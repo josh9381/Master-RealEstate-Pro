@@ -154,6 +154,11 @@ model Campaign {
   recurringPattern Json?
   archivedAt       DateTime?
   isArchived       Boolean        @default(false)
+  attachments      Json?          // Array of { filename, path, size, type } for email attachments
+  mediaUrl         String?         // MMS media URL for SMS campaigns
+  sendTimeOptimization String?     // 'none' | 'timezone' | 'engagement' | 'both'
+  abTestWinnerMetric String?       // 'open_rate' | 'click_rate' — metric used to pick winner
+  abTestEvalHours    Int?          // Hours after send to evaluate A/B test winner
   organizationId   String
   ABTestResult     ABTestResult[]
   activities       Activity[]
@@ -251,6 +256,8 @@ model Lead {
   source            String?
   value             Float?
   stage             String?
+  pipelineId        String?
+  pipelineStageId   String?
   assignedToId      String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -262,9 +269,25 @@ model Lead {
   emailOptOutAt     DateTime?
   emailOptOutReason String?
   unsubscribeToken  String?        @unique
+  smsOptIn          Boolean        @default(true)
+  smsOptOutAt       DateTime?
+  smsOptOutReason   String?
+  timezone          String?         // IANA timezone e.g. 'America/New_York'
   organizationId    String
   scoreUpdatedAt    DateTime?
   expectedCloseDate DateTime?
+
+  // Real-estate specific fields
+  propertyType      String?        // Single Family, Condo, Townhouse, Multi-Family, Land, Commercial
+  transactionType   String?        // Buyer, Seller, Both, Investor, Renter
+  budgetMin         Float?         // Minimum budget/price
+  budgetMax         Float?         // Maximum budget/price
+  preApprovalStatus String?        // Not Started, In-Process, Pre-Approved, Cash Buyer
+  moveInTimeline    String?        // ASAP, 1-3 Months, 3-6 Months, 6-12 Months, Just Browsing
+  desiredLocation   String?        // Target area, city, zip, neighborhood
+  bedsMin           Int?           // Minimum bedrooms desired
+  bathsMin          Int?           // Minimum bathrooms desired
+
   ABTestResult      ABTestResult[]
   activities        Activity[]
   appointments      Appointment[]
@@ -272,11 +295,14 @@ model Lead {
   campaignLeads     CampaignLead[]
   assignedTo        User?          @relation("LeadAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pipeline          Pipeline?      @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+  pipelineStage     PipelineStage? @relation(fields: [pipelineStageId], references: [id], onDelete: SetNull)
   messages          Message[]
   notes             Note[]
   tasks             Task[]
   tags              Tag[]          @relation("LeadToTag")
   workflowExecutions WorkflowExecution[]
+  followUpReminders  FollowUpReminder[]
 
   @@unique([organizationId, email])
   @@index([assignedToId])
@@ -289,6 +315,52 @@ model Lead {
   @@index([organizationId, email])
   @@index([organizationId])
   @@index([organizationId, status])
+  @@index([pipelineId])
+  @@index([pipelineStageId])
+}
+
+model Pipeline {
+  id              String          @id @default(cuid())
+  name            String
+  type            PipelineType    @default(DEFAULT)
+  description     String?
+  isDefault       Boolean         @default(false)
+  organizationId  String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stages          PipelineStage[]
+  leads           Lead[]
+
+  @@index([organizationId])
+  @@index([organizationId, type])
+}
+
+model PipelineStage {
+  id              String      @id @default(cuid())
+  name            String
+  order           Int
+  color           String?
+  description     String?
+  isWinStage      Boolean     @default(false)
+  isLostStage     Boolean     @default(false)
+  pipelineId      String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  pipeline        Pipeline    @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads           Lead[]
+
+  @@unique([pipelineId, order])
+  @@index([pipelineId])
+}
+
+enum PipelineType {
+  DEFAULT
+  BUYER
+  SELLER
+  RENTAL
+  COMMERCIAL
+  CUSTOM
 }
 
 model Message {
@@ -522,6 +594,7 @@ model User {
   notificationSettings NotificationSettings?
   ScoringConfigUpdates ScoringConfig[]       @relation("ScoringConfigUpdatedBy")
   savedReports         SavedReport[]
+  savedFilterViews     SavedFilterView[]
   smsConfig            SMSConfig?
   tasks                Task[]                @relation("TaskAssignedTo")
   teamMembers          TeamMember[]
@@ -531,6 +604,9 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   loginHistory         LoginHistory[]
   ModelPerformanceHistory ModelPerformanceHistory[]
+  followUpReminders  FollowUpReminder[]
+  pushSubscriptions  PushSubscription[]
+  callsPlaced        Call[]              @relation("CallsPlacedByUser")
 
   @@unique([organizationId, email])
   @@index([email])
@@ -545,7 +621,10 @@ model Workflow {
   isActive           Boolean             @default(false)
   triggerType        WorkflowTrigger
   triggerData        Json?
+  webhookKey          String?   @unique  // Unique key for webhook triggers
   actions            Json
+  maxRetries         Int                 @default(3) // 1-3, user-configurable
+  notifyOnFailure    Boolean             @default(true) // Notify user when action fails
   executions         Int                 @default(0)
   successRate        Float?
   lastRunAt          DateTime?
@@ -590,11 +669,33 @@ model WorkflowExecution {
   completedAt DateTime?
   workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   lead        Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  steps       WorkflowExecutionStep[]
 
   @@index([startedAt])
   @@index([status])
   @@index([workflowId])
   @@index([leadId])
+}
+
+model WorkflowExecutionStep {
+  id            String          @id @default(cuid())
+  executionId   String
+  stepIndex     Int
+  actionType    String
+  actionLabel   String?
+  actionConfig  Json?
+  status        ExecutionStatus
+  error         String?
+  retryCount    Int             @default(0)
+  startedAt     DateTime        @default(now())
+  completedAt   DateTime?
+  durationMs    Int?
+  branchTaken   String?
+  output        Json?
+  execution     WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
+  @@index([status])
 }
 
 model ABTest {
@@ -611,6 +712,8 @@ model ABTest {
   endDate          DateTime?
   participantCount Int            @default(0)
   winnerId         String?
+  winnerVariant    String?             // 'A' | 'B' — which variant won
+  winnerMetric     String?             // 'open_rate' | 'click_rate'
   confidence       Float?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
@@ -675,27 +778,34 @@ model Call {
   organizationId    String
   leadId            String?
   assistantId       String?
-  vapiCallId        String        @unique
+  calledById        String?
+  vapiCallId        String?       @unique
   direction         CallDirection
   phoneNumber       String
   status            CallStatus
+  outcome           CallOutcome?
   duration          Int?
   cost              Float?
   transcript        String?
   recording         String?
   sentiment         String?
+  notes             String?
+  followUpDate      DateTime?
   appointmentBooked Boolean       @default(false)
   metadata          Json?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   aiassistant       AIAssistant?  @relation(fields: [assistantId], references: [id], onDelete: SetNull)
+  calledBy          User?         @relation("CallsPlacedByUser", fields: [calledById], references: [id], onDelete: SetNull)
   lead              Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
   organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([direction])
   @@index([leadId])
+  @@index([calledById])
   @@index([organizationId, createdAt])
   @@index([status])
+  @@index([outcome])
 }
 
 model ChatMessage {
@@ -836,6 +946,8 @@ model Organization {
   users             User[]
   UserAIPreferences UserAIPreferences[]
   SavedReport       SavedReport[]
+  SavedFilterView   SavedFilterView[]
+  Pipeline          Pipeline[]
   Workflow          Workflow[]
   EmailSuppression  EmailSuppression[]
   CampaignLead      CampaignLead[]
@@ -851,6 +963,8 @@ model Organization {
   PasswordResetToken PasswordResetToken[]
   RefreshToken      RefreshToken[]
   ABTestResult      ABTestResult[]
+  FollowUpReminder  FollowUpReminder[]
+  PushSubscription  PushSubscription[]
 
   @@index([isActive])
   @@index([slug])
@@ -1005,6 +1119,28 @@ model SavedReport {
   @@index([userId])
 }
 
+model SavedFilterView {
+  id               String       @id @default(cuid())
+  name             String
+  icon             String?
+  color            String?
+  filterConfig     Json         // { status, source, scoreRange, dateRange, tags, assignedTo }
+  scoreFilter      String       @default("ALL")
+  sortField        String?
+  sortDirection    String?
+  isDefault        Boolean      @default(false)
+  isShared         Boolean      @default(false)
+  userId           String
+  organizationId   String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
 model RefreshToken {
   id             String       @id @default(cuid())
   token          String       @unique
@@ -1099,6 +1235,7 @@ enum ExecutionStatus {
 enum LeadStatus {
   NEW
   CONTACTED
+  NURTURING
   QUALIFIED
   PROPOSAL
   NEGOTIATION
@@ -1173,6 +1310,7 @@ enum WorkflowTrigger {
   SCORE_THRESHOLD
   TAG_ADDED
   MANUAL
+  WEBHOOK
 }
 
 enum ABTestStatus {
@@ -1277,6 +1415,18 @@ enum CallStatus {
 enum CallDirection {
   INBOUND
   OUTBOUND
+}
+
+enum CallOutcome {
+  ANSWERED
+  VOICEMAIL
+  LEFT_MESSAGE
+  NO_ANSWER
+  BUSY
+  WRONG_NUMBER
+  CALLBACK_SCHEDULED
+  NOT_INTERESTED
+  DNC_REQUEST
 }
 
 enum AIInsightType {
@@ -1386,4 +1536,68 @@ model EmailSuppression {
   @@unique([organizationId, email])
   @@index([organizationId])
   @@index([email])
+}
+
+// Follow-up reminder — tracks scheduled reminders with multi-channel delivery
+model FollowUpReminder {
+  id              String           @id @default(cuid())
+  leadId          String
+  userId          String
+  organizationId  String
+  title           String
+  note            String?
+  dueAt           DateTime
+  status          ReminderStatus   @default(PENDING)
+  priority        ReminderPriority @default(MEDIUM)
+  // Delivery channels — which channels to fire when due
+  channelInApp    Boolean          @default(true)
+  channelEmail    Boolean          @default(false)
+  channelSms      Boolean          @default(false)
+  channelPush     Boolean          @default(false)
+  // Tracking
+  firedAt         DateTime?        // When the reminder was actually dispatched
+  completedAt     DateTime?        // When user marked it complete / acted on it
+  snoozedUntil    DateTime?        // If snoozed, new due date
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  lead            Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([dueAt, status])
+  @@index([leadId])
+  @@index([organizationId])
+}
+
+enum ReminderStatus {
+  PENDING     // Not yet due
+  FIRED       // Due time reached, notifications sent
+  COMPLETED   // User acted on it
+  SNOOZED     // Snoozed to a later time
+  CANCELLED   // Cancelled by user
+}
+
+enum ReminderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Push subscription — stores browser push subscriptions per user
+model PushSubscription {
+  id              String   @id @default(cuid())
+  userId          String
+  organizationId  String
+  endpoint        String   @unique
+  p256dh          String   // Public key
+  auth            String   // Auth secret
+  userAgent       String?
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
 }

@@ -151,7 +151,7 @@ const swaggerDefinition: swaggerJsdoc.SwaggerDefinition = {
           phone: { type: 'string' },
           status: {
             type: 'string',
-            enum: ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'],
+            enum: ['NEW', 'CONTACTED', 'NURTURING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'],
           },
           source: { type: 'string' },
           score: { type: 'integer' },
@@ -170,7 +170,7 @@ const swaggerDefinition: swaggerJsdoc.SwaggerDefinition = {
           lastName: { type: 'string' },
           email: { type: 'string', format: 'email' },
           phone: { type: 'string' },
-          status: { type: 'string', enum: ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'] },
+          status: { type: 'string', enum: ['NEW', 'CONTACTED', 'NURTURING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'] },
           source: { type: 'string' },
           value: { type: 'number' },
           assignedToId: { type: 'string', format: 'uuid' },
