@@ -1,13 +1,13 @@
 # Master Real Estate Pro — 100% Completion Plan
 
 > **Created:** February 28, 2026
-> **Updated:** March 3, 2026 (v10: Phase 3B complete — 8/9 tasks done, 1 deferred)
+> **Updated:** March 4, 2026 (v11: Phase 4 complete — 14/14 tasks done)
 > **Total Estimated Days:** ~51 working days
 > **Philosophy: Build everything first, then polish and consolidate. Keep all routes/pages during building so we can see what exists. Admin/Team/Billing/Subscription deferred — decisions pending.**
 >
 > **Legend:** ⚠️ = Decision point — stop and ask user before proceeding | ✅ = Complete | 🔀 = Deferred
 >
-> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). Phase 3A complete (7/7 tasks). Phase 3B complete (8/9 tasks, 1 deferred). DS-1 + DS-2 + DS-3 + DS-4 + DS-5 resolved.
+> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). Phase 3A complete (7/7 tasks). Phase 3B complete (8/9 tasks, 1 deferred). Phase 4 complete (14/14 tasks). DS-1 + DS-2 + DS-3 + DS-4 + DS-5 + DS-6 resolved.
 
 ---
 
@@ -22,7 +22,7 @@
 | **DS-3** | ✅ RESOLVED | 4 | File upload: 10MB max, jpg/png/webp/gif. Integrations: all "Coming Soon" (no fake OAuth). Deliverability: contextual (campaign detail + email settings). Saved Reports: card grid with edit-in-place. |
 | **DS-4** | ✅ RESOLVED | 5 | Pipeline default stages (8 stages incl. Nurturing), pipeline types (Buyer/Seller/Rental/Commercial/General + Custom), follow-up delivery channels (resolved in 3.1), call logging outcomes (resolved in 3.2), lead field columns (deferred) |
 | **DS-5** | Before Phase 3B | 5 | Import duplicate criteria, relationship types, lead assignment strategy, real-estate-specific fields, deduplication behavior |
-| **DS-6** | Before Phase 4 | 5 | Editor choice (TipTap vs Quill), send-time algorithm, workflow conditions, delay options, retry strategy |
+| **DS-6** | ✅ RESOLVED | 5 | Editor: block-based + MJML (not WYSIWYG — clean HTML). Send-time: timezone + historical engagement. Conditions: all 4 (lead field, email opened, link clicked, time elapsed). Delay: minutes/hours/days/weeks + specific date/time. Retry: 1–3 retries, exponential backoff, notify user on failure (no silent skip). |
 | **DS-7** | Before Phase 5 | 4 | Attribution model, report scheduling/format, goal types, recurrence patterns |
 | **DS-8** | Before Phase 6 | 1 | Terms of Service content/URL |
 | **DS-9** | Before Phase 7 | 3 | AI model list, personalization options, budget thresholds |
@@ -358,20 +358,20 @@
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 4.1 | ⚠️ Rich text / WYSIWYG email editor — **DECISION: TipTap or Quill? (TipTap is more modern/extensible, Quill is simpler)** | 6 hr | ☐ |
-| 4.2 | Template responsive preview (desktop/mobile) | 3 hr | ☐ |
-| 4.3 | Email attachment support in campaigns | 3 hr | ☐ |
-| 4.4 | SMS STOP-word handling for TCPA compliance | 1 hr | ☐ |
-| 4.5 | CAN-SPAM compliance auto-insertion | 2 hr | ☐ |
-| 4.6 | MMS support | 4 hr | ☐ |
-| 4.7 | Per-recipient campaign activity log | 3 hr | ☐ |
-| 4.8 | ⚠️ Send-time optimization — **DECISION: algorithm approach? (time-zone based, historical engagement data, or both?)** | 4 hr | ☐ |
-| 4.9 | Campaign A/B auto-winner | 2 hr | ☐ |
-| 4.10 | ⚠️ Conditional branching in workflows (if/else) — **DECISION: what conditions available? (lead field values, email opened, link clicked, time elapsed?)** | 6 hr | ☐ |
-| 4.11 | ⚠️ Wait/delay steps in workflows — **DECISION: delay options? (minutes, hours, days, specific date/time?)** | 3 hr | ☐ |
-| 4.12 | Webhook trigger | 3 hr | ☐ |
-| 4.13 | Workflow execution logs per rule | 3 hr | ☐ |
-| 4.14 | ⚠️ Workflow error retry configuration — **DECISION: retry strategy? (max retries, backoff timing?)** | 2 hr | ☐ |
+| 4.1 | ✅ Block-based email editor + MJML compilation (clean, cross-client HTML — no WYSIWYG bloat) | 6 hr | ✅ |
+| 4.2 | ✅ Responsive template preview (desktop/tablet/mobile viewport toggle + iframe rendering) | 3 hr | ✅ |
+| 4.3 | ✅ Email attachment support (file upload, S3 storage, SendGrid integration) | 3 hr | ✅ |
+| 4.4 | ✅ SMS STOP-word handling — TCPA compliance (inbound webhook, auto opt-out, STOP footer) | 1 hr | ✅ |
+| 4.5 | ✅ CAN-SPAM compliance auto-insertion (unsubscribe link, physical address, List-Unsubscribe header) | 2 hr | ✅ |
+| 4.6 | ✅ MMS support (media URL input, Twilio mediaUrl passthrough, preview) | 4 hr | ✅ |
+| 4.7 | ✅ Per-recipient campaign activity log (CampaignLead rows, API endpoint, recipient timeline UI) | 3 hr | ✅ |
+| 4.8 | ✅ Send-time optimization (timezone + historical engagement scoring, deferred sends, scheduler pickup) | 4 hr | ✅ |
+| 4.9 | ✅ Campaign A/B auto-winner (scheduler evaluator, statistical significance, auto-deploy winner) | 2 hr | ✅ |
+| 4.10 | ✅ Conditional branching (4 condition types: lead field, email opened, link clicked, time elapsed + visual config) | 6 hr | ✅ |
+| 4.11 | ✅ Wait/delay steps (relative + absolute date/time, delay recovery on server restart) | 3 hr | ✅ |
+| 4.12 | ✅ Webhook trigger (inbound webhook endpoint, auto-generated keys, signature verification) | 3 hr | ✅ |
+| 4.13 | ✅ Workflow execution logs per step (WorkflowExecutionStep model, per-action logging, timeline UI) | 3 hr | ✅ |
+| 4.14 | ✅ Retry config + user notification (1–3 retries, exponential backoff, notify on persistent failure) | 2 hr | ✅ |
 
 **Phase Total: ~45 hours (5.5 days)**
 
