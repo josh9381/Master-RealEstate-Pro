@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import { useConfirm } from '@/hooks/useConfirm'
 import { 
   Calendar, 
   Phone, 
@@ -50,6 +51,7 @@ function LeadsFollowups() {
   const [isCreating, setIsCreating] = useState(false)
   const [followupErrors, setFollowupErrors] = useState<Record<string, string>>({})
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const queryClient = useQueryClient()
 
   const { data: followupsData, isLoading, refetch: loadFollowups } = useQuery({
@@ -165,7 +167,7 @@ function LeadsFollowups() {
   const handleComplete = async (id: number) => {
     const followup = followups.find((f: FollowUp) => f.id === id)
     
-    if (!window.confirm(`Mark follow-up with ${followup?.lead || 'this lead'} as complete?`)) {
+    if (!await showConfirm({ title: 'Complete Follow-up', message: `Mark follow-up with ${followup?.lead || 'this lead'} as complete?`, confirmLabel: 'Complete' })) {
       return
     }
 

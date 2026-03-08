@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -22,11 +22,24 @@ import { exportToCSV, campaignExportColumns } from '@/lib/exportService'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
 import { MockModeBanner } from '@/components/shared/MockModeBanner'
+import { AlertTriangle } from 'lucide-react'
+
+type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE'
 
 function CampaignsList() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
+  const typeFilter = (searchParams.get('type')?.toUpperCase() || 'all') as CampaignType
+  const setTypeFilter = (type: CampaignType) => {
+    if (type === 'all') {
+      searchParams.delete('type')
+    } else {
+      searchParams.set('type', type.toLowerCase())
+    }
+    setSearchParams(searchParams, { replace: true })
+  }
   const [activeTab, setActiveTab] = useState<'all' | 'ACTIVE' | 'SCHEDULED' | 'PAUSED' | 'COMPLETED'>('all')
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'calendar'>('list')
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([])
@@ -44,7 +57,7 @@ function CampaignsList() {
   const [createForm, setCreateForm] = useState<{ name: string; type: 'EMAIL' | 'SMS' | 'PHONE' }>({ name: '', type: 'EMAIL' })
 
   // Fetch campaigns from API
-  const { data: campaignsResponse, isLoading } = useQuery({
+  const { data: campaignsResponse, isLoading, isError } = useQuery({
     queryKey: ['campaigns', searchQuery],
     queryFn: async () => {
       try {
@@ -62,7 +75,8 @@ function CampaignsList() {
         const response = await campaignsApi.getCampaigns(params)
         return response.data
       } catch (error) {
-        return null
+        console.error('Failed to fetch campaigns:', error)
+        throw error
       }
     },
     retry: false,
@@ -176,10 +190,11 @@ function CampaignsList() {
     const filtered = campaigns.filter(campaign => {
       const matchesSearch = campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesTab = activeTab === 'all' || campaign.status.toUpperCase() === activeTab.toUpperCase()
-      return matchesSearch && matchesTab
+      const matchesType = typeFilter === 'all' || (campaign.type || '').toUpperCase() === typeFilter
+      return matchesSearch && matchesTab && matchesType
     })
     return filtered
-  }, [campaigns, searchQuery, activeTab])
+  }, [campaigns, searchQuery, activeTab, typeFilter])
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -385,6 +400,20 @@ function CampaignsList() {
     )
   }
 
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <CampaignsSubNav />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive font-medium">Failed to load campaigns</p>
+            <p className="text-muted-foreground text-sm mt-1">Please try refreshing the page</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Sub Navigation */}
@@ -392,6 +421,49 @@ function CampaignsList() {
 
       {/* Mock Mode Warning */}
       <MockModeBanner />
+
+      {/* Campaign Type Filter Tabs */}
+      <div className="flex gap-2">
+        {(['all', 'EMAIL', 'SMS', 'PHONE'] as const).map(type => {
+          const count = type === 'all'
+            ? campaigns.length
+            : campaigns.filter(c => (c.type || '').toUpperCase() === type).length
+          const labels: Record<string, string> = { all: 'All Types', EMAIL: 'Email', SMS: 'SMS', PHONE: 'Phone' }
+          const icons: Record<string, typeof Mail> = { EMAIL: Mail, SMS: MessageSquare, PHONE: Phone }
+          const Icon = type !== 'all' ? icons[type] : null
+          return (
+            <button
+              key={type}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                typeFilter === type
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
+              }`}
+              onClick={() => setTypeFilter(type)}
+            >
+              {Icon && <Icon className="h-4 w-4" />}
+              {labels[type]}
+              <span className={`ml-1 text-xs ${
+                typeFilter === type ? 'text-primary-foreground/70' : 'text-muted-foreground'
+              }`}>({count})</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Phone Coming Soon Banner */}
+      {typeFilter === 'PHONE' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <h3 className="font-semibold text-amber-800">Coming Soon — Voice Telephony</h3>
+            <p className="text-sm text-amber-700 mt-1">
+              Phone campaigns require voice telephony integration which is not yet available.
+              This feature is on the roadmap. In the meantime, use Email or SMS campaigns.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">

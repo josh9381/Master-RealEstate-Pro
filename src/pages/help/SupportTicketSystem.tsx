@@ -1,90 +1,328 @@
-import { Ticket, MessageSquare, AlertCircle, CheckCircle, Clock, User, Search } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ticket, MessageSquare, AlertCircle, CheckCircle, Clock, Search, Send, ArrowLeft, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { supportApi } from '@/lib/api';
+
+interface TicketMessage {
+  id: string;
+  ticketId: string;
+  userId: string;
+  content: string;
+  isStaffReply: boolean;
+  createdAt: string;
+}
+
+interface SupportTicket {
+  id: string;
+  subject: string;
+  description: string;
+  status: string;
+  priority: string;
+  category: string | null;
+  createdById: string;
+  assignedToId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  messages?: TicketMessage[];
+  _count?: { messages: number };
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  OPEN: 'bg-blue-100 text-blue-800',
+  IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
+  RESOLVED: 'bg-green-100 text-green-800',
+  CLOSED: 'bg-gray-100 text-gray-800',
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+  LOW: 'bg-green-100 text-green-800',
+  MEDIUM: 'bg-orange-100 text-orange-800',
+  HIGH: 'bg-red-100 text-red-800',
+  URGENT: 'bg-red-200 text-red-900',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: 'Open',
+  IN_PROGRESS: 'In Progress',
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed',
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  URGENT: 'Urgent',
+};
+
+const CATEGORIES = [
+  'Campaigns',
+  'Lead Management',
+  'Integrations',
+  'Billing',
+  'Technical Support',
+  'Feature Request',
+  'Other',
+];
 
 const SupportTicketSystem = () => {
-  const tickets = [
-    {
-      id: 'TICK-001',
-      subject: 'Cannot send email campaign',
-      description: 'Getting error when trying to send campaign to my contact list',
-      status: 'Open',
-      priority: 'High',
-      category: 'Campaigns',
-      created: '2 hours ago',
-      updated: '30 minutes ago',
-      assignee: 'Sarah Johnson',
-      replies: 3,
-    },
-    {
-      id: 'TICK-002',
-      subject: 'Lead import not working',
-      description: 'CSV file fails to upload, shows validation error',
-      status: 'In Progress',
-      priority: 'Medium',
-      category: 'Lead Management',
-      created: '1 day ago',
-      updated: '3 hours ago',
-      assignee: 'Mike Chen',
-      replies: 5,
-    },
-    {
-      id: 'TICK-003',
-      subject: 'API integration question',
-      description: 'Need help connecting Salesforce integration',
-      status: 'Waiting for Customer',
-      priority: 'Low',
-      category: 'Integrations',
-      created: '3 days ago',
-      updated: '1 day ago',
-      assignee: 'Alex Rodriguez',
-      replies: 2,
-    },
-    {
-      id: 'TICK-004',
-      subject: 'Billing inquiry',
-      description: 'Questions about my last invoice charges',
-      status: 'Resolved',
-      priority: 'Medium',
-      category: 'Billing',
-      created: '5 days ago',
-      updated: '4 days ago',
-      assignee: 'Emma Wilson',
-      replies: 4,
-    },
-  ];
+  const queryClient = useQueryClient();
+  const [view, setView] = useState<'list' | 'detail' | 'create'>('list');
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [filters, setFilters] = useState({ status: '', category: '', search: '' });
+  const [page, setPage] = useState(1);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Open':
-        return 'bg-blue-100 text-blue-800';
-      case 'In Progress':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Waiting for Customer':
-        return 'bg-purple-100 text-purple-800';
-      case 'Resolved':
-        return 'bg-green-100 text-green-800';
-      case 'Closed':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  // Form state
+  const [newTicket, setNewTicket] = useState({ subject: '', description: '', category: '', priority: 'MEDIUM' });
+  const [replyContent, setReplyContent] = useState('');
+
+  // ── Queries ──────────────────────────────────────────────────────────────
+  const { data: ticketData, isLoading } = useQuery({
+    queryKey: ['support-tickets', filters, page],
+    queryFn: () => supportApi.list({
+      ...(filters.status && { status: filters.status }),
+      ...(filters.category && { category: filters.category }),
+      ...(filters.search && { search: filters.search }),
+      page,
+      limit: 20,
+    }),
+  });
+
+  const { data: statsData } = useQuery({
+    queryKey: ['support-ticket-stats'],
+    queryFn: () => supportApi.getStats(),
+  });
+
+  const { data: ticketDetail } = useQuery({
+    queryKey: ['support-ticket', selectedTicketId],
+    queryFn: () => supportApi.get(selectedTicketId!),
+    enabled: !!selectedTicketId && view === 'detail',
+  });
+
+  // ── Mutations ────────────────────────────────────────────────────────────
+  const createMutation = useMutation({
+    mutationFn: (data: typeof newTicket) => supportApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['support-tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['support-ticket-stats'] });
+      setNewTicket({ subject: '', description: '', category: '', priority: 'MEDIUM' });
+      setView('list');
+    },
+  });
+
+  const replyMutation = useMutation({
+    mutationFn: ({ ticketId, content }: { ticketId: string; content: string }) =>
+      supportApi.addMessage(ticketId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['support-ticket', selectedTicketId] });
+      queryClient.invalidateQueries({ queryKey: ['support-tickets'] });
+      setReplyContent('');
+    },
+  });
+
+  const tickets: SupportTicket[] = ticketData?.data?.tickets ?? [];
+  const pagination = ticketData?.data?.pagination;
+  const stats = statsData?.data;
+  const detail: SupportTicket | null = ticketDetail?.data ?? null;
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'High':
-        return 'bg-red-100 text-red-800';
-      case 'Medium':
-        return 'bg-orange-100 text-orange-800';
-      case 'Low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const openTicket = (id: string) => {
+    setSelectedTicketId(id);
+    setView('detail');
   };
 
+  // ── Detail view ──────────────────────────────────────────────────────────
+  if (view === 'detail' && detail) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => { setView('list'); setSelectedTicketId(null); }}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Tickets
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">{detail.subject}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="secondary" className={STATUS_COLORS[detail.status] || ''}>
+                {STATUS_LABELS[detail.status] || detail.status}
+              </Badge>
+              <Badge variant="secondary" className={PRIORITY_COLORS[detail.priority] || ''}>
+                {PRIORITY_LABELS[detail.priority] || detail.priority}
+              </Badge>
+              {detail.category && (
+                <Badge variant="outline">{detail.category}</Badge>
+              )}
+              <span className="text-sm text-muted-foreground">Created {formatDate(detail.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Original description */}
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground mb-1">Original Description</p>
+            <p className="whitespace-pre-wrap">{detail.description}</p>
+          </CardContent>
+        </Card>
+
+        {/* Messages thread */}
+        <div className="space-y-3">
+          {(detail.messages || []).map((msg) => (
+            <Card key={msg.id} className={msg.isStaffReply ? 'border-blue-200 bg-blue-50/50' : ''}>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">
+                    {msg.isStaffReply ? '\u{1F6E1}\uFE0F Support Staff' : 'You'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{formatDate(msg.createdAt)}</span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Reply form */}
+        {detail.status !== 'CLOSED' && (
+          <Card>
+            <CardContent className="pt-6">
+              <textarea
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                placeholder="Type your reply..."
+                rows={4}
+                className="w-full px-3 py-2 border rounded-lg mb-3"
+              />
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    if (replyContent.trim() && selectedTicketId) {
+                      replyMutation.mutate({ ticketId: selectedTicketId, content: replyContent.trim() });
+                    }
+                  }}
+                  disabled={!replyContent.trim() || replyMutation.isPending}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {replyMutation.isPending ? 'Sending...' : 'Send Reply'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  // ── Create ticket view ───────────────────────────────────────────────────
+  if (view === 'create') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => setView('list')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Tickets
+          </Button>
+          <h1 className="text-2xl font-bold">Create New Support Ticket</h1>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Describe Your Issue</CardTitle>
+            <CardDescription>Our support team will respond as soon as possible</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newTicket.subject.trim() && newTicket.description.trim()) {
+                  createMutation.mutate(newTicket);
+                }
+              }}
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Category</label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={newTicket.category}
+                    onChange={(e) => setNewTicket(s => ({ ...s, category: e.target.value }))}
+                  >
+                    <option value="">Select category...</option>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Priority</label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={newTicket.priority}
+                    onChange={(e) => setNewTicket(s => ({ ...s, priority: e.target.value }))}
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Subject</label>
+                <input
+                  type="text"
+                  placeholder="Brief description of your issue"
+                  className="w-full px-3 py-2 border rounded-lg"
+                  value={newTicket.subject}
+                  onChange={(e) => setNewTicket(s => ({ ...s, subject: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
+                <textarea
+                  placeholder="Provide detailed information about your issue..."
+                  rows={6}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  value={newTicket.description}
+                  onChange={(e) => setNewTicket(s => ({ ...s, description: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={() => setView('list')}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? 'Submitting...' : 'Submit Ticket'}
+                </Button>
+              </div>
+              {createMutation.isError && (
+                <p className="text-sm text-red-600">Failed to create ticket. Please try again.</p>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── List view (default) ──────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -94,8 +332,8 @@ const SupportTicketSystem = () => {
             View and manage your support requests
           </p>
         </div>
-        <Button>
-          <Ticket className="h-4 w-4 mr-2" />
+        <Button onClick={() => setView('create')}>
+          <Plus className="h-4 w-4 mr-2" />
           Create New Ticket
         </Button>
       </div>
@@ -110,23 +348,28 @@ const SupportTicketSystem = () => {
                 type="text"
                 placeholder="Search tickets..."
                 className="w-full pl-10 pr-4 py-2 border rounded-lg"
+                value={filters.search}
+                onChange={(e) => { setFilters(f => ({ ...f, search: e.target.value })); setPage(1); }}
               />
             </div>
-            <select className="px-4 py-2 border rounded-lg">
-              <option>All Status</option>
-              <option>Open</option>
-              <option>In Progress</option>
-              <option>Waiting for Customer</option>
-              <option>Resolved</option>
-              <option>Closed</option>
+            <select
+              className="px-4 py-2 border rounded-lg"
+              value={filters.status}
+              onChange={(e) => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}
+            >
+              <option value="">All Status</option>
+              <option value="OPEN">Open</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="CLOSED">Closed</option>
             </select>
-            <select className="px-4 py-2 border rounded-lg">
-              <option>All Categories</option>
-              <option>Campaigns</option>
-              <option>Lead Management</option>
-              <option>Integrations</option>
-              <option>Billing</option>
-              <option>Technical</option>
+            <select
+              className="px-4 py-2 border rounded-lg"
+              value={filters.category}
+              onChange={(e) => { setFilters(f => ({ ...f, category: e.target.value })); setPage(1); }}
+            >
+              <option value="">All Categories</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </CardContent>
@@ -136,11 +379,11 @@ const SupportTicketSystem = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
+            <CardTitle className="text-sm font-medium">Open</CardTitle>
             <Ticket className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{stats?.open ?? '\u2014'}</div>
             <p className="text-xs text-muted-foreground">Awaiting response</p>
           </CardContent>
         </Card>
@@ -150,7 +393,7 @@ const SupportTicketSystem = () => {
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold">{stats?.inProgress ?? '\u2014'}</div>
             <p className="text-xs text-muted-foreground">Being worked on</p>
           </CardContent>
         </Card>
@@ -160,158 +403,115 @@ const SupportTicketSystem = () => {
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
+            <div className="text-2xl font-bold">{stats?.resolved ?? '\u2014'}</div>
+            <p className="text-xs text-muted-foreground">Resolved tickets</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Closed</CardTitle>
+            <AlertCircle className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.5h</div>
-            <p className="text-xs text-muted-foreground">Average time</p>
+            <div className="text-2xl font-bold">{stats?.closed ?? '\u2014'}</div>
+            <p className="text-xs text-muted-foreground">Closed tickets</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tickets List */}
-      <div className="space-y-4">
-        {tickets.map((ticket) => (
-          <Card key={ticket.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="font-semibold text-lg">{ticket.subject}</h3>
-                    <Badge variant="secondary" className={getStatusColor(ticket.status)}>
-                      {ticket.status}
-                    </Badge>
-                    <Badge variant="secondary" className={getPriorityColor(ticket.priority)}>
-                      {ticket.priority}
-                    </Badge>
+      {isLoading ? (
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            Loading tickets...
+          </CardContent>
+        </Card>
+      ) : tickets.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <Ticket className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <h3 className="font-semibold text-lg mb-1">No tickets found</h3>
+            <p className="text-muted-foreground mb-4">
+              {filters.status || filters.category || filters.search
+                ? 'Try adjusting your filters.'
+                : "You haven't created any support tickets yet."}
+            </p>
+            {!filters.status && !filters.category && !filters.search && (
+              <Button onClick={() => setView('create')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Ticket
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {tickets.map((ticket) => (
+            <Card key={ticket.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openTicket(ticket.id)}>
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h3 className="font-semibold text-lg">{ticket.subject}</h3>
+                      <Badge variant="secondary" className={STATUS_COLORS[ticket.status] || ''}>
+                        {STATUS_LABELS[ticket.status] || ticket.status}
+                      </Badge>
+                      <Badge variant="secondary" className={PRIORITY_COLORS[ticket.priority] || ''}>
+                        {PRIORITY_LABELS[ticket.priority] || ticket.priority}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-1">{ticket.description}</p>
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                      {ticket.category && (
+                        <>
+                          <span>{ticket.category}</span>
+                          <span>&middot;</span>
+                        </>
+                      )}
+                      <div className="flex items-center space-x-1">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>{ticket._count?.messages ?? 0} replies</span>
+                      </div>
+                      <span>&middot;</span>
+                      <span>Created {formatDate(ticket.createdAt)}</span>
+                      <span>&middot;</span>
+                      <span>Updated {formatDate(ticket.updatedAt)}</span>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">{ticket.description}</p>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <Ticket className="h-4 w-4" />
-                      <span>{ticket.id}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <User className="h-4 w-4" />
-                      <span>{ticket.assignee}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>{ticket.replies} replies</span>
-                    </div>
-                    <span>•</span>
-                    <span>Created {ticket.created}</span>
-                    <span>•</span>
-                    <span>Updated {ticket.updated}</span>
-                  </div>
+                  <Button variant="outline" onClick={(e) => { e.stopPropagation(); openTicket(ticket.id); }}>
+                    View Details
+                  </Button>
                 </div>
-                <Button variant="outline">View Details</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Create New Ticket Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Create New Support Ticket</CardTitle>
-          <CardDescription>Describe your issue and we'll help you resolve it</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Category</label>
-                <select className="w-full px-3 py-2 border rounded-lg">
-                  <option>Select category...</option>
-                  <option>Campaigns</option>
-                  <option>Lead Management</option>
-                  <option>Integrations</option>
-                  <option>Billing</option>
-                  <option>Technical Support</option>
-                  <option>Feature Request</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Priority</label>
-                <select className="w-full px-3 py-2 border rounded-lg">
-                  <option>Low</option>
-                  <option>Medium</option>
-                  <option>High</option>
-                  <option>Critical</option>
-                </select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Subject</label>
-              <input
-                type="text"
-                placeholder="Brief description of your issue"
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <textarea
-                placeholder="Provide detailed information about your issue..."
-                rows={6}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Attachments</label>
-              <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Drop files here or click to upload
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Supported formats: JPG, PNG, PDF, DOC (Max 10MB)
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline">Cancel</Button>
-              <Button>Submit Ticket</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* FAQ Quick Links */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Common Issues</CardTitle>
-          <CardDescription>Quick solutions to frequently reported problems</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2">
-            {[
-              'How to reset my password',
-              'Troubleshooting email delivery issues',
-              'Understanding campaign analytics',
-              'Managing user permissions',
-              'Setting up integrations',
-              'Billing and subscription FAQs',
-            ].map((faq, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <span className="text-sm">{faq}</span>
-                <Button variant="ghost" size="sm">
-                  View
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(p => p - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= pagination.totalPages}
+            onClick={() => setPage(p => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       {/* Contact Support */}
       <Card className="border-blue-200">
@@ -321,14 +521,7 @@ const SupportTicketSystem = () => {
             <div>
               <h4 className="font-semibold text-blue-900">Need Immediate Assistance?</h4>
               <p className="text-sm text-blue-800 mt-1">
-                Our support team is available 24/7. For urgent issues, please call us at{' '}
-                <a href="tel:+15551234567" className="font-semibold hover:underline">
-                  +1 (555) 123-4567
-                </a>{' '}
-                or email{' '}
-                <a href="mailto:support@company.com" className="font-semibold hover:underline">
-                  support@company.com
-                </a>
+                Our support team is available during business hours. For urgent issues, please create a ticket with <strong>Urgent</strong> priority and we&apos;ll prioritize it.
               </p>
             </div>
           </div>

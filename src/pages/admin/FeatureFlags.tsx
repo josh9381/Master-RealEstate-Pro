@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Flag, Plus, Edit, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Flag, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
-import { useAuthStore } from '@/store/authStore';
-import { getUserItem, setUserItem } from '@/lib/userStorage';
+import { useConfirm } from '@/hooks/useConfirm';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 
 interface FeatureFlag {
-  id: number;
+  id: string;
   name: string;
   key: string;
   description: string;
@@ -17,96 +18,21 @@ interface FeatureFlag {
   rollout: number;
 }
 
-
-const DEFAULT_FEATURES: FeatureFlag[] = [
-  {
-    id: 1,
-    name: 'AI Lead Scoring',
-    key: 'ai_lead_scoring',
-    description: 'Enable AI-powered lead scoring and predictions',
-    enabled: true,
-    environment: 'production',
-    rollout: 100,
-  },
-  {
-    id: 2,
-    name: 'Advanced Analytics',
-    key: 'advanced_analytics',
-    description: 'Show advanced analytics dashboard and reports',
-    enabled: true,
-    environment: 'production',
-    rollout: 100,
-  },
-  {
-    id: 3,
-    name: 'New Campaign Builder',
-    key: 'new_campaign_builder',
-    description: 'Use redesigned campaign builder interface',
-    enabled: true,
-    environment: 'beta',
-    rollout: 50,
-  },
-  {
-    id: 4,
-    name: 'Social Media Integration',
-    key: 'social_media_integration',
-    description: 'Connect and post to social media platforms',
-    enabled: false,
-    environment: 'development',
-    rollout: 10,
-  },
-  {
-    id: 5,
-    name: 'Video Calling',
-    key: 'video_calling',
-    description: 'Enable in-app video calling feature',
-    enabled: false,
-    environment: 'development',
-    rollout: 0,
-  },
-  {
-    id: 6,
-    name: 'Mobile App API v2',
-    key: 'mobile_api_v2',
-    description: 'Use new mobile API endpoints',
-    enabled: true,
-    environment: 'production',
-    rollout: 75,
-  },
-];
-
-const loadFeatureFlags = (userId: string | undefined): FeatureFlag[] => {
-  try {
-    const stored = getUserItem(userId, 'crm_feature_flags');
-    if (stored) {
-      return JSON.parse(stored) as FeatureFlag[];
-    }
-  } catch (e) {
-    console.error('Failed to load feature flags from localStorage:', e);
-  }
-  return DEFAULT_FEATURES;
-};
-
-const saveFeatureFlags = (userId: string | undefined, flags: FeatureFlag[]) => {
-  try {
-    setUserItem(userId, 'crm_feature_flags', JSON.stringify(flags));
-  } catch (e) {
-    console.error('Failed to save feature flags to localStorage:', e);
-  }
-};
-
 const FeatureFlags = () => {
   const { toast } = useToast();
-  const userId = useAuthStore(s => s.user?.id);
-  const [features, setFeatures] = useState<FeatureFlag[]>(() => loadFeatureFlags(userId));
+  const showConfirm = useConfirm();
+  const queryClient = useQueryClient();
 
-  // Persist to localStorage whenever features change
-  useEffect(() => {
-    saveFeatureFlags(userId, features);
-  }, [features, userId]);
+  const { data: features = [], isLoading } = useQuery({
+    queryKey: ['admin', 'feature-flags'],
+    queryFn: async () => {
+      const res = await api.get('/api/admin/feature-flags');
+      return (res.data?.data || res.data) as FeatureFlag[];
+    },
+  });
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingFeature, setEditingFeature] = useState<number | null>(null);
+  const [editingFeature, setEditingFeature] = useState<string | null>(null);
   const [newFeature, setNewFeature] = useState({
     name: '',
     key: '',
@@ -116,15 +42,25 @@ const FeatureFlags = () => {
     enabled: false,
   });
 
-  const handleToggle = (id: number) => {
-    setFeatures(features.map(f => 
-      f.id === id ? { ...f, enabled: !f.enabled } : f
-    ));
+  const handleToggle = (id: string) => {
     const feature = features.find(f => f.id === id);
-    toast.success(`${feature?.name} ${feature?.enabled ? 'disabled' : 'enabled'} successfully`);
+    if (!feature) return;
+    toggleMutation.mutate({ id, enabled: !feature.enabled });
   };
 
-  const handleEdit = (id: number) => {
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      await api.put(`/api/admin/feature-flags/${id}`, { enabled });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'feature-flags'] });
+    },
+    onError: () => {
+      toast.error('Failed to toggle feature flag');
+    },
+  });
+
+  const handleEdit = (id: string) => {
       const feature = features.find(f => f.id === id);
     if (feature) {
       setEditingFeature(id);
@@ -140,12 +76,24 @@ const FeatureFlags = () => {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this feature flag?')) {
-      setFeatures(features.filter(f => f.id !== id));
-      toast.success('Feature flag deleted successfully');
+  const handleDelete = async (id: string) => {
+    if (await showConfirm({ title: 'Delete Feature Flag', message: 'Are you sure you want to delete this feature flag?', confirmLabel: 'Delete', variant: 'destructive' })) {
+      deleteMutation.mutate(id);
     }
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/admin/feature-flags/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'feature-flags'] });
+      toast.success('Feature flag deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete feature flag');
+    },
+  });
 
   const handleCreate = () => {
     if (!newFeature.name || !newFeature.key) {
@@ -154,16 +102,41 @@ const FeatureFlags = () => {
     }
 
     if (editingFeature) {
-      setFeatures(features.map(f =>
-        f.id === editingFeature ? { ...f, ...newFeature } : f
-      ));
-      toast.success('Feature flag updated successfully');
+      updateMutation.mutate({ id: editingFeature, data: newFeature });
     } else {
-      const newId = Math.max(...features.map(f => f.id)) + 1;
-      setFeatures([...features, { id: newId, ...newFeature }]);
-      toast.success('Feature flag created successfully');
+      createMutation.mutate(newFeature);
     }
+  };
 
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof newFeature) => {
+      await api.post('/api/admin/feature-flags', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'feature-flags'] });
+      toast.success('Feature flag created successfully');
+      resetForm();
+    },
+    onError: () => {
+      toast.error('Failed to create feature flag');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof newFeature }) => {
+      await api.put(`/api/admin/feature-flags/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'feature-flags'] });
+      toast.success('Feature flag updated successfully');
+      resetForm();
+    },
+    onError: () => {
+      toast.error('Failed to update feature flag');
+    },
+  });
+
+  const resetForm = () => {
     setShowCreateModal(false);
     setEditingFeature(null);
     setNewFeature({
@@ -196,6 +169,12 @@ const FeatureFlags = () => {
         </Button>
       </div>
 
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+      <>
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -409,26 +388,14 @@ const FeatureFlags = () => {
                 <Plus className="h-4 w-4 mr-2" />
                 {editingFeature ? 'Update' : 'Create'} Feature Flag
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setEditingFeature(null);
-                  setNewFeature({
-                    name: '',
-                    key: '',
-                    description: '',
-                    environment: 'development',
-                    rollout: 0,
-                    enabled: false,
-                  });
-                }}
-              >
+              <Button variant="outline" onClick={resetForm}>
                 Cancel
               </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+      </>
       )}
     </div>
   );

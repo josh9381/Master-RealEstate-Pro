@@ -35,7 +35,8 @@ if (ACCESS_TOKEN_SECRET === REFRESH_TOKEN_SECRET) {
 console.log('✅ JWT secrets validated successfully');
 
 const ACCESS_TOKEN_EXPIRY = "15m"; // 15 minutes
-const REFRESH_TOKEN_EXPIRY = "7d"; // 7 days
+const REFRESH_TOKEN_EXPIRY_LONG = "7d"; // 7 days (remember me)
+const REFRESH_TOKEN_EXPIRY_SHORT = "1d"; // 1 day (session)
 
 export interface TokenPayload {
   userId: string;
@@ -68,16 +69,21 @@ export function generateAccessToken(
 }
 
 /**
- * Generate a refresh token (long-lived, 7 days)
+ * Generate a refresh token (long-lived, 7 days or 1 day based on rememberMe)
  */
-export function generateRefreshToken(userId: string, organizationId: string): string {
+export function generateRefreshToken(userId: string, organizationId: string, rememberMe: boolean = true): string {
   const payload: RefreshTokenPayload = { userId, organizationId };
 
   return jwt.sign(payload, REFRESH_TOKEN_SECRET as string, {
-    expiresIn: REFRESH_TOKEN_EXPIRY,
+    expiresIn: rememberMe ? REFRESH_TOKEN_EXPIRY_LONG : REFRESH_TOKEN_EXPIRY_SHORT,
     issuer: "realestate-pro-api",
     audience: "realestate-pro-client",
   });
+}
+
+/** Get the expiry duration in milliseconds for a refresh token */
+export function getRefreshTokenExpiryMs(rememberMe: boolean = true): number {
+  return rememberMe ? 7 * 24 * 60 * 60 * 1000 : 1 * 24 * 60 * 60 * 1000;
 }
 
 /**

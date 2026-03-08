@@ -2,8 +2,12 @@ import { Download, FileText, Calendar, DollarSign, CheckCircle, AlertCircle } fr
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useAuthStore } from '@/store/authStore';
+import { APP_NAME } from '@/lib/appConfig';
 
 const InvoiceDetail = () => {
+  const { user } = useAuthStore();
+  const organizationName = user?.organization?.name || APP_NAME;
   const invoice = {
     id: 'INV-2024-001',
     number: 'INV-2024-001',
@@ -138,12 +142,9 @@ const InvoiceDetail = () => {
                 <p className="text-muted-foreground mt-2">Invoice #{invoice.number}</p>
               </div>
               <div className="text-right">
-                <h3 className="text-xl font-bold">Your Company Name</h3>
+                <h3 className="text-xl font-bold">{organizationName}</h3>
                 <p className="text-sm text-muted-foreground mt-2">
-                  456 Company Ave<br />
-                  Suite 100<br />
-                  San Francisco, CA 94105<br />
-                  United States
+                  {/* Address populated from organization settings */}
                 </p>
               </div>
             </div>

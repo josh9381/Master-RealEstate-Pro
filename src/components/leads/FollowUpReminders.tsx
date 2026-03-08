@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Smartphone,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { remindersApi, type FollowUpReminder, type CreateReminderData } from '@/lib/api'
@@ -82,6 +83,11 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
   const [channelEmail, setChannelEmail] = useState(false)
   const [channelSms, setChannelSms] = useState(false)
   const [channelPush, setChannelPush] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrencePattern, setRecurrencePattern] = useState<string>('WEEKLY')
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1)
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
+  const [recurrenceCount, setRecurrenceCount] = useState('')
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -140,6 +146,11 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
     setChannelEmail(false)
     setChannelSms(false)
     setChannelPush(false)
+    setIsRecurring(false)
+    setRecurrencePattern('WEEKLY')
+    setRecurrenceInterval(1)
+    setRecurrenceEndDate('')
+    setRecurrenceCount('')
   }
 
   const handleQuickCreate = (minutes: number) => {
@@ -188,6 +199,13 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
       channelEmail,
       channelSms,
       channelPush,
+      ...(isRecurring ? {
+        isRecurring: true,
+        recurrencePattern: recurrencePattern as any,
+        ...(recurrencePattern === 'CUSTOM' ? { recurrenceInterval } : {}),
+        ...(recurrenceEndDate ? { recurrenceEndDate: new Date(recurrenceEndDate).toISOString() } : {}),
+        ...(recurrenceCount ? { recurrenceCount: parseInt(recurrenceCount) } : {}),
+      } : {}),
     })
   }
 
@@ -340,6 +358,73 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                     </label>
                   )}
                 </div>
+              </div>
+
+              {/* Recurrence options */}
+              <div>
+                <label className="flex items-center gap-2 text-xs cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={e => setIsRecurring(e.target.checked)}
+                    className="rounded"
+                  />
+                  <RefreshCw className="h-3 w-3" /> Make recurring
+                </label>
+                {isRecurring && (
+                  <div className="space-y-2 pl-5 border-l-2 border-blue-200 dark:border-blue-800">
+                    <div>
+                      <label className="text-xs text-muted-foreground">Repeat</label>
+                      <select
+                        value={recurrencePattern}
+                        onChange={e => setRecurrencePattern(e.target.value)}
+                        className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                      >
+                        <option value="DAILY">Daily</option>
+                        <option value="WEEKLY">Weekly</option>
+                        <option value="BIWEEKLY">Biweekly</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="QUARTERLY">Quarterly</option>
+                        <option value="YEARLY">Yearly</option>
+                        <option value="CUSTOM">Custom (every N days)</option>
+                      </select>
+                    </div>
+                    {recurrencePattern === 'CUSTOM' && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">Every N days</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={recurrenceInterval}
+                          onChange={e => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        />
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-muted-foreground">End date (optional)</label>
+                        <input
+                          type="date"
+                          value={recurrenceEndDate}
+                          onChange={e => setRecurrenceEndDate(e.target.value)}
+                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Max count (optional)</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={recurrenceCount}
+                          onChange={e => setRecurrenceCount(e.target.value)}
+                          placeholder="e.g. 10"
+                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2">

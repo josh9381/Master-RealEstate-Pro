@@ -1,9 +1,7 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
-import { useAuthStore } from '@/store/authStore'
-import { getUserItem, setUserItem } from '@/lib/userStorage'
 import { Mail, Layout, Type, Image, Link, Code, Eye, RefreshCw, Edit, Trash2, Plus, X, Send } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -11,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/hooks/useToast'
-import { templatesApi } from '@/lib/api'
+import api, { templatesApi } from '@/lib/api'
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
 import type { EmailTemplate } from '@/types'
 
@@ -21,7 +19,7 @@ const EmailTemplatesLibrary = () => {
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
-  const userId = useAuthStore(s => s.user?.id)
+  const queryClient = useQueryClient()
   const [activeCategory, setActiveCategory] = useState('All Templates')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
@@ -35,23 +33,43 @@ const EmailTemplatesLibrary = () => {
     enableClickTracking: boolean;
     includeSocialSharing: boolean;
   }
-  const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(() => {
-    const defaults = {
-      defaultFont: 'Arial',
-      primaryColor: '#0066cc',
-      logoUrl: '',
-      includeUnsubscribe: true,
-      enableOpenTracking: true,
-      enableClickTracking: true,
-      includeSocialSharing: false
+  const SETTINGS_DEFAULTS: TemplateSettings = {
+    defaultFont: 'Arial',
+    primaryColor: '#0066cc',
+    logoUrl: '',
+    includeUnsubscribe: true,
+    enableOpenTracking: true,
+    enableClickTracking: true,
+    includeSocialSharing: false
+  }
+  const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(SETTINGS_DEFAULTS)
+
+  // Load template settings from backend
+  const { data: savedSettings } = useQuery({
+    queryKey: ['email-template-defaults'],
+    queryFn: async () => {
+      const res = await api.get('/api/settings/email-template-defaults')
+      return res.data?.data || null
+    },
+  })
+
+  useEffect(() => {
+    if (savedSettings) {
+      setTemplateSettings(s => ({ ...s, ...savedSettings }))
     }
-    try {
-      const saved = getUserItem(userId, 'email-template-settings')
-      if (saved) return { ...defaults, ...JSON.parse(saved) }
-    } catch (e) {
-      console.error('Failed to load saved template settings:', e)
-    }
-    return defaults
+  }, [savedSettings])
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (data: TemplateSettings) => {
+      await api.put('/api/settings/email-template-defaults', data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-template-defaults'] })
+      toast.success('Template settings saved')
+    },
+    onError: () => {
+      toast.error('Failed to save template settings')
+    },
   })
 
   // Modal states
@@ -491,10 +509,9 @@ const EmailTemplatesLibrary = () => {
               </label>
             </div>
           </div>
-          <Button onClick={() => {
-            setUserItem(userId, 'email-template-settings', JSON.stringify(templateSettings))
-            toast.success('Template settings saved')
-          }}>Save Settings</Button>
+          <Button onClick={() => saveSettingsMutation.mutate(templateSettings)} disabled={saveSettingsMutation.isPending}>
+            {saveSettingsMutation.isPending ? 'Saving...' : 'Save Settings'}
+          </Button>
         </CardContent>
       </Card>
         </>

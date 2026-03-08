@@ -118,7 +118,7 @@ export class TemplateService {
       variables['{{system.currentTime}}'] = 'Current time';
       variables['{{system.currentYear}}'] = 'Current year';
       variables['{{system.unsubscribeLink}}'] = 'Unsubscribe link';
-      variables['{{system.companyName}}'] = 'Your company name';
+      variables['{{system.companyName}}'] = process.env.APP_NAME || 'Master RealEstate Pro';
       variables['{{system.companyWebsite}}'] = 'Your company website';
     }
 

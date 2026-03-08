@@ -105,7 +105,8 @@ const LeadsMerge = () => {
             autoMerged: 0,
           },
         };
-      } catch {
+      } catch (error) {
+        console.error('Failed to scan for duplicates:', error)
         toast.error('Failed to scan for duplicates');
         return { duplicates: [], stats: { potential: 0, mergedMonth: 0, autoMerged: 0 } };
       }

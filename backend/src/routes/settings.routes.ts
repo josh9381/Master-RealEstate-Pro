@@ -31,6 +31,7 @@ import { enable2FASchema, verify2FASchema, disable2FASchema } from '../validator
 
 // AI Settings (Phase 3C)
 import { getAISettings, updateAISettings, removeAPIKey } from '../controllers/settings/ai.controller';
+import { prisma } from '../config/database';
 
 const router = Router();
 
@@ -118,6 +119,24 @@ router.put('/email', validateBody(updateEmailConfigSchema), asyncHandler(updateE
  * @access  Private
  */
 router.post('/email/test', validateBody(testEmailSchema), asyncHandler(testEmail));
+
+// Email template defaults (org-wide)
+router.get('/email-template-defaults', asyncHandler(async (req, res) => {
+  const org = await prisma.organization.findUnique({
+    where: { id: req.user!.organizationId },
+    select: { emailTemplateDefaults: true },
+  });
+  res.json({ success: true, data: org?.emailTemplateDefaults || null });
+}));
+
+router.put('/email-template-defaults', asyncHandler(async (req, res) => {
+  const org = await prisma.organization.update({
+    where: { id: req.user!.organizationId },
+    data: { emailTemplateDefaults: req.body },
+    select: { emailTemplateDefaults: true },
+  });
+  res.json({ success: true, data: org.emailTemplateDefaults });
+}));
 
 // ============================================
 // SMS CONFIGURATION

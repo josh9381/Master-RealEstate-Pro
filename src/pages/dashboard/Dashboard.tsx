@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useToast } from '@/hooks/useToast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -17,6 +17,8 @@ import {
   RefreshCw,
   Bell,
   Mail,
+  FileText,
+  FileSpreadsheet,
   
   Clock,
   CheckCircle2,
@@ -393,17 +395,241 @@ function Dashboard() {
     }
   }, [refetchTasks, refetchStats, toast])
 
-  const handleExport = () => {
-    // Mock export functionality
-    const data = JSON.stringify({ stats, revenueData, conversionData }, null, 2)
-    const blob = new Blob([data], { type: 'application/json' })
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!showExportMenu) return
+    const handleClick = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showExportMenu])
+
+  const buildExportData = useCallback(() => {
+    const rows: Record<string, string | number>[] = []
+
+    // Stats cards
+    rows.push({ Section: 'Overview', Metric: '', Value: '', Details: '' })
+    for (const stat of stats) {
+      rows.push({ Section: 'Stats', Metric: stat.name, Value: stat.value, Details: `Change: ${stat.change}, Target: ${stat.target}` })
+    }
+
+    // Quick stats
+    for (const qs of quickStats) {
+      rows.push({ Section: 'Quick Stats', Metric: qs.label, Value: qs.value, Details: `Change: ${qs.change}` })
+    }
+
+    // Pipeline / conversion funnel
+    if (conversionData.length > 0) {
+      rows.push({ Section: 'Pipeline', Metric: '', Value: '', Details: '' })
+      for (const stage of conversionData) {
+        rows.push({ Section: 'Pipeline', Metric: stage.stage, Value: stage.count, Details: `Rate: ${stage.rate}%` })
+      }
+    }
+
+    // Top campaigns
+    if (topCampaigns.length > 0) {
+      rows.push({ Section: 'Top Campaigns', Metric: '', Value: '', Details: '' })
+      for (const c of topCampaigns) {
+        rows.push({ Section: 'Top Campaigns', Metric: c.name, Value: `${c.conversions} conversions`, Details: `Opens: ${c.opens}, Clicks: ${c.clicks}, ROI: ${c.roi}` })
+      }
+    }
+
+    // Revenue data
+    if (revenueData.length > 0) {
+      rows.push({ Section: 'Revenue', Metric: '', Value: '', Details: '' })
+      for (const r of revenueData) {
+        rows.push({ Section: 'Revenue', Metric: r.month, Value: r.revenue, Details: `Leads: ${r.leads}` })
+      }
+    }
+
+    // Recent activities
+    if (recentActivities.length > 0) {
+      rows.push({ Section: 'Recent Activity', Metric: '', Value: '', Details: '' })
+      for (const a of recentActivities) {
+        rows.push({ Section: 'Activity', Metric: a.action, Value: a.lead, Details: a.time })
+      }
+    }
+
+    // Tasks
+    if (upcomingTasks.length > 0) {
+      rows.push({ Section: 'Tasks', Metric: '', Value: '', Details: '' })
+      for (const t of upcomingTasks) {
+        rows.push({ Section: 'Tasks', Metric: t.title, Value: t.status, Details: `Due: ${t.due}, Priority: ${t.priority}` })
+      }
+    }
+
+    return rows
+  }, [stats, quickStats, conversionData, topCampaigns, revenueData, recentActivities, upcomingTasks])
+
+  const handleExportCSV = useCallback(() => {
+    setShowExportMenu(false)
+    const rows = buildExportData()
+    if (rows.length === 0) return
+
+    const headers = Object.keys(rows[0])
+    const csvContent = [
+      `RealEstate Pro — Dashboard Export (${new Date().toLocaleDateString()})`,
+      `Date Range: ${dateRange}`,
+      '',
+      headers.join(','),
+      ...rows.map(row =>
+        headers.map(h => {
+          const val = String(row[h] ?? '')
+          return val.includes(',') || val.includes('"') ? `"${val.replace(/"/g, '""')}"` : val
+        }).join(',')
+      )
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'dashboard-data.json'
+    a.download = `dashboard-export-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
+    toast.success('Dashboard exported as CSV')
+  }, [buildExportData, dateRange, toast])
+
+  const handleExportPDF = useCallback(async () => {
+    setShowExportMenu(false)
+    toast.info('Generating PDF...')
+
+    try {
+      const { default: jsPDF } = await import('jspdf')
+      const doc = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = doc.internal.pageSize.getWidth()
+      let y = 20
+
+      // Header / branding
+      doc.setFontSize(20)
+      doc.setTextColor(37, 99, 235) // brand blue
+      doc.text('RealEstate Pro', 14, y)
+      y += 8
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text(`Dashboard Report — ${new Date().toLocaleDateString()} — Date Range: ${dateRange}`, 14, y)
+      y += 2
+      doc.setDrawColor(37, 99, 235)
+      doc.setLineWidth(0.5)
+      doc.line(14, y, pageWidth - 14, y)
+      y += 10
+
+      // Stats cards
+      doc.setFontSize(14)
+      doc.setTextColor(0, 0, 0)
+      doc.text('Overview', 14, y)
+      y += 8
+      doc.setFontSize(10)
+      for (const stat of stats) {
+        doc.setTextColor(60, 60, 60)
+        doc.text(`${stat.name}: ${stat.value}`, 18, y)
+        doc.setTextColor(130, 130, 130)
+        doc.text(`(${stat.change}, Target: ${stat.target})`, 100, y)
+        y += 6
+      }
+      y += 4
+
+      // Pipeline funnel
+      if (conversionData.length > 0) {
+        doc.setFontSize(14)
+        doc.setTextColor(0, 0, 0)
+        doc.text('Pipeline', 14, y)
+        y += 8
+        doc.setFontSize(10)
+        for (const stage of conversionData) {
+          doc.setTextColor(60, 60, 60)
+          doc.text(`${stage.stage}: ${stage.count} leads (${stage.rate}%)`, 18, y)
+          y += 6
+        }
+        y += 4
+      }
+
+      // Top campaigns
+      if (topCampaigns.length > 0) {
+        if (y > 250) { doc.addPage(); y = 20 }
+        doc.setFontSize(14)
+        doc.setTextColor(0, 0, 0)
+        doc.text('Top Campaigns', 14, y)
+        y += 8
+        doc.setFontSize(10)
+        for (const c of topCampaigns) {
+          doc.setTextColor(60, 60, 60)
+          doc.text(`${c.name} — ${c.conversions} conversions, Opens: ${c.opens}, Clicks: ${c.clicks}, ROI: ${c.roi}`, 18, y)
+          y += 6
+        }
+        y += 4
+      }
+
+      // Revenue
+      if (revenueData.length > 0) {
+        if (y > 250) { doc.addPage(); y = 20 }
+        doc.setFontSize(14)
+        doc.setTextColor(0, 0, 0)
+        doc.text('Revenue Timeline', 14, y)
+        y += 8
+        doc.setFontSize(10)
+        for (const r of revenueData) {
+          doc.setTextColor(60, 60, 60)
+          doc.text(`${r.month}: $${Number(r.revenue).toLocaleString()} (${r.leads} deals)`, 18, y)
+          y += 6
+        }
+        y += 4
+      }
+
+      // Tasks
+      if (upcomingTasks.length > 0) {
+        if (y > 250) { doc.addPage(); y = 20 }
+        doc.setFontSize(14)
+        doc.setTextColor(0, 0, 0)
+        doc.text('Tasks', 14, y)
+        y += 8
+        doc.setFontSize(10)
+        for (const t of upcomingTasks) {
+          doc.setTextColor(60, 60, 60)
+          doc.text(`${t.title} — ${t.status} (Due: ${t.due}, Priority: ${t.priority})`, 18, y)
+          y += 6
+        }
+        y += 4
+      }
+
+      // Activities
+      if (recentActivities.length > 0) {
+        if (y > 250) { doc.addPage(); y = 20 }
+        doc.setFontSize(14)
+        doc.setTextColor(0, 0, 0)
+        doc.text('Recent Activity', 14, y)
+        y += 8
+        doc.setFontSize(10)
+        for (const a of recentActivities) {
+          doc.setTextColor(60, 60, 60)
+          doc.text(`${a.action} — ${a.lead} (${a.time})`, 18, y)
+          y += 6
+        }
+      }
+
+      // Footer
+      const totalPages = doc.getNumberOfPages()
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setTextColor(150, 150, 150)
+        doc.text(`RealEstate Pro — Page ${i} of ${totalPages}`, 14, doc.internal.pageSize.getHeight() - 10)
+        doc.text(new Date().toLocaleString(), pageWidth - 60, doc.internal.pageSize.getHeight() - 10)
+      }
+
+      doc.save(`dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`)
+      toast.success('Dashboard exported as PDF')
+    } catch (error) {
+      console.error('PDF export failed:', error)
+      toast.error('Failed to generate PDF. Please try CSV export.')
+    }
+  }, [stats, conversionData, topCampaigns, revenueData, upcomingTasks, recentActivities, dateRange, toast])
 
   // Show loading state while fetching data
   if (isLoading) {
@@ -450,10 +676,30 @@ function Dashboard() {
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+          <div className="relative" ref={exportMenuRef}>
+            <Button variant="outline" size="sm" onClick={() => setShowExportMenu(!showExportMenu)}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            {showExportMenu && (
+              <div className="absolute right-0 mt-1 w-40 bg-card border rounded-md shadow-lg z-10">
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-t-md"
+                  onClick={handleExportCSV}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Export CSV
+                </button>
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-b-md"
+                  onClick={handleExportPDF}
+                >
+                  <FileText className="h-4 w-4" />
+                  Export PDF
+                </button>
+              </div>
+            )}
+          </div>
           <select
             className="px-3 py-2 text-sm border rounded-md"
             value={dateRange}

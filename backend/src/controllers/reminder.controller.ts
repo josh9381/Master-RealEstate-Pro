@@ -4,6 +4,14 @@ import { UnauthorizedError } from '../middleware/errorHandler'
 import { z } from 'zod'
 
 // Zod schemas
+const recurrenceFields = {
+  isRecurring: z.boolean().optional().default(false),
+  recurrencePattern: z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM']).optional(),
+  recurrenceInterval: z.number().int().min(1).optional(),
+  recurrenceEndDate: z.string().datetime().optional(),
+  recurrenceCount: z.number().int().min(1).optional(),
+}
+
 const createReminderSchema = z.object({
   leadId: z.string(),
   title: z.string().min(1).max(200),
@@ -14,6 +22,7 @@ const createReminderSchema = z.object({
   channelEmail: z.boolean().optional().default(false),
   channelSms: z.boolean().optional().default(false),
   channelPush: z.boolean().optional().default(false),
+  ...recurrenceFields,
 })
 
 const updateReminderSchema = z.object({
@@ -25,6 +34,7 @@ const updateReminderSchema = z.object({
   channelEmail: z.boolean().optional(),
   channelSms: z.boolean().optional(),
   channelPush: z.boolean().optional(),
+  ...recurrenceFields,
 })
 
 /**
@@ -131,7 +141,8 @@ export async function createReminder(req: Request, res: Response): Promise<void>
     return
   }
 
-  const { leadId, title, note, dueAt, priority, channelInApp, channelEmail, channelSms, channelPush } = parsed.data
+  const { leadId, title, note, dueAt, priority, channelInApp, channelEmail, channelSms, channelPush,
+    isRecurring, recurrencePattern, recurrenceInterval, recurrenceEndDate, recurrenceCount } = parsed.data
 
   // Verify lead belongs to user's org
   const lead = await prisma.lead.findFirst({
@@ -157,6 +168,12 @@ export async function createReminder(req: Request, res: Response): Promise<void>
       channelEmail,
       channelSms,
       channelPush,
+      isRecurring: isRecurring || false,
+      recurrencePattern: isRecurring ? recurrencePattern : undefined,
+      recurrenceInterval: isRecurring && recurrencePattern === 'CUSTOM' ? recurrenceInterval : undefined,
+      recurrenceEndDate: isRecurring && recurrenceEndDate ? new Date(recurrenceEndDate) : undefined,
+      recurrenceCount: isRecurring ? recurrenceCount : undefined,
+      occurrenceNumber: 0,
     },
     include: {
       lead: {

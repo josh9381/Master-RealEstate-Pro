@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/Badge';
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { settingsApi, messagesApi } from '@/lib/api';
 
 const TwilioSetup = () => {
   const { toast } = useToast();
+  const showConfirm = useConfirm();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
@@ -259,7 +261,7 @@ const TwilioSetup = () => {
   };
 
   const handleDeleteCredentials = async () => {
-    if (!confirm('Are you sure you want to delete your stored Twilio credentials? This action cannot be undone.')) {
+    if (!await showConfirm({ title: 'Delete Credentials', message: 'Are you sure you want to delete your stored Twilio credentials? This action cannot be undone.', confirmLabel: 'Delete', variant: 'destructive' })) {
       return;
     }
 

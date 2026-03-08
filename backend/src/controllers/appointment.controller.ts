@@ -532,3 +532,78 @@ export async function sendReminder(req: Request, res: Response): Promise<void> {
     },
   });
 }
+
+// ──── ICS Export ────
+export async function exportAppointmentICS(req: Request, res: Response) {
+  const organizationId = req.user!.organizationId;
+  const { id } = req.params;
+
+  const appointment = await prisma.appointment.findFirst({
+    where: { id, organizationId },
+    include: { lead: { select: { firstName: true, lastName: true, email: true } }, user: { select: { firstName: true, email: true } } },
+  });
+
+  if (!appointment) {
+    throw new NotFoundError('Appointment not found');
+  }
+
+  const uid = `${appointment.id}@realestatecrm`;
+  const now = formatICSDate(new Date());
+  const dtStart = formatICSDate(new Date(appointment.startTime));
+  const dtEnd = formatICSDate(new Date(appointment.endTime));
+  const summary = escapeICSText(appointment.title);
+  const description = escapeICSText(appointment.description || '');
+  const location = escapeICSText(appointment.location || appointment.meetingUrl || '');
+  const organizer = appointment.user?.email ? `ORGANIZER;CN=${escapeICSText(appointment.user?.firstName || '')}:mailto:${appointment.user.email}` : '';
+
+  const attendees: string[] = [];
+  if (appointment.lead?.email) {
+    attendees.push(`ATTENDEE;CN=${escapeICSText(`${appointment.lead.firstName || ''} ${appointment.lead.lastName || ''}`.trim())}:mailto:${appointment.lead.email}`);
+  }
+  if (Array.isArray(appointment.attendees)) {
+    for (const a of appointment.attendees as { name?: string; email?: string }[]) {
+      if (a.email) attendees.push(`ATTENDEE;CN=${escapeICSText(a.name || a.email)}:mailto:${a.email}`);
+    }
+  }
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//RealEstateCRM//Appointments//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${now}`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    `SUMMARY:${summary}`,
+    ...(description ? [`DESCRIPTION:${description}`] : []),
+    ...(location ? [`LOCATION:${location}`] : []),
+    ...(organizer ? [organizer] : []),
+    ...attendees,
+    `STATUS:${appointment.status === 'CANCELLED' ? 'CANCELLED' : 'CONFIRMED'}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT15M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${summary}`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ];
+
+  const icsContent = lines.join('\r\n');
+  const filename = `appointment-${appointment.id}.ics`;
+
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.status(200).send(icsContent);
+}
+
+function formatICSDate(date: Date): string {
+  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+function escapeICSText(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}

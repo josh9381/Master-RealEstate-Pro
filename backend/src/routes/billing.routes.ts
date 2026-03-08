@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express'
 import { authenticate } from '../middleware/auth'
 import prisma from '../config/database'
+import { getStripeService } from '../services/stripe.service'
+import { STRIPE_PRICE_IDS, PLAN_FEATURES } from '../config/subscriptions'
+import { SubscriptionTier } from '@prisma/client'
 
 const router = Router()
 
@@ -36,7 +39,7 @@ router.get('/subscription', async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: {
-        plan: subscription?.tier || org?.subscriptionTier || 'FREE',
+        plan: subscription?.tier || org?.subscriptionTier || 'STARTER',
         status: subscription?.status || 'ACTIVE',
         currentPeriodEnd: subscription?.currentPeriodEnd || null,
         trialEndsAt: org?.trialEndsAt || null,
@@ -58,7 +61,7 @@ router.post('/checkout', async (req: Request, res: Response) => {
   if (!process.env.STRIPE_SECRET_KEY) {
     res.status(501).json({
       success: false,
-      message: 'Stripe checkout not configured. Set STRIPE_SECRET_KEY in environment variables to enable billing.',
+      message: 'Stripe not configured. Set STRIPE_SECRET_KEY to enable billing.',
     })
     return
   }
@@ -70,12 +73,92 @@ router.post('/checkout', async (req: Request, res: Response) => {
       return
     }
 
-    // TODO: Implement actual Stripe checkout session creation
-    // using getStripeService().createCheckoutSession(...)
-    res.status(501).json({
-      success: false,
-      message: 'Stripe checkout session creation not yet fully implemented. Configure Stripe price IDs.',
-    })
+    const tier = planId.toUpperCase() as SubscriptionTier
+    if (tier === 'ENTERPRISE') {
+      res.status(400).json({ success: false, message: 'Enterprise plans require contacting sales.' })
+      return
+    }
+
+    const priceId = STRIPE_PRICE_IDS[tier as Exclude<SubscriptionTier, 'ENTERPRISE'>]
+    if (!priceId) {
+      res.status(400).json({ success: false, message: `No Stripe price configured for plan: ${planId}` })
+      return
+    }
+
+    const stripe = getStripeService()
+    const orgId = req.user!.organizationId
+
+    // Ensure Subscription exists with a Stripe customer
+    let sub = await prisma.subscription.findUnique({ where: { organizationId: orgId } })
+    let customerId = sub?.stripeCustomerId
+
+    if (!customerId) {
+      const org = await prisma.organization.findUnique({
+        where: { id: orgId },
+        select: { name: true, _count: false },
+      })
+      const user = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { email: true } })
+      customerId = await stripe.createCustomer({
+        email: user?.email || '',
+        name: org?.name || '',
+        metadata: { organizationId: orgId },
+      })
+    }
+
+    if (!sub) {
+      sub = await prisma.subscription.create({
+        data: {
+          organizationId: orgId,
+          tier: 'STARTER',
+          status: 'INCOMPLETE',
+          stripeCustomerId: customerId,
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(),
+        },
+      })
+    } else if (!sub.stripeCustomerId) {
+      await prisma.subscription.update({
+        where: { id: sub.id },
+        data: { stripeCustomerId: customerId },
+      })
+    }
+
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+    const features = PLAN_FEATURES[tier]
+    const trialDays = features?.trialDays || 0
+
+    // If org already has a Stripe subscription, update it instead
+    if (sub.stripeSubscriptionId) {
+      await stripe.updateSubscription(sub.stripeSubscriptionId, priceId)
+      await prisma.subscription.update({
+        where: { id: sub.id },
+        data: { tier, stripePriceId: priceId },
+      })
+      await prisma.organization.update({
+        where: { id: orgId },
+        data: { subscriptionTier: tier },
+      })
+      res.json({
+        success: true,
+        data: { action: 'updated', message: `Subscription updated to ${tier}` },
+      })
+      return
+    }
+
+    const url = await stripe.createCheckoutSession(
+      customerId,
+      priceId,
+      `${baseUrl}/billing?success=true`,
+      `${baseUrl}/billing?canceled=true`,
+    )
+
+    // If trial is available, create subscription with trial instead of checkout
+    if (trialDays > 0 && !sub.stripeSubscriptionId) {
+      // The checkout session handles the trial via Stripe config
+      console.log(`Creating checkout with ${trialDays}-day trial for ${tier}`)
+    }
+
+    res.json({ success: true, data: { url } })
   } catch (error) {
     console.error('Create checkout session error:', error)
     res.status(500).json({ success: false, message: 'Failed to create checkout session' })
@@ -91,18 +174,27 @@ router.post('/portal', async (req: Request, res: Response) => {
   if (!process.env.STRIPE_SECRET_KEY) {
     res.status(501).json({
       success: false,
-      message: 'Stripe billing portal not configured. Set STRIPE_SECRET_KEY in environment variables to enable billing management.',
+      message: 'Stripe billing portal not configured.',
     })
     return
   }
 
   try {
-    // TODO: Implement actual Stripe billing portal session
-    // using getStripeService().createBillingPortal(...)
-    res.status(501).json({
-      success: false,
-      message: 'Stripe billing portal not yet fully implemented.',
+    const sub = await prisma.subscription.findUnique({
+      where: { organizationId: req.user!.organizationId },
+      select: { stripeCustomerId: true },
     })
+
+    if (!sub?.stripeCustomerId) {
+      res.status(400).json({ success: false, message: 'No billing account found. Subscribe to a plan first.' })
+      return
+    }
+
+    const stripe = getStripeService()
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+    const url = await stripe.createBillingPortal(sub.stripeCustomerId, `${baseUrl}/billing`)
+
+    res.json({ success: true, data: { url } })
   } catch (error) {
     console.error('Create billing portal error:', error)
     res.status(500).json({ success: false, message: 'Failed to create billing portal session' })
@@ -116,10 +208,10 @@ router.post('/portal', async (req: Request, res: Response) => {
  */
 router.get('/invoices', async (req: Request, res: Response) => {
   try {
-    // Try to fetch invoices from the database first
-    const subscription = await prisma.subscription.findUnique({
+    const sub = await prisma.subscription.findUnique({
       where: { organizationId: req.user!.organizationId },
       select: {
+        stripeCustomerId: true,
         Invoice: {
           orderBy: { createdAt: 'desc' },
           take: 20,
@@ -127,13 +219,25 @@ router.get('/invoices', async (req: Request, res: Response) => {
       },
     })
 
+    // If Stripe is configured and we have a customer, fetch from Stripe
+    if (process.env.STRIPE_SECRET_KEY && sub?.stripeCustomerId) {
+      try {
+        const stripe = getStripeService()
+        const invoices = await stripe.listInvoices(sub.stripeCustomerId, 20)
+        res.json({ success: true, data: invoices })
+        return
+      } catch (error) {
+        console.error('[BILLING] Failed to fetch Stripe invoices:', error)
+        // Fall through to DB invoices
+      }
+    }
+
     res.json({
       success: true,
-      data: subscription?.Invoice || [],
+      data: sub?.Invoice || [],
     })
   } catch (error) {
     console.error('Get invoices error:', error)
-    // Gracefully return empty array if Invoice model doesn't exist yet
     res.json({ success: true, data: [] })
   }
 })
@@ -145,19 +249,23 @@ router.get('/invoices', async (req: Request, res: Response) => {
  */
 router.get('/payment-methods', async (req: Request, res: Response) => {
   if (!process.env.STRIPE_SECRET_KEY) {
-    // No Stripe configured — return empty array gracefully
-    res.json({
-      success: true,
-      data: [],
-      message: 'Stripe not configured. No payment methods available.',
-    })
+    res.json({ success: true, data: [] })
     return
   }
 
   try {
-    // TODO: Implement Stripe payment methods retrieval
-    // const subscription = await prisma.subscription.findUnique(...)
-    // const methods = await stripe.paymentMethods.list({ customer: subscription.stripeCustomerId })
+    const sub = await prisma.subscription.findUnique({
+      where: { organizationId: req.user!.organizationId },
+      select: { stripeCustomerId: true },
+    })
+
+    if (!sub?.stripeCustomerId) {
+      res.json({ success: true, data: [] })
+      return
+    }
+
+    // Payment methods would need direct Stripe SDK call
+    // For now return empty; the portal handles payment method management
     res.json({ success: true, data: [] })
   } catch (error) {
     console.error('Get payment methods error:', error)

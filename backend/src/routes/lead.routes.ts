@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate';
 import { asyncHandler } from '../utils/asyncHandler';
 import { sensitiveLimiter } from '../middleware/rateLimiter';
+import { enforcePlanLimit } from '../middleware/planLimits';
 import {
   createLeadSchema,
   updateLeadSchema,
@@ -13,6 +14,12 @@ import {
   bulkUpdateLeadsSchema,
   mergeLeadsSchema,
 } from '../validators/lead.validator';
+import {
+  uploadDocuments,
+  getDocuments,
+  deleteDocument,
+} from '../controllers/document.controller';
+import { documentUpload } from '../config/upload';
 import {
   getLeads,
   getLead,
@@ -151,7 +158,8 @@ router.get(
 router.post(
   '/',
   validateBody(createLeadSchema),
-  sensitiveLimiter, // Limit lead creation
+  enforcePlanLimit('leads'),
+  sensitiveLimiter,
   asyncHandler(createLead)
 );
 
@@ -311,6 +319,42 @@ router.post(
 router.get(
   '/scores/:category',
   asyncHandler(getLeadsByScore)
+);
+
+// ─── Lead Document Routes ────────────────────────────────────────
+
+/**
+ * @route   POST /api/leads/:id/documents
+ * @desc    Upload documents for a lead (max 5 per request, 20 per lead)
+ * @access  Private
+ */
+router.post(
+  '/:id/documents',
+  (req, _res, next) => { req.params.leadId = req.params.id; next(); },
+  documentUpload,
+  asyncHandler(uploadDocuments)
+);
+
+/**
+ * @route   GET /api/leads/:id/documents
+ * @desc    Get all documents for a lead
+ * @access  Private
+ */
+router.get(
+  '/:id/documents',
+  (req, _res, next) => { req.params.leadId = req.params.id; next(); },
+  asyncHandler(getDocuments)
+);
+
+/**
+ * @route   DELETE /api/leads/:id/documents/:documentId
+ * @desc    Delete a document from a lead
+ * @access  Private
+ */
+router.delete(
+  '/:id/documents/:documentId',
+  (req, _res, next) => { req.params.leadId = req.params.id; next(); },
+  asyncHandler(deleteDocument)
 );
 
 export default router;

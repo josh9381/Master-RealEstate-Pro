@@ -14,6 +14,7 @@ import { corsOptions } from './config/cors'
 import { checkAndExecuteScheduledCampaigns } from './services/campaign-scheduler.service'
 import { startWorkflowJobs, setupGracefulShutdown } from './jobs/workflowProcessor'
 import { startDataCleanup, stopDataCleanup } from './jobs/dataCleanup'
+import { startReportScheduler, stopReportScheduler } from './jobs/reportScheduler'
 import { updateAllLeadScores } from './services/leadScoring.service'
 import { getMLOptimizationService } from './services/ml-optimization.service'
 import { acquireLock, releaseLock } from './utils/distributedLock'
@@ -31,6 +32,7 @@ import intelligenceRoutes from './routes/intelligence.routes'
 import abtestRoutes from './routes/abtest.routes'
 import emailTemplateRoutes from './routes/email-template.routes'
 import smsTemplateRoutes from './routes/sms-template.routes'
+import messageTemplateRoutes from './routes/message-template.routes'
 import messageRoutes from './routes/message.routes'
 import workflowRoutes from './routes/workflow.routes'
 import settingsRoutes from './routes/settings.routes'
@@ -53,6 +55,12 @@ import pipelineRoutes from './routes/pipeline.routes'
 import reminderRoutes from './routes/reminder.routes'
 import pushRoutes from './routes/push.routes'
 import callRoutes from './routes/call.routes'
+import reportScheduleRoutes from './routes/reportSchedule.routes'
+import goalRoutes from './routes/goal.routes'
+import auditRoutes from './routes/audit.routes'
+import supportRoutes from './routes/support.routes'
+import docsRoutes from './routes/docs.routes'
+import apiKeyRoutes from './routes/apiKey.routes'
 import { processRemindersDue } from './jobs/reminderProcessor'
 import { correlationId, requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
@@ -246,6 +254,7 @@ app.use('/api/intelligence', intelligenceRoutes)
 app.use('/api/ab-tests', abtestRoutes)
 app.use('/api/email-templates', emailTemplateRoutes)
 app.use('/api/sms-templates', smsTemplateRoutes)
+app.use('/api/message-templates', messageTemplateRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/workflows', workflowRoutes)
 app.use('/api/settings', settingsRoutes)
@@ -268,6 +277,12 @@ app.use('/api/pipelines', pipelineRoutes)
 app.use('/api/reminders', reminderRoutes)
 app.use('/api/push', pushRoutes)
 app.use('/api/calls', callRoutes)
+app.use('/api/report-schedules', reportScheduleRoutes)
+app.use('/api/goals', goalRoutes)
+app.use('/api/admin/audit-logs', auditRoutes)
+app.use('/api/support-tickets', supportRoutes)
+app.use('/api/docs', docsRoutes)
+app.use('/api/api-keys', apiKeyRoutes)
 
 // 404 handler
 app.use(notFoundHandler)
@@ -405,6 +420,11 @@ httpServer.listen(PORT, () => {
   logger.info('Starting stale data cleanup scheduler...')
   startDataCleanup()
   logger.info('Data cleanup scheduler active')
+
+  // Start report scheduler cron (Phase 5.3)
+  logger.info('Starting report scheduler...')
+  startReportScheduler()
+  logger.info('Report scheduler active')
 })
 
 // ── Process-level error handlers (0.5) ───────────────────────────────
@@ -431,6 +451,7 @@ async function gracefulShutdown(signal: string) {
 
   // Stop background jobs
   stopDataCleanup()
+  stopReportScheduler()
 
   // Stop accepting new connections
   httpServer.close(() => {

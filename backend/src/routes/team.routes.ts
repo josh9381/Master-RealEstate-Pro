@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { teamInviteLimiter } from '../middleware/rateLimiter';
+import { enforcePlanLimit } from '../middleware/planLimits';
 import { validateBody } from '../middleware/validate';
 import { asyncHandler } from '../utils/asyncHandler';
 import {
@@ -73,7 +74,7 @@ router.get('/:id/members', asyncHandler(listMembers));
  * @desc    Invite team member
  * @access  Private
  */
-router.post('/:id/invite', teamInviteLimiter, validateBody(inviteMemberSchema), asyncHandler(inviteMember));
+router.post('/:id/invite', teamInviteLimiter, enforcePlanLimit('users'), validateBody(inviteMemberSchema), asyncHandler(inviteMember));
 
 /**
  * @route   DELETE /api/teams/:id/members/:userId

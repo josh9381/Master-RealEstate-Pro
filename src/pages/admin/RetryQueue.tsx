@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import api from '@/lib/api';
 
 const RetryQueue = () => {
   const { toast } = useToast();
+  const showConfirm = useConfirm();
   const [failedJobs, setFailedJobs] = useState([
     {
       id: '1',
@@ -89,12 +91,13 @@ const RetryQueue = () => {
   };
 
   const handleCancel = async (jobId: string, jobName: string) => {
-    if (!confirm(`Cancel ${jobName}? This will remove it from the retry queue.`)) return;
+    if (!await showConfirm({ title: 'Cancel Job', message: `Cancel ${jobName}? This will remove it from the retry queue.`, confirmLabel: 'Cancel Job', variant: 'destructive' })) return;
     try {
       await api.delete(`/deliverability/retry/${jobId}`);
       setFailedJobs(failedJobs.filter(j => j.id !== jobId));
       toast.success(`${jobName} cancelled and removed from queue`);
-    } catch {
+    } catch (error) {
+      console.error('Failed to cancel job:', error)
       // Fallback: remove from local state
       setFailedJobs(failedJobs.filter(j => j.id !== jobId));
       toast.success(`${jobName} cancelled and removed from queue`);

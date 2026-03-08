@@ -1,15 +1,35 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Book, Video, MessageCircle, Search, Keyboard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { KeyboardShortcutsModal } from '@/components/help/KeyboardShortcutsModal';
+import { docsApi } from '@/lib/api';
 
 const HelpCenter = () => {
   const navigate = useNavigate();
   const [showShortcuts, setShowShortcuts] = useState(false)
-  const categories = [
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Fetch real category data from docs API
+  const { data: catData } = useQuery({
+    queryKey: ['help-center-doc-categories'],
+    queryFn: () => docsApi.getCategories(),
+  })
+
+  const apiCategories: { name: string; articleCount: number }[] = catData?.data ?? []
+
+  // Build categories from API data, fall back to static labels for now
+  const categories = apiCategories.length > 0
+    ? apiCategories.map(c => ({
+        title: c.name,
+        description: '',
+        articles: c.articleCount,
+        icon: Book,
+      }))
+    : [
     {
       title: 'Getting Started',
       description: 'Learn the basics of using the platform',
@@ -46,7 +66,13 @@ const HelpCenter = () => {
       articles: 10,
       icon: Book,
     },
-  ];
+  ]
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      navigate(`/help/docs?search=${encodeURIComponent(searchQuery.trim())}`)
+    }
+  }
 
   const popularArticles = [
     'How to create your first email campaign',
@@ -95,14 +121,20 @@ const HelpCenter = () => {
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search for help..." className="pl-10" />
+              <Input
+                placeholder="Search for help..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+              />
             </div>
-            <Button>Search</Button>
+            <Button onClick={handleSearch}>Search</Button>
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
             <span className="text-sm text-muted-foreground">Popular searches:</span>
             {['campaigns', 'leads', 'integrations', 'billing'].map((tag, index) => (
-              <Button key={index} variant="ghost" size="sm">
+              <Button key={index} variant="ghost" size="sm" onClick={() => navigate(`/help/docs?search=${encodeURIComponent(tag)}`)}>
                 {tag}
               </Button>
             ))}

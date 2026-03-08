@@ -7,14 +7,15 @@ import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { adminApi } from '@/lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { APP_NAME } from '@/lib/appConfig';
 
 const SystemSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   // General Settings
-  const [systemName, setSystemName] = useState('Your CRM System');
-  const [systemUrl, setSystemUrl] = useState('https://crm.yourcompany.com');
+  const [systemName, setSystemName] = useState(APP_NAME);
+  const [systemUrl, setSystemUrl] = useState(window.location.origin);
   const [systemDescription, setSystemDescription] = useState('Customer Relationship Management System for sales and marketing teams');
   const [language, setLanguage] = useState('en');
   const [timezone, setTimezone] = useState('America/New_York');
@@ -43,8 +44,8 @@ const SystemSettings = () => {
   useEffect(() => {
     if (settingsData) {
       if (settingsData.general) {
-        setSystemName(settingsData.general.systemName || 'Your CRM System');
-        setSystemUrl(settingsData.general.systemUrl || 'https://crm.yourcompany.com');
+        setSystemName(settingsData.general.systemName || APP_NAME);
+        setSystemUrl(settingsData.general.systemUrl || window.location.origin);
         setSystemDescription(settingsData.general.systemDescription || '');
         setLanguage(settingsData.general.language || 'en');
         setTimezone(settingsData.general.timezone || 'America/New_York');

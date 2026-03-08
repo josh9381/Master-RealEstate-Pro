@@ -4,9 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 
 const DebugConsole = () => {
   const { toast } = useToast();
+  const showConfirm = useConfirm();
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -57,8 +59,8 @@ const DebugConsole = () => {
     },
   ]);
 
-  const handleClearLogs = () => {
-    if (confirm('Are you sure you want to clear all logs? This cannot be undone.')) {
+  const handleClearLogs = async () => {
+    if (await showConfirm({ title: 'Clear Logs', message: 'Are you sure you want to clear all logs? This cannot be undone.', confirmLabel: 'Clear', variant: 'destructive' })) {
       setLogs([]);
       toast.success('All logs cleared successfully');
     }

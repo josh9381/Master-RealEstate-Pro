@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { segmentsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface SegmentRule {
@@ -68,6 +69,7 @@ const COLOR_OPTIONS = [
 
 const Segmentation = () => {
   const { toast } = useToast();
+  const showConfirm = useConfirm();
   const queryClient = useQueryClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showMembersDialog, setShowMembersDialog] = useState(false);
@@ -168,7 +170,7 @@ const Segmentation = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this segment?')) return;
+    if (!await showConfirm({ title: 'Delete Segment', message: 'Are you sure you want to delete this segment?', confirmLabel: 'Delete', variant: 'destructive' })) return;
     deleteMutation.mutate(id);
   };
 

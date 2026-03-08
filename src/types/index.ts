@@ -18,7 +18,7 @@ export interface OrganizationInfo {
   name: string
   domain?: string
   logo?: string
-  subscriptionTier: 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE'
+  subscriptionTier: 'STARTER' | 'PROFESSIONAL' | 'ELITE' | 'TEAM' | 'ENTERPRISE'
   trialEndsAt?: string
   memberCount?: number
 }

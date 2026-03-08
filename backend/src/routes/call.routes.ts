@@ -10,6 +10,8 @@ import {
   updateCall,
   deleteCall,
   getCallStats,
+  getCallQueue,
+  getTodayStats,
 } from '../controllers/call.controller';
 import {
   logCallSchema,
@@ -22,6 +24,20 @@ const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+/**
+ * @route   GET /api/calls/queue
+ * @desc    Get smart call queue — prioritized leads to call
+ * @access  Private
+ */
+router.get('/queue', asyncHandler(getCallQueue));
+
+/**
+ * @route   GET /api/calls/today-stats
+ * @desc    Get call stats for today (current user)
+ * @access  Private
+ */
+router.get('/today-stats', asyncHandler(getTodayStats));
 
 /**
  * @route   GET /api/calls/stats

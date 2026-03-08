@@ -25,6 +25,11 @@ import {
   updateScoringConfigSchema,
   idParamSchema,
   leadIdParamSchema,
+  updateOrgAISettingsSchema,
+  chatFeedbackSchema,
+  insightFeedbackSchema,
+  applyEnrichmentSchema,
+  updateBudgetSettingsSchema,
 } from '../validators/ai.validator'
 import { AI_PLAN_LIMITS } from '../config/subscriptions'
 import prisma from '../config/database'
@@ -42,11 +47,12 @@ async function getUserTier(userId: string, organizationId: string): Promise<Subs
       where: { id: organizationId },
       select: { subscriptionTier: true },
     })
-    const tier = org?.subscriptionTier || 'FREE'
+    const tier = org?.subscriptionTier || 'STARTER'
     tierCache.set(cacheKey, { tier, expiresAt: Date.now() + 60_000 })
     return tier
-  } catch {
-    return 'FREE'
+  } catch (error) {
+    console.error('[AI] Failed to get subscription tier:', error)
+    return 'STARTER'
   }
 }
 
@@ -147,5 +153,26 @@ router.get('/feature-importance', aiController.getFeatureImportance)
 router.get('/scoring-config', scoringConfigController.getScoringConfig)
 router.put('/scoring-config', requireAdmin, validateBody(updateScoringConfigSchema), scoringConfigController.updateScoringConfig)
 router.post('/scoring-config/reset', requireAdmin, scoringConfigController.resetScoringConfig)
+
+// ─── Phase 7: Org-Level AI Settings (admin for write) ───────────────
+router.get('/org-settings', aiController.getOrgSettings)
+router.put('/org-settings', requireAdmin, validateBody(updateOrgAISettingsSchema), aiController.updateOrgSettings)
+router.get('/available-models', aiController.getAvailableModels)
+
+// ─── Phase 7: Cost Dashboard ────────────────────────────────────────
+router.get('/cost-dashboard', aiController.getCostDashboard)
+
+// ─── Phase 7: Feedback ──────────────────────────────────────────────
+router.post('/chat/:id/feedback', validateParams(idParamSchema), validateBody(chatFeedbackSchema), aiController.submitChatFeedback)
+router.post('/insights/:id/feedback', validateParams(idParamSchema), validateBody(insightFeedbackSchema), aiController.submitInsightFeedback)
+router.get('/feedback/stats', aiController.getFeedbackStats)
+
+// ─── Phase 7: Lead Enrichment ───────────────────────────────────────
+router.post('/enrich/:leadId', checkAIUsage('contentGenerations'), validateParams(leadIdParamSchema), aiController.enrichLead)
+router.post('/enrich/:leadId/apply', validateParams(leadIdParamSchema), validateBody(applyEnrichmentSchema), aiController.applyEnrichment)
+
+// ─── Phase 7: Budget Alerts ─────────────────────────────────────────
+router.get('/budget-settings', aiController.getBudgetSettings)
+router.put('/budget-settings', requireAdmin, validateBody(updateBudgetSettingsSchema), aiController.updateBudgetSettings)
 
 export default router

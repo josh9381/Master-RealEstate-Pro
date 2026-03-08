@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { useConfirm } from '@/hooks/useConfirm'
 import { Input } from '@/components/ui/Input'
 import {
   Table,
@@ -55,6 +56,7 @@ const fieldTypes = [
 
 export function CustomFieldsManager() {
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const queryClient = useQueryClient()
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingField, setEditingField] = useState<CustomField | null>(null)
@@ -189,8 +191,8 @@ export function CustomFieldsManager() {
     setShowAddModal(true)
   }
 
-  const handleDeleteField = (id: string) => {
-    if (confirm('Are you sure you want to delete this custom field?')) {
+  const handleDeleteField = async (id: string) => {
+    if (await showConfirm({ title: 'Delete Custom Field', message: 'Are you sure you want to delete this custom field?', confirmLabel: 'Delete', variant: 'destructive' })) {
       deleteFieldMutation.mutate(id)
     }
   }

@@ -26,6 +26,7 @@ import {
   Sparkles,
   TrendingUp,
   SlidersHorizontal,
+  Activity,
 } from 'lucide-react'
 
 const navigation = [
@@ -37,10 +38,11 @@ const navigation = [
     { name: 'Lead Scoring', href: '/ai/lead-scoring', icon: Target },
     { name: 'Insights', href: '/ai/insights', icon: Sparkles },
     { name: 'Predictive', href: '/ai/predictive', icon: TrendingUp },
+    { name: 'AI Analytics', href: '/ai/analytics', icon: Activity },
     { name: 'AI Settings', href: '/ai/settings', icon: SlidersHorizontal },
   ]},
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Communications', href: '/communication', icon: MessageSquare },
+  { name: 'Communications', href: '/communication/inbox', icon: MessageSquare },
   { name: 'Automation', href: '/workflows', icon: Zap },
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Help', href: '/help', icon: HelpCircle },
@@ -68,8 +70,8 @@ export function Sidebar() {
     navigate('/auth/login')
   }
 
-  const displayName = user ? `${user.firstName} ${user.lastName}` : 'User Name'
-  const displayEmail = user?.email || 'user@example.com'
+  const displayName = user ? `${user.firstName} ${user.lastName}` : 'User'
+  const displayEmail = user?.email || ''
   const userInitials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : 'U'
   
   // Filter admin navigation based on user role
@@ -219,9 +221,10 @@ export function Sidebar() {
                         {item.name === 'Subscription' && tier && (
                           <span className={cn(
                             "ml-auto text-xs px-1.5 py-0.5 rounded font-medium",
-                            tier === 'FREE' && "bg-gray-100 text-gray-700",
                             tier === 'STARTER' && "bg-blue-100 text-blue-700",
                             tier === 'PROFESSIONAL' && "bg-purple-100 text-purple-700",
+                            tier === 'ELITE' && "bg-indigo-100 text-indigo-700",
+                            tier === 'TEAM' && "bg-emerald-100 text-emerald-700",
                             tier === 'ENTERPRISE' && "bg-amber-100 text-amber-700",
                           )}>
                             {tier}

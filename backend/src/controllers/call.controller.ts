@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { logger } from '../lib/logger';
+import { pushCallUpdate } from '../config/socket';
 
 /**
  * Log a manual call (not Vapi AI)
@@ -85,6 +86,8 @@ export async function logCall(req: Request, res: Response) {
       logger.warn({ leadId, err }, 'Failed to flag lead as DNC');
     }
   }
+
+  pushCallUpdate(organizationId, { type: direction === 'INBOUND' ? 'inbound' : 'logged', callId: call.id, leadId });
 
   logger.info(`Call logged for lead ${leadId} by user ${userId}: ${outcome}`);
   res.status(201).json({ success: true, data: call });
@@ -208,6 +211,151 @@ export async function deleteCall(req: Request, res: Response) {
   await prisma.call.delete({ where: { id } });
 
   res.json({ success: true, message: 'Call log deleted' });
+}
+
+/**
+ * Get smart call queue — prioritized list of leads to call
+ * GET /api/calls/queue
+ */
+export async function getCallQueue(req: Request, res: Response) {
+  const organizationId = (req as any).user!.organizationId;
+  const limit = Number(req.query.limit) || 25;
+
+  // Get leads that have a phone, are not DNC, sorted by score desc + recently active
+  const leads = await prisma.lead.findMany({
+    where: {
+      organizationId,
+      phone: { not: null },
+      status: { notIn: ['WON', 'LOST'] },
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      status: true,
+      score: true,
+      source: true,
+      company: true,
+      lastContactAt: true,
+      createdAt: true,
+      propertyType: true,
+      transactionType: true,
+      budgetMin: true,
+      budgetMax: true,
+      customFields: true,
+    },
+    orderBy: [{ score: 'desc' }, { lastContactAt: 'asc' }],
+    take: limit * 2, // over-fetch so we can filter & re-sort
+  });
+
+  // Batch-fetch last call and pending reminders for these leads
+  const leadIds = leads.map((l) => l.id);
+  const [lastCalls, pendingReminders] = await Promise.all([
+    prisma.call.findMany({
+      where: { leadId: { in: leadIds } },
+      orderBy: { createdAt: 'desc' },
+      distinct: ['leadId'],
+      select: { leadId: true, createdAt: true, outcome: true },
+    }),
+    prisma.followUpReminder.findMany({
+      where: { leadId: { in: leadIds }, dueAt: { lte: new Date() }, status: 'PENDING' },
+      distinct: ['leadId'],
+      select: { leadId: true, dueAt: true },
+    }),
+  ]);
+
+  const lastCallByLead = new Map(lastCalls.map((c) => [c.leadId, c]));
+  const reminderByLead = new Map(pendingReminders.map((r) => [r.leadId, r]));
+
+  // Filter out DNC leads and ones called in last 24 hours
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const filtered = leads.filter((lead) => {
+    const cf = lead.customFields as Record<string, unknown> | null;
+    if (cf?.doNotCall) return false;
+    const lastCall = lastCallByLead.get(lead.id);
+    if (lastCall && new Date(lastCall.createdAt) > oneDayAgo) return false;
+    return true;
+  });
+
+  // Score and sort: callbacks first, then hot leads, then by recency
+  const scored = filtered.map((lead) => {
+    let priority = lead.score || 0;
+    // Boost leads with pending follow-up reminders (callbacks)
+    if (reminderByLead.has(lead.id)) priority += 200;
+    // Boost leads never contacted
+    if (!lead.lastContactAt) priority += 50;
+    // Boost leads contacted long ago
+    if (lead.lastContactAt) {
+      const daysSince = (Date.now() - new Date(lead.lastContactAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince > 7) priority += 30;
+    }
+    return { ...lead, _priority: priority };
+  });
+
+  scored.sort((a, b) => b._priority - a._priority);
+
+  const queue = scored.slice(0, limit).map(({ _priority, customFields, ...rest }) => {
+    const lastCall = lastCallByLead.get(rest.id);
+    return {
+      ...rest,
+      lastCallAt: lastCall?.createdAt || null,
+      lastCallOutcome: lastCall?.outcome || null,
+      hasCallback: reminderByLead.has(rest.id),
+      priority: _priority,
+    };
+  });
+
+  res.json({ success: true, data: { queue, total: filtered.length } });
+}
+
+/**
+ * Get today's call stats for the current user
+ * GET /api/calls/today-stats
+ */
+export async function getTodayStats(req: Request, res: Response) {
+  const organizationId = (req as any).user!.organizationId;
+  const userId = (req as any).user!.userId;
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const where = { organizationId, calledById: userId, createdAt: { gte: startOfDay } };
+
+  const [totalCalls, byOutcome, totalDuration] = await Promise.all([
+    prisma.call.count({ where }),
+    prisma.call.groupBy({
+      by: ['outcome'],
+      where: { ...where, outcome: { not: null } },
+      _count: true,
+    }),
+    prisma.call.aggregate({
+      where: { ...where, duration: { not: null } },
+      _sum: { duration: true },
+      _avg: { duration: true },
+    }),
+  ]);
+
+  const outcomes = byOutcome.reduce((acc, item) => {
+    if (item.outcome) acc[item.outcome] = item._count;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const answered = (outcomes['ANSWERED'] || 0) + (outcomes['CALLBACK_SCHEDULED'] || 0) + (outcomes['NOT_INTERESTED'] || 0);
+  const connectionRate = totalCalls > 0 ? Math.round((answered / totalCalls) * 100) : 0;
+
+  res.json({
+    success: true,
+    data: {
+      totalCalls,
+      answered,
+      connectionRate,
+      totalTalkTimeSeconds: totalDuration._sum.duration || 0,
+      avgDurationSeconds: Math.round(totalDuration._avg.duration || 0),
+      byOutcome: outcomes,
+    },
+  });
 }
 
 /**

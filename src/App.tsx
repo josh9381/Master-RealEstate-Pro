@@ -21,6 +21,8 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
+import TermsOfService from './pages/auth/TermsOfService'
+import VerifyEmail from './pages/auth/VerifyEmail'
 
 // Public pages
 import { UnsubscribePage } from './pages/unsubscribe/UnsubscribePage'
@@ -44,9 +46,7 @@ const CampaignEdit = lazy(() => import('./pages/campaigns/CampaignEdit'))
 const CampaignTemplates = lazy(() => import('./pages/campaigns/CampaignTemplates'))
 const CampaignSchedule = lazy(() => import('./pages/campaigns/CampaignSchedule'))
 const CampaignReports = lazy(() => import('./pages/campaigns/CampaignReports'))
-const EmailCampaigns = lazy(() => import('./pages/campaigns/EmailCampaigns'))
-const SMSCampaigns = lazy(() => import('./pages/campaigns/SMSCampaigns'))
-const PhoneCampaigns = lazy(() => import('./pages/campaigns/PhoneCampaigns'))
+// EmailCampaigns, SMSCampaigns, PhoneCampaigns merged into CampaignsList (filter tabs) — old URLs redirect
 const ABTesting = lazy(() => import('./pages/campaigns/ABTesting'))
 
 // AI Hub (lazy loaded)
@@ -57,14 +57,21 @@ const PredictiveAnalytics = lazy(() => import('./pages/ai/PredictiveAnalytics'))
 const IntelligenceInsights = lazy(() => import('./pages/ai/IntelligenceInsights'))
 const AIAnalytics = lazy(() => import('./pages/ai/AIAnalytics'))
 const AISettings = lazy(() => import('./pages/ai/AISettings'))
+const OrgAISettings = lazy(() => import('./pages/ai/OrgAISettings'))
+const AICostDashboard = lazy(() => import('./pages/ai/AICostDashboard'))
 
 // Analytics (lazy loaded)
 const AnalyticsDashboard = lazy(() => import('./pages/analytics/AnalyticsDashboard'))
-const CampaignAnalytics = lazy(() => import('./pages/analytics/CampaignAnalytics'))
 const LeadAnalytics = lazy(() => import('./pages/analytics/LeadAnalytics'))
 const ConversionReports = lazy(() => import('./pages/analytics/ConversionReports'))
 const UsageAnalytics = lazy(() => import('./pages/analytics/UsageAnalytics'))
 const CustomReports = lazy(() => import('./pages/analytics/CustomReports'))
+const AttributionReport = lazy(() => import('./pages/analytics/AttributionReport'))
+const GoalTracking = lazy(() => import('./pages/analytics/GoalTracking'))
+const LeadVelocity = lazy(() => import('./pages/analytics/LeadVelocity'))
+const SourceROI = lazy(() => import('./pages/analytics/SourceROI'))
+const FollowUpAnalytics = lazy(() => import('./pages/analytics/FollowUpAnalytics'))
+const PeriodComparison = lazy(() => import('./pages/analytics/PeriodComparison'))
 
 // Communication (lazy loaded)
 const CommunicationInbox = lazy(() => import('./pages/communication/CommunicationInbox'))
@@ -102,11 +109,11 @@ const DataExportWizard = lazy(() => import('./pages/admin/DataExportWizard'))
 const RetryQueue = lazy(() => import('./pages/admin/RetryQueue'))
 const HealthCheckDashboard = lazy(() => import('./pages/admin/HealthCheckDashboard'))
 const DatabaseMaintenance = lazy(() => import('./pages/admin/DatabaseMaintenance'))
+const AuditTrail = lazy(() => import('./pages/admin/AuditTrail'))
 
 // Billing (lazy loaded)
 const BillingPage = lazy(() => import('./pages/billing/BillingPage'))
 const InvoiceDetail = lazy(() => import('./pages/billing/InvoiceDetail'))
-const PaymentMethods = lazy(() => import('./pages/billing/PaymentMethods'))
 
 // Help (lazy loaded)
 const HelpCenter = lazy(() => import('./pages/help/HelpCenter'))
@@ -123,7 +130,6 @@ const CalendarPage = lazy(() => import('./pages/calendar/CalendarPage'))
 const ActivityPage = lazy(() => import('./pages/activity/ActivityPage'))
 const TasksPage = lazy(() => import('./pages/tasks/TasksPage'))
 const PasswordSecurityPage = lazy(() => import('./pages/settings/PasswordSecurityPage'))
-const BillingSubscriptionPage = lazy(() => import('./pages/billing/BillingSubscriptionPage'))
 
 // Phase 5 - Components (lazy loaded)
 const TagsManager = lazy(() => import('./components/settings/TagsManager').then(m => ({ default: m.TagsManager })))
@@ -138,6 +144,7 @@ function App() {
     <Routes>
       {/* Public routes */}
       <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
+      <Route path="/terms-of-service" element={<TermsOfService />} />
 
       {/* Auth routes */}
       <Route element={<AuthLayout />}>
@@ -145,6 +152,7 @@ function App() {
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
         <Route path="/auth/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/verify-email" element={<VerifyEmail />} />
       </Route>
 
       {/* Main app routes */}
@@ -176,9 +184,9 @@ function App() {
         <Route path="/campaigns/templates" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Templates"><CampaignTemplates /></PageErrorBoundary></Suspense>} />
         <Route path="/campaigns/schedule" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Schedule"><CampaignSchedule /></PageErrorBoundary></Suspense>} />
         <Route path="/campaigns/reports" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Reports"><CampaignReports /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/email" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Campaigns"><EmailCampaigns /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/sms" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="SMS Campaigns"><SMSCampaigns /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/phone" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Phone Campaigns"><PhoneCampaigns /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/email" element={<Navigate to="/campaigns?type=email" replace />} />
+        <Route path="/campaigns/sms" element={<Navigate to="/campaigns?type=sms" replace />} />
+        <Route path="/campaigns/phone" element={<Navigate to="/campaigns?type=phone" replace />} />
         <Route path="/campaigns/ab-testing" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="A/B Testing"><ABTesting /></PageErrorBoundary></Suspense>} />
         
         {/* AI Hub */}
@@ -189,21 +197,29 @@ function App() {
         <Route path="/ai/insights" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Insights"><IntelligenceInsights /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Settings"><AISettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/org-settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Org AI Settings"><OrgAISettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/cost-dashboard" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Cost Dashboard"><AICostDashboard /></PageErrorBoundary></Suspense>} />
         
         {/* Analytics */}
         <Route path="/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Analytics Dashboard"><AnalyticsDashboard /></PageErrorBoundary></Suspense>} />
-        <Route path="/analytics/campaigns" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Analytics"><CampaignAnalytics /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/campaigns" element={<Navigate to="/campaigns/reports" replace />} />
         <Route path="/analytics/leads" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Analytics"><LeadAnalytics /></PageErrorBoundary></Suspense>} />
         <Route path="/analytics/conversions" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Conversion Reports"><ConversionReports /></PageErrorBoundary></Suspense>} />
         <Route path="/analytics/usage" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Usage Analytics"><UsageAnalytics /></PageErrorBoundary></Suspense>} />
         <Route path="/analytics/custom-reports" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Custom Reports"><CustomReports /></PageErrorBoundary></Suspense>} />
-        <Route path="/analytics/report-builder" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Report Builder"><CustomReports /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/report-builder" element={<Navigate to="/analytics/custom-reports" replace />} />
+        <Route path="/analytics/attribution" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Attribution Report"><AttributionReport /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/goals" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Goal Tracking"><GoalTracking /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/velocity" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Velocity"><LeadVelocity /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/source-roi" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Source ROI"><SourceROI /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/follow-ups" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Follow-Up Analytics"><FollowUpAnalytics /></PageErrorBoundary></Suspense>} />
+        <Route path="/analytics/comparison" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Period Comparison"><PeriodComparison /></PageErrorBoundary></Suspense>} />
         
         {/* Communication */}
-        <Route path="/communication" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Inbox"><CommunicationInbox /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication" element={<Navigate to="/communication/inbox" replace />} />
         <Route path="/communication/inbox" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Inbox"><CommunicationInbox /></PageErrorBoundary></Suspense>} />
         <Route path="/communication/templates" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Templates"><EmailTemplatesLibrary /></PageErrorBoundary></Suspense>} />
-        <Route path="/communication/calls" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Call Center"><CallCenter /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication/calls" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Cold Call Hub"><CallCenter /></PageErrorBoundary></Suspense>} />
         <Route path="/communication/social" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Social Media"><SocialMediaDashboard /></PageErrorBoundary></Suspense>} />
         <Route path="/communication/newsletter" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Newsletter"><NewsletterManagement /></PageErrorBoundary></Suspense>} />
         
@@ -216,7 +232,7 @@ function App() {
         <Route path="/settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Settings"><SettingsHub /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/profile" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Profile"><ProfileSettings /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/business" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Business Settings"><BusinessSettings /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/team" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Team"><TeamManagement /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/team" element={<Navigate to="/admin/team" replace />} />
         <Route path="/settings/email" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Config"><EmailConfiguration /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/notifications" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Notification Settings"><NotificationSettings /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/security" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Security"><SecuritySettings /></PageErrorBoundary></Suspense>} />
@@ -243,12 +259,13 @@ function App() {
         <Route path="/admin/retry-queue" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Retry Queue"><RetryQueue /></PageErrorBoundary></Suspense></RequireAdmin>} />
         <Route path="/admin/health" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Health Check"><HealthCheckDashboard /></PageErrorBoundary></Suspense></RequireAdmin>} />
         <Route path="/admin/database" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Database Maintenance"><DatabaseMaintenance /></PageErrorBoundary></Suspense></RequireAdmin>} />
+        <Route path="/admin/audit" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Audit Trail"><AuditTrail /></PageErrorBoundary></Suspense></RequireAdmin>} />
         
         {/* Billing */}
         <Route path="/billing" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Billing"><BillingPage /></PageErrorBoundary></Suspense>} />
-        <Route path="/billing/subscription" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Subscription"><BillingSubscriptionPage /></PageErrorBoundary></Suspense>} />
+        <Route path="/billing/subscription" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Billing"><BillingPage /></PageErrorBoundary></Suspense>} />
         <Route path="/billing/invoices/:id" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Invoice"><InvoiceDetail /></PageErrorBoundary></Suspense>} />
-        <Route path="/billing/payment-methods" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Payment Methods"><PaymentMethods /></PageErrorBoundary></Suspense>} />
+        <Route path="/billing/payment-methods" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Billing"><BillingPage /></PageErrorBoundary></Suspense>} />
         
         {/* Help */}
         <Route path="/help" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Help Center"><HelpCenter /></PageErrorBoundary></Suspense>} />

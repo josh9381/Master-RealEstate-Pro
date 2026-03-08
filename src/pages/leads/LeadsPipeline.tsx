@@ -79,7 +79,8 @@ function LeadsPipeline() {
       try {
         const response = await pipelinesApi.getPipelineLeads(activePipeline.id)
         return response.data
-      } catch {
+      } catch (error) {
+        console.error('Pipeline leads endpoint unavailable, using fallback:', error)
         // Fallback: fetch all leads and group by status
         const response = await leadsApi.getLeads({ limit: 200 })
         const leads = response.data?.leads || []

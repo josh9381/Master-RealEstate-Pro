@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
+import { useConfirm } from '@/hooks/useConfirm'
 import { tasksApi, usersApi, CreateTaskData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
 
@@ -37,6 +39,7 @@ const fallbackTasks: Task[] = []
 
 export default function TasksPage() {
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -68,7 +71,7 @@ export default function TasksPage() {
   })
 
   // Fetch tasks from API with server-side pagination (#111)
-  const { data: tasksResponse, isError, error, refetch } = useQuery({
+  const { data: tasksResponse, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['tasks', filter, currentPage, pageSize],
     queryFn: async () => {
       const params: {
@@ -235,8 +238,8 @@ export default function TasksPage() {
     completeTaskMutation.mutate(String(taskId))
   }
 
-  const handleDeleteTask = (taskId: number | string) => {
-    if (confirm('Are you sure you want to delete this task?')) {
+  const handleDeleteTask = async (taskId: number | string) => {
+    if (await showConfirm({ title: 'Delete Task', message: 'Are you sure you want to delete this task?', confirmLabel: 'Delete', variant: 'destructive' })) {
       deleteTaskMutation.mutate(String(taskId))
     }
   }
@@ -288,6 +291,18 @@ export default function TasksPage() {
   }
 
   const isMutating = createTaskMutation.isPending || updateTaskMutation.isPending
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Tasks</h1>
+          <p className="text-muted-foreground">Manage your to-do list and assignments</p>
+        </div>
+        <LoadingSkeleton rows={5} />
+      </div>
+    )
+  }
 
   if (isError) {
     return (

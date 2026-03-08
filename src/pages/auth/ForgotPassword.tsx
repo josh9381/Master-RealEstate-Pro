@@ -25,7 +25,8 @@ const ForgotPassword = () => {
     try {
       await authApi.forgotPassword(email);
       toast.success('Email sent!', 'If that email is registered, a reset link has been sent.');
-    } catch {
+    } catch (error) {
+      console.error('Forgot password request failed:', error)
       toast.error('Something went wrong', 'Please try again later.');
     } finally {
       setLoading(false);
@@ -33,8 +34,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
+      <Card>
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-primary/10 rounded-full">
@@ -84,7 +84,6 @@ const ForgotPassword = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
   );
 };
 

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { Role, ActivityType } from '@prisma/client';
 import { prisma } from '../config/database';
+import path from 'path';
+import fs from 'fs/promises';
 
 // In-memory store for system settings (per organization)
 // In production, this would be a database table
@@ -15,8 +17,8 @@ export const getSystemSettings = async (req: Request, res: Response) => {
     
     const settings = systemSettingsStore[organizationId] || {
       general: {
-        systemName: 'Your CRM System',
-        systemUrl: 'https://crm.yourcompany.com',
+        systemName: process.env.APP_NAME || 'Master RealEstate Pro',
+        systemUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
         systemDescription: 'Customer Relationship Management System for sales and marketing teams',
         language: 'en',
         timezone: 'America/New_York',
@@ -89,7 +91,8 @@ export const healthCheck = async (req: Request, res: Response) => {
         latency: `${dbLatency}ms`,
         uptime: '99.9%',
       });
-    } catch {
+    } catch (error) {
+      console.error('[ADMIN] Database health check failed:', error)
       services.push({
         name: 'Database',
         status: 'down',
@@ -175,9 +178,157 @@ export const runMaintenance = async (req: Request, res: Response) => {
         await prisma.$queryRawUnsafe(`ANALYZE "${safeName}"`);
         return res.json({ success: true, message: `Table ${safeName} optimized` });
 
-      case 'backup':
-        // In production, this would trigger pg_dump or a backup service
-        return res.json({ success: true, message: 'Backup feature requires infrastructure setup (pg_dump or backup service)' });
+      case 'backup': {
+        const orgId = req.user!.organizationId;
+        const userId = req.user!.userId;
+        const backupDir = path.join(process.cwd(), 'backups', orgId);
+        await fs.mkdir(backupDir, { recursive: true });
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `backup-${timestamp}.json`;
+        const filePath = path.join(backupDir, filename);
+
+        // Export all org-scoped data
+        const [leads, campaigns, workflows, users, activities] = await Promise.all([
+          prisma.lead.findMany({ where: { organizationId: orgId } }),
+          prisma.campaign.findMany({ where: { organizationId: orgId } }),
+          prisma.workflow.findMany({ where: { organizationId: orgId } }),
+          prisma.user.findMany({ where: { organizationId: orgId }, select: { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true, createdAt: true } }),
+          prisma.activity.findMany({ where: { organizationId: orgId }, take: 50000, orderBy: { createdAt: 'desc' } }),
+        ]);
+
+        const tables: Record<string, number> = {
+          leads: leads.length,
+          campaigns: campaigns.length,
+          workflows: workflows.length,
+          users: users.length,
+          activities: activities.length,
+        };
+        const totalRecords = Object.values(tables).reduce((a, b) => a + b, 0);
+
+        const payload = {
+          version: '1.0',
+          organizationId: orgId,
+          exportedAt: new Date().toISOString(),
+          tables,
+          data: { leads, campaigns, workflows, users, activities },
+        };
+
+        const jsonStr = JSON.stringify(payload);
+        await fs.writeFile(filePath, jsonStr, 'utf-8');
+        const sizeBytes = Buffer.byteLength(jsonStr, 'utf-8');
+
+        await prisma.dataBackup.create({
+          data: {
+            organizationId: orgId,
+            createdById: userId,
+            filename,
+            filePath,
+            sizeBytes,
+            recordCount: totalRecords,
+            status: 'completed',
+            type: 'manual',
+            tables: tables as object,
+          },
+        });
+
+        const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
+        return res.json({
+          success: true,
+          message: `Backup created successfully (${totalRecords} records, ${sizeMB} MB)`,
+          data: { filename, sizeBytes, recordCount: totalRecords, tables },
+        });
+      }
+
+      case 'backup_history': {
+        const backups = await prisma.dataBackup.findMany({
+          where: { organizationId: req.user!.organizationId },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        });
+        const history = backups.map(b => ({
+          id: b.id,
+          date: b.createdAt.toISOString(),
+          size: b.sizeBytes > 1024 * 1024
+            ? `${(b.sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+            : `${(b.sizeBytes / 1024).toFixed(1)} KB`,
+          status: b.status,
+          type: b.type,
+          recordCount: b.recordCount,
+          filename: b.filename,
+        }));
+        return res.json({ success: true, history });
+      }
+
+      case 'db_stats': {
+        // Real PostgreSQL stats
+        const tableStats = await prisma.$queryRaw<Array<{
+          table_name: string;
+          row_count: bigint;
+          total_bytes: bigint;
+          last_autovacuum: Date | null;
+        }>>`
+          SELECT
+            relname AS table_name,
+            n_live_tup AS row_count,
+            pg_total_relation_size(c.oid) AS total_bytes,
+            last_autovacuum
+          FROM pg_stat_user_tables s
+          JOIN pg_class c ON c.relname = s.relname
+          WHERE s.schemaname = 'public'
+          ORDER BY pg_total_relation_size(c.oid) DESC
+          LIMIT 20
+        `;
+
+        const dbSizeResult = await prisma.$queryRaw<Array<{ size: bigint }>>`
+          SELECT pg_database_size(current_database()) AS size
+        `;
+
+        const connResult = await prisma.$queryRaw<Array<{
+          active: bigint;
+          idle: bigint;
+          total: bigint;
+          max_conn: string;
+        }>>`
+          SELECT
+            count(*) FILTER (WHERE state = 'active') AS active,
+            count(*) FILTER (WHERE state = 'idle') AS idle,
+            count(*) AS total,
+            current_setting('max_connections') AS max_conn
+          FROM pg_stat_activity
+          WHERE datname = current_database()
+        `;
+
+        return res.json({
+          success: true,
+          data: {
+            tables: tableStats.map(t => ({
+              name: t.table_name,
+              records: Number(t.row_count),
+              size: Number(t.total_bytes) > 1024 * 1024
+                ? `${(Number(t.total_bytes) / (1024 * 1024)).toFixed(1)} MB`
+                : `${(Number(t.total_bytes) / 1024).toFixed(1)} KB`,
+              sizeBytes: Number(t.total_bytes),
+              lastVacuum: t.last_autovacuum ? t.last_autovacuum.toISOString() : null,
+            })),
+            databaseSize: Number(dbSizeResult[0]?.size || 0),
+            connections: connResult[0] ? {
+              active: Number(connResult[0].active),
+              idle: Number(connResult[0].idle),
+              total: Number(connResult[0].total),
+              max: parseInt(connResult[0].max_conn, 10),
+            } : null,
+          },
+        });
+      }
+
+      case 'restore':
+        // Restore is intentionally not implemented as a one-click operation
+        // for safety. Admins should use the exported JSON file with manual review.
+        return res.json({
+          success: true,
+          message: 'Restore requires manual review. Download your backup file from the backup history and contact support for assisted restoration.',
+        });
 
       case 'cluster':
         // CLUSTER requires an index, so we just report it needs manual setup
@@ -191,6 +342,37 @@ export const runMaintenance = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'Maintenance operation failed' });
   }
 };
+
+export const downloadBackup = async (req: Request, res: Response) => {
+  try {
+    const { backupId } = req.params;
+    const orgId = req.user!.organizationId;
+
+    const backup = await prisma.dataBackup.findFirst({
+      where: { id: backupId, organizationId: orgId },
+    });
+
+    if (!backup) {
+      return res.status(404).json({ success: false, message: 'Backup not found' });
+    }
+
+    try {
+      await fs.access(backup.filePath);
+    } catch (error) {
+      console.error('[ADMIN] Backup file not found on disk:', error)
+      return res.status(404).json({ success: false, message: 'Backup file no longer available on disk' });
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${backup.filename}"`);
+    const fileStream = await fs.readFile(backup.filePath);
+    return res.send(fileStream);
+  } catch (error) {
+    console.error('Error downloading backup:', error);
+    res.status(500).json({ success: false, message: 'Failed to download backup' });
+  }
+};
+
 export const getAdminStats = async (req: Request, res: Response) => {
   try {
     const organizationId = req.user!.organizationId;

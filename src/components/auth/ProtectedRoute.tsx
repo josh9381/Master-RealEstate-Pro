@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import { useSessionManager } from '@/hooks/useSessionManager'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -10,6 +11,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation()
   const { isAuthenticated, accessToken, fetchCurrentUser } = useAuthStore()
   const [isChecking, setIsChecking] = useState(true)
+
+  // Proactive JWT refresh + idle timeout management
+  useSessionManager()
 
   useEffect(() => {
     const checkAuth = async () => {

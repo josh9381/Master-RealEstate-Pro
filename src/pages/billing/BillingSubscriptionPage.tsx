@@ -28,7 +28,7 @@ export default function BillingSubscriptionPage() {
   })
 
   const subscription = subscriptionRes?.data
-  const currentPlanId = subscription?.plan || 'FREE'
+  const currentPlanId = subscription?.plan || 'STARTER'
 
   // Fetch invoices
   const { data: invoicesRes } = useQuery({
@@ -133,10 +133,10 @@ export default function BillingSubscriptionPage() {
   ]
 
   const currentPlanData = plans.find(p => p.id === currentPlanId) || {
-    name: currentPlanId === 'FREE' ? 'Free' : currentPlanId,
+    name: currentPlanId,
     price: 0,
     interval: 'month',
-    limits: { users: 2, storage: '1GB', campaigns: '5' },
+    limits: { users: 1, storage: '1GB', campaigns: '10' },
   }
 
   return (

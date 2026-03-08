@@ -198,7 +198,8 @@ const NewsletterManagement = () => {
                             });
                             toast.success(`"${newsletter.name}" sent successfully`);
                             refetch();
-                          } catch {
+                          } catch (error) {
+                            console.error('Failed to send newsletter:', error)
                             toast.error(`Failed to send "${newsletter.name}"`);
                           } finally {
                             setSendingId(null);

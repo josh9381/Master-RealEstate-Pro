@@ -17,17 +17,19 @@ export function OrganizationHeader() {
   const tier = getSubscriptionTier()
   const isTrial = isTrialActive()
   
-  const tierColors = {
-    FREE: 'bg-gray-100 text-gray-800',
+  const tierColors: Record<string, string> = {
     STARTER: 'bg-blue-100 text-blue-800',
     PROFESSIONAL: 'bg-purple-100 text-purple-800',
+    ELITE: 'bg-indigo-100 text-indigo-800',
+    TEAM: 'bg-emerald-100 text-emerald-800',
     ENTERPRISE: 'bg-amber-100 text-amber-800',
   }
   
-  const tierIcons = {
-    FREE: null,
+  const tierIcons: Record<string, React.ReactNode | null> = {
     STARTER: null,
     PROFESSIONAL: <Crown className="w-4 h-4" />,
+    ELITE: <Crown className="w-4 h-4" />,
+    TEAM: <Crown className="w-4 h-4" />,
     ENTERPRISE: <Crown className="w-4 h-4" />,
   }
   

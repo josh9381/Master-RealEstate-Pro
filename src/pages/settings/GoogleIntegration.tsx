@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { settingsApi } from '@/lib/api';
 
 const GoogleIntegration = () => {
   const { toast } = useToast();
+  const showConfirm = useConfirm();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [connected, setConnected] = useState(true);
@@ -65,7 +67,7 @@ const GoogleIntegration = () => {
   };
   
   const handleDisconnect = async () => {
-    if (!confirm('Are you sure you want to disconnect Google Workspace?')) return;
+    if (!await showConfirm({ title: 'Disconnect Google', message: 'Are you sure you want to disconnect Google Workspace?', confirmLabel: 'Disconnect', variant: 'destructive' })) return;
     
     setSaving(true);
     try {

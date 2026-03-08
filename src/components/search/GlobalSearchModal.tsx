@@ -23,40 +23,53 @@ interface SearchResult {
 
 export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const navigate = useNavigate()
 
+  // Debounce search input — 300ms delay, min 2 characters
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setDebouncedQuery('')
+      return
+    }
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
   // Fetch leads
   const { data: leadsData } = useQuery({
-    queryKey: ['search-leads', searchQuery],
+    queryKey: ['search-leads', debouncedQuery],
     queryFn: async () => {
-      if (!searchQuery) return null
-      const response = await api.get('/leads', { params: { search: searchQuery, limit: 5 } })
+      if (!debouncedQuery) return null
+      const response = await api.get('/leads', { params: { search: debouncedQuery, limit: 5 } })
       return response.data?.data || response.data
     },
-    enabled: searchQuery.length > 0,
+    enabled: debouncedQuery.length >= 2,
   })
 
   // Fetch campaigns
   const { data: campaignsData } = useQuery({
-    queryKey: ['search-campaigns', searchQuery],
+    queryKey: ['search-campaigns', debouncedQuery],
     queryFn: async () => {
-      if (!searchQuery) return null
-      const response = await api.get('/campaigns', { params: { search: searchQuery, limit: 5 } })
+      if (!debouncedQuery) return null
+      const response = await api.get('/campaigns', { params: { search: debouncedQuery, limit: 5 } })
       return response.data?.data || response.data
     },
-    enabled: searchQuery.length > 0,
+    enabled: debouncedQuery.length >= 2,
   })
 
   // Fetch workflows
   const { data: workflowsData } = useQuery({
-    queryKey: ['search-workflows', searchQuery],
+    queryKey: ['search-workflows', debouncedQuery],
     queryFn: async () => {
-      if (!searchQuery) return null
-      const response = await api.get('/workflows', { params: { search: searchQuery, limit: 5 } })
+      if (!debouncedQuery) return null
+      const response = await api.get('/workflows', { params: { search: debouncedQuery, limit: 5 } })
       return response.data?.data || response.data
     },
-    enabled: searchQuery.length > 0,
+    enabled: debouncedQuery.length >= 2,
   })
 
   // Static pages/features to search
@@ -76,8 +89,8 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const searchResults = useMemo(() => {
     const results: SearchResult[] = []
 
-    // Filter static pages
-    if (searchQuery) {
+    // Filter static pages (uses raw query for instant local filtering)
+    if (searchQuery.length >= 2) {
       const filteredPages = staticPages.filter(page =>
         page.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         page.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -170,6 +183,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   useEffect(() => {
     if (isOpen) {
       setSearchQuery('')
+      setDebouncedQuery('')
       setSelectedIndex(0)
     }
   }, [isOpen])
@@ -231,10 +245,10 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
 
         {/* Results */}
         <div className="max-h-96 overflow-y-auto">
-          {searchQuery === '' ? (
+          {searchQuery.length < 2 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">Start typing to search across your workspace</p>
+              <p className="text-sm">{searchQuery.length === 0 ? 'Start typing to search across your workspace' : 'Type at least 2 characters to search'}</p>
               <div className="mt-4 flex flex-wrap gap-2 justify-center">
                 <kbd className="px-2 py-1 text-xs bg-muted rounded">↑</kbd>
                 <kbd className="px-2 py-1 text-xs bg-muted rounded">↓</kbd>

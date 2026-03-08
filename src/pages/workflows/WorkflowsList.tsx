@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { workflowsApi } from '@/lib/api';
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -40,6 +41,7 @@ interface WorkflowStats {
 
 const WorkflowsList = () => {
   const { toast } = useToast();
+  const showConfirm = useConfirm();
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -122,7 +124,7 @@ const WorkflowsList = () => {
       return;
     }
 
-    if (!window.confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
+    if (!await showConfirm({ title: 'Delete Workflow', message: 'Are you sure you want to delete this workflow? This action cannot be undone.', confirmLabel: 'Delete', variant: 'destructive' })) {
       return;
     }
 

@@ -1,32 +1,35 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { Breadcrumbs } from './Breadcrumbs'
 import { ToastContainer } from '@/components/ui/ToastContainer'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FloatingAIButton } from '@/components/ai/FloatingAIButton'
-import { KeyboardShortcutsModal } from '@/components/help/KeyboardShortcutsModal'
 import { useUIStore } from '@/store/uiStore'
+import { useToast } from '@/hooks/useToast'
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { cn } from '@/lib/utils'
 
 export function MainLayout() {
   const { sidebarOpen } = useUIStore()
-  const [showShortcuts, setShowShortcuts] = useState(false)
+  const { toast } = useToast()
 
+  // Subscribe to real-time WebSocket events (lead/campaign/workflow updates)
+  useRealtimeUpdates()
+
+  // Update document title based on current route + unread notifications
+  usePageTitle()
+
+  // Listen for idle-warning events from the session manager
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        // Only trigger if not in an input field
-        const target = e.target as HTMLElement
-        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
-          e.preventDefault()
-          setShowShortcuts(true)
-        }
-      }
+    const handleIdleWarning = () => {
+      toast.warning('You will be logged out soon due to inactivity. Move your mouse or press a key to stay signed in.')
     }
-    
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [])
+    window.addEventListener('session:idle-warning', handleIdleWarning)
+    return () => window.removeEventListener('session:idle-warning', handleIdleWarning)
+  }, [toast])
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -41,16 +44,14 @@ export function MainLayout() {
         <Header />
         
         <main className="flex-1 overflow-y-auto bg-muted/10 p-6">
+          <Breadcrumbs />
           <Outlet />
         </main>
       </div>
       
       <ToastContainer />
+      <ConfirmDialog />
       <FloatingAIButton />
-      <KeyboardShortcutsModal 
-        isOpen={showShortcuts} 
-        onClose={() => setShowShortcuts(false)} 
-      />
     </div>
   )
 }

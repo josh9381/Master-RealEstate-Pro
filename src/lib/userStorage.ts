@@ -12,8 +12,6 @@
 export const USER_SCOPED_KEYS = [
   'emailSignature',
   'autoAppendSignature',
-  'email-template-settings',
-  'crm_feature_flags',
   'onboarding_wizard_dismissed',
 ] as const;
 

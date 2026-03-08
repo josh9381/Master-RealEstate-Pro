@@ -165,7 +165,8 @@ const SMSCampaigns = () => {
                     toast.success('SMS campaign sent!');
                     setSmsMessage('');
                     loadCampaigns();
-                  } catch {
+                  } catch (error) {
+                    console.error('Failed to send SMS campaign:', error)
                     toast.error('Failed to send SMS campaign');
                   }
                 }}
@@ -185,7 +186,8 @@ const SMSCampaigns = () => {
                     toast.success('SMS campaign scheduled!');
                     setSmsMessage('');
                     loadCampaigns();
-                  } catch {
+                  } catch (error) {
+                    console.error('Failed to schedule SMS campaign:', error)
                     toast.error('Failed to schedule SMS campaign');
                   }
                 }}
@@ -205,7 +207,8 @@ const SMSCampaigns = () => {
                     toast.success('SMS draft saved!');
                     setSmsMessage('');
                     loadCampaigns();
-                  } catch {
+                  } catch (error) {
+                    console.error('Failed to save SMS draft:', error)
                     toast.error('Failed to save draft');
                   }
                 }}

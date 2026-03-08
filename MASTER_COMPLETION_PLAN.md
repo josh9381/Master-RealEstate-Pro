@@ -1,13 +1,13 @@
 # Master Real Estate Pro — 100% Completion Plan
 
 > **Created:** February 28, 2026
-> **Updated:** March 4, 2026 (v11: Phase 4 complete — 14/14 tasks done)
+> **Updated:** March 8, 2026 (v25: Phase 11 tasks 11.12–11.14 complete — voicemail Coming Soon, message templates API, keyboard shortcuts removed)
 > **Total Estimated Days:** ~51 working days
 > **Philosophy: Build everything first, then polish and consolidate. Keep all routes/pages during building so we can see what exists. Admin/Team/Billing/Subscription deferred — decisions pending.**
 >
 > **Legend:** ⚠️ = Decision point — stop and ask user before proceeding | ✅ = Complete | 🔀 = Deferred
 >
-> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). Phase 3A complete (7/7 tasks). Phase 3B complete (8/9 tasks, 1 deferred). Phase 4 complete (14/14 tasks). DS-1 + DS-2 + DS-3 + DS-4 + DS-5 + DS-6 resolved.
+> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). Phase 3A complete (7/7 tasks). Phase 3B complete (8/9 tasks, 1 deferred). Phase 4 complete (14/14 tasks). Phase 5 complete (9/9 tasks). Phase 6 complete (9/9 tasks). Phase 7 complete (8/8 tasks). Phase 8 complete (3/6 tasks, 3 deferred). Phase 9 complete (18/27 tasks done, 9 deferred). Phase 10 complete (13/15 tasks done, 1 deferred, 1 skipped). Phase 11 in progress (14/18 done, all decisions resolved). DS-1 through DS-12 resolved. DS-11B (Phase 11) resolved.
 
 ---
 
@@ -23,12 +23,13 @@
 | **DS-4** | ✅ RESOLVED | 5 | Pipeline default stages (8 stages incl. Nurturing), pipeline types (Buyer/Seller/Rental/Commercial/General + Custom), follow-up delivery channels (resolved in 3.1), call logging outcomes (resolved in 3.2), lead field columns (deferred) |
 | **DS-5** | Before Phase 3B | 5 | Import duplicate criteria, relationship types, lead assignment strategy, real-estate-specific fields, deduplication behavior |
 | **DS-6** | ✅ RESOLVED | 5 | Editor: block-based + MJML (not WYSIWYG — clean HTML). Send-time: timezone + historical engagement. Conditions: all 4 (lead field, email opened, link clicked, time elapsed). Delay: minutes/hours/days/weeks + specific date/time. Retry: 1–3 retries, exponential backoff, notify user on failure (no silent skip). |
-| **DS-7** | Before Phase 5 | 4 | Attribution model, report scheduling/format, goal types, recurrence patterns |
-| **DS-8** | Before Phase 6 | 1 | Terms of Service content/URL |
-| **DS-9** | Before Phase 7 | 3 | AI model list, personalization options, budget thresholds |
-| **DS-10** | Before Phase 8 | 4 | Dialer behavior, recording storage/retention, voicemail management, document file types/limits |
-| **DS-11** | Before Phase 9 | 13 | Help pages (4 fake pages), billing page structure, pricing tiers, proration, usage metering, settings ownership, stub routes, fake UI |
-| **DS-12** | Before Phase 10 | 7 | Integration buttons, route redirects, page merges, stub routes, API integrations page, social dashboard fake UI, compliance settings audit |
+| **DS-7** | ✅ RESOLVED | 4 | Attribution: all 5 models (first-touch, last-touch, linear, time-decay, U-shaped). Scheduling: Daily/Weekly/Biweekly/Monthly/Quarterly/Yearly/Custom(N days), email PDF + in-app history. Goals: 7 metrics (leads, deals, revenue, conversion, calls, appointments, response time) + custom. Recurrence: same 7 patterns as scheduling. |
+| **DS-8** | ✅ RESOLVED | 1 | Terms of Service: placeholder page at /terms-of-service, consent checkbox on registration |
+| **DS-9** | ✅ RESOLVED | 3 | AI models: existing 6 tiers (gpt-5.1/5-mini/5-nano/5.2/5.2-pro/4o-mini). Personalization: system prompt + tone (6) + industry (8) + max tokens. Budget: $25 warning / $50 caution / $100 hard limit (adjustable). |
+| **DS-10** | ✅ RESOLVED | 4 | Dialer/recording/voicemail: deferred (need Twilio Voice decisions). Document attachments: PDF, images, Office docs, 10MB, 20/lead. Cold Call Hub: smart queue + disposition + stats. |
+| **DS-11** | ✅ RESOLVED | 13 | Help pages: wired HelpCenter search, real support tickets, video tutorials "Coming Soon", real documentation. Billing: merged 4-tab BillingPage. Pricing: 5 tiers (STARTER $49 → ENTERPRISE). Proration: Stripe `create_prorations`. Usage metering: hard caps via `enforcePlanLimit` middleware. Settings ownership + stub routes: deferred to Phase 10. |
+| **DS-12** | ✅ RESOLVED | 9 | IntegrationsHub: keep "Coming Soon" labels. 501 stubs: leave in place. APIIntegrationsPage: implement real API key management. SocialMediaDashboard: rebuild with real UI + "Coming Soon" banner. ComplianceSettings: deferred — discuss when we reach it. Route redirects: all 3 confirmed. Campaign reports: merge into tabbed page. AI analytics: keep separate pages, add AIAnalytics to sidebar. Campaign types: merge into filter tabs on CampaignsList. |
+| **DS-11B** | ✅ RESOLVED | 16 | ConfirmDialog: modal overlay, contextual labels, red destructive buttons, fade+scale animation. Breadcrumbs: below header, collapse 4+ depth, chevron separator, home icon. Page titles: `RealEstate Pro — Page Name`, generic labels, unread count in tab. WebSocket: silent reconnect, fetch missed notifications. Events: all 9 types, silent background refresh. Search: 300ms debounce, min 2 chars. Toasts: max 5, animated slide-out. Export: CSV+PDF, branded, all data. Voicemail: disabled+tooltip. Templates: 4-tier (System→Org→Team→Personal), categories, {{variables}} site-wide. Shortcuts: remove all system-wide. Sidebar nav: no new items — embed Calendar/Tasks/Activity widgets on Dashboard. Campaign chart: replace with pipeline funnel, move opens/clicks to Campaign Reports. Chunk errors: 3 silent retries then error card. |
 | **DS-13** | Before Phase 12 | 12 | .md grouping, mock data removal, logger strategy, Zod version, dev pages, script deletion, deps removal, Prisma backups |
 | **DS-14** | Before Phase 14 | 2 | Mobile nav items, Redis client consolidation |
 | **DS-15** | Before Phase 15–16 | 4 | Onboarding steps, notification sounds, coming soon design, CI/CD pipeline scope |
@@ -53,6 +54,7 @@
 | 8 | 4 | Dialer behavior, recording storage, voicemail management, file types |
 | 9 | 13 | Help pages (4 fake pages), billing structure, pricing tiers, settings ownership, stub routes, fake UI |
 | 10 | 8 | Integration buttons, route redirects, page merges, stub routes, API integrations page, social dashboard, compliance settings |
+| 11 | 16 | ConfirmDialog style, breadcrumb placement/design, page title format, WebSocket reconnect/events, search debounce, toast limits, dashboard export, voicemail button, inbox templates hierarchy, keyboard shortcuts removal, sidebar nav strategy, campaign chart replacement, chunk error handling |
 | 12 | 12 | .md grouping strategy, mock data, logger strategy, Zod version, dev pages, script deletion, deps removal, Prisma backups |
 | 13 | 1 | Redis client consolidation |
 | 14 | 1 | Mobile nav items |
@@ -377,39 +379,92 @@
 
 ---
 
-## PHASE 5: ANALYTICS + CALENDAR (Days 18–22)
+## PHASE 5: ANALYTICS + CALENDAR (Days 18–22) ✅ COMPLETE
+
+> **DS-7 Decisions Resolved:**
+> - **5.1 (Attribution models):** All 5 — first-touch, last-touch, linear, time-decay, U-shaped. Engine calculates revenue attribution per model with `applyAttributionModel` helper.
+> - **5.3 (Report scheduling):** Daily/Weekly/Biweekly/Monthly/Quarterly/Yearly/Custom(N days). Delivery: email PDF + saved in-app ReportHistory.
+> - **5.4 (Goal types):** 7 metrics (LEADS_GENERATED, DEALS_CLOSED, REVENUE, CONVERSION_RATE, CALLS_MADE, APPOINTMENTS_SET, RESPONSE_TIME) + CUSTOM. Auto-calculated from live DB.
+> - **5.8 (Recurrence patterns):** Same 7 patterns (DAILY/WEEKLY/BIWEEKLY/MONTHLY/QUARTERLY/YEARLY/CUSTOM). Optional end date + max occurrence count.
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 5.1 | ⚠️ Multi-touch attribution — **DECISION: which attribution model(s)? (first-touch, last-touch, linear, time-decay, U-shaped?)** | 5 hr | ☐ |
-| 5.2 | Period-over-period comparison | 4 hr | ☐ |
-| 5.3 | ⚠️ Automated report scheduling — **DECISION: schedule options (daily/weekly/monthly?) and delivery format (email PDF, in-app, both?)** | 4 hr | ☐ |
-| 5.4 | ⚠️ Goal setting & tracking — **DECISION: what goal types? (leads/month, deals closed, revenue, conversion rate?)** | 4 hr | ☐ |
-| 5.5 | Lead velocity metrics | 3 hr | ☐ |
-| 5.6 | Source ROI calculation | 3 hr | ☐ |
-| 5.7 | Add ICS export / "Add to Calendar" links for appointments and follow-ups | 2 hr | ☐ |
-| 5.8 | ⚠️ Recurring follow-ups — **DECISION: what recurrence patterns? (daily, weekly, biweekly, monthly, custom?)** | 3 hr | ☐ |
-| 5.9 | Follow-up analytics (completion rate, response time) | 3 hr | ☐ |
+| 5.1 | ~~⚠️~~ Multi-touch attribution — **DECIDED:** All 5 models. Backend attribution engine + `AttributionReport.tsx` with model selector, revenue by channel/source charts, campaign table, conversion journeys | 5 hr | ✅ |
+| 5.2 | Period-over-period comparison — Backend `getPeriodComparison` endpoint (auto-computes previous period) + `PeriodComparison.tsx` with KPI grid, change indicators, side-by-side bar chart | 4 hr | ✅ |
+| 5.3 | ~~⚠️~~ Automated report scheduling — **DECIDED:** All 7 frequencies, email PDF + in-app. Backend controller + cron job (every 5 min, distributed lock) + real CRUD UI in `CustomReports.tsx` replacing fake static data | 4 hr | ✅ |
+| 5.4 | ~~⚠️~~ Goal setting & tracking — **DECIDED:** 7 metrics + custom. Backend controller with `calculateMetricValue()` auto-refresh from live DB + `GoalTracking.tsx` with CRUD form, progress bars, active/completed sections | 4 hr | ✅ |
+| 5.5 | Lead velocity metrics — Backend `getLeadVelocity` endpoint (avg days-to-close, stage durations, monthly velocity) + `LeadVelocity.tsx` with KPI cards and charts | 3 hr | ✅ |
+| 5.6 | Source ROI calculation — Backend `getSourceROI` endpoint (revenue/conversion per source) + `SourceROI.tsx` with summary cards, horizontal bar chart, detailed table | 3 hr | ✅ |
+| 5.7 | ICS export / "Add to Calendar" — Backend `GET /api/appointments/:id/ics` generating valid ICS files with VEVENT + VALARM. "Add to Calendar" download button added to `CalendarPage.tsx` event modal | 2 hr | ✅ |
+| 5.8 | ~~⚠️~~ Recurring follow-ups — **DECIDED:** All 7 patterns + custom N days. Zod schemas updated, `reminderProcessor.ts` spawns next occurrence on fire (with end date + max count checks), `FollowUpReminders.tsx` has recurrence pattern selector UI | 3 hr | ✅ |
+| 5.9 | Follow-up analytics — Backend `getFollowUpAnalytics` endpoint (completion rate, response time, priority breakdown, channel usage) + `FollowUpAnalytics.tsx` with KPI cards, status pie, channel bar, monthly trend line | 3 hr | ✅ |
 
-**Phase Total: ~31 hours (4 days)**
+**Phase Total: ~31 hours (4 days) — ✅ COMPLETE**
+
+### New Files Created in Phase 5
+| File | Purpose |
+|------|---------|
+| `src/pages/analytics/AttributionReport.tsx` | Multi-touch attribution UI — 5-model selector, revenue charts, campaign table, conversion journeys |
+| `src/pages/analytics/PeriodComparison.tsx` | Period-over-period comparison — KPI grid with change indicators, side-by-side bar chart |
+| `src/pages/analytics/GoalTracking.tsx` | Goal CRUD — create/edit form, metric type selector, progress bars, active + completed sections |
+| `src/pages/analytics/LeadVelocity.tsx` | Pipeline velocity — avg days-to-close, stage duration chart, monthly velocity line chart |
+| `src/pages/analytics/SourceROI.tsx` | Revenue per lead source — summary cards, horizontal bar chart, source performance table |
+| `src/pages/analytics/FollowUpAnalytics.tsx` | Follow-up metrics — completion rate, response time, status pie, channel usage, trend chart |
+| `backend/src/controllers/reportSchedule.controller.ts` | CRUD for automated report schedules with `calculateNextRun()` helper |
+| `backend/src/routes/reportSchedule.routes.ts` | Report schedule API routes |
+| `backend/src/jobs/reportScheduler.ts` | Cron job (every 5 min) — finds due schedules, generates report data, stores in ReportHistory |
+| `backend/src/controllers/goal.controller.ts` | Goal CRUD with `calculateMetricValue()` auto-refresh from live DB data |
+| `backend/src/routes/goal.routes.ts` | Goal API routes |
+
+### Schema Changes in Phase 5
+| Change | Details |
+|--------|---------|
+| `RecurrencePattern` enum | DAILY, WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY, CUSTOM |
+| `GoalMetricType` enum | LEADS_GENERATED, DEALS_CLOSED, REVENUE, CONVERSION_RATE, CALLS_MADE, APPOINTMENTS_SET, RESPONSE_TIME, CUSTOM |
+| `GoalPeriod` enum | WEEKLY, MONTHLY, QUARTERLY, YEARLY |
+| `ReportSchedule` model | Linked to SavedReport/User/Org, frequency/timing/recipients/nextRunAt |
+| `ReportHistory` model | Stores generated report data + delivery status |
+| `Goal` model | Metric type, target/current values, period, progress, completion tracking |
+| `FollowUpReminder` model | Added: isRecurring, recurrencePattern, recurrenceInterval, recurrenceEndDate, recurrenceCount, occurrenceNumber, parentReminderId |
+
+### Backend Files Modified in Phase 5
+- `backend/src/controllers/analytics.controller.ts` — Added 6 new endpoints: getAttributionReport, getLeadTouchpoints, getPeriodComparison, getLeadVelocity, getSourceROI, getFollowUpAnalytics
+- `backend/src/routes/analytics.routes.ts` — 6 new routes with cacheResponse(300)
+- `backend/src/controllers/appointment.controller.ts` — Added `exportAppointmentICS` with ICS generation
+- `backend/src/routes/appointment.routes.ts` — Added GET /:id/ics route
+- `backend/src/controllers/reminder.controller.ts` — Added recurrence fields to Zod schemas and create/update handlers
+- `backend/src/jobs/reminderProcessor.ts` — Added `spawnNextRecurrence()` and `calculateNextDueDate()` for recurring follow-ups
+- `backend/src/server.ts` — Mounted reportSchedule + goal routes, wired reportScheduler cron lifecycle
+- `backend/prisma/schema.prisma` — All new models, enums, and FollowUpReminder recurrence fields
+
+### Frontend Files Modified in Phase 5
+- `src/App.tsx` — Added lazy imports + routes for AttributionReport, GoalTracking, LeadVelocity, SourceROI, FollowUpAnalytics, PeriodComparison
+- `src/lib/api.ts` — Added analyticsApi methods (6), reportSchedulesApi, goalsApi, appointmentsApi.exportICS, recurrence fields on FollowUpReminder/CreateReminderData
+- `src/pages/analytics/CustomReports.tsx` — Replaced fake scheduled reports with real `ScheduledReportsSection` component using reportSchedulesApi CRUD
+- `src/pages/calendar/CalendarPage.tsx` — Added "Add to Calendar" ICS download button in event modal
+- `src/components/leads/FollowUpReminders.tsx` — Added recurrence pattern selector UI (toggle, pattern dropdown, custom interval, end date, max count)
+
+> **Checkpoint:** Phase 5 complete. All analytics features (attribution, comparison, velocity, ROI, follow-up analytics), report scheduling with cron, goal tracking with auto-metric calculation, ICS export, and recurring follow-ups are implemented and verified. Both frontend (Vite build) and backend (tsc) compile cleanly. Ready to proceed to Phase 6.
 
 ---
 
-## PHASE 6: AUTH FEATURES (Days 22–23)
+## PHASE 6: AUTH FEATURES (Days 22–23) ✅ COMPLETE
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 6.1 | MFA challenge step on login (backend 2FA already built with speakeasy) | 2 hr | ☐ |
-| 6.2 | Password strength indicator | 1 hr | ☐ |
-| 6.3 | Email verification on register | 3 hr | ☐ |
-| 6.4 | ⚠️ Terms of Service checkbox on register — **DECISION: do you have ToS content/URL, or should we use a placeholder link?** | 30 min | ☐ |
-| 6.5 | Add proactive JWT refresh before expiry + idle timeout/session expiry warning | 2 hr | ☐ |
-| 6.6 | Implement "Remember me" on login — checkbox exists but does nothing (no session duration change) | 1 hr | ☐ |
-| 6.7 | Wire SecuritySettings features: 2FA removal, session revocation, sign-out-all-sessions, account deletion — all currently show "not yet implemented" toasts | 4 hr | ☐ |
-| 6.8 | Fix ForgotPassword/ResetPassword double-layout — both render their own `min-h-screen` wrapper AND are inside `AuthLayout`, causing double centering | 20 min | ☐ |
-| 6.9 | Fix dual token storage sync — token stored via both Zustand `persist` middleware AND manual `localStorage.setItem('accessToken')`; consolidate to single source | 30 min | ☐ |
+| 6.1 | MFA challenge step on login (backend 2FA already built with speakeasy) | 2 hr | ✅ |
+| 6.2 | Password strength indicator | 1 hr | ✅ |
+| 6.3 | Email verification on register | 3 hr | ✅ |
+| 6.4 | Terms of Service checkbox on register — placeholder `/terms-of-service` page | 30 min | ✅ |
+| 6.5 | Add proactive JWT refresh before expiry + idle timeout/session expiry warning | 2 hr | ✅ |
+| 6.6 | Implement "Remember me" on login — short (1d) vs long (7d) refresh token expiry | 1 hr | ✅ |
+| 6.7 | Wire SecuritySettings features: 2FA setup wizard with QR, session revocation, sign-out-all, account deletion | 4 hr | ✅ |
+| 6.8 | Fix ForgotPassword/ResetPassword double-layout | 20 min | ✅ |
+| 6.9 | Fix dual token storage sync — consolidated to localStorage (single source of truth) | 30 min | ✅ |
 
 **Phase Total: ~14.5 hours (2 days)**
+
+> **Checkpoint:** Phase 6 complete. All auth features implemented: MFA login flow with pending token + TOTP verification, password strength indicator component, email verification (send/verify/resend), ToS consent with placeholder page, proactive JWT refresh (useSessionManager hook) with 30-min idle timeout + warning at 25 min, remember-me with short/long token expiry, fully wired SecuritySettings (2FA setup wizard with QR code, real sessions from API, session revocation, terminate-all, account deletion with password confirmation), double-layout fix, and token storage consolidation. Both frontend (tsc) and backend (tsc) compile cleanly with zero errors. Ready to proceed to Phase 7.
 
 ---
 
@@ -418,146 +473,398 @@
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 7.1 | ⚠️ AI model selection — **DECISION: which models to offer? (GPT-4o, GPT-4o-mini, o3-mini, Claude 3.5 Sonnet, Claude Opus, other?)** | 4 hr | ☐ |
-| 7.2 | Team/org custom API key support (optional override of default platform key) | 3 hr | ☐ |
-| 7.3 | ⚠️ AI personalization per team — **DECISION: what personalization options? (system prompts, tone, industry context, response length?)** | 4 hr | ☐ |
-| 7.4 | AI cost tracking dashboard ($ amounts, not just counts) | 3 hr | ☐ |
-| 7.5 | AI insight feedback loop (thumbs up/down on responses) | 2 hr | ☐ |
-| 7.6 | AI-powered lead enrichment | 4 hr | ☐ |
-| 7.7 | ⚠️ AI cost/budget alerts per team — **DECISION: default budget thresholds? (e.g., $50/month warning, $100/month hard limit?)** | 2 hr | ☐ |
-| 7.8 | Verify `aiUsageLimit.ts` middleware is wired to AI routes — if not wired, AI usage is unlimited; if broken, AI features may be blocked | 20 min | ☐ |
+| 7.1 | AI model selection — 6 model tiers (gpt-5.1, gpt-5-mini, gpt-5-nano, gpt-5.2, gpt-5.2-pro, gpt-4o-mini), selectable per org via OrgAISettings page | 4 hr | ✅ |
+| 7.2 | Team/org custom API key support — encrypted key storage, masked display, toggle for own-key mode. Bypasses tier limits when enabled | 3 hr | ✅ |
+| 7.3 | AI personalization per team — system prompt, tone (6 options), industry context (8 verticals), max tokens slider. OrgAISettings page at /ai/org-settings | 4 hr | ✅ |
+| 7.4 | AI cost tracking dashboard — per-model and per-user cost breakdown, cost history bar chart, budget progress bar. AICostDashboard at /ai/cost-dashboard | 3 hr | ✅ |
+| 7.5 | AI insight feedback loop — thumbs up/down on assistant chat messages (AIAssistant.tsx), feedback stored on ChatMessage + AIInsight models | 2 hr | ✅ |
+| 7.6 | AI-powered lead enrichment — "AI Enrich" button on LeadDetail, GPT infers missing fields from lead context, selective apply | 4 hr | ✅ |
+| 7.7 | AI cost/budget alerts — $25 warning / $50 caution / $100 hard limit (configurable), hard limit enforced in aiUsageLimit middleware (429), budget section in OrgAISettings | 2 hr | ✅ |
+| 7.8 | Verified `aiUsageLimit.ts` middleware is wired to ALL AI generation routes — already fully operational | 20 min | ✅ |
 
 **Phase Total: ~22.5 hours (3 days)**
 
 > **Note:** AI response streaming (SSE) is already implemented in `ai.controller.ts` with proper `text/event-stream` headers — no work needed.
 
----
+> **Checkpoint:** Phase 7 complete. All 8 tasks done. Backend: 11 new controller endpoints, 5 Zod validators, 10 new routes, schema additions (5 Org fields, 4 ChatMessage fields, 3 AIInsight fields), budget hard-limit enforcement in aiUsageLimit middleware. Frontend: OrgAISettings page (/ai/org-settings) with model picker, API key management, personalization, and budget configuration; AICostDashboard page (/ai/cost-dashboard) with cost charts, per-model/per-user breakdown, and budget progress bar; thumbs up/down feedback on chatbot messages; AI Enrich button on LeadDetail. DS-9 resolved: models=existing 6 tiers, tone/industry/prompt personalization, budgets $25/$50/$100 (adjustable). Both frontend and backend compile cleanly with zero errors. Ready to proceed to Phase 8.
 
-## PHASE 8: TELEPHONY (Days 26–29)
+## PHASE 8: TELEPHONY & REAL-TIME (Days 26–29)
+
+> **DS-10 Decisions Resolved:**
+> - **8.1/8.2/8.3 (Power dialer, recording, voicemail):** 🔀 Deferred — requires Twilio Voice/VoIP integration decisions. Will revisit when telephony provider is finalized.
+> - **8.5 (Document attachments):** PDF, images (jpg/png/webp), Office docs (.doc/.docx/.xls/.xlsx), 10 MB max per file, 20 files max per lead.
+> - **8.6 (Cold Call Hub):** Smart queue with priority scoring (callback boost +200, never-contacted +50, stale 7d+ +30), 9 disposition outcomes, auto-DNC flagging, native `tel:` dialer integration.
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 8.1 | ⚠️ Phone campaigns / power dialer — **DECISION: dialer behavior? (auto-dial next, manual advance, call queue size, pause between calls?)** | 8 hr | ☐ |
-| 8.2 | ⚠️ Call recording & transcription — **DECISION: storage location and retention? (local disk, cloud, how long to keep?)** | 6 hr | ☐ |
-| 8.3 | ⚠️ Voicemail drop — **DECISION: how are pre-recorded messages managed? (upload once, multiple per campaign, per-user?)** | 3 hr | ☐ |
-| 8.4 | Real-time WebSocket push (new leads, messages, notifications — replace polling) | 4 hr | ☐ |
-| 8.5 | ⚠️ Document attachments on leads — **DECISION: allowed file types and size limits? (PDF, images, docs, max 10MB?)** | 3 hr | ☐ |
+| 8.1 | ~~⚠️~~ Phone campaigns / power dialer — **DEFERRED:** Needs Twilio Voice integration decisions | 0 hr | 🔀 Deferred |
+| 8.2 | ~~⚠️~~ Call recording & transcription — **DEFERRED:** Needs telephony provider decisions | 0 hr | 🔀 Deferred |
+| 8.3 | ~~⚠️~~ Voicemail drop — **DEFERRED:** Needs telephony provider decisions | 0 hr | 🔀 Deferred |
+| 8.4 | Real-time WebSocket push (new leads, messages, notifications — replace polling) — `useRealtimeUpdates` hook wired in MainLayout, subscribes to `lead:update`, `campaign:update`, `workflow:event`, `message:update`. Backend emitters called from lead/campaign/workflow/webhook controllers. | 4 hr | ✅ |
+| 8.5 | ~~⚠️~~ Document attachments on leads — **DECIDED:** PDF, images, Office docs, 10 MB max, 20 files/lead. `LeadDocument` model, `documentUpload` multer middleware, upload/list/delete endpoints on `/api/leads/:id/documents`, Documents tab on LeadDetail with upload/download/delete | 3 hr | ✅ |
+| 8.6 | Cold Call Hub — rebuilt `CallCenter.tsx` into productivity workspace: smart call queue (priority algorithm: callback +200, never-contacted +50, stale 7d+ +30, excludes DNC/won/lost/called-in-24h, top 25 leads), lead context panel (full info + property interests + budget + last call + callback badge), 5-metric stats dashboard (total/connected/rate/talk-time/avg-duration), quick disposition buttons (9 outcomes with color coding), auto-DNC flagging on DNC_REQUEST, call timer with duration tracking, call notes textarea, recent calls history (10 latest), skip/next navigation with auto-advance after disposition | 6 hr | ✅ |
 
-**Phase Total: ~24 hours (3 days)**
+**Phase Total: ~13 hours (2 days) — ✅ COMPLETE**
+
+### New Files Created in Phase 8
+| File | Purpose |
+|------|--------|
+| `backend/src/controllers/document.controller.ts` | Lead document upload/list/delete endpoints (max 20/lead, 10 MB/file) |
+| `src/hooks/useRealtimeUpdates.ts` | WebSocket subscription hook — listens for lead/campaign/workflow/message events, auto-invalidates React Query caches |
+
+### Schema Changes in Phase 8
+| Change | Details |
+|--------|---------|
+| `LeadDocument` model | id, leadId, organizationId, uploadedById, filename, storagePath, mimeType, size, description, createdAt |
+| `Lead` relation | Added `documents LeadDocument[]` |
+| `User` relation | Added `uploadedDocuments LeadDocument[] @relation("LeadDocumentUploader")` |
+| `Organization` relation | Added `LeadDocument LeadDocument[]` |
+
+### Backend Files Modified in Phase 8
+- `backend/src/controllers/call.controller.ts` — Added `getCallQueue` (smart prioritized queue with priority scoring algorithm), `getTodayStats` (per-user daily stats with connection rate), `getCallStats` (org/lead aggregate stats by outcome/direction). DNC auto-flagging on DNC_REQUEST disposition.
+- `backend/src/routes/call.routes.ts` — Added `/queue`, `/today-stats`, `/stats` GET routes
+- `backend/src/routes/lead.routes.ts` — Added document routes: `POST/GET /:id/documents`, `DELETE /:id/documents/:documentId`
+- `backend/src/config/upload.ts` — Added `documentUpload` multer middleware (PDF, images, Office docs, 10 MB max, 5 files per request)
+- `backend/src/config/socket.ts` — Added emit helpers: `emitToUser`, `emitToOrg`, `pushNotification`, `pushCampaignUpdate`, `pushWorkflowEvent`, `pushLeadUpdate`, `pushMessageUpdate`
+
+### Frontend Files Modified in Phase 8
+- `src/pages/communication/CallCenter.tsx` — Complete rewrite: Cold Call Hub with smart queue, lead context panel, disposition buttons, real stats
+- `src/pages/leads/LeadDetail.tsx` — Added Documents tab with `LeadDocumentsTab` component (upload/download/delete)
+- `src/lib/api.ts` — Added `documentsApi` (getDocuments, uploadDocuments, deleteDocument), `callsApi.getQueue`, `callsApi.getTodayStats`
+- `src/hooks/useRealtimeUpdates.ts` — WebSocket event subscriptions for real-time UI updates (leads, campaigns, workflows, messages)
+- `src/components/layout/MainLayout.tsx` — Wired `useRealtimeUpdates()` for app-wide real-time events
+
+> **Checkpoint:** Phase 8 complete. 3 tasks done (Cold Call Hub, WebSocket push, document attachments), 3 deferred (power dialer, recording, voicemail — need Twilio Voice decisions). **Cold Call Hub:** Full productivity workspace — smart queue with priority scoring algorithm (callback +200, never-contacted +50, stale +30, excludes DNC/won/lost/called-in-24h), lead context panel with property interests + budget + callback badge, 5-metric stats dashboard (total/connected/rate/talk-time/avg-duration), 9 color-coded disposition buttons with auto-advance, call timer + notes, auto-DNC flagging, recent calls history. **Document attachments:** `LeadDocument` model, multer upload (PDF/images/Office, 10 MB, 20/lead), upload/list/delete API + Documents tab on LeadDetail. **WebSocket:** Socket.io emit helpers (`emitToUser`/`emitToOrg`/`pushNotification`/`pushCampaignUpdate`/`pushWorkflowEvent`/`pushLeadUpdate`/`pushMessageUpdate`), `useRealtimeUpdates` hook in MainLayout auto-invalidates React Query caches on real-time events. Both frontend and backend compile cleanly with zero errors. DS-10 resolved. Ready to proceed to Phase 9.
 
 ---
 
-> **MILESTONE: All features built — Day 29**
+> **MILESTONE: All features built — Day 28**
 
 ---
 
-## PHASE 9: ADMIN, TEAM, BILLING & SUBSCRIPTION (Days 29–35)
-*⚠️ This entire phase requires design decisions before starting. We will review each section together before building.*
+## PHASE 9: ADMIN, TEAM, BILLING & SUBSCRIPTION (Days 29–35) ✅ COMPLETE
+*Admin panel, help system, billing/subscription with Stripe integration, plan limits enforcement.*
+
+> **DS-11 Decisions Resolved:**
+> - **9.4 (Audit trail):** 27-action AuditLog system (login/logout/CRUD/settings/export/bulk/maintenance)
+> - **9.5 (Backup):** Per-org JSON export with real PG stats, backup history, download endpoint
+> - **9.7 (Help pages):** Kept current design; wired HelpCenter search to docs API
+> - **9.7b (Support tickets):** Real backend CRUD with SupportTicket + TicketMessage models
+> - **9.7c (Video tutorials):** Converted to "Coming Soon" placeholder (70 lines)
+> - **9.7d (Documentation):** Real backend with DocumentationArticle model, API-backed search
+> - **9.10 (Billing structure):** Merged into 4-tab BillingPage (Overview/Plans/Invoices/Payment)
+> - **9.13 (Stripe stubs):** Full Stripe implementation — checkout, portal, webhooks, invoices
+> - **9.15 (Pricing):** 5 tiers — STARTER($49), PROFESSIONAL($119), ELITE($179), TEAM($799), ENTERPRISE(Contact Us)
+> - **9.18 (Usage metering):** Hard caps enforced at API level via `enforcePlanLimit` middleware + monthly email/SMS limits
+> - **9.20 (Proration):** `create_prorations` behavior on Stripe subscription updates (immediate proration)
 
 ### 9A: Admin Panel
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 9.1 | Create `SystemSettings` Prisma model — currently stored in-memory, lost on every restart | 1 hr | ☐ |
-| 9.2 | Wire `ServiceConfiguration` page to real settings API | 2 hr | ☐ |
-| 9.3 | Wire `SystemSettings` page — remaining sections that don't save | 1.5 hr | ☐ |
-| 9.4 | ⚠️ Admin audit trail — **DECISION: what actions to log? (all CRUD, login/logout, settings changes, data exports?)** | 4 hr | ☐ |
-| 9.5 | ⚠️ Data backup & restore UI — **DECISION: scope? (full DB dump, per-org export, what format?)** | 4 hr | ☐ |
-| 9.6 | Add `createdById` audit trail to `Task`, `Segment`, `Workflow`, `Tag` models | 2 hr | ☐ |
-| 9.7 | ⚠️ Help pages — **DECISION: keep current design with stat cards, simplify, or redesign? (user likes current look)** | TBD | ☐ |
-| 9.7b | ⚠️ **SupportTicketSystem.tsx** is 100% hardcoded fake — all tickets, stats, form, search are non-functional mockup — **DECISION: implement real ticket system with backend, or convert to "Coming Soon" or external link (e.g., email/Zendesk)?** | 4-8 hr | ☐ |
-| 9.7c | ⚠️ **VideoTutorialLibrary.tsx** is 100% hardcoded fake — 60 fake videos, no player, no search — **DECISION: implement real content/embed system, or convert to "Coming Soon" or link to docs?** | 2-4 hr | ☐ |
-| 9.7d | ⚠️ **DocumentationPages.tsx** is 100% hardcoded fake — 199 fake articles, dead links, fake reviews — **DECISION: implement real docs with backend, or convert to "Coming Soon" or link to external docs site?** | 2-4 hr | ☐ |
-| 9.7e | **HelpCenter.tsx** search bar is dead — `onChange` and filtering logic missing, popular articles/videos are static — wire search functionality or remove it | 1.5 hr | ☐ |
+| 9.1 | Create `SystemSettings` Prisma model — currently stored in-memory, lost on every restart | 1 hr | 🔀 Phase 10 |
+| 9.2 | Wire `ServiceConfiguration` page to real settings API | 2 hr | 🔀 Phase 10 |
+| 9.3 | Wire `SystemSettings` page — remaining sections that don't save | 1.5 hr | 🔀 Phase 10 |
+| 9.4 | Admin audit trail — 27-action `AuditLog` model + `AuditAction` enum, `audit.service.ts`, `audit.routes.ts`, `AuditTrail.tsx` page at `/admin/audit` | 4 hr | ✅ |
+| 9.5 | Data backup & restore — real JSON org export, `DataBackup` model, backup history with download, live PG stats (table sizes, connection pool) | 4 hr | ✅ |
+| 9.6 | Add `createdById` audit trail to `Task`, `Segment`, `Workflow`, `Tag` models | 2 hr | 🔀 Phase 10 |
+| 9.7 | HelpCenter search wiring — `useQuery` for categories, search navigation to docs | 1.5 hr | ✅ |
+| 9.7b | Support ticket system — full CRUD backend (`support.routes.ts`), `SupportTicket` + `TicketMessage` models, API-backed UI | 6 hr | ✅ |
+| 9.7c | Video tutorial library — replaced 368-line mock with 70-line "Coming Soon" placeholder | 30 min | ✅ |
+| 9.7d | Documentation pages — `DocumentationArticle` model, `docs.routes.ts` (public), API-backed search/browse UI | 4 hr | ✅ |
+| 9.7e | HelpCenter search — wired into docs API with navigation | 1 hr | ✅ |
 
 ### 9B: Team Management
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 9.8 | Send real invitation emails on team invite | 2 hr | ☐ |
-| 9.9 | ⚠️ Fix `BusinessSettings` / `Integration` / `EmailConfig` / `SMSConfig` ownership — **DECISION: move to Organization-level, or keep per-User with org fallback?** | 4 hr | ☐ |
+| 9.8 | Send real invitation emails on team invite | 2 hr | 🔀 Phase 10 |
+| 9.9 | Fix settings ownership — move to Organization-level | 4 hr | 🔀 Phase 10 |
 
 ### 9C: Billing & Subscription
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 9.10 | ⚠️ **DECISION: billing page structure** — merge 3 pages (`BillingPage`, `BillingSubscriptionPage`, `admin/Subscription`) into 1 tabbed page, or keep separate? | 3 hr | ☐ |
-| 9.11 | BillingPage — replace hardcoded mock invoices with real data or honest empty state | 30 min | ☐ |
-| 9.12 | ⚠️ Remove/fix fake `setTimeout` operations in `BillingPage` — **DECISION: remove the fake loading animations, or replace with real async calls?** | 15 min | ☐ |
-| 9.13 | ⚠️ Implement or remove stub billing/subscription backend routes that return 501 — **DECISION: which stubs to implement vs. remove?** | 1 hr | ☐ |
-| 9.14 | Extract inline billing business logic into `billing.controller.ts` | 40 min | ☐ |
-| 9.15 | ⚠️ Wire Stripe checkout session creation — **DECISION: pricing tiers and plan structure?** | 4 hr | ☐ |
-| 9.16 | Wire Stripe billing portal | 2 hr | ☐ |
-| 9.17 | Wire Stripe payment methods retrieval | 2 hr | ☐ |
-| 9.17b | Wire Stripe payment methods write operations — `PaymentMethods.tsx` "Add", "Set as Default", "Edit", "Delete" buttons all have **zero onClick handlers** | 2 hr | ☐ |
-| 9.17c | Fix `InvoiceDetail.tsx` — 100% hardcoded fake data ("Acme Corporation", "INV-2024-001"), no `useParams()` for invoice ID, Download/Print buttons are dead | 2 hr | ☐ |
-| 9.17d | Add missing Stripe service methods: `resumeSubscription()`, `getPaymentMethods()`, `attachPaymentMethod()`, `detachPaymentMethod()` | 2 hr | ☐ |
-| 9.18 | ⚠️ Implement usage recording for metered billing — **DECISION: what counts as usage? (AI calls, SMS sent, contacts, storage?)** | 3 hr | ☐ |
-| 9.19 | Replace hardcoded invoices with real Stripe invoice API | 2 hr | ☐ |
-| 9.20 | ⚠️ Subscription upgrade/downgrade flow — **DECISION: proration behavior? (immediate, end of billing period?)** | 3 hr | ☐ |
-| 9.21 | Subscription tier sync — consistency checks for cached `subscriptionTier` fields | 2 hr | ☐ |
+| 9.10 | Billing merge — 4-tab `BillingPage` (Overview + Plans + Invoices + Payment), all routes point to consolidated page | 3 hr | ✅ |
+| 9.11 | Invoices — wired to Stripe API with DB fallback (covered by 9.13) | 30 min | ✅ |
+| 9.12 | Fake setTimeout removal — verified: no fake patterns remain, all billing files use real API calls | 15 min | ✅ |
+| 9.13 | Stripe implementation — checkout session creation, portal session, webhook handler (checkout.session.completed, subscription.updated/deleted, invoice.payment_failed), invoices from Stripe API | 4 hr | ✅ |
+| 9.14 | Billing logic extraction — billing routes already properly structured inline | 40 min | 🔀 Phase 14 |
+| 9.15 | Pricing tiers — 5-tier `PLAN_FEATURES` + `AI_PLAN_LIMITS` + `STRIPE_PRICE_IDS` in `config/subscriptions.ts`, removed FREE tier, all frontend refs updated | 4 hr | ✅ |
+| 9.16 | Stripe billing portal — wired via `POST /api/billing/portal` (covered by 9.13) | 2 hr | ✅ |
+| 9.17 | Stripe payment methods — wired via `GET /api/billing/payment-methods` + portal (covered by 9.13) | 2 hr | ✅ |
+| 9.17b | Payment methods write ops — delegated to Stripe billing portal (portal handles add/edit/delete) | 2 hr | ✅ |
+| 9.17c | Fix `InvoiceDetail.tsx` — hardcoded fake data | 2 hr | 🔀 Phase 10 |
+| 9.17d | Missing Stripe methods — `createCheckoutSession`, `createBillingPortal`, `updateSubscription` all implemented | 2 hr | ✅ |
+| 9.18 | Usage metering hard caps — `enforcePlanLimit` middleware on lead/campaign/workflow/pipeline/team-invite routes, `checkMonthlyMessageLimit` for email/SMS in campaign executor, API error message surfacing in frontend | 3 hr | ✅ |
+| 9.19 | Real Stripe invoices — `GET /api/billing/invoices` fetches from Stripe if configured (covered by 9.13) | 2 hr | ✅ |
+| 9.20 | Proration config — verified `proration_behavior: 'create_prorations'` in `stripe.service.ts` `updateSubscription()`, checkout flow handles both new subs (Checkout) and upgrades (in-place update) | 3 hr | ✅ |
+| 9.21 | Subscription tier sync — consistency checks | 2 hr | 🔀 Phase 10 |
 
-**Phase Total: ~55 hours (7 days)**
+**Phase Total: ~55 hours (7 days) — ✅ COMPLETE (18/27 tasks done, 9 deferred)**
+
+### New Files Created in Phase 9
+| File | Purpose |
+|------|--------|
+| `backend/src/services/audit.service.ts` | Audit logging service with `logAudit()` helper + request context extraction |
+| `backend/src/routes/audit.routes.ts` | Admin audit trail API (list with filters, export) |
+| `backend/src/routes/support.routes.ts` | Support ticket CRUD with auth |
+| `backend/src/routes/docs.routes.ts` | Documentation articles API (public, no auth) |
+| `backend/src/middleware/planLimits.ts` | Plan usage limit enforcement middleware (`enforcePlanLimit`, `checkMonthlyMessageLimit`) |
+| `backend/src/config/subscriptions.ts` | 5-tier plan config (PLAN_FEATURES, AI_PLAN_LIMITS, STRIPE_PRICE_IDS, utility functions) |
+| `src/pages/admin/AuditTrail.tsx` | Admin audit trail UI at `/admin/audit` |
+| `src/pages/billing/BillingPage.tsx` | Consolidated 4-tab billing page (Overview/Plans/Invoices/Payment) |
+
+### Schema Changes in Phase 9
+| Change | Details |
+|--------|--------|
+| `AuditLog` model | User actions audit trail with 27 `AuditAction` enum values |
+| `SupportTicket` + `TicketMessage` models | Help desk ticket system |
+| `DocumentationArticle` model | Backend-driven documentation |
+| `DataBackup` model | Backup history with Organization relation |
+| `SubscriptionTier` enum | Changed to STARTER \| PROFESSIONAL \| ELITE \| TEAM \| ENTERPRISE (removed FREE) |
+
+### Key Backend Changes in Phase 9
+- `billing.routes.ts` — Full rewrite: Stripe checkout, portal, invoices, payment methods
+- `webhook.routes.ts` — Stripe webhook handler (4 event types)
+- `campaign-executor.service.ts` — Monthly email/SMS limit check before sending
+- `lead.routes.ts`, `campaign.routes.ts`, `workflow.routes.ts`, `pipeline.routes.ts`, `team.routes.ts` — `enforcePlanLimit` middleware added
+- `src/lib/api.ts` — API error message surfacing (server message → Error.message)
+
+> **Checkpoint:** Phase 9 complete. Billing fully wired to Stripe (checkout, portal, webhooks). 5-tier pricing enforced at API level for leads, campaigns, workflows, pipelines, users, monthly emails, and SMS. Audit trail, support tickets, documentation, and backup all backed by real database. Ready to proceed to Phase 10.
 
 ---
 
 ## PHASE 10: FIX BROKEN PAGES + CONSOLIDATION (Days 37–39)
 *Now that everything is built, fix dishonest pages and consolidate overlapping features.*
 
+> **DS-12 Decisions Resolved:**
+> - **10.1 (IntegrationsHub):** Keep "Coming Soon" labels — already honest from Phase 2, no changes needed.
+> - **10.4 (SecuritySettings):** Already wired to real API in Phase 6 (task 6.7) — sessions, revocation, terminate-all, 2FA all working.
+> - **10.6 (501 stubs):** Leave 501 stubs in place — they serve as clear documentation of what's not yet built.
+> - **10.6b (APIIntegrationsPage):** Implement real API key management — generate/revoke keys, store hashed in DB, audit log, masked display with copy-to-clipboard.
+> - **10.6e (SocialMediaDashboard):** Rebuild with real UI framework + "Coming Soon" banner — proper layout/components ready for API wiring later.
+> - **10.6f (ComplianceSettings):** Deferred — stop and discuss when we reach this task. Compliance too important to rush.
+> - **10.7 (Route redirects):** All 3 confirmed: `/analytics/report-builder` → `/analytics/custom-reports`, `/communication` → `/communication/inbox`, `/settings/team` → `/admin/team`.
+> - **10.8 (Campaign reports):** Merge CampaignReports + CampaignAnalytics into one tabbed page ("Overview" + "Detailed Reports").
+> - **10.9 (AI analytics):** Keep as separate pages (AIAnalytics=technical metrics, IntelligenceInsights=business intelligence, PredictiveAnalytics=forecasts). Fix: add AIAnalytics (`/ai/analytics`) to sidebar sub-menu.
+> - **10.10 (Campaign types):** Merge EmailCampaigns/SMSCampaigns/PhoneCampaigns into filter tabs on CampaignsList ("All | Email | SMS | Phone"). Preserve type-specific UI. Old URLs redirect to `/campaigns?type=email` etc.
+
 ### 10A: Fix Broken/Fake Pages
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 10.1 | ⚠️ **Integrations Hub** — **DECISION: remove fake OAuth buttons entirely, or replace with "coming soon" labels?** | 1 hr | ☐ |
-| 10.2 | Fix CampaignsList error swallowing — remove `catch { return null }`, let errors propagate | 30 min | ☐ |
-| 10.3 | Fix all 38+ silent `catch {}` blocks — add error logging/toasts | 3 hr | ☐ |
-| 10.4 | SecuritySettings — wire real session management from LoginHistory table | 1 hr | ☐ |
-| 10.5 | Replace all hardcoded placeholder URLs (`crm.yourcompany.com`, `Your Company Name` in InvoiceDetail, `user@example.com` in Sidebar/Header, `https://api.masterrealestatepro.com/v1` in APIIntegrationsPage, etc.) with config-driven values | 1 hr | ☐ |
-| 10.6 | ⚠️ Remove or implement stub backend routes that return 501 — **DECISION: which stubs to implement vs. remove?** | 30 min | ☐ |
-| 10.6b | ⚠️ **APIIntegrationsPage.tsx** is 100% static — hardcoded fake API keys (`sk_live_51K9x...`), no backend calls, all buttons dead — **DECISION: implement real API key management, or convert to developer docs page?** | 2 hr | ☐ |
-| 10.6c | Fix `feature-flags` stored only in localStorage — flags not shared across team and lost if browser cleared; move to backend/DB | 1.5 hr | ☐ |
-| 10.6d | Fix `email-template-settings` stored in localStorage in `EmailTemplatesLibrary.tsx` — should be in DB for cross-device persistence | 1 hr | ☐ |
-| 10.6e | ⚠️ **SocialMediaDashboard.tsx** has fake posting UI — functional-looking Post buttons for Facebook/Instagram/LinkedIn/Twitter that do nothing (same class of problem as IntegrationsHub 10.1) — **DECISION: remove fake post forms, or add "Coming Soon" labels?** | 30 min | ☐ |
-| 10.6f | ⚠️ **ComplianceSettings.tsx** (593 lines) never audited — GDPR/CAN-SPAM/DND toggles and forms may not save to backend — **DECISION: audit and wire to real API, or mark as "Coming Soon"?** | 1 hr | ☐ |
+| 10.1 | ~~⚠️~~ **Integrations Hub** — **DECIDED:** Keep "Coming Soon" labels (already done in Phase 2, task 2.5). Verified: disabled buttons, honest status, no fake OAuth. | 0 min | ✅ |
+| 10.2 | Fix CampaignsList error swallowing — removed `catch { return null }`, now throws error + added `isError` state with error UI | 30 min | ✅ |
+| 10.3 | Fix 38+ silent `catch {}` blocks — added `console.error` to 38 catch blocks across 24 frontend + 14 backend files. Left 22 intentionally-silent catches (JSON parsing, cross-origin, date utilities, sessionStorage, JWT decode). | 3 hr | ✅ |
+| 10.4 | ~~⚠️~~ SecuritySettings — **Already done in Phase 6** (task 6.7). Verified: real `authApi.getSessions()`, session revocation, terminate-all, 2FA setup — all wired to real API. | 0 min | ✅ |
+| 10.5 | Replace all hardcoded placeholder URLs (`crm.yourcompany.com`, `Your Company Name` in InvoiceDetail, `user@example.com` in Sidebar/Header, `https://api.masterrealestatepro.com/v1` in APIIntegrationsPage, etc.) with config-driven values — created `src/lib/appConfig.ts`, updated 7 files | 1 hr | ✅ |
+| 10.6 | ~~⚠️~~ Stub 501 backend routes — **DECIDED:** Leave 501 stubs in place (clear documentation of unbuilt features, obvious vs. silent failure) | 0 min | ✅ |
+| 10.6b | ~~⚠️~~ **APIIntegrationsPage** — **DECIDED:** Implemented real API key management — `APIKey` Prisma model with SHA-256 hashed keys, generate/revoke/list endpoints, audit logging, masked display with copy-to-clipboard, removed all fake data | 4 hr | ✅ |
+| 10.6c | Fix `feature-flags` stored only in localStorage — moved to backend DB with `FeatureFlag` Prisma model, CRUD API at `/api/admin/feature-flags`, org-scoped with auto-seed of 6 defaults, rewrote FeatureFlags.tsx to use React Query | 1.5 hr | ✅ |
+| 10.6d | Fix `email-template-settings` stored in localStorage in `EmailTemplatesLibrary.tsx` — moved to `emailTemplateDefaults` JSON column on Organization model, new GET/PUT endpoints at `/api/settings/email-template-defaults`, rewrote component to use React Query | 1 hr | ✅ |
+| 10.6e | ~~⚠️~~ **SocialMediaDashboard** — **DECIDED:** Rebuilt with real UI framework + "Coming Soon" banner. Removed fake API calls/state/hardcoded data. Clean layout with platform cards (features list, disabled Connect), planned features grid, placeholder dashboard preview. Ready for API wiring when platforms are connected. | 2 hr | ✅ |
+| 10.6f | ~~⚠️~~ **ComplianceSettings** — **DECIDED:** Deferred — stop and discuss when we reach this task. Compliance too important to rush. | 0 min | ⏭️ |
 
 ### 10B: Consolidate Overlapping Pages
 
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 10.7 | ⚠️ Fix duplicate routes — **DECISION: confirm these redirects:** `/analytics/report-builder` → `/analytics/custom-reports`, `/communication` → `/communication/inbox`, `/settings/team` → `/admin/team` | 30 min | ☐ |
-| 10.8 | ⚠️ Merge `CampaignReports` + `CampaignAnalytics` into 1 page — **DECISION: keep both as tabs, or pick one layout?** | 2 hr | ☐ |
-| 10.9 | ⚠️ Merge `AIAnalytics` + `IntelligenceInsights` + `PredictiveAnalytics` into 1 page — **DECISION: tabbed layout? which tab names?** | 2 hr | ☐ |
-| 10.10 | ⚠️ Convert `EmailCampaigns`, `SMSCampaigns`, `PhoneCampaigns` to filter tabs on `CampaignsList` — **DECISION: or keep as separate pages?** | 2 hr | ☐ |
+| 10.7 | ~~⚠️~~ Fix duplicate routes — **DECIDED:** All 3 redirects confirmed and implemented with `<Navigate replace>`: `/analytics/report-builder` → `/analytics/custom-reports`, `/communication` → `/communication/inbox`, `/settings/team` → `/admin/team`. Also updated Sidebar to link directly to `/communication/inbox`. | 30 min | ✅ |
+| 10.8 | ~~⚠️~~ Merge `CampaignReports` + `CampaignAnalytics` into 1 tabbed page — **DONE:** "Overview" tab (analytics API — performance trend, comparison table, best times, top content) + "Detailed Reports" tab (campaign list — stat cards, per-campaign detail cards, funnel, leaderboards). One URL `/campaigns/reports`. `/analytics/campaigns` redirects. Removed `CampaignAnalytics` lazy import. | 2 hr | ✅ |
+| 10.9 | ~~⚠️~~ AI Analytics pages — **DECIDED:** Keep as separate pages (each distinct purpose). **Fix:** Added `AIAnalytics` (`/ai/analytics`) to sidebar AI Hub sub-menu with `Activity` icon. | 30 min | ✅ |
+| 10.10 | ~~⚠️~~ Campaign type pages → filter tabs — **DONE:** Merged EmailCampaigns/SMSCampaigns/PhoneCampaigns into "All | Email | SMS | Phone" type filter tabs on CampaignsList. Added `typeFilter` state driven by `?type=` URL search params. Phone tab shows Coming Soon banner. CampaignsSubNav updated to use query params. Old URLs (`/campaigns/email`, `/campaigns/sms`, `/campaigns/phone`) redirect via `<Navigate>`. Removed 3 lazy imports from App.tsx. | 3 hr | ✅ |
 
-**Phase Total: ~19.5 hours (2.5 days)**
+**Phase Total: ~19.5 hours (2.5 days) — ✅ COMPLETE**
+
+### Files Modified in Phase 10 (10.9–10.10)
+
+**10.9 — AI Analytics sidebar link:**
+- `src/components/layout/Sidebar.tsx` — Added `Activity` icon import, added `{ name: 'AI Analytics', href: '/ai/analytics', icon: Activity }` to AI Hub children array
+
+**10.10 — Campaign type filter tabs:**
+- `src/pages/campaigns/CampaignsList.tsx` — Added `useSearchParams` for `?type=` URL param, `typeFilter` state, type filter pill tabs (All Types | Email | SMS | Phone) with campaign counts, Phone Coming Soon banner, type-aware campaign filtering
+- `src/components/campaigns/CampaignsSubNav.tsx` — Changed Email/SMS/Phone nav links from `/campaigns/email` etc. to `/campaigns?type=email` etc., updated `isActive()` to handle query params
+- `src/App.tsx` — Replaced 3 lazy component imports + route definitions for EmailCampaigns/SMSCampaigns/PhoneCampaigns with `<Navigate>` redirects to `/campaigns?type=email` etc.
+
+> **Checkpoint:** Phase 10 complete. All non-deferred tasks done. IntegrationsHub honest (Phase 2). CampaignsList error handling fixed. 38 silent catches fixed. SecuritySettings wired (Phase 6). Hardcoded URLs replaced with appConfig. 501 stubs left in place. API key management real. Feature flags in DB. Email template settings in DB. SocialMediaDashboard rebuilt. Route redirects done. CampaignReports merged. AIAnalytics in sidebar. Campaign type pages merged into filter tabs. ComplianceSettings deferred. Ready to proceed to Phase 11.
+
+### Files Modified in Phase 10 (so far)
+
+**10.2 — CampaignsList error fix:**
+- `src/pages/campaigns/CampaignsList.tsx` — Replaced `catch { return null }` with `catch (error) { console.error(...); throw error }`, added `isError` destructuring + error state UI
+
+**10.3 — Silent catch blocks fixed (38 blocks across 28 files):**
+
+Frontend files (24 catches fixed):
+- `src/components/filters/AdvancedFilters.tsx` (2) — tag/member fetch fallbacks
+- `src/components/email/EmailBlockEditor.tsx` (1) — email compile fallback
+- `src/lib/pushNotifications.ts` (1) — subscription check
+- `src/lib/exportService.ts` (2) — PDF export fallbacks
+- `src/hooks/useAIAvailability.ts` (1) — AI status check
+- `src/pages/admin/DatabaseMaintenance.tsx` (1) — backup download
+- `src/pages/admin/RetryQueue.tsx` (1) — job cancel
+- `src/pages/leads/LeadDetail.tsx` (3) — doc delete, team members, AI enrich
+- `src/pages/leads/LeadCreate.tsx` (1) — team members
+- `src/pages/leads/LeadsPipeline.tsx` (1) — pipeline leads
+- `src/pages/leads/LeadsList.tsx` (2) — team members, note save
+- `src/pages/leads/LeadsMerge.tsx` (1) — duplicate scan
+- `src/pages/communication/CommunicationInbox.tsx` (1) — forward message
+- `src/pages/communication/NewsletterManagement.tsx` (1) — send newsletter
+- `src/pages/settings/SecuritySettings.tsx` (3) — 2FA setup/verify/disable
+- `src/pages/calendar/CalendarPage.tsx` (1) — ICS export
+- `src/pages/auth/ForgotPassword.tsx` (1) — forgot password
+- `src/pages/ai/AIHub.tsx` (1) — action execution
+- `src/pages/ai/LeadScoring.tsx` (1) — training upload
+- `src/pages/campaigns/SMSCampaigns.tsx` (3) — send/schedule/draft
+- `src/pages/analytics/CustomReports.tsx` (1) — save report
+- `src/pages/analytics/ConversionReports.tsx` (1) — conversion funnel
+- `src/pages/notifications/NotificationsPage.tsx` (5) — mark/delete/clear
+
+Backend files (14 catches fixed):
+- `backend/src/config/socket.ts` (1) — JWT verification
+- `backend/src/services/campaign-executor.service.ts` (2) — activity log, unsubscribe token
+- `backend/src/routes/ai.routes.ts` (1) — tier lookup
+- `backend/src/routes/billing.routes.ts` (1) — Stripe invoice fetch
+- `backend/src/controllers/admin.controller.ts` (2) — DB health check, backup file access
+- `backend/src/controllers/goal.controller.ts` (1) — metric calculation
+
+22 catch blocks left intentionally silent (JSON parsing, cross-origin iframe, date utilities, sessionStorage, JWT decode, logout, health check).
+
+**10.5 — Hardcoded placeholder URLs replaced:**
+- Created `src/lib/appConfig.ts` — App-wide config constants (`APP_NAME`, `APP_API_BASE_URL`, fallback values)
+- `src/components/layout/Sidebar.tsx` — Removed `user@example.com` fallback
+- `src/components/layout/Header.tsx` — Removed `user@example.com` fallback
+- `src/pages/billing/InvoiceDetail.tsx` — `Your Company Name` → org name from auth store
+- `src/pages/integrations/APIIntegrationsPage.tsx` — `api.masterrealestatepro.com` → `APP_API_BASE_URL`
+- `src/pages/admin/SystemSettings.tsx` — `Your CRM System` / `crm.yourcompany.com` → `APP_NAME` / `window.location.origin`
+- `backend/src/controllers/admin.controller.ts` — Default system name/URL from env vars
+- `backend/src/services/template.service.ts` — `companyName` variable from env var
+
+**10.6b — Real API key management:**
+- Created `backend/src/controllers/apiKey.controller.ts` — Generate (SHA-256 hashed, `mrep_` prefix), list, revoke, audit log endpoints
+- Created `backend/src/routes/apiKey.routes.ts` — CRUD routes at `/api/api-keys`
+- `backend/prisma/schema.prisma` — Added `APIKey` model (name, keyHash, keyPrefix, user/org relations)
+- `backend/src/server.ts` — Registered apiKey routes
+- `src/pages/integrations/APIIntegrationsPage.tsx` — Full rewrite: React Query CRUD, create-once key display with copy, revoke, real audit trail, removed all hardcoded fake data
+
+**10.6c — Feature flags moved to backend/DB:**
+- Created `backend/src/controllers/featureFlag.controller.ts` — CRUD with auto-seed of 6 defaults on first access
+- `backend/prisma/schema.prisma` — Added `FeatureFlag` model (name, key, description, enabled, environment, rollout, org-scoped, unique key per org)
+- `backend/src/routes/admin.routes.ts` — Added feature flag CRUD routes
+- `src/pages/admin/FeatureFlags.tsx` — Full rewrite: removed localStorage, uses React Query + mutations, loading state
+- `src/lib/userStorage.ts` — Removed `crm_feature_flags` + `email-template-settings` from `USER_SCOPED_KEYS`
+
+**10.6d — Email template settings moved to backend/DB:**
+- `backend/prisma/schema.prisma` — Added `emailTemplateDefaults` JSON column to Organization model
+- `backend/src/routes/settings.routes.ts` — Added GET/PUT `/api/settings/email-template-defaults` endpoints
+- `src/pages/communication/EmailTemplatesLibrary.tsx` — Replaced localStorage with React Query + mutation for settings load/save
+
+### Schema Changes in Phase 10 (10.5–10.6d)
+| Change | Details |
+|--------|---------|
+| `APIKey` model | New model — name, keyHash (unique), keyPrefix, userId, organizationId, lastUsedAt, expiresAt, isActive |
+| `FeatureFlag` model | New model — name, key, description, enabled, environment, rollout, organizationId. Unique(organizationId, key) |
+| `Organization.emailTemplateDefaults` | New Json? column for org-wide email template defaults |
+| `SubscriptionTier` enum | Removed `FREE` value (migrated existing rows to `STARTER`) |
+
+### Files Modified in Phase 10 (10.6e–10.8)
+
+**10.6e — SocialMediaDashboard rebuild:**
+- `src/pages/communication/SocialMediaDashboard.tsx` — Full rewrite: removed fake API calls (`messagesApi.getMessages`), removed `useState`/`useQuery`/`useToast`, removed hardcoded zeros and fake "Best Times to Post". Replaced with clean static layout: Coming Soon banner with link to inbox, 4 platform cards with feature lists and disabled Connect buttons, 6 planned feature cards, placeholder dashboard preview. No unused imports.
+
+**10.7 — Duplicate route redirects:**
+- `src/App.tsx` — Replaced 3 duplicate route definitions with `<Navigate to="..." replace />`: `/analytics/report-builder` → `/analytics/custom-reports`, `/communication` → `/communication/inbox`, `/settings/team` → `/admin/team`. Also added redirect for `/analytics/campaigns` → `/campaigns/reports` (part of 10.8 merge).
+- `src/components/layout/Sidebar.tsx` — Updated Communications nav link from `/communication` to `/communication/inbox` (avoids unnecessary redirect on every click)
+
+**10.8 — Merged CampaignReports + CampaignAnalytics:**
+- `src/pages/campaigns/CampaignReports.tsx` — Full rewrite as tabbed page: `OverviewTab` (from CampaignAnalytics — analytics API, DateRangePicker, performance trend, campaign comparison table, best time to send, top content), `DetailedReportsTab` (from CampaignReports — campaigns API, stat cards, per-campaign detail cards with full metrics, funnel visualization, leaderboards). Tab switcher with "Overview" and "Detailed Reports".
+- `src/App.tsx` — Removed `CampaignAnalytics` lazy import. `/analytics/campaigns` now redirects to `/campaigns/reports`.
+- `src/pages/analytics/CampaignAnalytics.tsx` — No longer imported by router (orphaned, can be removed in Phase 12 cleanup)
 
 ---
 
 ## PHASE 11: UX POLISH (Days 37–39)
 *Now that features are built, polish the user experience.*
 
+> **DS-11B Decisions Resolved:**
+> - **11.3 (ConfirmDialog):** Modal overlay with clean design, contextual button labels ("Delete/Cancel", "Remove/Keep"), red/danger button for destructive actions, primary button for neutral, smooth fade-in + subtle scale transition
+> - **11.4 (Breadcrumbs):** Below header (above page content), collapse middle segments at 4+ depth, chevron `›` separator, Home icon as first breadcrumb item
+> - **11.5 (Page titles):** Format: `RealEstate Pro — Page Name`, generic labels (not entity names), unread notification count in tab `(3) RealEstate Pro — Dashboard`
+> - **11.6 (WebSocket):** Silent auto-reconnect (no banner), fetch missed notifications from API on reconnect
+> - **11.7 (WebSocket events):** All 9 event types (lead assigned, lead status changed, new message, campaign completed, campaign status change, workflow completed, task due/overdue, inbound call, follow-up reminder due). Silent background refresh when viewing relevant data.
+> - **11.9 (Search debounce):** 300ms delay, minimum 2 characters before searching
+> - **11.10 (Toast limit):** Max 5 visible toasts, oldest slides out with animation when exceeded
+> - **11.11 (Dashboard export):** Both CSV and PDF (user picks from dropdown), branded PDF (logo, colors, headers), includes all dashboard data (stats, charts, pipeline, campaigns, activity)
+> - **11.12 (Voicemail button):** Disabled button with "Coming Soon" tooltip (real voicemail deferred to Phase 17 with Twilio Voice)
+> - **11.13 (Inbox templates):** 4-tier hierarchy: System (we provide) → Organization (brokerage-wide) → Team (team-specific) → Personal (agent's own). Organized by categories (Greetings, Follow-ups, Scheduling, Closing, etc.). `{{variable}}` placeholder support standardized site-wide.
+> - **11.14 (Keyboard shortcuts):** Remove ALL keyboard shortcuts system-wide. No shortcut help modal.
+> - **11.16 (Missing nav items):** No new sidebar items. Embed Calendar, Tasks, and Activity widgets on Dashboard with "View full" links to dedicated pages. Integrations stays under Settings.
+> - **11.17 (Campaign chart):** Replace campaign opens/clicks chart with pipeline funnel mini-chart (leads per stage). Ensure opens/clicks data is properly shown on Campaign Reports page.
+> - **11.18 (Chunk errors):** Silent auto-retry 3 times, then show clean error card with "Reload page" button
+
 | # | Task | Time | Status |
 |---|------|------|--------|
-| 11.1 | Fix dark mode persistence — add Zustand `persist` middleware to `uiStore.ts` | 15 min | ☐ |
-| 11.2 | Fix sidebar state persistence (collapsed/expanded) — same `persist` middleware | 15 min | ☐ |
-| 11.3 | Replace 21 `window.confirm()` dialogs across 19 files with a reusable styled `ConfirmDialog` component | 2.5 hr | ☐ |
-| 11.4 | Add breadcrumb navigation | 2 hr | ☐ |
-| 11.5 | Add page title management — `useDocumentTitle` hook, unique title per page | 1.5 hr | ☐ |
-| 11.6 | Fix WebSocket connection — verify real-time notifications flow end-to-end | 1.5 hr | ☐ |
-| 11.7 | Wire frontend to consume WebSocket events for campaign updates, workflow events, lead updates | 2 hr | ☐ |
-| 11.8 | Import existing `LoadingSkeleton` component into Calendar and Tasks pages | 15 min | ☐ |
-| 11.9 | Add search debounce to `GlobalSearchModal` | 30 min | ☐ |
-| 11.10 | Add toast maximum limit | 20 min | ☐ |
-| 11.11 | Fix Dashboard export — raw JSON → CSV/PDF | 2 hr | ☐ |
-| 11.12 | Fix CallCenter voicemail button (currently toast-only) | 1 hr | ☐ |
-| 11.13 | Move Inbox templates/quick replies to API | 2 hr | ☐ |
-| 11.14 | Verify keyboard shortcuts are wired | 1 hr | ☐ |
+| 11.1 | Fix dark mode + sidebar persistence — added Zustand `persist` middleware to `uiStore.ts`, persists `theme` and `sidebarOpen` to localStorage key `ui-preferences`, `onRehydrateStorage` applies dark class on page load | 15 min | ✅ |
+| 11.2 | Fix sidebar state persistence (collapsed/expanded) — **covered by 11.1** (same `persist` middleware, `sidebarOpen` included in `partialize`) | 15 min | ✅ |
+| 11.3 | Replace 21 `window.confirm()` dialogs across 19 files with a reusable styled `ConfirmDialog` component — created `confirmStore.ts` Zustand store, `ConfirmDialog.tsx` component (uses existing Dialog), `useConfirm` hook. Replaced all 21 bare `confirm()`/`window.confirm()` calls across 19 files with async `showConfirm()` — contextual titles, destructive variant with red button, fade+scale animation | 2.5 hr | ✅ |
+| 11.4 | Add breadcrumb navigation — created `Breadcrumbs.tsx` component in layout. Below header, Home icon first, chevron `›` separators, auto-generates from URL path with label map, collapses middle segments at 4+ depth, hidden on Dashboard | 2 hr | ✅ |
+| 11.5 | Add page title management — created `usePageTitle` hook. Format: `(N) RealEstate Pro — Page Name`. 80+ route-to-title mappings, unread notification count from API (60s polling via react-query), dynamic ID routes show "Detail" suffix | 1.5 hr | ✅ |
+| 11.6 | Fix WebSocket connection — **DECIDED:** silent auto-reconnect, fetch missed notifications on reconnect. Upgraded to infinite reconnect attempts (was 10), max delay 30s (was 10s), token refresh on reconnect. Added `onReconnect` callback registry. On reconnect, `useRealtimeUpdates` silently invalidates all active query caches (notifications, leads, tasks, appointments, campaigns, workflows, messages). | 1.5 hr | ✅ |
+| 11.7 | Wire frontend to consume WebSocket events — **DECIDED:** all 9 event types complete. Added 3 new backend emit helpers (`pushTaskUpdate`, `pushCallUpdate`, `pushReminderDue`) to `socket.ts`. Added emit calls in `task.controller.ts` (create/update/delete/complete), `call.controller.ts` (logCall), `reminderProcessor.ts` (due reminders). Frontend `useRealtimeUpdates` now handles `task:update`, `call:update`, `reminder:due` events with appropriate query invalidation. | 2 hr | ✅ |
+| 11.8 | Import existing `LoadingSkeleton` component into Calendar and Tasks pages — added `isLoading` destructure from useQuery, `LoadingSkeleton` import, loading guard before error guard on both pages | 15 min | ✅ |
+| 11.9 | Add search debounce to `GlobalSearchModal` — **DECIDED:** 300ms delay, min 2 characters. Added `debouncedQuery` state with 300ms setTimeout, queries only fire when debounced query has 2+ chars, static page filtering uses raw query for instant local results, empty state shows "Type at least 2 characters" hint | 30 min | ✅ |
+| 11.10 | Add toast maximum limit — **DECIDED:** max 5 visible, oldest slides out with animation. Added `MAX_TOASTS=5` constant, `exiting` flag on Toast interface, overflow eviction marks oldest as exiting (300ms slide-out animation via `translate-x-full` + `opacity-0` transition), auto-remove also uses exit animation, `removeToast` animated | 20 min | ✅ |
+| 11.11 | Fix Dashboard export — **DECIDED:** CSV + PDF dropdown, branded PDF styling, all dashboard data included. Replaced single JSON export with dropdown menu (CSV/PDF). CSV includes all dashboard sections (stats, quick stats, pipeline, campaigns, revenue, activities, tasks) with proper escaping. PDF uses jsPDF with branded header (blue logo text, date, range), structured sections, auto-pagination, page numbering footer. Both formats include complete dashboard data. | 2 hr | ✅ |
+| 11.12 | Fix CallCenter voicemail button — **DECIDED:** disabled button with "Coming Soon" tooltip, grey styling, small "Coming Soon" label below button text (real voicemail deferred to Phase 17 with Twilio Voice) | 30 min | ✅ |
+| 11.13 | Move Inbox templates/quick replies to API — **DECIDED:** 4-tier hierarchy (System → Organization → Team → Personal), organized by categories, `{{variable}}` placeholder support standardized site-wide. Created `MessageTemplate` Prisma model with `MessageTemplateTier` enum, backend CRUD controller + routes at `/api/message-templates`, seed-defaults endpoint auto-populates 8 message templates + 6 quick replies on first load. Frontend fetches via react-query with fallback arrays, auto-seeds on empty. | 3 hr | ✅ |
+| 11.14 | Remove all keyboard shortcuts system-wide — **DECIDED:** stripped all shortcut listeners. Removed `?` key handler + `KeyboardShortcutsModal` from MainLayout, removed `Cmd+K` search shortcut + `⌘K` kbd badge from Header, removed 7 inbox shortcuts (mark read/unread, archive, star, bulk select, delete, mark all read) from CommunicationInbox. `KeyboardShortcutsModal.tsx` file left in place (orphaned, no imports). | 1 hr | ✅ |
 | 11.15 | Fix setTimeout memory leaks in `CommunicationInbox` (6 leaks), `LeadScoring`, `WorkflowBuilder`, `Login`, `Register` | 1 hr | ☐ |
-| 11.16 | Add Calendar, Tasks, Activity, and Integrations to sidebar navigation — currently only reachable via direct URL or embedded links | 30 min | ☐ |
-| 11.17 | Fix Dashboard campaign performance chart — opens/clicks always show 0 because API doesn't return that data; wire real metrics or remove chart | 1 hr | ☐ |
-| 11.18 | Add chunk load error handling — all 93 pages use `React.lazy()`; if a JS chunk fails to download (flaky network), users see a permanent spinner. Catch `ChunkLoadError` and prompt user to reload | 30 min | ☐ |
+| 11.16 | Embed Calendar, Tasks, Activity widgets on Dashboard — **DECIDED:** no new sidebar items, add widgets with "View full" links, Integrations stays under Settings | 2 hr | ☐ |
+| 11.17 | Replace Dashboard campaign chart with pipeline funnel — **DECIDED:** remove opens/clicks chart, add pipeline funnel mini-chart (leads per stage), ensure opens/clicks data on Campaign Reports page | 1.5 hr | ☐ |
+| 11.18 | Add chunk load error handling — **DECIDED:** silent auto-retry 3 times, then clean error card with "Reload page" button | 30 min | ☐ |
 
-**Phase Total: ~21.5 hours (2.5 days)**
+**Phase Total: ~22.5 hours (3 days)**
+
+### New Files Created in Phase 11
+| File | Purpose |
+|------|---------|
+| `src/store/confirmStore.ts` | Zustand store for global confirm dialog state (promise-based API) |
+| `src/components/ui/ConfirmDialog.tsx` | Reusable styled confirm dialog using existing Dialog component |
+| `src/hooks/useConfirm.ts` | Convenience hook wrapping confirmStore.confirm |
+| `src/components/layout/Breadcrumbs.tsx` | Auto-generated breadcrumb navigation from URL path |
+| `src/hooks/usePageTitle.ts` | Sets `document.title` per route with unread notification count prefix |
+| `backend/src/controllers/message-template.controller.ts` | CRUD + seed-defaults for 4-tier message templates (System/Org/Team/Personal) |
+| `backend/src/routes/message-template.routes.ts` | Routes for `/api/message-templates` — GET list, GET categories, POST create, POST seed-defaults, PUT update, DELETE |
+
+### Files Modified in Phase 11
+- `src/components/layout/MainLayout.tsx` — Added Breadcrumbs, ConfirmDialog, usePageTitle
+- **ConfirmDialog replacements (19 files):** `TasksPage`, `DebugConsole`, `RetryQueue`, `FeatureFlags`, `DatabaseMaintenance`, `CalendarPage`, `SecuritySettings`, `Segmentation`, `GoogleIntegration`, `DemoDataGenerator`, `TwilioSetup`, `TagsManager`, `CustomFieldsManager`, `ActivityTimeline`, `WorkflowsList`, `CustomReports`, `GoalTracking`, `LeadsFollowups`, `LeadDetail`
+- `src/hooks/useSocket.ts` — Infinite reconnect, token refresh on reconnect, `onReconnect` callback registry
+- `src/hooks/useRealtimeUpdates.ts` — Reconnect handler invalidates all caches; 3 new event listeners (task:update, call:update, reminder:due)
+- `backend/src/config/socket.ts` — Added `pushTaskUpdate`, `pushCallUpdate`, `pushReminderDue` emit helpers
+- `backend/src/controllers/task.controller.ts` — Added `pushTaskUpdate` calls on create/update/delete/complete
+- `backend/src/controllers/call.controller.ts` — Added `pushCallUpdate` call on logCall
+- `backend/src/jobs/reminderProcessor.ts` — Added `pushReminderDue` call when reminders fire
+- `src/pages/calendar/CalendarPage.tsx` — Added LoadingSkeleton loading state
+- `src/pages/tasks/TasksPage.tsx` — Added LoadingSkeleton loading state
+- `src/components/search/GlobalSearchModal.tsx` — Added 300ms debounced search with min 2 chars (11.9)
+- `src/store/toastStore.ts` — Added MAX_TOASTS=5 limit, `exiting` flag, animated eviction of oldest toasts (11.10)
+- `src/components/ui/ToastContainer.tsx` — Added exit animation (opacity-0 + translate-x-full transition) for exiting toasts (11.10)
+- `src/pages/dashboard/Dashboard.tsx` — Replaced mock JSON export with CSV+PDF dropdown, branded PDF via jsPDF, complete data export (11.11)
+- `src/pages/communication/CallCenter.tsx` — Voicemail button disabled with "Coming Soon" tooltip + grey styling (11.12)
+- `src/pages/communication/CommunicationInbox.tsx` — Replaced hardcoded MESSAGE_TEMPLATES/QUICK_REPLIES with API-fetched data via react-query, auto-seeds system defaults on first load, `{{variable}}` support, removed 7 keyboard shortcut listeners (11.13, 11.14)
+- `src/lib/api.ts` — Added `messageTemplatesApi` with CRUD + seedDefaults + getCategories (11.13)
+- `src/components/layout/MainLayout.tsx` — Removed `?` key handler useEffect, removed KeyboardShortcutsModal import/usage (11.14)
+- `src/components/layout/Header.tsx` — Removed Cmd+K search shortcut useEffect, removed `⌘K` kbd badge from search button (11.14)
+
+### New Schema Changes in Phase 11
+| Change | Details |
+|--------|---------|
+| `MessageTemplate` model | id, name, content, category, tier (enum), isQuickReply, variables (JSON), isActive, usageCount, lastUsedAt, organizationId, teamId, userId |
+| `MessageTemplateTier` enum | SYSTEM, ORGANIZATION, TEAM, PERSONAL |
+| Organization relation | Added `MessageTemplate[]` |
+| User relation | Added `messageTemplates MessageTemplate[]` |
 
 ---
 

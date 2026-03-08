@@ -5,6 +5,15 @@ import { io, Socket } from 'socket.io-client'
 let socket: Socket | null = null
 let listenerCount = 0
 
+// Reconnect callbacks — registered by consumers to fetch missed data on reconnect
+type ReconnectCallback = () => void
+const reconnectCallbacks = new Set<ReconnectCallback>()
+
+export function onReconnect(cb: ReconnectCallback): () => void {
+  reconnectCallbacks.add(cb)
+  return () => { reconnectCallbacks.delete(cb) }
+}
+
 function getSocket(): Socket {
   if (!socket) {
     const token = localStorage.getItem('accessToken')
@@ -16,16 +25,26 @@ function getSocket(): Socket {
       autoConnect: true,
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 10000,
-      reconnectionAttempts: 10,
+      reconnectionDelayMax: 30000,
+      reconnectionAttempts: Infinity,
     })
 
     socket.on('connect', () => {
-      console.log('[Socket] Connected:', socket?.id)
+      // Silent connect — no user-facing banner
     })
 
-    socket.on('connect_error', (err) => {
-      console.warn('[Socket] Connection error:', err.message)
+    // On reconnect, update auth token (may have been refreshed) and fire callbacks
+    socket.io.on('reconnect', () => {
+      const freshToken = localStorage.getItem('accessToken')
+      if (socket && freshToken) {
+        socket.auth = { token: freshToken }
+      }
+      // Notify all registered consumers to refetch missed data
+      reconnectCallbacks.forEach((cb) => cb())
+    })
+
+    socket.on('connect_error', () => {
+      // Silent — reconnection is automatic
     })
   }
   return socket

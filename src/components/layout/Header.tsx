@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Menu, Search, Moon, Sun, User, Settings, LogOut, ChevronDown } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal'
 
@@ -14,27 +14,14 @@ export function Header() {
   const [showSearchModal, setShowSearchModal] = useState(false)
   const navigate = useNavigate()
 
-  // Keyboard shortcut for search (Cmd+K or Ctrl+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setShowSearchModal(true)
-      }
-    }
-    
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
   const handleLogout = async () => {
     setShowProfileMenu(false)
     await logout()
     navigate('/auth/login')
   }
 
-  const displayName = user ? `${user.firstName} ${user.lastName}` : 'User Name'
-  const displayEmail = user?.email || 'user@example.com'
+  const displayName = user ? `${user.firstName} ${user.lastName}` : 'User'
+  const displayEmail = user?.email || ''
   const userInitials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : 'U'
 
   return (
@@ -61,9 +48,7 @@ export function Header() {
             <Search className="h-4 w-4" />
             <span className="text-sm">Search anything...</span>
           </div>
-          <kbd className="hidden sm:inline-flex h-5 px-1.5 items-center gap-1 rounded border bg-muted text-[10px] font-medium">
-            <span className="text-xs">⌘</span>K
-          </kbd>
+
         </Button>
       </div>
 

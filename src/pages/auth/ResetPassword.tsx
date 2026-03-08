@@ -59,8 +59,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
+      <Card>
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-primary/10 rounded-full">
@@ -140,7 +139,6 @@ const ResetPassword = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
   );
 };
 

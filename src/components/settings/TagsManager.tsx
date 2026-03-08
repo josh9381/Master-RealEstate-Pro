@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { useConfirm } from '@/hooks/useConfirm'
 import { Input } from '@/components/ui/Input'
 import {
   Table,
@@ -67,6 +68,7 @@ const categories = ['Priority', 'Company Size', 'Action Required', 'Status', 'Ti
 
 export function TagsManager() {
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -179,8 +181,8 @@ export function TagsManager() {
     })
   }
 
-  const handleDeleteTag = (id: string) => {
-    if (confirm('Are you sure you want to delete this tag?')) {
+  const handleDeleteTag = async (id: string) => {
+    if (await showConfirm({ title: 'Delete Tag', message: 'Are you sure you want to delete this tag?', confirmLabel: 'Delete', variant: 'destructive' })) {
       deleteTagMutation.mutate(id)
     }
   }

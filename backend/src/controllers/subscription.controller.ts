@@ -7,6 +7,7 @@ import {
   getTrialDaysRemaining,
 } from '../config/subscriptions';
 import { prisma } from '../config/database';
+import { logAudit, getRequestContext } from '../services/audit.service';
 
 /**
  * Get current subscription for the user's organization
@@ -167,7 +168,7 @@ export const changePlan = async (req: Request, res: Response) => {
     const userId = req.user!.userId;
 
     // Validate new tier
-    if (!['FREE', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'].includes(newTier)) {
+    if (!['STARTER', 'PROFESSIONAL', 'ELITE', 'TEAM', 'ENTERPRISE'].includes(newTier)) {
       return res.status(400).json({ success: false, message: 'Invalid subscription tier' });
     }
 
@@ -198,7 +199,7 @@ export const changePlan = async (req: Request, res: Response) => {
     // Log the change in activity
     await prisma.activity.create({
       data: {
-        type: 'STATUS_CHANGED', // Using existing enum
+        type: 'STATUS_CHANGED',
         title: 'Subscription Changed',
         description: `Subscription changed from ${oldTier} to ${newTier}`,
         userId,
@@ -210,6 +211,18 @@ export const changePlan = async (req: Request, res: Response) => {
           timestamp: new Date().toISOString(),
         },
       },
+    });
+
+    // Audit log
+    logAudit({
+      userId,
+      organizationId,
+      action: 'SUBSCRIPTION_CHANGED',
+      entityType: 'Subscription',
+      description: `Subscription changed from ${oldTier} to ${newTier}`,
+      beforeData: { tier: oldTier },
+      afterData: { tier: newTier },
+      ...getRequestContext(req),
     });
 
     const newPlanFeatures = getPlanFeatures(newTier as SubscriptionTier);
@@ -326,10 +339,11 @@ export const getUsageStats = async (req: Request, res: Response) => {
  */
 function getTierLevel(tier: SubscriptionTier): number {
   const levels: Record<SubscriptionTier, number> = {
-    FREE: 0,
-    STARTER: 1,
-    PROFESSIONAL: 2,
-    ENTERPRISE: 3,
+    STARTER: 0,
+    PROFESSIONAL: 1,
+    ELITE: 2,
+    TEAM: 3,
+    ENTERPRISE: 4,
   };
   return levels[tier];
 }

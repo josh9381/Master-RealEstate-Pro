@@ -20,7 +20,7 @@ interface PlanFeatures {
 }
 
 interface Plan {
-  tier: 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE'
+  tier: 'STARTER' | 'PROFESSIONAL' | 'ELITE' | 'TEAM' | 'ENTERPRISE'
   name: string
   description: string
   price: number
@@ -67,67 +67,86 @@ export default function SubscriptionPage() {
   // Fallback plans if API fails
   const fallbackPlans: Plan[] = [
     {
-      tier: 'FREE',
-      name: 'Free',
-      description: 'Perfect for getting started',
-      price: 0,
-      billingPeriod: 'month',
-      features: {
-        maxUsers: 1,
-        maxLeads: 100,
-        maxCampaigns: null,
-        maxWorkflows: null,
-        emailsPerMonth: 1000,
-        smsPerMonth: 100,
-        features: ['Basic features', 'Email support', '1 GB storage'],
-      },
-      isCurrent: user?.organization?.subscriptionTier === 'FREE',
-      isUpgrade: false,
-      isDowngrade: false,
-    },
-    {
       tier: 'STARTER',
       name: 'Starter',
-      description: 'For growing teams',
+      description: 'Perfect for solo agents getting started',
       price: 49,
       billingPeriod: 'month',
       features: {
-        maxUsers: 5,
-        maxLeads: 1000,
+        maxUsers: 1,
+        maxLeads: 500,
         maxCampaigns: 10,
         maxWorkflows: 5,
-        emailsPerMonth: 10000,
-        smsPerMonth: 1000,
-        features: ['All Free features', 'Priority support', '10 GB storage', 'Advanced analytics'],
+        emailsPerMonth: 1000,
+        smsPerMonth: 100,
+        features: ['Up to 500 leads', '1 pipeline', 'Basic AI (nano model)', '200 AI msgs/mo'],
       },
       isCurrent: user?.organization?.subscriptionTier === 'STARTER',
-      isUpgrade: user?.organization?.subscriptionTier === 'FREE',
+      isUpgrade: false,
       isDowngrade: false,
     },
     {
       tier: 'PROFESSIONAL',
       name: 'Professional',
-      description: 'For established businesses',
-      price: 149,
+      description: 'For productive agents scaling their business',
+      price: 119,
+      billingPeriod: 'month',
+      features: {
+        maxUsers: 1,
+        maxLeads: 5000,
+        maxCampaigns: null,
+        maxWorkflows: null,
+        emailsPerMonth: 10000,
+        smsPerMonth: 500,
+        features: ['Up to 5,000 leads', '5 pipelines', 'Full AI (all models)', 'A/B testing', 'Custom reports'],
+      },
+      isCurrent: user?.organization?.subscriptionTier === 'PROFESSIONAL',
+      isUpgrade: user?.organization?.subscriptionTier === 'STARTER',
+      isDowngrade: false,
+    },
+    {
+      tier: 'ELITE',
+      name: 'Elite',
+      description: 'For top-producing agents',
+      price: 179,
+      billingPeriod: 'month',
+      features: {
+        maxUsers: 1,
+        maxLeads: null,
+        maxCampaigns: null,
+        maxWorkflows: null,
+        emailsPerMonth: 25000,
+        smsPerMonth: 2000,
+        features: ['Unlimited leads', 'Priority AI', 'Cold call hub', 'Send-time optimization'],
+      },
+      isCurrent: user?.organization?.subscriptionTier === 'ELITE',
+      isUpgrade: ['STARTER', 'PROFESSIONAL'].includes(user?.organization?.subscriptionTier || ''),
+      isDowngrade: false,
+    },
+    {
+      tier: 'TEAM',
+      name: 'Team',
+      description: 'For teams and small brokerages',
+      price: 799,
       billingPeriod: 'month',
       features: {
         maxUsers: 10,
         maxLeads: null,
         maxCampaigns: null,
-        maxWorkflows: 20,
-        emailsPerMonth: null,
-        smsPerMonth: null,
-        features: ['All Starter features', '24/7 support', '100 GB storage', 'Custom branding', 'API access'],
+        maxWorkflows: null,
+        emailsPerMonth: 50000,
+        smsPerMonth: 5000,
+        features: ['Everything in Elite', 'Up to 10 users (+$59/extra)', 'Team management', 'Admin panel'],
       },
-      isCurrent: user?.organization?.subscriptionTier === 'PROFESSIONAL',
-      isUpgrade: ['FREE', 'STARTER'].includes(user?.organization?.subscriptionTier || ''),
+      isCurrent: user?.organization?.subscriptionTier === 'TEAM',
+      isUpgrade: ['STARTER', 'PROFESSIONAL', 'ELITE'].includes(user?.organization?.subscriptionTier || ''),
       isDowngrade: false,
     },
     {
       tier: 'ENTERPRISE',
-      name: 'Enterprise',
-      description: 'For large organizations',
-      price: 499,
+      name: 'Brokerage',
+      description: 'For large brokerages with custom needs',
+      price: 0,
       billingPeriod: 'month',
       features: {
         maxUsers: null,
@@ -136,10 +155,10 @@ export default function SubscriptionPage() {
         maxWorkflows: null,
         emailsPerMonth: null,
         smsPerMonth: null,
-        features: ['All Professional features', 'Dedicated support', 'Unlimited storage', 'SLA', 'Custom integrations'],
+        features: ['Everything in Team', 'SSO', 'Dedicated support', 'Custom onboarding', 'Volume discounts'],
       },
       isCurrent: user?.organization?.subscriptionTier === 'ENTERPRISE',
-      isUpgrade: ['FREE', 'STARTER', 'PROFESSIONAL'].includes(user?.organization?.subscriptionTier || ''),
+      isUpgrade: ['STARTER', 'PROFESSIONAL', 'ELITE', 'TEAM'].includes(user?.organization?.subscriptionTier || ''),
       isDowngrade: false,
     },
   ]
@@ -202,10 +221,11 @@ export default function SubscriptionPage() {
     )
   }
   
-  const tierConfig = {
-    FREE: { color: 'gray', gradient: 'from-gray-50 to-gray-100' },
+  const tierConfig: Record<string, { color: string; gradient: string }> = {
     STARTER: { color: 'blue', gradient: 'from-blue-50 to-blue-100' },
     PROFESSIONAL: { color: 'purple', gradient: 'from-purple-50 to-purple-100' },
+    ELITE: { color: 'indigo', gradient: 'from-indigo-50 to-indigo-100' },
+    TEAM: { color: 'emerald', gradient: 'from-emerald-50 to-emerald-100' },
     ENTERPRISE: { color: 'amber', gradient: 'from-amber-50 to-amber-100' },
   }
   

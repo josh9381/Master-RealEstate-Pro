@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Send, Sparkles, TrendingUp, MessageSquare } from 'lucide-react'
+import { X, Send, Sparkles, TrendingUp, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -7,6 +7,7 @@ import { sendChatMessage, getChatHistory } from '@/services/aiService'
 import { useToast } from '@/hooks/useToast'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { MessagePreview } from './MessagePreview'
+import { aiApi } from '@/lib/api'
 
 interface Message {
   id: string
@@ -15,6 +16,7 @@ interface Message {
   timestamp: Date
   tokens?: number | null
   cost?: number | null
+  feedback?: string | null
 }
 
 interface Suggestion {
@@ -528,6 +530,36 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 <p className="mt-1 text-xs opacity-70">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
+                {message.role === 'assistant' && (
+                  <div className="flex items-center gap-1 mt-1.5 -mb-0.5">
+                    <button
+                      onClick={() => {
+                        aiApi.submitChatFeedback(message.id, { feedback: 'positive' }).catch(() => {})
+                        message.feedback = 'positive'
+                      }}
+                      className={cn(
+                        'p-0.5 rounded hover:bg-background/60 transition-colors',
+                        message.feedback === 'positive' ? 'text-green-600' : 'text-muted-foreground/50 hover:text-green-600'
+                      )}
+                      title="Helpful"
+                    >
+                      <ThumbsUp className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        aiApi.submitChatFeedback(message.id, { feedback: 'negative' }).catch(() => {})
+                        message.feedback = 'negative'
+                      }}
+                      className={cn(
+                        'p-0.5 rounded hover:bg-background/60 transition-colors',
+                        message.feedback === 'negative' ? 'text-red-500' : 'text-muted-foreground/50 hover:text-red-500'
+                      )}
+                      title="Not helpful"
+                    >
+                      <ThumbsDown className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}

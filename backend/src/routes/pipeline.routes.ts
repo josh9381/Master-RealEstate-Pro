@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { authenticate } from '../middleware/auth'
+import { enforcePlanLimit } from '../middleware/planLimits'
 import {
   getPipelines,
   getPipeline,
@@ -21,7 +22,7 @@ router.use(authenticate)
 
 // Pipeline CRUD
 router.get('/', getPipelines)
-router.post('/', createPipeline)
+router.post('/', enforcePlanLimit('pipelines'), createPipeline)
 router.get('/:id', getPipeline)
 router.put('/:id', updatePipeline)
 router.delete('/:id', deletePipeline)

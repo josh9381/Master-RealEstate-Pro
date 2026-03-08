@@ -85,7 +85,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
     throw new Error(`Organization ${organizationId} not found`)
   }
 
-  const tier = org.subscriptionTier || 'FREE'
+  const tier = org.subscriptionTier || 'STARTER'
   const limits = AI_PLAN_LIMITS[tier as SubscriptionTier]
 
   // Determine API key
@@ -236,6 +236,11 @@ export async function updateOrgAISettings(
     aiDefaultModel?: string
     aiMaxTokensPerRequest?: number
     aiMonthlyTokenBudget?: number
+    aiIndustryContext?: string
+    aiBudgetWarning?: number
+    aiBudgetCaution?: number
+    aiBudgetHardLimit?: number
+    aiBudgetAlertEnabled?: boolean
   }
 ) {
   const updateData: any = {}
@@ -247,6 +252,11 @@ export async function updateOrgAISettings(
   if (settings.aiDefaultModel !== undefined) updateData.aiDefaultModel = settings.aiDefaultModel
   if (settings.aiMaxTokensPerRequest !== undefined) updateData.aiMaxTokensPerRequest = settings.aiMaxTokensPerRequest
   if (settings.aiMonthlyTokenBudget !== undefined) updateData.aiMonthlyTokenBudget = settings.aiMonthlyTokenBudget
+  if (settings.aiIndustryContext !== undefined) updateData.aiIndustryContext = settings.aiIndustryContext
+  if (settings.aiBudgetWarning !== undefined) updateData.aiBudgetWarning = settings.aiBudgetWarning
+  if (settings.aiBudgetCaution !== undefined) updateData.aiBudgetCaution = settings.aiBudgetCaution
+  if (settings.aiBudgetHardLimit !== undefined) updateData.aiBudgetHardLimit = settings.aiBudgetHardLimit
+  if (settings.aiBudgetAlertEnabled !== undefined) updateData.aiBudgetAlertEnabled = settings.aiBudgetAlertEnabled
 
   // Encrypt API key if provided
   if (settings.openaiApiKey) {
@@ -297,6 +307,11 @@ export async function getOrgAISettings(organizationId: string) {
       aiDefaultModel: true,
       aiMaxTokensPerRequest: true,
       aiMonthlyTokenBudget: true,
+      aiIndustryContext: true,
+      aiBudgetWarning: true,
+      aiBudgetCaution: true,
+      aiBudgetHardLimit: true,
+      aiBudgetAlertEnabled: true,
       subscriptionTier: true,
     },
   })
@@ -315,6 +330,13 @@ export async function getOrgAISettings(organizationId: string) {
     aiDefaultModel: org.aiDefaultModel,
     aiMaxTokensPerRequest: org.aiMaxTokensPerRequest,
     aiMonthlyTokenBudget: org.aiMonthlyTokenBudget,
+    aiIndustryContext: org.aiIndustryContext,
+    budget: {
+      warning: org.aiBudgetWarning ?? 25,
+      caution: org.aiBudgetCaution ?? 50,
+      hardLimit: org.aiBudgetHardLimit ?? 100,
+      alertEnabled: org.aiBudgetAlertEnabled,
+    },
     subscriptionTier: org.subscriptionTier,
     availableModels: Object.entries(MODEL_TIERS).map(([tier, model]) => ({
       tier,

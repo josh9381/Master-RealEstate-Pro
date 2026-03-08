@@ -145,7 +145,8 @@ export function NotificationsPage() {
   const handleMarkAsRead = async (id: string) => {
     try {
       await markAsReadMutation.mutateAsync(id)
-    } catch {
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error)
       toast.error('Failed to mark notification as read')
     }
   }
@@ -157,7 +158,8 @@ export function NotificationsPage() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       setSelectedIds([])
       toast.success(`Marked ${count} notifications as read`)
-    } catch {
+    } catch (error) {
+      console.error('Failed to mark selected as read:', error)
       toast.error('Failed to mark selected as read')
     }
   }
@@ -173,7 +175,8 @@ export function NotificationsPage() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       setSelectedIds([])
       toast.success(`Deleted ${count} notifications`)
-    } catch {
+    } catch (error) {
+      console.error('Failed to delete selected notifications:', error)
       toast.error('Failed to delete selected notifications')
     }
   }
@@ -183,7 +186,8 @@ export function NotificationsPage() {
       await Promise.all(notifications.map(n => notificationsApi.deleteNotification(n.id)))
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('All notifications cleared')
-    } catch {
+    } catch (error) {
+      console.error('Failed to clear notifications:', error)
       toast.error('Failed to clear notifications')
     }
   }
@@ -192,7 +196,8 @@ export function NotificationsPage() {
     try {
       await deleteMutation.mutateAsync(id)
       toast.success('Notification removed')
-    } catch {
+    } catch (error) {
+      console.error('Failed to delete notification:', error)
       toast.error('Failed to delete notification')
     }
   }

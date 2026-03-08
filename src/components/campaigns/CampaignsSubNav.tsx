@@ -16,9 +16,9 @@ import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
 
 const navItems = [
   { name: 'All', href: '/campaigns', icon: Megaphone, exact: true },
-  { name: 'Email', href: '/campaigns/email', icon: Mail },
-  { name: 'SMS', href: '/campaigns/sms', icon: MessageSquare },
-  { name: 'Phone', href: '/campaigns/phone', icon: Phone, comingSoon: true },
+  { name: 'Email', href: '/campaigns?type=email', icon: Mail, exact: true },
+  { name: 'SMS', href: '/campaigns?type=sms', icon: MessageSquare, exact: true },
+  { name: 'Phone', href: '/campaigns?type=phone', icon: Phone, comingSoon: true, exact: true },
   { name: 'Templates', href: '/campaigns/templates', icon: FileText },
   { name: 'Schedule', href: '/campaigns/schedule', icon: Calendar },
   { name: 'Reports', href: '/campaigns/reports', icon: BarChart3 },
@@ -34,10 +34,14 @@ export function CampaignsSubNav({ hideCreateButton }: CampaignsSubNavProps) {
   const location = useLocation()
 
   const isActive = (href: string, exact?: boolean) => {
+    const [path, query] = href.split('?')
     if (exact) {
-      return location.pathname === href
+      if (query) {
+        return location.pathname === path && location.search === `?${query}`
+      }
+      return location.pathname === path && !location.search
     }
-    return location.pathname.startsWith(href)
+    return location.pathname.startsWith(path)
   }
 
   return (

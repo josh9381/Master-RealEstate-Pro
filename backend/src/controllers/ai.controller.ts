@@ -8,6 +8,7 @@ import * as templateService from '../services/template-ai.service'
 import * as preferencesService from '../services/user-preferences.service'
 import { updateMultipleLeadScores, getLeadScoreBreakdown } from '../services/leadScoring.service'
 import { incrementAIUsage, getUsageWithLimits, getCostBreakdown } from '../services/usage-tracking.service'
+import { getOrgAISettings, updateOrgAISettings, MODEL_PRICING, MODEL_TIERS, calculateCost } from '../services/ai-config.service'
 import prisma from '../config/database'
 import { AIInsightType, AIInsightPriority } from '@prisma/client'
 
@@ -2599,5 +2600,484 @@ export const resetPreferences = async (req: Request, res: Response) => {
       message: 'Failed to reset preferences',
       error: error.message
     })
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Phase 7: AI Features
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * 7.1 + 7.2 + 7.3: Get org-level AI settings (model, key, personalization)
+ */
+export const getOrgSettings = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const settings = await getOrgAISettings(organizationId)
+    res.json({ success: true, data: settings })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to fetch org AI settings', error: error.message })
+  }
+}
+
+/**
+ * 7.1 + 7.2 + 7.3: Update org-level AI settings (admin only)
+ */
+export const updateOrgSettings = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const result = await updateOrgAISettings(organizationId, req.body)
+    res.json({ success: true, data: result })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to update org AI settings', error: error.message })
+  }
+}
+
+/**
+ * 7.1: Get available models with pricing info
+ */
+export const getAvailableModels = async (req: Request, res: Response) => {
+  try {
+    const models = Object.entries(MODEL_PRICING).map(([model, pricing]) => {
+      // Determine which tier group this model belongs to
+      let tier = 'other'
+      for (const [t, m] of Object.entries(MODEL_TIERS)) {
+        if (m === model) { tier = t; break }
+      }
+      return {
+        model,
+        tier,
+        inputCost: `$${(pricing.input * 1_000_000).toFixed(2)}/1M tokens`,
+        outputCost: `$${(pricing.output * 1_000_000).toFixed(2)}/1M tokens`,
+        inputCostRaw: pricing.input * 1_000_000,
+        outputCostRaw: pricing.output * 1_000_000,
+      }
+    })
+    res.json({ success: true, data: models })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to fetch available models', error: error.message })
+  }
+}
+
+/**
+ * 7.4: AI cost tracking dashboard — detailed breakdown
+ */
+export const getCostDashboard = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const months = parseInt(req.query.months as string) || 6
+
+    const costHistory = await getCostBreakdown(organizationId, months)
+    const usageWithLimits = await getUsageWithLimits(organizationId)
+
+    // Get per-model cost breakdown from chat messages
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const modelBreakdown = await prisma.chatMessage.groupBy({
+      by: ['model'],
+      where: {
+        organizationId,
+        role: 'assistant',
+        createdAt: { gte: thirtyDaysAgo },
+        cost: { not: null },
+      },
+      _sum: { tokens: true, cost: true },
+      _count: { id: true },
+    })
+
+    // Get per-user cost breakdown
+    const userBreakdown = await prisma.chatMessage.groupBy({
+      by: ['userId'],
+      where: {
+        organizationId,
+        role: 'assistant',
+        createdAt: { gte: thirtyDaysAgo },
+        cost: { not: null },
+      },
+      _sum: { tokens: true, cost: true },
+      _count: { id: true },
+    })
+
+    // Fetch user names for the breakdown
+    const userIds = userBreakdown.map(u => u.userId)
+    const users = userIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    }) : []
+    const userMap = new Map(users.map(u => [u.id, u]))
+
+    // Get budget settings
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        aiBudgetWarning: true,
+        aiBudgetCaution: true,
+        aiBudgetHardLimit: true,
+        aiBudgetAlertEnabled: true,
+      },
+    })
+
+    const currentMonthCost = usageWithLimits.usage.totalCost
+
+    res.json({
+      success: true,
+      data: {
+        currentMonth: {
+          cost: currentMonthCost,
+          tokens: usageWithLimits.usage.totalTokensUsed,
+          tier: usageWithLimits.tier,
+          useOwnKey: usageWithLimits.useOwnKey,
+        },
+        budget: {
+          warning: org?.aiBudgetWarning ?? 25,
+          caution: org?.aiBudgetCaution ?? 50,
+          hardLimit: org?.aiBudgetHardLimit ?? 100,
+          alertEnabled: org?.aiBudgetAlertEnabled ?? true,
+          currentCost: currentMonthCost,
+          status: currentMonthCost >= (org?.aiBudgetHardLimit ?? 100)
+            ? 'exceeded'
+            : currentMonthCost >= (org?.aiBudgetCaution ?? 50)
+            ? 'caution'
+            : currentMonthCost >= (org?.aiBudgetWarning ?? 25)
+            ? 'warning'
+            : 'ok',
+        },
+        costHistory,
+        modelBreakdown: modelBreakdown.map(m => ({
+          model: m.model || 'unknown',
+          requests: m._count.id,
+          tokens: m._sum.tokens || 0,
+          cost: m._sum.cost || 0,
+        })),
+        userBreakdown: userBreakdown.map(u => {
+          const user = userMap.get(u.userId)
+          return {
+            userId: u.userId,
+            name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+            email: user?.email || '',
+            requests: u._count.id,
+            tokens: u._sum.tokens || 0,
+            cost: u._sum.cost || 0,
+          }
+        }),
+      },
+    })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to fetch cost dashboard', error: error.message })
+  }
+}
+
+/**
+ * 7.5: Submit feedback on a chat message (thumbs up/down)
+ */
+export const submitChatFeedback = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { feedback, note } = req.body
+    const userId = req.user!.userId
+    const organizationId = req.user!.organizationId
+
+    const message = await prisma.chatMessage.findFirst({
+      where: { id, organizationId },
+    })
+
+    if (!message) {
+      return res.status(404).json({ success: false, message: 'Message not found' })
+    }
+
+    const updated = await prisma.chatMessage.update({
+      where: { id },
+      data: {
+        feedback,
+        feedbackNote: note || null,
+        feedbackAt: new Date(),
+      },
+    })
+
+    res.json({ success: true, data: { id: updated.id, feedback: updated.feedback } })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to submit feedback', error: error.message })
+  }
+}
+
+/**
+ * 7.5: Submit feedback on an AI insight
+ */
+export const submitInsightFeedback = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { feedback } = req.body
+    const userId = req.user!.userId
+    const organizationId = req.user!.organizationId
+
+    const insight = await prisma.aIInsight.findFirst({
+      where: { id, organizationId },
+    })
+
+    if (!insight) {
+      return res.status(404).json({ success: false, message: 'Insight not found' })
+    }
+
+    const updated = await prisma.aIInsight.update({
+      where: { id },
+      data: {
+        feedback,
+        feedbackAt: new Date(),
+        feedbackBy: userId,
+      },
+    })
+
+    res.json({ success: true, data: { id: updated.id, feedback: updated.feedback } })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to submit insight feedback', error: error.message })
+  }
+}
+
+/**
+ * 7.5: Get feedback stats for the org
+ */
+export const getFeedbackStats = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+    const [chatPositive, chatNegative, chatTotal, insightHelpful, insightNotHelpful] = await Promise.all([
+      prisma.chatMessage.count({ where: { organizationId, feedback: 'positive', feedbackAt: { gte: thirtyDaysAgo } } }),
+      prisma.chatMessage.count({ where: { organizationId, feedback: 'negative', feedbackAt: { gte: thirtyDaysAgo } } }),
+      prisma.chatMessage.count({ where: { organizationId, role: 'assistant', createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.aIInsight.count({ where: { organizationId, feedback: 'helpful', feedbackAt: { gte: thirtyDaysAgo } } }),
+      prisma.aIInsight.count({ where: { organizationId, feedback: 'not_helpful', feedbackAt: { gte: thirtyDaysAgo } } }),
+    ])
+
+    res.json({
+      success: true,
+      data: {
+        chat: {
+          positive: chatPositive,
+          negative: chatNegative,
+          total: chatTotal,
+          satisfactionRate: chatTotal > 0 ? Math.round(((chatPositive) / Math.max(1, chatPositive + chatNegative)) * 100) : null,
+        },
+        insights: {
+          helpful: insightHelpful,
+          notHelpful: insightNotHelpful,
+          total: insightHelpful + insightNotHelpful,
+        },
+      },
+    })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to fetch feedback stats', error: error.message })
+  }
+}
+
+/**
+ * 7.6: AI-powered lead enrichment  
+ * Uses GPT to infer/enrich lead data from available context
+ */
+export const enrichLead = async (req: Request, res: Response) => {
+  try {
+    const { leadId } = req.params
+    const organizationId = req.user!.organizationId
+
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, organizationId },
+      include: {
+        notes: { take: 10, orderBy: { createdAt: 'desc' } },
+        messages: { take: 10, orderBy: { createdAt: 'desc' } },
+        activities: { take: 10, orderBy: { createdAt: 'desc' } },
+      },
+    })
+
+    if (!lead) {
+      return res.status(404).json({ success: false, message: 'Lead not found' })
+    }
+
+    const openaiService = getOpenAIService()
+
+    // Build context from lead data
+    const existingData = {
+      name: `${lead.firstName} ${lead.lastName}`,
+      email: lead.email,
+      phone: lead.phone,
+      company: lead.company,
+      position: lead.position,
+      source: lead.source,
+      propertyType: lead.propertyType,
+      transactionType: lead.transactionType,
+      budgetMin: lead.budgetMin,
+      budgetMax: lead.budgetMax,
+      desiredLocation: lead.desiredLocation,
+      notes: lead.notes.map(n => n.content).join('\n'),
+      recentMessages: lead.messages.map(m => m.body).slice(0, 5).join('\n'),
+    }
+
+    const prompt = `You are a real estate CRM data enrichment assistant. Based on the following lead data, infer any missing information that can be reasonably deduced. Only provide information that can be reliably inferred — do not fabricate data.
+
+Current lead data:
+${JSON.stringify(existingData, null, 2)}
+
+Analyze the lead's name, email domain, communication history, notes, and existing data to infer:
+1. Likely property preferences (type, budget range, location) if not already set
+2. Transaction type (buyer/seller/investor) if not set  
+3. Timeline/urgency level
+4. Key interests or concerns mentioned in communications
+5. Suggested tags based on the lead's profile
+6. A brief lead summary (2-3 sentences)
+
+Respond in JSON format with only the fields you can confidently infer:
+{
+  "propertyType": "string or null",
+  "transactionType": "string or null", 
+  "budgetMin": "number or null",
+  "budgetMax": "number or null",
+  "desiredLocation": "string or null",
+  "moveInTimeline": "string or null",
+  "suggestedTags": ["array of tag strings"],
+  "interests": ["array of identified interests"],
+  "concerns": ["array of identified concerns"],
+  "summary": "brief lead profile summary",
+  "confidence": "low | medium | high"
+}`
+
+    const result = await openaiService.chat(
+      [{ role: 'user', content: prompt }],
+      req.user!.userId,
+      organizationId
+    )
+
+    // Track usage
+    await incrementAIUsage(organizationId, 'contentGenerations', {
+      tokens: result.tokens,
+      cost: result.cost,
+    })
+
+    // Try to parse the enrichment response
+    let enrichment: Record<string, any> = {}
+    try {
+      const jsonMatch = result.response.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        enrichment = JSON.parse(jsonMatch[0])
+      }
+    } catch {
+      enrichment = { summary: result.response, confidence: 'low' }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        leadId,
+        enrichment,
+        tokens: result.tokens,
+        cost: result.cost,
+      },
+    })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to enrich lead', error: error.message })
+  }
+}
+
+/**
+ * 7.6: Apply enrichment suggestions to a lead
+ */
+export const applyEnrichment = async (req: Request, res: Response) => {
+  try {
+    const { leadId } = req.params
+    const organizationId = req.user!.organizationId
+    const { fields } = req.body // Fields the user approved to apply
+
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, organizationId },
+    })
+
+    if (!lead) {
+      return res.status(404).json({ success: false, message: 'Lead not found' })
+    }
+
+    // Only update fields that are currently empty on the lead
+    const updateData: Record<string, any> = {}
+    const allowedFields = ['propertyType', 'transactionType', 'budgetMin', 'budgetMax', 'desiredLocation', 'moveInTimeline']
+
+    for (const field of allowedFields) {
+      if (fields[field] !== undefined && fields[field] !== null && !lead[field as keyof typeof lead]) {
+        updateData[field] = fields[field]
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.json({ success: true, data: lead, message: 'No new fields to apply' })
+    }
+
+    const updated = await prisma.lead.update({
+      where: { id: leadId },
+      data: updateData,
+    })
+
+    res.json({ success: true, data: updated, message: `Updated ${Object.keys(updateData).length} field(s)` })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to apply enrichment', error: error.message })
+  }
+}
+
+/**
+ * 7.7: Get/update AI budget alert settings
+ */
+export const getBudgetSettings = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        aiBudgetWarning: true,
+        aiBudgetCaution: true,
+        aiBudgetHardLimit: true,
+        aiBudgetAlertEnabled: true,
+      },
+    })
+
+    res.json({
+      success: true,
+      data: {
+        warning: org?.aiBudgetWarning ?? 25,
+        caution: org?.aiBudgetCaution ?? 50,
+        hardLimit: org?.aiBudgetHardLimit ?? 100,
+        alertEnabled: org?.aiBudgetAlertEnabled ?? true,
+      },
+    })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to fetch budget settings', error: error.message })
+  }
+}
+
+export const updateBudgetSettings = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const { warning, caution, hardLimit, alertEnabled } = req.body
+
+    const updated = await prisma.organization.update({
+      where: { id: organizationId },
+      data: {
+        ...(warning !== undefined && { aiBudgetWarning: warning }),
+        ...(caution !== undefined && { aiBudgetCaution: caution }),
+        ...(hardLimit !== undefined && { aiBudgetHardLimit: hardLimit }),
+        ...(alertEnabled !== undefined && { aiBudgetAlertEnabled: alertEnabled }),
+      },
+      select: {
+        aiBudgetWarning: true,
+        aiBudgetCaution: true,
+        aiBudgetHardLimit: true,
+        aiBudgetAlertEnabled: true,
+      },
+    })
+
+    res.json({
+      success: true,
+      data: {
+        warning: updated.aiBudgetWarning ?? 25,
+        caution: updated.aiBudgetCaution ?? 50,
+        hardLimit: updated.aiBudgetHardLimit ?? 100,
+        alertEnabled: updated.aiBudgetAlertEnabled,
+      },
+    })
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to update budget settings', error: error.message })
   }
 }

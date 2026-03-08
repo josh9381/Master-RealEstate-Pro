@@ -161,7 +161,8 @@ const AIHub = () => {
         navigate('/leads')
         toast.info(`Navigating to: ${rec.action}`)
       }
-    } catch {
+    } catch (error) {
+      console.error('Failed to execute AI action:', error)
       toast.error('Failed to execute action. Please try again.')
     }
   }

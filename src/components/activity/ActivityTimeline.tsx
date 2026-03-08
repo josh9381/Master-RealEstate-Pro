@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { useConfirm } from '@/hooks/useConfirm'
 import { 
   Mail, 
   Phone, 
@@ -97,6 +98,7 @@ function mapApiActivity(raw: Record<string, unknown>): Activity {
 
 export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTimelineProps) {
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<'all' | 'email' | 'call' | 'sms' | 'note'>('all')
   const [expandedIds, setExpandedIds] = useState<(number | string)[]>([])
@@ -322,8 +324,8 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
-                              if (confirm('Delete this activity?')) {
+                            onClick={async () => {
+                              if (await showConfirm({ title: 'Delete Activity', message: 'Delete this activity?', confirmLabel: 'Delete', variant: 'destructive' })) {
                                 deleteActivityMutation.mutate(String(activity.id))
                               }
                             }}

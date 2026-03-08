@@ -28,7 +28,7 @@ interface AuthState {
   isManager: () => boolean
   isTeamMode: () => boolean
   hasPermission: (permission: keyof UserPermissions) => boolean
-  getSubscriptionTier: () => 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE' | null
+  getSubscriptionTier: () => 'STARTER' | 'PROFESSIONAL' | 'ELITE' | 'TEAM' | 'ENTERPRISE' | null
   isTrialActive: () => boolean
 }
 
@@ -43,6 +43,8 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       setAuth: (user, accessToken, refreshToken) => {
+        // localStorage is the canonical storage for tokens (used by axios interceptor)
+        // Zustand persist stores user + isAuthenticated for UI state
         localStorage.setItem('accessToken', accessToken)
         localStorage.setItem('refreshToken', refreshToken)
         set({ 
@@ -60,6 +62,7 @@ export const useAuthStore = create<AuthState>()(
         clearUserStorage(userId)
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
+        localStorage.removeItem('auth-storage')
         disconnectSocket()
         set({ 
           user: null, 
@@ -173,12 +176,28 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      // Only persist user and auth flag — tokens live in localStorage (single source of truth)
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
+      // On rehydrate, restore tokens from localStorage
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const accessToken = localStorage.getItem('accessToken')
+          const refreshToken = localStorage.getItem('refreshToken')
+          if (accessToken && refreshToken) {
+            state.accessToken = accessToken
+            state.refreshToken = refreshToken
+          } else {
+            // Tokens were cleared (e.g., manual localStorage clear) — force logout state
+            state.isAuthenticated = false
+            state.user = null
+            state.accessToken = null
+            state.refreshToken = null
+          }
+        }
+      },
     }
   )
 )

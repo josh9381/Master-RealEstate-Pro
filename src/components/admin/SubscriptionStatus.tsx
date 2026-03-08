@@ -63,14 +63,15 @@ export function SubscriptionStatus() {
   
   if (!data?.usage) return null
   
-  const tierConfig = {
-    FREE: { color: 'gray', icon: null },
+  const tierConfig: Record<string, { color: string; icon: React.ReactNode | null }> = {
     STARTER: { color: 'blue', icon: null },
     PROFESSIONAL: { color: 'purple', icon: <Crown className="w-4 h-4" /> },
+    ELITE: { color: 'indigo', icon: <Crown className="w-4 h-4" /> },
+    TEAM: { color: 'emerald', icon: <Crown className="w-4 h-4" /> },
     ENTERPRISE: { color: 'amber', icon: <Crown className="w-4 h-4" /> },
   }
   
-  const config = tierConfig[tier || 'FREE']
+  const config = tierConfig[tier || 'STARTER'] || tierConfig.STARTER
   
   const normalizeLimit = (limit: number | 'unlimited' | null | undefined): number | null => {
     if (limit === 'unlimited' || limit === null || limit === undefined) return null
@@ -123,7 +124,7 @@ export function SubscriptionStatus() {
           <div className="flex items-center gap-2">
             {config.icon}
             <h3 className="text-lg font-semibold text-gray-900">
-              {tier || 'FREE'} Plan
+              {tier || 'STARTER'} Plan
             </h3>
           </div>
           

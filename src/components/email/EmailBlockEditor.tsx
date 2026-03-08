@@ -253,8 +253,8 @@ export function EmailBlockEditor({
                 try {
                   const result = await campaignsApi.compileEmail(serializeBlocks(blocks))
                   setCompiledHtml(result.html)
-                } catch {
-                  // Fallback: show block preview
+                } catch (error) {
+                  console.error('Failed to compile email:', error)
                   setCompiledHtml(null)
                 } finally {
                   setIsCompiling(false)

@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth'
 import { workflowTriggerLimiter } from '../middleware/rateLimiter'
 import { validateBody, validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../utils/asyncHandler'
+import { enforcePlanLimit } from '../middleware/planLimits'
 import {
   createWorkflowSchema,
   updateWorkflowSchema,
@@ -63,6 +64,7 @@ router.get('/:id', asyncHandler(getWorkflow))
 router.post(
   '/',
   validateBody(createWorkflowSchema),
+  enforcePlanLimit('workflows'),
   asyncHandler(createWorkflow)
 )
 

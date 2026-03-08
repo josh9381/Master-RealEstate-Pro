@@ -7,7 +7,14 @@ import {
   updateSystemSettings,
   healthCheck,
   runMaintenance,
+  downloadBackup,
 } from '../controllers/admin.controller';
+import {
+  getFeatureFlags,
+  createFeatureFlag,
+  updateFeatureFlag,
+  deleteFeatureFlag,
+} from '../controllers/featureFlag.controller';
 import { adminMaintenanceLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../middleware/validate';
 import { updateSystemSettingsSchema, runMaintenanceSchema } from '../validators/admin.validator';
@@ -35,5 +42,14 @@ router.get('/health', healthCheck);
 
 // Database maintenance
 router.post('/maintenance', adminMaintenanceLimiter, validateBody(runMaintenanceSchema), runMaintenance);
+
+// Backup download
+router.get('/backups/:backupId/download', downloadBackup);
+
+// Feature flags
+router.get('/feature-flags', getFeatureFlags);
+router.post('/feature-flags', createFeatureFlag);
+router.put('/feature-flags/:id', updateFeatureFlag);
+router.delete('/feature-flags/:id', deleteFeatureFlag);
 
 export default router;

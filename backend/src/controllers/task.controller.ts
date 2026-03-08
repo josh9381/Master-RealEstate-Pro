@@ -3,6 +3,7 @@ import { prisma } from '../config/database';
 import { NotFoundError, ValidationError } from '../middleware/errorHandler';
 import type { TaskStatus, TaskPriority } from '@prisma/client';
 import { getTasksFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
+import { pushTaskUpdate } from '../config/socket';
 
 /**
  * Get all tasks with filtering and pagination
@@ -194,6 +195,8 @@ export const createTask = async (req: Request, res: Response) => {
     },
   });
 
+  pushTaskUpdate(req.user!.organizationId, { type: 'created', taskId: task.id, assignedToId: task.assignedToId ?? undefined });
+
   res.status(201).json({
     success: true,
     data: { task },
@@ -274,6 +277,8 @@ export const updateTask = async (req: Request, res: Response) => {
     },
   });
 
+  pushTaskUpdate(organizationId, { type: 'updated', taskId: task.id, assignedToId: task.assignedToId ?? undefined });
+
   res.json({
     success: true,
     data: { task },
@@ -302,6 +307,8 @@ export const deleteTask = async (req: Request, res: Response) => {
   await prisma.task.delete({
     where: { id },
   });
+
+  pushTaskUpdate(organizationId, { type: 'deleted', taskId: id });
 
   res.json({
     success: true,
@@ -346,6 +353,8 @@ export const completeTask = async (req: Request, res: Response) => {
       },
     },
   });
+
+  pushTaskUpdate(organizationId, { type: 'completed', taskId: task.id, assignedToId: task.assignedToId ?? undefined });
 
   res.json({
     success: true,

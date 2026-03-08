@@ -166,8 +166,8 @@ export async function printToPDF(
     }
 
     pdf.save(filename)
-  } catch {
-    // Fallback to browser print dialog
+  } catch (error) {
+    console.error('PDF export failed, falling back to print:', error)
     const originalTitle = document.title
     if (title) document.title = title
     window.print()
@@ -237,8 +237,8 @@ export async function exportAnalyticsAsPDF(
     }
 
     pdf.save(filename)
-  } catch {
-    // Fallback: open in new window with print dialog
+  } catch (error) {
+    console.error('PDF table export failed, falling back to print:', error)
     const win = window.open('', '_blank')
     if (!win) return
 

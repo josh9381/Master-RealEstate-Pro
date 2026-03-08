@@ -1,46 +1,58 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Facebook, Twitter, Instagram, Linkedin, Send, Calendar, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { useToast } from '@/hooks/useToast'
-import { messagesApi } from '@/lib/api'
-import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
+import { Facebook, Twitter, Instagram, Linkedin, Share2, AlertTriangle, Calendar, BarChart3, Users, TrendingUp, Clock, ExternalLink } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { Link } from 'react-router-dom'
+
+const platforms = [
+  {
+    name: 'Facebook',
+    icon: Facebook,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    description: 'Pages, groups, and ad campaigns',
+    features: ['Page management', 'Post scheduling', 'Ad analytics', 'Audience insights'],
+  },
+  {
+    name: 'Twitter / X',
+    icon: Twitter,
+    color: 'text-sky-500',
+    bgColor: 'bg-sky-50',
+    borderColor: 'border-sky-200',
+    description: 'Tweets, threads, and engagement',
+    features: ['Tweet scheduling', 'Thread composer', 'Hashtag analytics', 'Follower tracking'],
+  },
+  {
+    name: 'Instagram',
+    icon: Instagram,
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-50',
+    borderColor: 'border-pink-200',
+    description: 'Posts, stories, and reels',
+    features: ['Post scheduling', 'Story templates', 'Hashtag research', 'Engagement tracking'],
+  },
+  {
+    name: 'LinkedIn',
+    icon: Linkedin,
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    description: 'Professional content and networking',
+    features: ['Article publishing', 'Post scheduling', 'Lead gen forms', 'Company page analytics'],
+  },
+]
+
+const plannedFeatures = [
+  { icon: Calendar, title: 'Unified Scheduler', description: 'Schedule posts across all platforms from one calendar view' },
+  { icon: BarChart3, title: 'Cross-Platform Analytics', description: 'Compare engagement metrics across all connected platforms' },
+  { icon: Users, title: 'Audience Insights', description: 'Understand your followers with demographic and behavior data' },
+  { icon: TrendingUp, title: 'Performance Tracking', description: 'Track reach, impressions, and engagement over time' },
+  { icon: Clock, title: 'Best Time to Post', description: 'AI-powered recommendations for optimal posting times' },
+  { icon: Share2, title: 'Content Library', description: 'Save and reuse your best-performing content templates' },
+]
 
 const SocialMediaDashboard = () => {
-  const { toast } = useToast()
-  const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'published'>('all')
-  const [postContent, setPostContent] = useState('')
-
-  const { data: socialPosts = [], isLoading: loading, isFetching, refetch } = useQuery({
-    queryKey: ['social-media-posts'],
-    queryFn: async () => {
-      const response = await messagesApi.getMessages({ type: 'SOCIAL' })
-      const threads = response?.data?.threads || response?.threads || []
-      return Array.isArray(threads) ? threads : []
-    }
-  })
-  const refreshing = isFetching && !loading
-
-  const handleRefresh = () => {
-    refetch()
-  }
-
-  const platformIcons = {
-    Facebook: Facebook,
-    Twitter: Twitter,
-    Instagram: Instagram,
-    LinkedIn: Linkedin,
-  };
-
-  const platformColors = {
-    Facebook: 'text-blue-600',
-    Twitter: 'text-sky-500',
-    Instagram: 'text-pink-600',
-    LinkedIn: 'text-blue-700',
-  };
-
   return (
     <div className="space-y-6">
       {/* Coming Soon Banner */}
@@ -49,333 +61,110 @@ const SocialMediaDashboard = () => {
         <div>
           <h3 className="font-semibold text-amber-800">Coming Soon — Social Media Integration</h3>
           <p className="text-sm text-amber-700 mt-1">
-            Social media management requires platform API integrations which are not yet available.
-            This feature is on the roadmap. In the meantime, use the Communications inbox for Email and SMS.
+            Social media management requires platform API integrations (Facebook Graph API, Twitter API v2, Instagram Basic Display API, LinkedIn Marketing API)
+            which are not yet connected. This page shows the planned features and layout. Use the{' '}
+            <Link to="/communication/inbox" className="underline font-medium">Communications inbox</Link>{' '}
+            for Email and SMS in the meantime.
           </p>
         </div>
         <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Social Media Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage and schedule posts across all platforms
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button disabled title="Social media integration coming soon">
-            <Send className="h-4 w-4 mr-2" />
-            Create Post
-          </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Social Media Dashboard</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage and schedule posts across all platforms from one place
+        </p>
+      </div>
+
+      {/* Platform Cards */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Platforms</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {platforms.map((platform) => {
+            const Icon = platform.icon
+            return (
+              <Card key={platform.name} className={`${platform.borderColor} border-2 opacity-75`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className={`p-2 rounded-lg ${platform.bgColor}`}>
+                      <Icon className={`h-6 w-6 ${platform.color}`} />
+                    </div>
+                    <Badge variant="secondary">Not Connected</Badge>
+                  </div>
+                  <CardTitle className="text-base mt-2">{platform.name}</CardTitle>
+                  <CardDescription>{platform.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-1.5">
+                    {platform.features.map((feature) => (
+                      <li key={feature} className="text-sm text-muted-foreground flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button variant="outline" size="sm" className="w-full mt-4" disabled>
+                    <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                    Connect
+                  </Button>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       </div>
 
-      {loading ? (
-        <LoadingSkeleton rows={4} />
-      ) : (
-        <>
-      <div className="hidden">Wrapper for loading state</div>
-
-      {/* Platform Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No data yet</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Engagement</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No data yet</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No data yet</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Reach</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">—</div>
-            <p className="text-xs text-muted-foreground">No data yet</p>
-          </CardContent>
-        </Card>
+      {/* Planned Features */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Planned Features</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {plannedFeatures.map((feature) => {
+            const Icon = feature.icon
+            return (
+              <Card key={feature.title} className="opacity-75">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-muted">
+                      <Icon className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <CardTitle className="text-base">{feature.title}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Connected Platforms */}
-      <Card>
+      {/* Placeholder Dashboard Preview */}
+      <Card className="opacity-60">
         <CardHeader>
-          <CardTitle>Connected Platforms</CardTitle>
-          <CardDescription>Your social media accounts</CardDescription>
+          <CardTitle>Dashboard Preview</CardTitle>
+          <CardDescription>This is how your social media overview will look once platforms are connected</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             {[
-              { name: 'Facebook', followers: '—', status: 'disconnected' },
-              { name: 'Twitter', followers: '—', status: 'disconnected' },
-              { name: 'Instagram', followers: '—', status: 'disconnected' },
-              { name: 'LinkedIn', followers: '—', status: 'disconnected' },
-            ].map((platform) => {
-              const Icon = platformIcons[platform.name as keyof typeof platformIcons];
-              return (
-                <div key={platform.name} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <Icon className={`h-8 w-8 ${platformColors[platform.name as keyof typeof platformColors]}`} />
-                    <Badge variant={platform.status === 'connected' ? 'default' : 'secondary'}>
-                      {platform.status}
-                    </Badge>
-                  </div>
-                  <h4 className="font-semibold">{platform.name}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">{platform.followers} followers</p>
-                  <Button variant="outline" size="sm" className="mt-3 w-full" disabled title="Platform integration coming soon">
-                    {platform.status === 'connected' ? 'Disconnect' : 'Connect'}
-                  </Button>
-                </div>
-              );
-            })}
+              { label: 'Total Posts', value: '—' },
+              { label: 'Total Engagement', value: '—' },
+              { label: 'Scheduled Posts', value: '—' },
+              { label: 'Avg. Reach', value: '—' },
+            ].map((stat) => (
+              <div key={stat.label} className="p-4 border rounded-lg text-center bg-muted/30">
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-bold mt-1">{stat.value}</p>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
-
-      {/* Scheduled & Published Posts */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Recent Posts</CardTitle>
-              <CardDescription>Scheduled and published content</CardDescription>
-            </div>
-            <div className="flex space-x-2">
-              <Button variant={filterStatus === 'scheduled' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(filterStatus === 'scheduled' ? 'all' : 'scheduled')}>
-                Scheduled
-              </Button>
-              <Button variant={filterStatus === 'published' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(filterStatus === 'published' ? 'all' : 'published')}>
-                Published
-              </Button>
-              <Button variant={filterStatus === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus('all')}>
-                All
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {socialPosts.filter(post => filterStatus === 'all' || post.status === filterStatus).map((post) => {
-              const Icon = platformIcons[post.platform as keyof typeof platformIcons];
-              return (
-                <div key={post.id} className="p-4 border rounded-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3 flex-1">
-                      <Icon className={`h-5 w-5 ${platformColors[post.platform as keyof typeof platformColors]} mt-1`} />
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h4 className="font-semibold">{post.platform}</h4>
-                          <Badge variant={post.status === 'published' ? 'default' : 'secondary'}>
-                            {post.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm mb-3">{post.content}</p>
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                          <span className="flex items-center space-x-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{post.scheduled}</span>
-                          </span>
-                          {post.status === 'published' && (
-                            <>
-                              <span>{post.likes} likes</span>
-                              <span>{post.comments} comments</span>
-                              <span>{post.shares} shares</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <Button variant="outline" size="sm" onClick={() => {
-                        setPostContent(post.content)
-                        toast.info(`Editing post: ${post.content.substring(0, 30)}...`)
-                      }}>
-                        Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this post?')) {
-                          toast.success('Post deleted')
-                          refetch()
-                        }
-                      }}>
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Create New Post */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Create New Post</CardTitle>
-          <CardDescription>Schedule content across platforms</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Select Platforms</label>
-            <div className="flex space-x-3">
-              {['Facebook', 'Twitter', 'Instagram', 'LinkedIn'].map((platform) => {
-                const Icon = platformIcons[platform as keyof typeof platformIcons];
-                return (
-                  <label key={platform} className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" className="rounded" />
-                    <Icon className={`h-5 w-5 ${platformColors[platform as keyof typeof platformColors]}`} />
-                    <span className="text-sm">{platform}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Post Content</label>
-            <textarea
-              rows={4}
-              placeholder="What's on your mind?"
-              value={postContent}
-              onChange={(e) => setPostContent(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
-            />
-            <p className="text-xs text-muted-foreground mt-1">{postContent.length} / 280 characters</p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Schedule Date</label>
-              <input type="date" className="w-full px-3 py-2 border rounded-lg" />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Schedule Time</label>
-              <input type="time" className="w-full px-3 py-2 border rounded-lg" />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Add Media (Optional)</label>
-            <div className="border-2 border-dashed rounded-lg p-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Click to upload or drag and drop images/videos
-              </p>
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            <Button disabled title="Social media integration coming soon">Schedule Post</Button>
-            <Button variant="outline" disabled>Save Draft</Button>
-            <Button variant="outline" disabled>Post Now</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Analytics Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Platform Performance</CardTitle>
-          <CardDescription>Last 30 days</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              { platform: 'Facebook', posts: 0, engagement: 0, reach: 0, growth: '—' },
-              { platform: 'Twitter', posts: 0, engagement: 0, reach: 0, growth: '—' },
-              { platform: 'Instagram', posts: 0, engagement: 0, reach: 0, growth: '—' },
-              { platform: 'LinkedIn', posts: 0, engagement: 0, reach: 0, growth: '—' },
-            ].map((stat) => {
-              const Icon = platformIcons[stat.platform as keyof typeof platformIcons];
-              return (
-                <div key={stat.platform} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Icon className={`h-6 w-6 ${platformColors[stat.platform as keyof typeof platformColors]}`} />
-                    <div>
-                      <h4 className="font-semibold">{stat.platform}</h4>
-                      <p className="text-xs text-muted-foreground">{stat.posts} posts</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-6 text-sm">
-                    <div className="text-center">
-                      <p className="font-semibold">{stat.engagement.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">Engagement</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-semibold">{stat.reach.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">Reach</p>
-                    </div>
-                    <Badge variant="secondary">{stat.growth}</Badge>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Best Times to Post */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Best Times to Post</CardTitle>
-          <CardDescription>Optimal posting schedule based on engagement</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            {[
-              { platform: 'Facebook', bestTimes: ['10:00 AM', '2:00 PM', '7:00 PM'] },
-              { platform: 'Twitter', bestTimes: ['9:00 AM', '12:00 PM', '5:00 PM'] },
-              { platform: 'Instagram', bestTimes: ['11:00 AM', '3:00 PM', '8:00 PM'] },
-              { platform: 'LinkedIn', bestTimes: ['8:00 AM', '12:00 PM', '5:00 PM'] },
-            ].map((timing) => {
-              const Icon = platformIcons[timing.platform as keyof typeof platformIcons];
-              return (
-                <div key={timing.platform} className="p-4 border rounded-lg">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Icon className={`h-5 w-5 ${platformColors[timing.platform as keyof typeof platformColors]}`} />
-                    <h4 className="font-semibold">{timing.platform}</h4>
-                  </div>
-                  <div className="flex space-x-2">
-                    {timing.bestTimes.map((time) => (
-                      <Badge key={time} variant="outline">
-                        {time}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-        </>
-      )}
     </div>
-  );
-};
+  )
+}
 
-export default SocialMediaDashboard;
+export default SocialMediaDashboard
+

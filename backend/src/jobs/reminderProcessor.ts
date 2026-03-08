@@ -1,6 +1,6 @@
 import { prisma } from '../config/database'
 import { logger } from '../lib/logger'
-import { pushNotification } from '../config/socket'
+import { pushNotification, pushReminderDue } from '../config/socket'
 import { sendPushToUser } from '../services/pushNotification.service'
 
 /**
@@ -75,6 +75,13 @@ export async function processRemindersDue(): Promise<{ processed: number }> {
           read: false,
           createdAt: notification.createdAt.toISOString(),
           data: { leadId: reminder.leadId, reminderId: reminder.id },
+        })
+
+        // 2b. Dedicated reminder event for query cache invalidation
+        pushReminderDue(reminder.organizationId, {
+          reminderId: reminder.id,
+          leadId: reminder.leadId,
+          userId: reminder.userId,
         })
       }
 
@@ -158,6 +165,15 @@ export async function processRemindersDue(): Promise<{ processed: number }> {
         data: { status: 'FIRED', firedAt: now },
       })
 
+      // 7. Spawn next occurrence if recurring
+      if ((reminder as any).isRecurring && (reminder as any).recurrencePattern) {
+        try {
+          await spawnNextRecurrence(reminder as any, now)
+        } catch (recErr) {
+          logger.warn({ reminderId: reminder.id, error: recErr }, 'Failed to spawn next recurrence (non-blocking)')
+        }
+      }
+
       processed++
     } catch (err) {
       logger.error({ reminderId: reminder.id, error: err }, 'Failed to process reminder')
@@ -166,4 +182,86 @@ export async function processRemindersDue(): Promise<{ processed: number }> {
 
   logger.info({ processed }, 'Reminder processing complete')
   return { processed }
+}
+
+/**
+ * Calculate the next due date for a recurring reminder and create a new occurrence.
+ */
+async function spawnNextRecurrence(reminder: any, firedAt: Date): Promise<void> {
+  const currentOccurrence = reminder.occurrenceNumber || 0
+  const nextOccurrence = currentOccurrence + 1
+
+  // Check max occurrence count
+  if (reminder.recurrenceCount && nextOccurrence >= reminder.recurrenceCount) {
+    logger.info({ reminderId: reminder.id }, 'Max recurrence count reached, not spawning next')
+    return
+  }
+
+  const nextDue = calculateNextDueDate(new Date(reminder.dueAt), reminder.recurrencePattern, reminder.recurrenceInterval)
+
+  // Check end date
+  if (reminder.recurrenceEndDate && nextDue > new Date(reminder.recurrenceEndDate)) {
+    logger.info({ reminderId: reminder.id }, 'Recurrence end date passed, not spawning next')
+    return
+  }
+
+  const parentId = reminder.parentReminderId || reminder.id
+
+  await prisma.followUpReminder.create({
+    data: {
+      leadId: reminder.leadId,
+      userId: reminder.userId,
+      organizationId: reminder.organizationId,
+      title: reminder.title,
+      note: reminder.note,
+      dueAt: nextDue,
+      priority: reminder.priority,
+      channelInApp: reminder.channelInApp,
+      channelEmail: reminder.channelEmail,
+      channelSms: reminder.channelSms,
+      channelPush: reminder.channelPush,
+      isRecurring: true,
+      recurrencePattern: reminder.recurrencePattern,
+      recurrenceInterval: reminder.recurrenceInterval,
+      recurrenceEndDate: reminder.recurrenceEndDate,
+      recurrenceCount: reminder.recurrenceCount,
+      occurrenceNumber: nextOccurrence,
+      parentReminderId: parentId,
+      status: 'PENDING',
+    },
+  })
+
+  logger.info({ parentId, occurrence: nextOccurrence, nextDue }, 'Spawned next recurring reminder')
+}
+
+function calculateNextDueDate(currentDue: Date, pattern: string, customInterval?: number | null): Date {
+  const next = new Date(currentDue)
+
+  switch (pattern) {
+    case 'DAILY':
+      next.setDate(next.getDate() + 1)
+      break
+    case 'WEEKLY':
+      next.setDate(next.getDate() + 7)
+      break
+    case 'BIWEEKLY':
+      next.setDate(next.getDate() + 14)
+      break
+    case 'MONTHLY':
+      next.setMonth(next.getMonth() + 1)
+      break
+    case 'QUARTERLY':
+      next.setMonth(next.getMonth() + 3)
+      break
+    case 'YEARLY':
+      next.setFullYear(next.getFullYear() + 1)
+      break
+    case 'CUSTOM':
+      next.setDate(next.getDate() + (customInterval || 1))
+      break
+    default:
+      next.setDate(next.getDate() + 1)
+  }
+
+  return next
 }

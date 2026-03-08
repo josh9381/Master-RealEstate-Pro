@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { getUserItem, setUserItem } from '@/lib/userStorage'
 import { useQuery } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { 
   Mail, 
   MessageSquare, 
@@ -46,7 +47,7 @@ import {
 import { useToast } from '@/hooks/useToast'
 import { MockModeBanner } from '@/components/shared/MockModeBanner'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
-import { messagesApi, leadsApi, aiApi } from '@/lib/api'
+import { messagesApi, leadsApi, aiApi, messageTemplatesApi } from '@/lib/api'
 import { AIComposer } from '@/components/ai/AIComposer'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import type { ApiSendResponse } from '@/types'
@@ -103,22 +104,15 @@ interface Thread {
 
 // Mock data removed - using real API data
 
-// Configurable message templates – replace with API fetch when backend supports it
-const MESSAGE_TEMPLATES = [
-  { id: 1, name: 'Schedule a call', content: 'Hi {contact},\n\nI\'d like to schedule a call to discuss this further. What times work best for you this week?\n\nBest regards' },
-  { id: 2, name: 'Request more info', content: 'Hi {contact},\n\nThank you for your message. Could you provide some additional information about [specific topic]?\n\nLooking forward to your response.' },
-  { id: 3, name: 'Send pricing', content: 'Hi {contact},\n\nThank you for your interest! I\'ve attached our pricing information. Please let me know if you have any questions.\n\nBest regards' },
-  { id: 4, name: 'Follow-up reminder', content: 'Hi {contact},\n\nI wanted to follow up on our previous conversation. Do you have any updates or questions I can help with?\n\nBest regards' },
-  { id: 5, name: 'Thank you', content: 'Hi {contact},\n\nThank you so much for your time today. I really appreciated our conversation. Please don\'t hesitate to reach out if you need anything.\n\nBest regards' },
+// Fallback templates used only when API hasn't loaded yet
+const FALLBACK_TEMPLATES = [
+  { id: 'fallback-1', name: 'Schedule a Call', content: 'Hi {{contact}},\n\nI\'d like to schedule a call to discuss this further. What times work best for you this week?\n\nBest regards' },
+  { id: 'fallback-2', name: 'Follow-up Reminder', content: 'Hi {{contact}},\n\nI wanted to follow up on our previous conversation. Do you have any updates or questions I can help with?\n\nBest regards' },
 ];
 
-const QUICK_REPLIES = [
-  { id: 1, text: 'Thanks! 👍', emoji: '👍' },
-  { id: 2, text: 'Will call you soon 📞', emoji: '📞' },
-  { id: 3, text: 'Received ✅', emoji: '✅' },
-  { id: 4, text: 'Perfect! 🎉', emoji: '🎉' },
-  { id: 5, text: 'Got it 👌', emoji: '👌' },
-  { id: 6, text: 'On my way! 🚗', emoji: '🚗' },
+const FALLBACK_QUICK_REPLIES = [
+  { id: 'fallback-qr-1', name: 'Thanks!', content: 'Thanks! 👍' },
+  { id: 'fallback-qr-2', name: 'Got it', content: 'Got it 👌' },
 ];
 
 const CommunicationInbox = () => {
@@ -208,6 +202,39 @@ const CommunicationInbox = () => {
     staleTime: 60_000,
   })
 
+  // Fetch message templates from API (4-tier: System → Organization → Team → Personal)
+  const { data: templatesData } = useQuery({
+    queryKey: ['message-templates'],
+    queryFn: async () => {
+      const response = await messageTemplatesApi.getTemplates({ isQuickReply: 'false' })
+      return response?.templates || []
+    },
+    staleTime: 120_000,
+  })
+
+  // Fetch quick replies from API
+  const { data: quickRepliesData } = useQuery({
+    queryKey: ['message-templates-quick-replies'],
+    queryFn: async () => {
+      const response = await messageTemplatesApi.getTemplates({ isQuickReply: 'true' })
+      return response?.templates || []
+    },
+    staleTime: 120_000,
+  })
+
+  // Seed default templates on first load if none exist
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    if (templatesData && templatesData.length === 0 && quickRepliesData && quickRepliesData.length === 0) {
+      messageTemplatesApi.seedDefaults().then((result) => {
+        if (result?.seeded) {
+          queryClient.invalidateQueries({ queryKey: ['message-templates'] })
+          queryClient.invalidateQueries({ queryKey: ['message-templates-quick-replies'] })
+        }
+      }).catch(() => { /* silently ignore seed errors */ })
+    }
+  }, [templatesData, quickRepliesData, queryClient])
+
   // Track selectedThread id in a ref to avoid stale closure in threadsData sync effect
   const selectedThreadIdRef = useRef<number | null>(null)
   useEffect(() => {
@@ -241,71 +268,19 @@ const CommunicationInbox = () => {
     }
   }, [selectedThread?.id, selectedThread?.messages?.length])
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle shortcuts when not typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return
-      }
-
-      // Cmd/Ctrl + R: Mark as read
-      if ((e.metaKey || e.ctrlKey) && e.key === 'r' && selectedThread) {
-        e.preventDefault()
-        handleMarkRead()
-      }
-
-      // Cmd/Ctrl + U: Mark as unread
-      if ((e.metaKey || e.ctrlKey) && e.key === 'u' && selectedThread) {
-        e.preventDefault()
-        handleMarkUnread()
-      }
-
-      // Cmd/Ctrl + Shift + A: Mark all as read
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'A') {
-        e.preventDefault()
-        handleMarkAllAsRead()
-      }
-
-      // E: Archive
-      if (e.key === 'e' && selectedThread) {
-        e.preventDefault()
-        archiveThread(selectedThread.id)
-      }
-
-      // S: Star/Unstar
-      if (e.key === 's' && selectedThread) {
-        e.preventDefault()
-        toggleStarThread(selectedThread.id)
-      }
-
-      // X: Bulk select mode
-      if (e.key === 'x') {
-        e.preventDefault()
-        handleToggleBulkSelect()
-      }
-
-      // Delete: Move to trash
-      if (e.key === 'Delete' && selectedThread) {
-        e.preventDefault()
-        trashThread(selectedThread.id)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedThread, bulkSelectMode])
-
   const handleRefresh = () => {
     refetchMessages()
   }
 
-  const templates = MESSAGE_TEMPLATES
+  const templates = (templatesData && templatesData.length > 0) ? templatesData : FALLBACK_TEMPLATES
 
-  const quickReplies = QUICK_REPLIES
+  const quickReplies = (quickRepliesData && quickRepliesData.length > 0) ? quickRepliesData : FALLBACK_QUICK_REPLIES
 
   const insertTemplate = (templateContent: string) => {
-    const personalizedContent = templateContent.replace('{contact}', selectedThread?.contact || 'there')
+    // Support both {{contact}} and {contact} variable syntax
+    const personalizedContent = templateContent
+      .replace(/\{\{contact\}\}/g, selectedThread?.contact || 'there')
+      .replace(/\{contact\}/g, selectedThread?.contact || 'there')
     setReplyText(personalizedContent)
     setShowTemplates(false)
     toast.success('Template inserted')
@@ -468,7 +443,8 @@ const CommunicationInbox = () => {
         body: `---------- Forwarded message ----------\nFrom: ${selectedThread.contact}\n\n${lastMsg?.body || selectedThread.lastMessage}`,
       })
       toast.success(`Forwarded to ${forwardTo.trim()}`)
-    } catch {
+    } catch (error) {
+      console.error('Failed to forward message:', error)
       toast.error('Failed to forward message')
     }
   }
@@ -1030,7 +1006,7 @@ const CommunicationInbox = () => {
         <Link to="/communication/calls">
           <Button variant="outline" size="sm">
             <Phone className="mr-2 h-4 w-4" />
-            Call Center
+            Cold Call Hub
           </Button>
         </Link>
       </div>
@@ -1658,7 +1634,7 @@ const CommunicationInbox = () => {
                         <Card className="absolute bottom-full left-0 mb-2 w-64 z-10 shadow-lg">
                           <CardContent className="p-2">
                             <div className="space-y-1">
-                              {templates.map(template => (
+                              {templates.map((template: { id: string; name: string; content: string }) => (
                                 <Button
                                   key={template.id}
                                   variant="ghost"
@@ -1688,15 +1664,15 @@ const CommunicationInbox = () => {
                         <Card className="absolute bottom-full left-0 mb-2 w-56 z-10 shadow-lg">
                           <CardContent className="p-2">
                             <div className="space-y-1">
-                              {quickReplies.map(reply => (
+                              {quickReplies.map((reply: { id: string; name: string; content: string }) => (
                                 <Button
                                   key={reply.id}
                                   variant="ghost"
                                   size="sm"
                                   className="w-full justify-start text-left"
-                                  onClick={() => insertQuickReply(reply.text)}
+                                  onClick={() => insertQuickReply(reply.content)}
                                 >
-                                  {reply.text}
+                                  {reply.content}
                                 </Button>
                               ))}
                             </div>

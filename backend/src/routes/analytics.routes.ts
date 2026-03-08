@@ -17,6 +17,12 @@ import {
   getPipelineMetrics,
   getDeviceBreakdown,
   getGeographicBreakdown,
+  getAttributionReport,
+  getLeadTouchpoints,
+  getPeriodComparison,
+  getLeadVelocity,
+  getSourceROI,
+  getFollowUpAnalytics,
 } from '../controllers/analytics.controller'
 
 const router = Router()
@@ -43,5 +49,13 @@ router.get('/revenue-timeline', cacheResponse(300), asyncHandler(getRevenueTimel
 router.get('/pipeline-metrics', cacheResponse(300), asyncHandler(getPipelineMetrics))
 router.get('/device-breakdown', cacheResponse(300), asyncHandler(getDeviceBreakdown))
 router.get('/geographic', cacheResponse(300), asyncHandler(getGeographicBreakdown))
+
+// Phase 5: Attribution, comparison, velocity, ROI, follow-up analytics
+router.get('/attribution', cacheResponse(300), asyncHandler(getAttributionReport))
+router.get('/attribution/touchpoints/:leadId', cacheResponse(120), asyncHandler(getLeadTouchpoints))
+router.get('/comparison', cacheResponse(300), asyncHandler(getPeriodComparison))
+router.get('/lead-velocity', cacheResponse(300), asyncHandler(getLeadVelocity))
+router.get('/source-roi', cacheResponse(300), asyncHandler(getSourceROI))
+router.get('/follow-up-analytics', cacheResponse(300), asyncHandler(getFollowUpAnalytics))
 
 export default router

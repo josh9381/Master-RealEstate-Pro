@@ -37,7 +37,8 @@ export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: Ad
         const response = await tagsApi.getTags()
         const tags = response?.data?.tags || response?.tags || response || []
         return Array.isArray(tags) ? tags.map((t: { name: string }) => t.name) : []
-      } catch {
+      } catch (error) {
+        console.error('Failed to fetch tags:', error)
         return ['Enterprise', 'Hot Lead', 'Demo Scheduled', 'Follow-up', 'High Value', 'Partner']
       }
     },
@@ -56,7 +57,8 @@ export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: Ad
               u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown'
             ), 'Unassigned']
           : ['Unassigned']
-      } catch {
+      } catch (error) {
+        console.error('Failed to fetch team members:', error)
         return ['Unassigned']
       }
     },

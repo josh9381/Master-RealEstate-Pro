@@ -20,6 +20,7 @@ import {
   getCalendarView,
   getUpcomingAppointments,
   sendReminder,
+  exportAppointmentICS,
 } from '../controllers/appointment.controller';
 
 const router = Router();
@@ -77,6 +78,13 @@ router.post(
  * @access  Private
  */
 router.get('/:id', asyncHandler(getAppointment));
+
+/**
+ * @route   GET /api/appointments/:id/ics
+ * @desc    Export appointment as ICS file for calendar apps
+ * @access  Private
+ */
+router.get('/:id/ics', asyncHandler(exportAppointmentICS));
 
 /**
  * @route   PUT /api/appointments/:id

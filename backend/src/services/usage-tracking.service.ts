@@ -153,12 +153,12 @@ export async function checkUsageLimit(
     },
   })
 
-  const tier = org?.subscriptionTier || 'FREE'
+  const tier = org?.subscriptionTier || 'STARTER'
   const useOwnKey = !!(org?.useOwnAIKey && org?.openaiApiKey)
   const limits = AI_PLAN_LIMITS[tier as SubscriptionTier]
 
   // Map usage type to limit field
-  const limitMap: Record<AIUsageType, keyof typeof limits> = {
+  const limitMap: Record<AIUsageType, keyof Pick<typeof limits, 'maxMonthlyAIMessages' | 'maxContentGenerations' | 'maxComposeUses' | 'maxScoringRecalculations' | 'maxWebSearches'>> = {
     aiMessages: 'maxMonthlyAIMessages',
     contentGenerations: 'maxContentGenerations',
     composeUses: 'maxComposeUses',
@@ -167,7 +167,7 @@ export async function checkUsageLimit(
     enhancements: 'maxContentGenerations', // Enhancements count toward content limit
   }
 
-  const limitValue = limits[limitMap[type]]
+  const limitValue = limits[limitMap[type]] as number | 'unlimited'
 
   // If org uses their own key, skip message count limits (they pay OpenAI directly)
   // But still enforce rate limits (handled by middleware)
@@ -225,7 +225,7 @@ export async function getUsageWithLimits(organizationId: string) {
     },
   })
 
-  const tier = (org?.subscriptionTier || 'FREE') as SubscriptionTier
+  const tier = (org?.subscriptionTier || 'STARTER') as SubscriptionTier
   const useOwnKey = !!(org?.useOwnAIKey && org?.openaiApiKey)
   const limits = AI_PLAN_LIMITS[tier]
   const usage = await getMonthlyUsage(organizationId)

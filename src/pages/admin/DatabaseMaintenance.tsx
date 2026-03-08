@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Database, Zap, RefreshCw, FileText, Loader2, AlertTriangle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Database, Zap, RefreshCw, FileText, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { adminApi } from '@/lib/api';
 
 const DatabaseMaintenance = () => {
   const { toast } = useToast();
+  const showConfirm = useConfirm();
   const [vacuumFull, setVacuumFull] = useState(true);
   const [analyze, setAnalyze] = useState(true);
   const [backupSchedule, setBackupSchedule] = useState('Daily at 2:00 AM');
@@ -15,8 +18,24 @@ const DatabaseMaintenance = () => {
   const [runningOp, setRunningOp] = useState<string | null>(null);
   const [expandedTable, setExpandedTable] = useState<string | null>(null);
   const [showBackupHistory, setShowBackupHistory] = useState(false);
-  const [backupHistory, setBackupHistory] = useState<Array<{ id: string; date: string; size: string; status: string; type: string }>>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Fetch real DB stats
+  const { data: dbStatsData } = useQuery({
+    queryKey: ['db-stats'],
+    queryFn: () => adminApi.getDbStats(),
+    staleTime: 60_000,
+  });
+
+  // Fetch real backup history
+  const { data: backupHistoryData, refetch: refetchHistory } = useQuery({
+    queryKey: ['backup-history'],
+    queryFn: () => adminApi.runMaintenance('backup_history'),
+    enabled: showBackupHistory,
+  });
+
+  const dbStats = dbStatsData?.data;
+  const backupHistory: Array<{ id: string; date: string; size: string; status: string; type: string; filename?: string }> =
+    backupHistoryData?.history || [];
 
   const runMaintenanceOp = async (operation: string, label: string, options?: Record<string, unknown>) => {
     setRunningOp(operation);
@@ -39,7 +58,10 @@ const DatabaseMaintenance = () => {
 
   const handleOptimize = () => runMaintenanceOp('optimize', 'Database optimization');
   const handleReindex = () => runMaintenanceOp('reindex', 'Table reindexing');
-  const handleBackup = () => runMaintenanceOp('backup', 'Database backup');
+  const handleBackup = async () => {
+    await runMaintenanceOp('backup', 'Database backup');
+    refetchHistory();
+  };
 
   const handleVacuum = () => {
     const options: string[] = [];
@@ -50,8 +72,8 @@ const DatabaseMaintenance = () => {
 
   const handleReindexAll = () => runMaintenanceOp('reindex_all', 'Full reindex');
 
-  const handleCluster = () => {
-    if (confirm('This will lock tables and may take significant time. Continue?')) {
+  const handleCluster = async () => {
+    if (await showConfirm({ title: 'Table Clustering', message: 'This will lock tables and may take significant time. Continue?', confirmLabel: 'Continue' })) {
       runMaintenanceOp('cluster', 'Table clustering');
     }
   };
@@ -64,34 +86,27 @@ const DatabaseMaintenance = () => {
     setExpandedTable(expandedTable === tableName ? null : tableName);
   };
 
-  const handleBackupNow = () => runMaintenanceOp('backup', 'Backup creation');
+  const handleBackupNow = async () => {
+    await runMaintenanceOp('backup', 'Backup creation');
+    refetchHistory();
+  };
 
-  const handleViewHistory = async () => {
-    if (showBackupHistory) {
-      setShowBackupHistory(false);
-      return;
-    }
-    setLoadingHistory(true);
+  const handleViewHistory = () => {
+    setShowBackupHistory(!showBackupHistory);
+  };
+
+  const handleDownloadBackup = async (backupId: string, filename: string) => {
     try {
-      const result = await adminApi.runMaintenance('backup_history');
-      const history = result?.data?.history || result?.history || [
-        { id: '1', date: new Date(Date.now() - 2 * 3600000).toISOString(), size: '4.2 GB', status: 'completed', type: 'automatic' },
-        { id: '2', date: new Date(Date.now() - 26 * 3600000).toISOString(), size: '4.1 GB', status: 'completed', type: 'automatic' },
-        { id: '3', date: new Date(Date.now() - 50 * 3600000).toISOString(), size: '4.1 GB', status: 'completed', type: 'manual' },
-      ];
-      setBackupHistory(history);
-      setShowBackupHistory(true);
-    } catch {
-      // Fallback to showing sample history when endpoint unavailable
-      setBackupHistory([
-        { id: '1', date: new Date(Date.now() - 2 * 3600000).toISOString(), size: '4.2 GB', status: 'completed', type: 'automatic' },
-        { id: '2', date: new Date(Date.now() - 26 * 3600000).toISOString(), size: '4.1 GB', status: 'completed', type: 'automatic' },
-        { id: '3', date: new Date(Date.now() - 50 * 3600000).toISOString(), size: '4.1 GB', status: 'completed', type: 'manual' },
-      ]);
-      setShowBackupHistory(true);
-      toast.info('Showing cached backup history (live API unavailable)');
-    } finally {
-      setLoadingHistory(false);
+      const blob = await adminApi.downloadBackup(backupId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Backup download failed:', error)
+      toast.error('Failed to download backup');
     }
   };
 
@@ -114,8 +129,14 @@ const DatabaseMaintenance = () => {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4.2 GB</div>
-            <p className="text-xs text-muted-foreground">50 GB available</p>
+            <div className="text-2xl font-bold">
+              {dbStats?.databaseSize
+                ? dbStats.databaseSize > 1024 * 1024 * 1024
+                  ? `${(dbStats.databaseSize / (1024 * 1024 * 1024)).toFixed(1)} GB`
+                  : `${(dbStats.databaseSize / (1024 * 1024)).toFixed(1)} MB`
+                : '—'}
+            </div>
+            <p className="text-xs text-muted-foreground">PostgreSQL</p>
           </CardContent>
         </Card>
         <Card>
@@ -124,7 +145,7 @@ const DatabaseMaintenance = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">47</div>
+            <div className="text-2xl font-bold">{dbStats?.tables?.length ?? '—'}</div>
             <p className="text-xs text-muted-foreground">PostgreSQL</p>
           </CardContent>
         </Card>
@@ -134,7 +155,11 @@ const DatabaseMaintenance = () => {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.4M</div>
+            <div className="text-2xl font-bold">
+              {dbStats?.tables
+                ? dbStats.tables.reduce((sum: number, t: { records: number }) => sum + t.records, 0).toLocaleString()
+                : '—'}
+            </div>
             <p className="text-xs text-muted-foreground">Across all tables</p>
           </CardContent>
         </Card>
@@ -144,8 +169,18 @@ const DatabaseMaintenance = () => {
             <RefreshCw className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2h ago</div>
-            <p className="text-xs text-muted-foreground">Automatic backup</p>
+            <div className="text-2xl font-bold">
+              {backupHistory.length > 0
+                ? (() => {
+                    const ms = Date.now() - new Date(backupHistory[0].date).getTime();
+                    const hrs = Math.floor(ms / 3600000);
+                    return hrs < 1 ? 'Just now' : hrs < 24 ? `${hrs}h ago` : `${Math.floor(hrs / 24)}d ago`;
+                  })()
+                : 'Never'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {backupHistory.length > 0 ? backupHistory[0].type : 'No backups yet'}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -187,23 +222,17 @@ const DatabaseMaintenance = () => {
       <Card>
         <CardHeader>
           <CardTitle>Table Statistics</CardTitle>
-          <CardDescription>Size and record count by table</CardDescription>
+          <CardDescription>Size and record count by table (live from PostgreSQL)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { name: 'leads', records: 125340, size: '1.2 GB', lastVacuum: '2 days ago' },
-              { name: 'contacts', records: 89012, size: '890 MB', lastVacuum: '3 days ago' },
-              { name: 'campaigns', records: 2340, size: '120 MB', lastVacuum: '1 day ago' },
-              { name: 'activities', records: 567890, size: '780 MB', lastVacuum: '5 days ago' },
-              { name: 'users', records: 156, size: '12 MB', lastVacuum: '1 week ago' },
-            ].map((table) => (
+            {(dbStats?.tables || []).map((table: { name: string; records: number; size: string; lastVacuum: string | null }) => (
               <div key={table.name}>
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <h4 className="font-semibold font-mono">{table.name}</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {table.records.toLocaleString()} records • {table.size} • Last vacuum: {table.lastVacuum}
+                      {table.records.toLocaleString()} records • {table.size} • Last vacuum: {table.lastVacuum ? new Date(table.lastVacuum).toLocaleDateString() : 'Never'}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -221,7 +250,7 @@ const DatabaseMaintenance = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div><span className="text-muted-foreground">Records:</span> <strong>{table.records.toLocaleString()}</strong></div>
                       <div><span className="text-muted-foreground">Size:</span> <strong>{table.size}</strong></div>
-                      <div><span className="text-muted-foreground">Last Vacuum:</span> <strong>{table.lastVacuum}</strong></div>
+                      <div><span className="text-muted-foreground">Last Vacuum:</span> <strong>{table.lastVacuum ? new Date(table.lastVacuum).toLocaleDateString() : 'Never'}</strong></div>
                       <div><span className="text-muted-foreground">Engine:</span> <strong>PostgreSQL</strong></div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -355,13 +384,16 @@ const DatabaseMaintenance = () => {
           </div>
           <div className="flex space-x-2">
             <Button onClick={handleBackupNow}>Create Backup Now</Button>
-            <Button variant="outline" onClick={handleViewHistory} disabled={loadingHistory}>
-              {loadingHistory ? 'Loading...' : showBackupHistory ? 'Hide Backup History' : 'View Backup History'}
+            <Button variant="outline" onClick={handleViewHistory}>
+              {showBackupHistory ? 'Hide Backup History' : 'View Backup History'}
             </Button>
           </div>
           {showBackupHistory && (
             <div className="mt-4 space-y-2">
               <h4 className="font-semibold text-sm">Backup History</h4>
+              {backupHistory.length === 0 && (
+                <p className="text-sm text-muted-foreground">No backups yet. Create your first backup above.</p>
+              )}
               {backupHistory.map((backup) => (
                 <div key={backup.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-4">
@@ -371,7 +403,14 @@ const DatabaseMaintenance = () => {
                       <p className="text-xs text-muted-foreground">{backup.size} • {backup.type}</p>
                     </div>
                   </div>
-                  <Badge variant={backup.status === 'completed' ? 'default' : 'destructive'}>{backup.status}</Badge>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={backup.status === 'completed' ? 'default' : 'destructive'}>{backup.status}</Badge>
+                    {backup.status === 'completed' && backup.filename && (
+                      <Button variant="outline" size="sm" onClick={() => handleDownloadBackup(backup.id, backup.filename!)}>
+                        <Download className="h-3 w-3 mr-1" /> Download
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -383,26 +422,12 @@ const DatabaseMaintenance = () => {
       <Card>
         <CardHeader>
           <CardTitle>Slow Query Log</CardTitle>
-          <CardDescription>Queries that need optimization</CardDescription>
+          <CardDescription>Requires pg_stat_statements extension to be enabled</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[
-              { query: 'SELECT * FROM leads WHERE...', duration: '2.3s', calls: 1234 },
-              { query: 'SELECT COUNT(*) FROM activities...', duration: '1.8s', calls: 567 },
-              { query: 'UPDATE campaigns SET...', duration: '890ms', calls: 89 },
-            ].map((slowQuery, index) => (
-              <div key={index} className="p-3 border rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <code className="text-sm flex-1">{slowQuery.query}</code>
-                  <Badge variant="destructive">{slowQuery.duration}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Called {slowQuery.calls.toLocaleString()} times in last 24h
-                </p>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Slow query monitoring will be available once the pg_stat_statements extension is enabled on the database server. Contact your database administrator to enable it.
+          </p>
         </CardContent>
       </Card>
 
@@ -410,25 +435,25 @@ const DatabaseMaintenance = () => {
       <Card>
         <CardHeader>
           <CardTitle>Connection Pool</CardTitle>
-          <CardDescription>Database connection statistics</CardDescription>
+          <CardDescription>Database connection statistics (live)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <span className="text-sm font-medium">Active Connections</span>
-              <span className="text-sm">12 / 100</span>
+              <span className="text-sm">{dbStats?.connections?.active ?? '—'} / {dbStats?.connections?.max ?? '—'}</span>
             </div>
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <span className="text-sm font-medium">Idle Connections</span>
-              <span className="text-sm">8</span>
+              <span className="text-sm">{dbStats?.connections?.idle ?? '—'}</span>
             </div>
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <span className="text-sm font-medium">Max Connections</span>
-              <span className="text-sm">100</span>
+              <span className="text-sm">{dbStats?.connections?.max ?? '—'}</span>
             </div>
             <div className="flex items-center justify-between p-3 border rounded-lg">
-              <span className="text-sm font-medium">Avg. Query Time</span>
-              <span className="text-sm">45ms</span>
+              <span className="text-sm font-medium">Total Current</span>
+              <span className="text-sm">{dbStats?.connections?.total ?? '—'}</span>
             </div>
           </div>
         </CardContent>

@@ -6,6 +6,7 @@ import { workflowTriggerService } from '../services/workflow-trigger.service';
 import { updateLeadScore, updateMultipleLeadScores, updateAllLeadScores, getScoreCategory, getLeadsByScoreCategory } from '../services/leadScoring.service';
 import { getLeadsFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
 import { parse as csvParse } from 'csv-parse/sync';
+import { pushLeadUpdate } from '../config/socket';
 import {
   parseCSV,
   parseExcel,
@@ -361,6 +362,9 @@ export async function createLead(req: Request, res: Response): Promise<void> {
     // Don't fail the lead creation if workflow trigger fails
   }
 
+  // Push real-time update
+  pushLeadUpdate(req.user!.organizationId, { type: 'created', leadId: lead.id });
+
   res.status(201).json({
     success: true,
     message: 'Lead created successfully',
@@ -529,6 +533,8 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
     }
   }
 
+  pushLeadUpdate(req.user!.organizationId, { type: 'updated', leadId: lead.id });
+
   res.status(200).json({
     success: true,
     message: 'Lead updated successfully',
@@ -560,6 +566,8 @@ export async function deleteLead(req: Request, res: Response): Promise<void> {
     where: { id },
   });
 
+  pushLeadUpdate(req.user!.organizationId, { type: 'deleted', leadId: id });
+
   res.status(200).json({
     success: true,
     message: 'Lead deleted successfully',
@@ -580,6 +588,10 @@ export async function bulkDeleteLeads(req: Request, res: Response): Promise<void
       organizationId: req.user!.organizationId  // Safety check
     },
   });
+
+  if (result.count > 0) {
+    pushLeadUpdate(req.user!.organizationId, { type: 'deleted', count: result.count });
+  }
 
   res.status(200).json({
     success: true,
@@ -987,6 +999,8 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
         duplicateAction,
       });
 
+      pushLeadUpdate(organizationId, { type: 'imported', count: result.imported });
+
       res.json({ success: true, data: result });
       return;
     } catch (err: any) {
@@ -1055,6 +1069,10 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
       skipped++;
       errors.push(`Row ${i}: ${err.message}`);
     }
+  }
+
+  if (imported > 0) {
+    pushLeadUpdate(organizationId, { type: 'imported', count: imported });
   }
 
   res.json({

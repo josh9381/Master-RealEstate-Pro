@@ -132,6 +132,12 @@ api.interceptors.response.use(
       }
     }
 
+    // Surface API error messages so .message contains the server's message
+    const serverMessage = (error as any).response?.data?.message
+    if (serverMessage && typeof serverMessage === 'string') {
+      error.message = serverMessage
+    }
+
     return devApiErrorInterceptor(error)
   }
 )
@@ -145,11 +151,14 @@ export interface RegisterData {
   lastName: string
   email: string
   password: string
+  tosAccepted: boolean
 }
 
 export interface LoginData {
   email: string
   password: string
+  rememberMe?: boolean
+  twoFactorCode?: string
 }
 
 export interface AuthResponse {
@@ -162,6 +171,9 @@ export interface AuthResponse {
       refreshToken: string
     }
   }
+  // 2FA challenge fields (returned when user has 2FA enabled)
+  requires2FA?: boolean
+  pendingToken?: string
 }
 
 export const authApi = {
@@ -172,6 +184,11 @@ export const authApi = {
 
   login: async (data: LoginData): Promise<AuthResponse> => {
     const response = await api.post('/auth/login', data)
+    return response.data
+  },
+
+  verify2FALogin: async (pendingToken: string, twoFactorCode: string, rememberMe?: boolean): Promise<AuthResponse> => {
+    const response = await api.post('/auth/login/2fa-verify', { pendingToken, twoFactorCode, rememberMe })
     return response.data
   },
 
@@ -208,6 +225,18 @@ export const authApi = {
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }).then(r => r.data),
 
   resetPassword: (token: string, password: string) => api.post('/auth/reset-password', { token, password }).then(r => r.data),
+
+  verifyEmail: (token: string) => api.post('/auth/verify-email', { token }).then(r => r.data),
+
+  resendVerification: () => api.post('/auth/resend-verification').then(r => r.data),
+
+  getSessions: () => api.get('/auth/sessions').then(r => r.data?.data || r.data),
+
+  terminateSession: (sessionId: string) => api.delete(`/auth/sessions/${sessionId}`).then(r => r.data),
+
+  terminateAllSessions: () => api.post('/auth/sessions/terminate-all').then(r => r.data),
+
+  deleteAccount: (password: string) => api.post('/auth/delete-account', { password }).then(r => r.data),
 }
 
 // ============================================================================
@@ -419,6 +448,31 @@ export const customFieldsApi = {
 
   reorderCustomFields: async (fieldIds: string[]) => {
     const response = await api.put('/custom-fields/reorder', { fieldIds })
+    return response.data
+  },
+}
+
+// ============================================================================
+// LEAD DOCUMENTS API
+// ============================================================================
+
+export const documentsApi = {
+  getDocuments: async (leadId: string) => {
+    const response = await api.get(`/leads/${leadId}/documents`)
+    return response.data
+  },
+
+  uploadDocuments: async (leadId: string, files: File[]) => {
+    const formData = new FormData()
+    files.forEach((file) => formData.append('documents', file))
+    const response = await api.post(`/leads/${leadId}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+
+  deleteDocument: async (leadId: string, documentId: string) => {
+    const response = await api.delete(`/leads/${leadId}/documents/${documentId}`)
     return response.data
   },
 }
@@ -902,6 +956,37 @@ export const analyticsApi = {
     const response = await api.get('/analytics/geographic', { params })
     return response.data
   },
+
+  // Phase 5: Attribution, comparison, velocity, ROI, follow-up analytics
+  getAttributionReport: async (params?: { model?: string; startDate?: string; endDate?: string }) => {
+    const response = await api.get('/analytics/attribution', { params })
+    return response.data
+  },
+
+  getLeadTouchpoints: async (leadId: string, params?: { model?: string }) => {
+    const response = await api.get(`/analytics/attribution/touchpoints/${leadId}`, { params })
+    return response.data
+  },
+
+  getPeriodComparison: async (params?: { startDate?: string; endDate?: string }) => {
+    const response = await api.get('/analytics/comparison', { params })
+    return response.data
+  },
+
+  getLeadVelocity: async (params?: { months?: number }) => {
+    const response = await api.get('/analytics/lead-velocity', { params })
+    return response.data
+  },
+
+  getSourceROI: async (params?: { startDate?: string; endDate?: string }) => {
+    const response = await api.get('/analytics/source-roi', { params })
+    return response.data
+  },
+
+  getFollowUpAnalytics: async (params?: { months?: number }) => {
+    const response = await api.get('/analytics/follow-up-analytics', { params })
+    return response.data
+  },
 }
 
 // ============================================================================
@@ -1123,6 +1208,66 @@ export const aiApi = {
     const response = await api.get('/ai/usage/limits')
     return response.data
   },
+
+  // Phase 7: Org-Level AI Settings
+  getOrgSettings: async () => {
+    const response = await api.get('/ai/org-settings')
+    return response.data
+  },
+
+  updateOrgSettings: async (settings: Record<string, unknown>) => {
+    const response = await api.put('/ai/org-settings', settings)
+    return response.data
+  },
+
+  getAvailableModels: async () => {
+    const response = await api.get('/ai/available-models')
+    return response.data
+  },
+
+  // Phase 7: Cost Dashboard
+  getCostDashboard: async (months?: number) => {
+    const response = await api.get('/ai/cost-dashboard', { params: { months } })
+    return response.data
+  },
+
+  // Phase 7: Feedback
+  submitChatFeedback: async (messageId: string, payload: { feedback: 'positive' | 'negative'; note?: string }) => {
+    const response = await api.post(`/ai/chat/${messageId}/feedback`, payload)
+    return response.data
+  },
+
+  submitInsightFeedback: async (insightId: string, payload: { feedback: 'helpful' | 'not_helpful' }) => {
+    const response = await api.post(`/ai/insights/${insightId}/feedback`, payload)
+    return response.data
+  },
+
+  getFeedbackStats: async () => {
+    const response = await api.get('/ai/feedback/stats')
+    return response.data
+  },
+
+  // Phase 7: Lead Enrichment
+  enrichLead: async (leadId: string) => {
+    const response = await api.post(`/ai/enrich/${leadId}`)
+    return response.data
+  },
+
+  applyEnrichment: async (leadId: string, fields: Record<string, unknown>) => {
+    const response = await api.post(`/ai/enrich/${leadId}/apply`, { fields })
+    return response.data
+  },
+
+  // Phase 7: Budget Settings
+  getBudgetSettings: async () => {
+    const response = await api.get('/ai/budget-settings')
+    return response.data
+  },
+
+  updateBudgetSettings: async (settings: { warning?: number; caution?: number; hardLimit?: number; alertEnabled?: boolean }) => {
+    const response = await api.put('/ai/budget-settings', settings)
+    return response.data
+  },
 }
 
 // Calls API — manual call logging
@@ -1174,6 +1319,16 @@ export const callsApi = {
 
   getStats: async (params?: { leadId?: string }) => {
     const response = await api.get('/calls/stats', { params })
+    return response.data
+  },
+
+  getQueue: async (params?: { limit?: number }) => {
+    const response = await api.get('/calls/queue', { params })
+    return response.data
+  },
+
+  getTodayStats: async () => {
+    const response = await api.get('/calls/today-stats')
     return response.data
   },
 }
@@ -1319,6 +1474,34 @@ export const templatesApi = {
     return response.data
   },
 
+}
+
+// Message Templates API (inbox templates + quick replies)
+export const messageTemplatesApi = {
+  getTemplates: async (params?: { category?: string; isQuickReply?: string; tier?: string }) => {
+    const response = await api.get('/message-templates', { params })
+    return response.data
+  },
+  getCategories: async () => {
+    const response = await api.get('/message-templates/categories')
+    return response.data
+  },
+  create: async (data: { name: string; content: string; category?: string; tier?: string; isQuickReply?: boolean; variables?: Record<string, string>; teamId?: string }) => {
+    const response = await api.post('/message-templates', data)
+    return response.data
+  },
+  update: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.put(`/message-templates/${id}`, data)
+    return response.data
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/message-templates/${id}`)
+    return response.data
+  },
+  seedDefaults: async () => {
+    const response = await api.post('/message-templates/seed-defaults')
+    return response.data
+  },
 }
 
 // Workflows API
@@ -1693,6 +1876,11 @@ export const appointmentsApi = {
     const response = await api.get('/appointments/upcoming', { params })
     return response.data
   },
+
+  exportICS: async (id: string) => {
+    const response = await api.get(`/appointments/${id}/ics`, { responseType: 'blob' })
+    return response.data
+  },
 }
 
 // ============================================================================
@@ -1799,9 +1987,32 @@ export const adminApi = {
     return response.data
   },
 
+  // Database Stats (real PostgreSQL stats)
+  getDbStats: async () => {
+    const response = await api.post('/admin/maintenance', { operation: 'db_stats' })
+    return response.data
+  },
+
+  // Backup download
+  downloadBackup: async (backupId: string) => {
+    const response = await api.get(`/admin/backups/${backupId}/download`, { responseType: 'blob' })
+    return response.data
+  },
+
   // Admin Stats (existing)
   getStats: async () => {
     const response = await api.get('/admin/stats')
+    return response.data
+  },
+
+  // Audit Logs
+  getAuditLogs: async (params?: { userId?: string; action?: string; entityType?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) => {
+    const response = await api.get('/admin/audit-logs', { params })
+    return response.data
+  },
+
+  getAuditActions: async () => {
+    const response = await api.get('/admin/audit-logs/actions')
     return response.data
   },
 }
@@ -2118,6 +2329,13 @@ export interface FollowUpReminder {
   firedAt?: string
   completedAt?: string
   snoozedUntil?: string
+  isRecurring?: boolean
+  recurrencePattern?: 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CUSTOM'
+  recurrenceInterval?: number
+  recurrenceEndDate?: string
+  recurrenceCount?: number
+  occurrenceNumber?: number
+  parentReminderId?: string
   createdAt: string
   updatedAt: string
   lead?: {
@@ -2140,6 +2358,11 @@ export interface CreateReminderData {
   channelEmail?: boolean
   channelSms?: boolean
   channelPush?: boolean
+  isRecurring?: boolean
+  recurrencePattern?: 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CUSTOM'
+  recurrenceInterval?: number
+  recurrenceEndDate?: string
+  recurrenceCount?: number
 }
 
 export const remindersApi = {
@@ -2180,6 +2403,127 @@ export const remindersApi = {
 
   deleteReminder: async (id: string) => {
     const response = await api.delete(`/reminders/${id}`)
+    return response.data
+  },
+}
+
+// ============================================================================
+// Report Schedules API (Phase 5.3)
+// ============================================================================
+export const reportSchedulesApi = {
+  list: async () => {
+    const response = await api.get('/report-schedules')
+    return response.data
+  },
+  create: async (data: {
+    savedReportId: string
+    frequency: string
+    customInterval?: number
+    dayOfWeek?: number
+    dayOfMonth?: number
+    timeOfDay?: string
+    timezone?: string
+    recipients?: string[]
+  }) => {
+    const response = await api.post('/report-schedules', data)
+    return response.data
+  },
+  update: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.patch(`/report-schedules/${id}`, data)
+    return response.data
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/report-schedules/${id}`)
+    return response.data
+  },
+  getHistory: async (id: string, params?: { page?: number; limit?: number }) => {
+    const response = await api.get(`/report-schedules/${id}/history`, { params })
+    return response.data
+  },
+}
+
+// ============================================================================
+// Goals API (Phase 5.4)
+// ============================================================================
+export const goalsApi = {
+  list: async (params?: { active?: string }) => {
+    const response = await api.get('/goals', { params })
+    return response.data
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/goals/${id}`)
+    return response.data
+  },
+  create: async (data: {
+    name: string
+    metricType: string
+    targetValue: number
+    startDate: string
+    endDate: string
+    period?: string
+    notes?: string
+  }) => {
+    const response = await api.post('/goals', data)
+    return response.data
+  },
+  update: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.patch(`/goals/${id}`, data)
+    return response.data
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/goals/${id}`)
+    return response.data
+  },
+}
+
+// ============================================================================
+// Support Tickets API (Phase 9.7b)
+// ============================================================================
+export const supportApi = {
+  list: async (params?: { status?: string; priority?: string; category?: string; search?: string; page?: number; limit?: number }) => {
+    const response = await api.get('/support-tickets', { params })
+    return response.data
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/support-tickets/${id}`)
+    return response.data
+  },
+  getStats: async () => {
+    const response = await api.get('/support-tickets/stats')
+    return response.data
+  },
+  create: async (data: { subject: string; description: string; category?: string; priority?: string }) => {
+    const response = await api.post('/support-tickets', data)
+    return response.data
+  },
+  addMessage: async (ticketId: string, content: string) => {
+    const response = await api.post(`/support-tickets/${ticketId}/messages`, { content })
+    return response.data
+  },
+  updateStatus: async (ticketId: string, status: string) => {
+    const response = await api.patch(`/support-tickets/${ticketId}/status`, { status })
+    return response.data
+  },
+  assign: async (ticketId: string, assignedToId: string | null) => {
+    const response = await api.patch(`/support-tickets/${ticketId}/assign`, { assignedToId })
+    return response.data
+  },
+}
+
+// ============================================================================
+// Documentation API (Phase 9.7d)
+// ============================================================================
+export const docsApi = {
+  list: async (params?: { category?: string; search?: string; page?: number; limit?: number }) => {
+    const response = await api.get('/docs', { params })
+    return response.data
+  },
+  getCategories: async () => {
+    const response = await api.get('/docs/categories')
+    return response.data
+  },
+  getBySlug: async (slug: string) => {
+    const response = await api.get(`/docs/${slug}`)
     return response.data
   },
 }

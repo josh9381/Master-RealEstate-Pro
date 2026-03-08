@@ -38,7 +38,8 @@ const ConversionReports = () => {
       let funnelData = null;
       try {
         funnelData = await analyticsApi.getConversionFunnel(params);
-      } catch {
+      } catch (error) {
+        console.error('Conversion funnel endpoint unavailable:', error)
         // Optional endpoint
       }
       const leadResult = leads?.data || leads;

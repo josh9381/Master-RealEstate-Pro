@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useToast } from '@/hooks/useToast'
 import { useAuthStore } from '@/store/authStore'
+import { PasswordStrengthIndicator, isPasswordStrong } from '@/components/auth/PasswordStrengthIndicator'
 
 function Register() {
   const navigate = useNavigate()
@@ -16,6 +17,7 @@ function Register() {
     email: '',
     password: '',
     confirmPassword: '',
+    tosAccepted: false,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,14 +38,25 @@ function Register() {
       return
     }
 
+    if (!isPasswordStrong(formData.password)) {
+      toast.warning('Weak password', 'Password must contain uppercase, lowercase, number, and special character')
+      return
+    }
+
+    if (!formData.tosAccepted) {
+      toast.error('Terms required', 'You must accept the Terms of Service to continue')
+      return
+    }
+
     try {
       await register({ 
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email, 
-        password: formData.password 
+        password: formData.password,
+        tosAccepted: true,
       })
-      toast.success('Account created successfully!', 'Welcome to CRM Platform')
+      toast.success('Account created!', 'Please check your email to verify your account.')
       setTimeout(() => navigate('/'), 500)
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string; errors?: unknown } } }
@@ -128,6 +141,7 @@ function Register() {
               required
               disabled={isLoading}
             />
+            <PasswordStrengthIndicator password={formData.password} />
           </div>
 
           <div className="space-y-2">
@@ -146,7 +160,27 @@ function Register() {
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <label className="flex items-start space-x-2 text-sm">
+            <input
+              type="checkbox"
+              className="rounded mt-0.5"
+              checked={formData.tosAccepted}
+              onChange={(e) => setFormData({ ...formData, tosAccepted: e.target.checked })}
+              disabled={isLoading}
+            />
+            <span className="text-muted-foreground">
+              I agree to the{' '}
+              <Link to="/terms-of-service" target="_blank" className="text-primary hover:underline">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link to="/terms-of-service" target="_blank" className="text-primary hover:underline">
+                Privacy Policy
+              </Link>
+            </span>
+          </label>
+
+          <Button type="submit" className="w-full" disabled={isLoading || !formData.tosAccepted}>
             {isLoading ? 'Creating account...' : 'Create Account'}
           </Button>
         </form>

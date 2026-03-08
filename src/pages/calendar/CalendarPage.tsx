@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, Users, Video, Loader2, MapPin, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, Users, Video, Loader2, MapPin, Trash2, Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { appointmentsApi, CreateAppointmentData, UpdateAppointmentData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -43,6 +45,7 @@ interface CalendarEvent {
 
 export default function CalendarPage() {
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const queryClient = useQueryClient()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
@@ -62,7 +65,7 @@ export default function CalendarPage() {
   })
 
   // Fetch real appointments from API
-  const { data: appointmentsResponse, isError, error, refetch } = useQuery({
+  const { data: appointmentsResponse, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['appointments', currentDate.getFullYear(), currentDate.getMonth()],
     queryFn: () => appointmentsApi.getAppointments({
       startDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString(),
@@ -257,8 +260,8 @@ export default function CalendarPage() {
     }
   }
 
-  const handleDeleteEvent = () => {
-    if (editingEvent && confirm('Are you sure you want to cancel this event?')) {
+  const handleDeleteEvent = async () => {
+    if (editingEvent && await showConfirm({ title: 'Cancel Event', message: 'Are you sure you want to cancel this event?', confirmLabel: 'Cancel Event', variant: 'destructive' })) {
       deleteMutation.mutate(editingEvent.id)
     }
   }
@@ -326,6 +329,18 @@ export default function CalendarPage() {
       case 'follow_up': return 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
       default: return 'bg-primary/10 text-primary'
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Calendar</h1>
+          <p className="text-muted-foreground">Manage your schedule and meetings</p>
+        </div>
+        <LoadingSkeleton rows={5} showChart />
+      </div>
+    )
   }
 
   if (isError) {
@@ -683,15 +698,39 @@ export default function CalendarPage() {
 
           <DialogFooter>
             {editingEvent && (
-              <Button
-                variant="outline"
-                onClick={handleDeleteEvent}
-                disabled={isMutating}
-                className="mr-auto text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Cancel Event
-              </Button>
+              <div className="flex gap-2 mr-auto">
+                <Button
+                  variant="outline"
+                  onClick={handleDeleteEvent}
+                  disabled={isMutating}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Cancel Event
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const blob = await appointmentsApi.exportICS(editingEvent.id);
+                      const url = window.URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob], { type: 'text/calendar' }));
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `appointment-${editingEvent.id}.ics`;
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      toast.success('Calendar file downloaded');
+                    } catch (error) {
+                      console.error('Failed to export calendar file:', error)
+                      toast.error('Failed to export calendar file');
+                    }
+                  }}
+                  disabled={isMutating}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Add to Calendar
+                </Button>
+              </div>
             )}
             <Button variant="outline" onClick={closeModal} disabled={isMutating}>
               Close

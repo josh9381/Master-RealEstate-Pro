@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate } from '../middleware/auth';
+import { enforcePlanLimit } from '../middleware/planLimits';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate';
 import {
   getCampaigns,
@@ -270,6 +271,7 @@ router.get(
 router.post(
   '/',
   validateBody(createCampaignSchema),
+  enforcePlanLimit('campaigns'),
   sensitiveLimiter,
   asyncHandler(createCampaign)
 );

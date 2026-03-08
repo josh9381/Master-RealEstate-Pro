@@ -49,6 +49,26 @@ model APIKeyAudit {
   @@index([organizationId])
 }
 
+model APIKey {
+  id             String    @id @default(cuid())
+  name           String
+  keyHash        String    @unique
+  keyPrefix      String                    // First 8 chars for identification (e.g. "mrep_abc1")
+  userId         String
+  organizationId String
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([keyHash])
+}
+
 model Appointment {
   id             String            @id @default(cuid())
   title          String
@@ -181,6 +201,23 @@ model Campaign {
   @@index([organizationId, status])
 }
 
+model FeatureFlag {
+  id             String   @id @default(cuid())
+  name           String
+  key            String
+  description    String   @default("")
+  enabled        Boolean  @default(false)
+  environment    String   @default("development")  // development, beta, production
+  rollout        Int      @default(0)              // 0-100 percentage
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+}
+
 model EmailConfig {
   id             String       @id @default(cuid())
   userId         String       @unique
@@ -303,6 +340,7 @@ model Lead {
   tags              Tag[]          @relation("LeadToTag")
   workflowExecutions WorkflowExecution[]
   followUpReminders  FollowUpReminder[]
+  documents          LeadDocument[]
 
   @@unique([organizationId, email])
   @@index([assignedToId])
@@ -484,6 +522,32 @@ model SMSTemplate {
   @@index([organizationId])
 }
 
+model MessageTemplate {
+  id             String               @id @default(cuid())
+  name           String
+  content        String
+  category       String?
+  tier           MessageTemplateTier
+  isQuickReply   Boolean              @default(false)
+  variables      Json?
+  isActive       Boolean              @default(true)
+  usageCount     Int                  @default(0)
+  lastUsedAt     DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  organizationId String
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teamId         String?
+  userId         String?
+  user           User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, tier])
+  @@index([organizationId, category])
+  @@index([organizationId, isQuickReply])
+  @@index([userId])
+  @@index([teamId])
+}
+
 model Tag {
   id             String       @id @default(cuid())
   name           String
@@ -529,7 +593,7 @@ model Team {
   slug             String           @unique
   settings         Json?
   // Cached from Subscription.tier — kept in sync by subscription update logic
-  subscriptionTier SubscriptionTier @default(FREE)
+  subscriptionTier SubscriptionTier @default(STARTER)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   teamMembers      TeamMember[]
@@ -571,8 +635,11 @@ model User {
   lastLoginIp          String?
   twoFactorEnabled     Boolean               @default(false)
   twoFactorSecret      String?
+  tosAcceptedAt        DateTime?
+  emailVerificationToken String?
+  emailVerificationExpiry DateTime?
   // Cached from Subscription.tier — kept in sync by subscription update logic
-  subscriptionTier     SubscriptionTier      @default(FREE)
+  subscriptionTier     SubscriptionTier      @default(STARTER)
   subscriptionId       String?
   trialEndsAt          DateTime?
   createdAt            DateTime              @default(now())
@@ -580,6 +647,7 @@ model User {
   organizationId       String
   ABTest               ABTest[]
   aPIKeyAudit          APIKeyAudit[]
+  apiKeys              APIKey[]
   activities           Activity[]
   appointments         Appointment[]
   businessSettings     BusinessSettings?
@@ -607,6 +675,10 @@ model User {
   followUpReminders  FollowUpReminder[]
   pushSubscriptions  PushSubscription[]
   callsPlaced        Call[]              @relation("CallsPlacedByUser")
+  reportSchedules    ReportSchedule[]
+  goals              Goal[]
+  uploadedDocuments  LeadDocument[]   @relation("LeadDocumentUploader")
+  messageTemplates   MessageTemplate[]
 
   @@unique([organizationId, email])
   @@index([email])
@@ -816,7 +888,12 @@ model ChatMessage {
   content        String
   tokens         Int?
   cost           Float?
+  model          String?      // Which model generated this response
   metadata       Json?
+  // Phase 7: Feedback loop
+  feedback       String?      // 'positive' | 'negative' | null
+  feedbackNote   String?      // Optional user note about why
+  feedbackAt     DateTime?
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -824,6 +901,7 @@ model ChatMessage {
   @@index([organizationId, createdAt])
   @@index([organizationId])
   @@index([userId, createdAt])
+  @@index([feedback])
 }
 
 model Invoice {
@@ -907,7 +985,7 @@ model Organization {
   domain            String?             @unique
   logo              String?
   // Cached from Subscription.tier — kept in sync by subscription update logic
-  subscriptionTier  SubscriptionTier    @default(FREE)
+  subscriptionTier  SubscriptionTier    @default(STARTER)
   subscriptionId    String?
   trialEndsAt       DateTime?
   isActive          Boolean             @default(true)
@@ -922,6 +1000,13 @@ model Organization {
   aiDefaultModel        String?         // Override default model
   aiMaxTokensPerRequest Int?            // Override max tokens
   aiMonthlyTokenBudget  Int?            // Optional hard cap
+  // Phase 7: Budget alert thresholds (in dollars)
+  aiBudgetWarning       Float?          // Warning threshold (default $25)
+  aiBudgetCaution       Float?          // Caution threshold (default $50)
+  aiBudgetHardLimit     Float?          // Hard limit threshold (default $100)
+  aiBudgetAlertEnabled  Boolean         @default(true)
+  aiIndustryContext     String?         // Real estate sub-niche context
+  emailTemplateDefaults Json?           // Org-wide email template settings (font, color, tracking, etc.)
   ABTest            ABTest[]
   AIAssistant       AIAssistant[]
   AIInsight         AIInsight[]
@@ -960,11 +1045,21 @@ model Organization {
   SMSConfig         SMSConfig[]
   NotificationSettings NotificationSettings[]
   APIKeyAudit       APIKeyAudit[]
+  APIKey            APIKey[]
+  FeatureFlag       FeatureFlag[]
   PasswordResetToken PasswordResetToken[]
   RefreshToken      RefreshToken[]
   ABTestResult      ABTestResult[]
   FollowUpReminder  FollowUpReminder[]
   PushSubscription  PushSubscription[]
+  ReportSchedule   ReportSchedule[]
+  ReportHistory    ReportHistory[]
+  Goal             Goal[]
+  LeadDocument     LeadDocument[]
+  AuditLog         AuditLog[]
+  SupportTicket    SupportTicket[]
+  DataBackup       DataBackup[]
+  MessageTemplate  MessageTemplate[]
 
   @@index([isActive])
   @@index([slug])
@@ -1050,6 +1145,10 @@ model AIInsight {
   actedOnBy      String?
   actionTaken    String?
   expiresAt      DateTime?
+  // Phase 7: Feedback
+  feedback       String?           // 'helpful' | 'not_helpful' | null
+  feedbackAt     DateTime?
+  feedbackBy     String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1114,6 +1213,7 @@ model SavedReport {
   updatedAt        DateTime     @updatedAt
   user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  schedules        ReportSchedule[]
 
   @@index([organizationId])
   @@index([userId])
@@ -1273,9 +1373,10 @@ enum Role {
 }
 
 enum SubscriptionTier {
-  FREE
   STARTER
   PROFESSIONAL
+  ELITE
+  TEAM
   ENTERPRISE
 }
 
@@ -1554,6 +1655,14 @@ model FollowUpReminder {
   channelEmail    Boolean          @default(false)
   channelSms      Boolean          @default(false)
   channelPush     Boolean          @default(false)
+  // Recurrence (Phase 5.8)
+  isRecurring     Boolean          @default(false)
+  recurrencePattern RecurrencePattern?  // DAILY, WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY, CUSTOM
+  recurrenceInterval Int?               // For CUSTOM: every N days
+  recurrenceEndDate  DateTime?          // Optional: stop recurring after this date
+  recurrenceCount    Int?               // Optional: max number of occurrences
+  occurrenceNumber   Int               @default(0) // Which occurrence this is (0 = first/original)
+  parentReminderId   String?            // If this is a recurrence child, link to original
   // Tracking
   firedAt         DateTime?        // When the reminder was actually dispatched
   completedAt     DateTime?        // When user marked it complete / acted on it
@@ -1568,6 +1677,7 @@ model FollowUpReminder {
   @@index([dueAt, status])
   @@index([leadId])
   @@index([organizationId])
+  @@index([parentReminderId])
 }
 
 enum ReminderStatus {
@@ -1600,4 +1710,283 @@ model PushSubscription {
 
   @@index([userId])
   @@index([organizationId])
+}
+
+// Phase 5.3: Report scheduling
+model ReportSchedule {
+  id              String            @id @default(cuid())
+  savedReportId   String
+  userId          String
+  organizationId  String
+  frequency       RecurrencePattern // DAILY, WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY, CUSTOM
+  customInterval  Int?              // For CUSTOM: every N days
+  dayOfWeek       Int?              // 0-6 (Sun-Sat) for weekly schedules
+  dayOfMonth      Int?              // 1-31 for monthly schedules
+  timeOfDay       String            @default("08:00") // HH:mm in user's timezone
+  timezone        String            @default("America/New_York")
+  isActive        Boolean           @default(true)
+  recipients      Json?             // Additional email recipients: string[]
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  runCount        Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  savedReport     SavedReport       @relation(fields: [savedReportId], references: [id], onDelete: Cascade)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportHistory   ReportHistory[]
+
+  @@index([organizationId])
+  @@index([nextRunAt, isActive])
+  @@index([userId])
+}
+
+// Phase 5.3: Generated report history (in-app storage)
+model ReportHistory {
+  id                String          @id @default(cuid())
+  reportScheduleId  String
+  savedReportId     String
+  userId            String
+  organizationId    String
+  title             String
+  generatedData     Json            // The report data snapshot
+  fileUrl           String?         // S3/local URL for PDF if available
+  sentTo            Json?           // Email addresses it was sent to
+  status            String          @default("COMPLETED") // COMPLETED, FAILED
+  errorMessage      String?
+  createdAt         DateTime        @default(now())
+  reportSchedule    ReportSchedule  @relation(fields: [reportScheduleId], references: [id], onDelete: Cascade)
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([reportScheduleId])
+  @@index([createdAt])
+}
+
+// Phase 5.4: Goal setting & tracking
+model Goal {
+  id              String        @id @default(cuid())
+  userId          String
+  organizationId  String
+  name            String
+  metricType      GoalMetricType
+  targetValue     Float
+  currentValue    Float         @default(0)
+  startDate       DateTime
+  endDate         DateTime
+  period          GoalPeriod    @default(MONTHLY)
+  isActive        Boolean       @default(true)
+  completedAt     DateTime?     // When goal was first reached
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId, isActive])
+  @@index([endDate])
+}
+
+enum RecurrencePattern {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum GoalMetricType {
+  LEADS_GENERATED
+  DEALS_CLOSED
+  REVENUE
+  CONVERSION_RATE
+  CALLS_MADE
+  APPOINTMENTS_SET
+  RESPONSE_TIME
+  CUSTOM
+}
+
+enum GoalPeriod {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model LeadDocument {
+  id              String       @id @default(cuid())
+  leadId          String
+  organizationId  String
+  uploadedById    String
+  filename        String       // Original filename for display
+  storagePath     String       // Relative path within uploads/documents
+  mimeType        String
+  size            Int          // File size in bytes
+  description     String?
+  createdAt       DateTime     @default(now())
+
+  lead            Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy      User         @relation("LeadDocumentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([organizationId])
+}
+
+// Phase 9.4: Audit log — records every significant action in the system
+model AuditLog {
+  id              String       @id @default(cuid())
+  userId          String?
+  organizationId  String
+  action          AuditAction
+  entityType      String       // e.g. "Lead", "Campaign", "User", "Settings"
+  entityId        String?      // ID of the affected entity
+  description     String       // Human-readable description
+  ipAddress       String?
+  userAgent       String?
+  beforeData      Json?        // Snapshot before the change
+  afterData       Json?        // Snapshot after the change
+  metadata        Json?        // Extra context (e.g. bulk action count)
+  createdAt       DateTime     @default(now())
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+enum AuditAction {
+  // Auth
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  PASSWORD_CHANGED
+  TWO_FACTOR_ENABLED
+  TWO_FACTOR_DISABLED
+  // CRUD
+  CREATED
+  UPDATED
+  DELETED
+  // Settings
+  SETTINGS_CHANGED
+  SUBSCRIPTION_CHANGED
+  // Team
+  TEAM_MEMBER_INVITED
+  TEAM_MEMBER_ROLE_CHANGED
+  TEAM_MEMBER_REMOVED
+  // Data operations
+  DATA_IMPORTED
+  DATA_EXPORTED
+  DATA_MERGED
+  BULK_ACTION
+  BACKUP_CREATED
+  // Admin
+  SYSTEM_SETTINGS_CHANGED
+  MAINTENANCE_ACTION
+}
+
+// Phase 9.5: Data backup tracking
+model DataBackup {
+  id              String       @id @default(cuid())
+  organizationId  String
+  createdById     String
+  filename        String
+  filePath        String
+  sizeBytes       Int
+  recordCount     Int          @default(0)
+  status          String       @default("completed") // completed, failed, in_progress
+  type            String       @default("manual")     // manual, automatic
+  tables          Json?        // { tableName: recordCount } breakdown
+  error           String?
+  createdAt       DateTime     @default(now())
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([status])
+}
+
+// Phase 9.7b: Support ticket system
+model SupportTicket {
+  id              String              @id @default(cuid())
+  organizationId  String
+  createdById     String
+  assignedToId    String?
+  subject         String
+  description     String
+  status          TicketStatus        @default(OPEN)
+  priority        TicketPriority      @default(MEDIUM)
+  category        String?
+  closedAt        DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages        TicketMessage[]
+
+  @@index([organizationId, status])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model TicketMessage {
+  id              String       @id @default(cuid())
+  ticketId        String
+  userId          String
+  content         String
+  isStaffReply    Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+
+  ticket          SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MessageTemplateTier {
+  SYSTEM
+  ORGANIZATION
+  TEAM
+  PERSONAL
+}
+
+// Phase 9.7d: Documentation articles
+model DocumentationArticle {
+  id              String       @id @default(cuid())
+  organizationId  String?      // null = global/system article
+  title           String
+  slug            String       @unique
+  content         String       // Markdown content
+  category        String
+  tags            String[]     @default([])
+  order           Int          @default(0)
+  isPublished     Boolean      @default(false)
+  viewCount       Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([category])
+  @@index([isPublished])
+  @@index([slug])
 }

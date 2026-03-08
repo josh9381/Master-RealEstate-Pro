@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { BarChart3, TrendingUp, Filter, Download, RefreshCw, Layout, Plus, Settings, X, GripVertical } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { BarChart3, TrendingUp, Filter, Download, RefreshCw, Layout, Plus, Settings, X, GripVertical, Clock, Trash2, Pause, Play, Calendar } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
-import { analyticsApi, savedReportsApi } from '@/lib/api';
+import { analyticsApi, savedReportsApi, reportSchedulesApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { exportToCSV, exportToJSON, exportAnalyticsAsPDF, ExportColumn } from '@/lib/exportService';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
@@ -34,12 +35,239 @@ interface ReportWidget {
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#6366F1'];
 
+const FREQUENCIES = [
+  { value: 'DAILY', label: 'Daily' },
+  { value: 'WEEKLY', label: 'Weekly' },
+  { value: 'BIWEEKLY', label: 'Biweekly' },
+  { value: 'MONTHLY', label: 'Monthly' },
+  { value: 'QUARTERLY', label: 'Quarterly' },
+  { value: 'YEARLY', label: 'Yearly' },
+];
+
+const DAY_OPTIONS = [
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+  { value: 0, label: 'Sunday' },
+];
+
+const ScheduledReportsSection = () => {
+  const queryClient = useQueryClient();
+  const showConfirm = useConfirm();
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({
+    reportType: 'leads' as string,
+    frequency: 'WEEKLY',
+    timeOfDay: '08:00',
+    dayOfWeek: 1,
+    dayOfMonth: 1,
+    recipients: '',
+    isActive: true,
+  });
+
+  const { data: schedulesResult } = useQuery({
+    queryKey: ['report-schedules'],
+    queryFn: async () => {
+      const response = await reportSchedulesApi.list();
+      return response.data;
+    },
+  });
+
+  const createMut = useMutation({
+    mutationFn: (data: any) => reportSchedulesApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['report-schedules'] });
+      setShowScheduleForm(false);
+    },
+  });
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => reportSchedulesApi.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['report-schedules'] }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => reportSchedulesApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['report-schedules'] }),
+  });
+
+  const schedules = schedulesResult || [];
+
+  const handleCreateSchedule = (e: React.FormEvent) => {
+    e.preventDefault();
+    const recipients = scheduleForm.recipients.split(',').map((r: string) => r.trim()).filter(Boolean);
+    createMut.mutate({
+      reportType: scheduleForm.reportType,
+      frequency: scheduleForm.frequency,
+      timeOfDay: scheduleForm.timeOfDay,
+      dayOfWeek: scheduleForm.dayOfWeek,
+      dayOfMonth: scheduleForm.dayOfMonth,
+      recipients,
+      isActive: true,
+    });
+  };
+
+  const toggleActive = (sched: any) => {
+    updateMut.mutate({ id: sched.id, data: { isActive: !sched.isActive } });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Scheduled Reports</CardTitle>
+          <CardDescription>Automatically generated and emailed reports</CardDescription>
+        </div>
+        <Button size="sm" onClick={() => setShowScheduleForm(!showScheduleForm)} className="flex items-center gap-1">
+          {showScheduleForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {showScheduleForm ? 'Cancel' : 'New Schedule'}
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {showScheduleForm && (
+          <form onSubmit={handleCreateSchedule} className="mb-4 p-4 border rounded-lg space-y-3 bg-gray-50 dark:bg-gray-800/50">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Report Type</label>
+                <select
+                  value={scheduleForm.reportType}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, reportType: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                >
+                  <option value="leads">Leads Report</option>
+                  <option value="campaigns">Campaigns Report</option>
+                  <option value="pipeline">Pipeline Report</option>
+                  <option value="team">Team Report</option>
+                  <option value="revenue">Revenue Report</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Frequency</label>
+                <select
+                  value={scheduleForm.frequency}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                >
+                  {FREQUENCIES.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Time of Day</label>
+                <input
+                  type="time"
+                  value={scheduleForm.timeOfDay}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, timeOfDay: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(scheduleForm.frequency === 'WEEKLY' || scheduleForm.frequency === 'BIWEEKLY') && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Day of Week</label>
+                  <select
+                    value={scheduleForm.dayOfWeek}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, dayOfWeek: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                  >
+                    {DAY_OPTIONS.map((d) => (
+                      <option key={d.value} value={d.value}>{d.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {(scheduleForm.frequency === 'MONTHLY' || scheduleForm.frequency === 'QUARTERLY' || scheduleForm.frequency === 'YEARLY') && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Day of Month</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={scheduleForm.dayOfMonth}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, dayOfMonth: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                  />
+                </div>
+              )}
+              <div className={scheduleForm.frequency === 'DAILY' ? 'md:col-span-2' : ''}>
+                <label className="block text-sm font-medium mb-1">Recipients (comma-separated emails)</label>
+                <input
+                  type="text"
+                  value={scheduleForm.recipients}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, recipients: e.target.value })}
+                  placeholder="team@company.com, manager@company.com"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                />
+              </div>
+            </div>
+            <Button type="submit" size="sm" disabled={createMut.isPending}>
+              {createMut.isPending ? 'Creating...' : 'Create Schedule'}
+            </Button>
+          </form>
+        )}
+
+        <div className="space-y-3">
+          {schedules.length === 0 && !showScheduleForm && (
+            <p className="text-sm text-gray-500 text-center py-4">No scheduled reports yet. Click "New Schedule" to create one.</p>
+          )}
+          {schedules.map((sched: any) => (
+            <div key={sched.id} className={`flex items-center justify-between p-4 border rounded-lg ${!sched.isActive ? 'opacity-60' : ''}`}>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold capitalize">{sched.reportType || sched.savedReport?.name || 'Report'} Report</h4>
+                  <Badge variant={sched.isActive ? 'success' : 'secondary'}>
+                    {sched.isActive ? 'Active' : 'Paused'}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {sched.frequency} at {sched.timeOfDay || '08:00'}
+                  {sched.dayOfWeek != null && (scheduleForm.frequency === 'WEEKLY' || scheduleForm.frequency === 'BIWEEKLY')
+                    ? ` on ${DAY_OPTIONS.find(d => d.value === sched.dayOfWeek)?.label || ''}`
+                    : ''}
+                </p>
+                <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
+                  {sched.recipients?.length > 0 && <span>To: {sched.recipients.join(', ')}</span>}
+                  {sched.nextRunAt && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Next: {new Date(sched.nextRunAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Button variant="ghost" size="sm" onClick={() => toggleActive(sched)} title={sched.isActive ? 'Pause' : 'Resume'}>
+                  {sched.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-500 hover:text-red-700"
+                  onClick={async () => { if (await showConfirm({ title: 'Delete Schedule', message: 'Delete this schedule?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMut.mutate(sched.id); }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const CustomReports = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'saved' | 'builder'>('saved');
 
   // ——— Saved Reports state ———
-  const [_showReportBuilder, setShowReportBuilder] = useState(false);
+  const [_showReportBuilder, _setShowReportBuilder] = useState(false);
   const [reportConfig, setReportConfig] = useState<ReportConfig>({ name: '', type: 'leads', groupBy: 'none', metrics: [], dateRange: '30d' });
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [generatedReport, setGeneratedReport] = useState<Record<string, unknown> | null>(null);
@@ -820,44 +1048,7 @@ const CustomReports = () => {
           )}
 
           {/* Scheduled Reports */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Scheduled Reports</CardTitle>
-              <CardDescription>Automatically generated reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {[
-                  { name: 'Weekly Sales Summary', schedule: 'Every Monday at 8:00 AM', recipients: 'sales-team@company.com', nextRun: '2024-01-22' },
-                  { name: 'Monthly Performance Report', schedule: 'First day of month at 9:00 AM', recipients: 'executives@company.com', nextRun: '2024-02-01' },
-                ].map((schedule, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h4 className="font-semibold">{schedule.name}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">{schedule.schedule}</p>
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
-                        <span>To: {schedule.recipients}</span>
-                        <span>Next run: {schedule.nextRun}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => {
-                        setShowReportBuilder(true);
-                        setReportConfig(prev => ({ ...prev, name: schedule.name }));
-                        setTimeout(() => document.getElementById('report-builder')?.scrollIntoView({ behavior: 'smooth' }), 100);
-                        toast.info(`Editing schedule: ${schedule.name} — update via the Report Builder below`);
-                      }}>
-                        Edit Schedule
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => toast.success(`${schedule.name} paused`)}>
-                        Pause
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <ScheduledReportsSection />
 
           {/* Export Options */}
           <Card>
@@ -943,7 +1134,8 @@ const CustomReports = () => {
                   });
                   refetchSaved();
                   toast.success(`Report "${reportName}" saved successfully`);
-                } catch {
+                } catch (error) {
+                  console.error('Failed to save report:', error)
                   toast.error('Failed to save report. Please try again.');
                 }
               }}>Save Report</Button>

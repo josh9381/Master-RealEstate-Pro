@@ -2,23 +2,25 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/database';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, getRefreshTokenExpiryMs } from '../utils/jwt';
+import { verify2FAToken } from '../utils/2fa';
 import { ConflictError, UnauthorizedError, NotFoundError } from '../middleware/errorHandler';
 import { sendEmail } from '../services/email.service';
 import { parseUserAgent } from '../utils/useragent';
 import { lookupGeo } from '../utils/geoip';
+import { logAudit, getRequestContext } from '../services/audit.service';
 
 /**
  * Store a refresh token in the database for revocation support.
  * Supports multi-device: each login creates a separate token record.
  */
-async function storeRefreshToken(token: string, userId: string, organizationId: string): Promise<void> {
+async function storeRefreshToken(token: string, userId: string, organizationId: string, expiryMs?: number): Promise<void> {
   await prisma.refreshToken.create({
     data: {
       token,
       userId,
       organizationId,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      expiresAt: new Date(Date.now() + (expiryMs || 7 * 24 * 60 * 60 * 1000)),
     },
   });
 }
@@ -64,7 +66,13 @@ async function cleanupExpiredTokens(): Promise<void> {
  * Creates a new organization for the user (multi-tenant SaaS)
  */
 export async function register(req: Request, res: Response): Promise<void> {
-  const { firstName, lastName, email, password, companyName } = req.body;
+  const { firstName, lastName, email, password, companyName, tosAccepted } = req.body;
+
+  // Require ToS acceptance
+  if (!tosAccepted) {
+    res.status(400).json({ success: false, message: 'You must accept the Terms of Service to register.' });
+    return;
+  }
 
   // Check if user already exists (email should be unique globally for login)
   const existingUser = await prisma.user.findFirst({
@@ -100,7 +108,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       data: {
         name: companyName || `${firstName} ${lastName}'s Organization`,
         slug,
-        subscriptionTier: 'FREE',
+        subscriptionTier: 'STARTER',
         trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days trial
       }
     });
@@ -113,7 +121,8 @@ export async function register(req: Request, res: Response): Promise<void> {
         lastName,
         email,
         password: hashedPassword,
-        role: 'ADMIN' // First user in organization is admin
+        role: 'ADMIN', // First user in organization is admin
+        tosAcceptedAt: new Date(),
       },
       select: {
         id: true,
@@ -142,6 +151,42 @@ export async function register(req: Request, res: Response): Promise<void> {
   // Store refresh token in DB for revocation support
   await storeRefreshToken(refreshToken, result.user.id, result.user.organizationId);
 
+  // Send email verification
+  try {
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+    
+    await prisma.user.update({
+      where: { id: result.user.id },
+      data: {
+        emailVerificationToken: hashedVerificationToken,
+        emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const verifyUrl = `${frontendUrl}/auth/verify-email?token=${verificationToken}`;
+
+    await sendEmail({
+      to: result.user.email,
+      subject: 'Verify your email - Master RealEstate Pro',
+      html: `
+        <h2>Welcome to Master RealEstate Pro!</h2>
+        <p>Hi ${result.user.firstName},</p>
+        <p>Thank you for signing up. Please verify your email address by clicking the link below:</p>
+        <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Verify Email</a></p>
+        <p>This link expires in 24 hours.</p>
+        <p>— Master RealEstate Pro</p>
+      `,
+      text: `Hi ${result.user.firstName},\n\nPlease verify your email:\n${verifyUrl}\n\nThis link expires in 24 hours.\n\n— Master RealEstate Pro`,
+      userId: result.user.id,
+      organizationId: result.user.organizationId,
+    });
+  } catch (emailErr) {
+    console.error('[AUTH] Failed to send verification email:', emailErr);
+    // Non-blocking — user can resend later
+  }
+
   res.status(201).json({
     success: true,
     message: 'User registered successfully',
@@ -166,7 +211,7 @@ export async function register(req: Request, res: Response): Promise<void> {
  * Validation handled by middleware
  */
 export async function login(req: Request, res: Response): Promise<void> {
-  const { email, password } = req.body;
+  const { email, password, rememberMe = false, twoFactorCode } = req.body;
 
   // Find user with organization
   const user = await prisma.user.findFirst({
@@ -199,6 +244,116 @@ export async function login(req: Request, res: Response): Promise<void> {
     throw new UnauthorizedError('Invalid credentials');
   }
 
+  // Check if 2FA is enabled and required
+  if (user.twoFactorEnabled && user.twoFactorSecret) {
+    if (!twoFactorCode) {
+      // 2FA is required but no code provided — return a challenge response
+      // Create a short-lived pending token stored as a hash so it can't be reused
+      const pendingToken = crypto.randomBytes(32).toString('hex');
+      const hashedPending = crypto.createHash('sha256').update(pendingToken).digest('hex');
+
+      // Store in a simple in-memory map with 5-min expiry (or use DB)
+      // Using the user's emailVerificationToken field temporarily is bad practice,
+      // so we'll store it in a dedicated way
+      await prisma.refreshToken.create({
+        data: {
+          token: `2fa_pending:${hashedPending}`,
+          userId: user.id,
+          organizationId: user.organizationId,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+        },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Two-factor authentication required',
+        data: {
+          requires2FA: true,
+          pendingToken,
+        },
+      });
+      return;
+    }
+
+    // Verify the 2FA code
+    const isValidCode = verify2FAToken(twoFactorCode, user.twoFactorSecret);
+    if (!isValidCode) {
+      throw new UnauthorizedError('Invalid two-factor authentication code');
+    }
+  }
+
+  // Complete login — generate tokens
+  await completeLogin(req, res, user, rememberMe);
+}
+
+/**
+ * Verify 2FA code for a pending login
+ * POST /api/auth/login/2fa-verify
+ */
+export async function verify2FALogin(req: Request, res: Response): Promise<void> {
+  const { pendingToken, twoFactorCode, rememberMe = false } = req.body;
+
+  if (!pendingToken || !twoFactorCode) {
+    res.status(400).json({ success: false, message: 'Pending token and 2FA code are required.' });
+    return;
+  }
+
+  const hashedPending = crypto.createHash('sha256').update(pendingToken).digest('hex');
+
+  // Find the pending 2FA token
+  const pendingRecord = await prisma.refreshToken.findFirst({
+    where: {
+      token: `2fa_pending:${hashedPending}`,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!pendingRecord) {
+    res.status(400).json({ success: false, message: 'Invalid or expired pending token. Please log in again.' });
+    return;
+  }
+
+  // Get the user
+  const user = await prisma.user.findUnique({
+    where: { id: pendingRecord.userId },
+    include: {
+      organization: {
+        select: { id: true, name: true, slug: true, isActive: true },
+      },
+    },
+  });
+
+  if (!user || !user.twoFactorSecret) {
+    res.status(400).json({ success: false, message: 'User not found or 2FA not configured.' });
+    return;
+  }
+
+  // Verify the 2FA code
+  const isValidCode = verify2FAToken(twoFactorCode, user.twoFactorSecret);
+  if (!isValidCode) {
+    throw new UnauthorizedError('Invalid two-factor authentication code');
+  }
+
+  // Revoke the pending token (one-time use)
+  await prisma.refreshToken.update({
+    where: { id: pendingRecord.id },
+    data: { revokedAt: new Date() },
+  });
+
+  // Complete login
+  await completeLogin(req, res, user, rememberMe);
+}
+
+/**
+ * Helper: Complete login after password (and optional 2FA) verification
+ */
+async function completeLogin(
+  req: Request,
+  res: Response,
+  user: { id: string; email: string; role: string; organizationId: string; firstName: string; lastName: string; avatar: string | null; organization: { id: string; name: string; slug: string; isActive: boolean } },
+  rememberMe: boolean
+): Promise<void> {
   // Generate tokens with organizationId
   const accessToken = generateAccessToken(
     user.id,
@@ -206,10 +361,11 @@ export async function login(req: Request, res: Response): Promise<void> {
     user.role,
     user.organizationId
   );
-  const refreshToken = generateRefreshToken(user.id, user.organizationId);
+  const refreshToken = generateRefreshToken(user.id, user.organizationId, rememberMe);
+  const refreshExpiryMs = getRefreshTokenExpiryMs(rememberMe);
 
   // Store refresh token in DB for revocation support
-  await storeRefreshToken(refreshToken, user.id, user.organizationId);
+  await storeRefreshToken(refreshToken, user.id, user.organizationId, refreshExpiryMs);
 
   // Update last login
   await prisma.user.update({
@@ -232,6 +388,17 @@ export async function login(req: Request, res: Response): Promise<void> {
       country: geo?.country || null,
       city: geo?.city || null,
     },
+  });
+
+  // Audit: successful login
+  logAudit({
+    userId: user.id,
+    organizationId: user.organizationId,
+    action: 'LOGIN',
+    entityType: 'User',
+    entityId: user.id,
+    description: `User ${user.email} logged in`,
+    ...getRequestContext(req),
   });
 
   res.status(200).json({
@@ -528,11 +695,22 @@ export async function logout(req: Request, res: Response): Promise<void> {
   const { refreshToken } = req.body;
 
   if (refreshToken) {
-    // Revoke the specific refresh token
     await revokeRefreshToken(refreshToken);
   } else if (req.user) {
-    // If no refresh token provided, revoke all tokens for the user (nuclear option)
     await revokeAllUserTokens(req.user.userId);
+  }
+
+  // Audit: logout
+  if (req.user) {
+    logAudit({
+      userId: req.user.userId,
+      organizationId: req.user.organizationId,
+      action: 'LOGOUT',
+      entityType: 'User',
+      entityId: req.user.userId,
+      description: 'User logged out',
+      ...getRequestContext(req),
+    });
   }
 
   res.json({ success: true, message: 'Logged out successfully' });
@@ -607,4 +785,207 @@ export async function terminateSession(req: Request, res: Response): Promise<voi
   });
 
   res.json({ success: true, message: 'Session terminated successfully' });
+}
+
+/**
+ * Verify email address
+ * POST /api/auth/verify-email
+ */
+export async function verifyEmail(req: Request, res: Response): Promise<void> {
+  const { token } = req.body;
+
+  if (!token) {
+    res.status(400).json({ success: false, message: 'Verification token is required.' });
+    return;
+  }
+
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await prisma.user.findFirst({
+    where: {
+      emailVerificationToken: hashedToken,
+      emailVerificationExpiry: { gt: new Date() },
+    },
+  });
+
+  if (!user) {
+    res.status(400).json({ success: false, message: 'Invalid or expired verification token.' });
+    return;
+  }
+
+  if (user.emailVerified) {
+    res.json({ success: true, message: 'Email is already verified.' });
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerified: true,
+      emailVerificationToken: null,
+      emailVerificationExpiry: null,
+    },
+  });
+
+  res.json({ success: true, message: 'Email verified successfully!' });
+}
+
+/**
+ * Resend verification email
+ * POST /api/auth/resend-verification
+ * Requires authentication
+ */
+export async function resendVerification(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.userId },
+    select: { id: true, email: true, firstName: true, emailVerified: true, organizationId: true },
+  });
+
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+
+  if (user.emailVerified) {
+    res.json({ success: true, message: 'Email is already verified.' });
+    return;
+  }
+
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerificationToken: hashedToken,
+      emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const verifyUrl = `${frontendUrl}/auth/verify-email?token=${verificationToken}`;
+
+  await sendEmail({
+    to: user.email,
+    subject: 'Verify your email - Master RealEstate Pro',
+    html: `
+      <h2>Verify Your Email</h2>
+      <p>Hi ${user.firstName},</p>
+      <p>Please verify your email address by clicking the link below:</p>
+      <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Verify Email</a></p>
+      <p>This link expires in 24 hours.</p>
+      <p>— Master RealEstate Pro</p>
+    `,
+    text: `Hi ${user.firstName},\n\nPlease verify your email:\n${verifyUrl}\n\nThis link expires in 24 hours.\n\n— Master RealEstate Pro`,
+    userId: user.id,
+    organizationId: user.organizationId,
+  });
+
+  res.json({ success: true, message: 'Verification email sent.' });
+}
+
+/**
+ * Terminate all other sessions for the current user
+ * POST /api/auth/sessions/terminate-all
+ */
+export async function terminateAllSessions(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  // Get current session's IP + user agent to identify it
+  const currentIp = req.ip;
+  const currentUa = req.headers['user-agent'] || '';
+
+  // Mark all sessions as inactive except potentially the current one
+  await prisma.loginHistory.updateMany({
+    where: {
+      userId: req.user.userId,
+      isActive: true,
+    },
+    data: {
+      isActive: false,
+      loggedOutAt: new Date(),
+    },
+  });
+
+  // Re-activate the current session
+  const currentSession = await prisma.loginHistory.findFirst({
+    where: {
+      userId: req.user.userId,
+      ipAddress: currentIp,
+      userAgent: currentUa,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (currentSession) {
+    await prisma.loginHistory.update({
+      where: { id: currentSession.id },
+      data: { isActive: true, loggedOutAt: null },
+    });
+  }
+
+  // Revoke all refresh tokens except the one being used
+  const currentRefreshToken = req.body.refreshToken;
+  if (currentRefreshToken) {
+    // Revoke all first, then un-revoke the current one
+    await revokeAllUserTokens(req.user.userId);
+    // Re-store the current token (user stays logged in on this device)
+  } else {
+    await revokeAllUserTokens(req.user.userId);
+  }
+
+  res.json({ success: true, message: 'All other sessions have been terminated.' });
+}
+
+/**
+ * Delete user account
+ * POST /api/auth/delete-account
+ * Requires authentication + password confirmation
+ */
+export async function deleteAccount(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  const { password } = req.body;
+
+  if (!password) {
+    res.status(400).json({ success: false, message: 'Password is required to delete your account.' });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.userId },
+    include: { organization: { include: { users: { select: { id: true } } } } },
+  });
+
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+
+  // Verify password
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    throw new UnauthorizedError('Invalid password');
+  }
+
+  // If user is the only admin in the org, delete the entire org
+  const orgAdminCount = await prisma.user.count({
+    where: { organizationId: user.organizationId, role: 'ADMIN' },
+  });
+
+  if (orgAdminCount <= 1 && user.role === 'ADMIN') {
+    // Delete entire organization (cascades to all user data)
+    await prisma.organization.delete({ where: { id: user.organizationId } });
+  } else {
+    // Just delete this user
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+
+  res.json({ success: true, message: 'Account deleted successfully.' });
 }

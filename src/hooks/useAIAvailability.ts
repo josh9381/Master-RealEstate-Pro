@@ -40,7 +40,8 @@ export function useAIAvailability(): AIAvailability {
           loading: false,
           message: data.ai.configured ? '' : 'Configure OpenAI API key in Settings to enable AI features',
         })
-      } catch {
+      } catch (error) {
+        console.error('AI availability check failed:', error)
         // Can't reach backend — assume available
         cachedStatus = { available: true, checked: true }
         setStatus({ available: true, loading: false, message: '' })

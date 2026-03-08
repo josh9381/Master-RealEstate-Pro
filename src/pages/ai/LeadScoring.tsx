@@ -146,7 +146,8 @@ const LeadScoring = () => {
         })
         toast.success('Training data uploaded successfully!')
         refetchTraining()
-      } catch {
+      } catch (error) {
+        console.error('Failed to upload training data:', error)
         toast.error('Failed to upload training data')
       } finally {
         setUploading(false)

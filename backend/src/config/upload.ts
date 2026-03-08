@@ -167,3 +167,45 @@ export function readAttachmentAsBase64(filePath: string): { content: string; fil
 }
 
 export { UPLOAD_DIR, MAX_FILE_SIZE, ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS };
+
+// ─── Lead Document Upload ────────────────────────────────────────
+
+const DOCUMENT_DIR = path.join(UPLOAD_DIR, 'documents');
+if (!fs.existsSync(DOCUMENT_DIR)) {
+  fs.mkdirSync(DOCUMENT_DIR, { recursive: true });
+}
+
+const DOCUMENT_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
+
+const DOCUMENT_EXTENSIONS = [
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+  '.jpg', '.jpeg', '.png', '.webp',
+];
+
+function documentFileFilter(_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!DOCUMENT_MIME_TYPES.includes(file.mimetype) || !DOCUMENT_EXTENSIONS.includes(ext)) {
+    cb(new Error(`Invalid document type. Allowed: ${DOCUMENT_EXTENSIONS.join(', ')}`));
+    return;
+  }
+  cb(null, true);
+}
+
+/**
+ * Multer middleware for lead document uploads.
+ * Field name: 'documents' (multiple files, max 5 per request)
+ */
+export const documentUpload = multer({
+  storage: makeStorage('documents'),
+  limits: { fileSize: MAX_FILE_SIZE, files: 5 },
+  fileFilter: documentFileFilter,
+}).array('documents', 5);

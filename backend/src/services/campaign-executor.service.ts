@@ -11,6 +11,7 @@ import { compileEmailBlocks, compilePlainText, CanSpamOptions } from '../utils/m
 import { readAttachmentAsBase64 } from '../config/upload';
 import { ensureUnsubscribeToken } from '../controllers/unsubscribe.controller';
 import { calculateOptimalSendTimes, groupLeadsBySendSlot, OptimizationStrategy } from './send-time-optimizer.service';
+import { checkMonthlyMessageLimit } from '../middleware/planLimits';
 import Handlebars from 'handlebars';
 
 /**
@@ -51,7 +52,8 @@ async function updateCampaignLeadStatus(
         ...(status === 'SENT' ? { sentAt: timestamp } : { bouncedAt: timestamp }),
       },
     });
-  } catch {
+  } catch (error) {
+    console.error('[CAMPAIGN] Failed to record campaign activity:', error)
     // Non-critical — don't fail the send
   }
 }
@@ -115,6 +117,19 @@ export async function executeCampaign(
     }
 
     console.log(`[CAMPAIGN] Executing campaign ${campaign.name} to ${leads.length} leads`);
+
+    // Monthly sending limit check
+    const msgType = campaign.type === 'EMAIL' ? 'emails' as const : 'sms' as const;
+    const monthlyCheck = await checkMonthlyMessageLimit(campaign.organizationId, msgType);
+    if (!monthlyCheck.allowed) {
+      return {
+        success: false,
+        totalLeads: leads.length,
+        sent: 0,
+        failed: leads.length,
+        errors: [`Monthly ${msgType} limit reached (${monthlyCheck.sent}/${monthlyCheck.limit}). Upgrade your plan for higher limits.`],
+      };
+    }
 
     // Send-time optimization: If enabled, calculate per-lead optimal times
     const optimizationStrategy = (campaign.sendTimeOptimization || 'none') as OptimizationStrategy;
@@ -383,7 +398,8 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
       let unsubscribeToken: string;
       try {
         unsubscribeToken = await ensureUnsubscribeToken(lead.id);
-      } catch {
+      } catch (error) {
+        console.error('[CAMPAIGN] Failed to generate unsubscribe token:', error)
         // If token generation fails, use a fallback URL with leadId
         unsubscribeToken = lead.id;
       }

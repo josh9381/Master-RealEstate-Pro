@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useState } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 
 const DemoDataGenerator = () => {
   const { toast } = useToast();
+  const showConfirm = useConfirm();
   const [loading, setLoading] = useState(false);
   const [_generating, setGenerating] = useState(false);
   const [leadsCount, setLeadsCount] = useState('100');
@@ -27,7 +29,7 @@ const DemoDataGenerator = () => {
   };
 
   const handleClearAll = async () => {
-    if (!confirm('Are you sure you want to delete ALL demo data? This action cannot be undone.')) {
+    if (!await showConfirm({ title: 'Delete All Data', message: 'Are you sure you want to delete ALL demo data? This action cannot be undone.', confirmLabel: 'Delete All', variant: 'destructive' })) {
       return;
     }
     

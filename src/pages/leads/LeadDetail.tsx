@@ -15,8 +15,9 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/Dialog'
-import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, Brain, TrendingUp, Target, Clock, AlertTriangle, ArrowLeft, Save, Plus, LayoutDashboard, History, CheckSquare } from 'lucide-react'
+import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, Brain, TrendingUp, Target, Clock, AlertTriangle, ArrowLeft, Save, Plus, LayoutDashboard, History, CheckSquare, Wand2, Paperclip, Upload, Download, File } from 'lucide-react'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
+import { useConfirm } from '@/hooks/useConfirm'
 import { AIEmailComposer } from '@/components/ai/AIEmailComposer'
 import { AISMSComposer } from '@/components/ai/AISMSComposer'
 import { AISuggestedActions } from '@/components/ai/AISuggestedActions'
@@ -28,17 +29,163 @@ import { LogCallDialog } from '@/components/leads/LogCallDialog'
 import { PredictionBadge } from '@/components/ai/PredictionBadge'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import intelligenceService, { type LeadPrediction, type EngagementAnalysis, type NextActionSuggestion } from '@/services/intelligenceService'
+import { aiApi } from '@/lib/api'
 import { Lead } from '@/types'
 import type { AssignedUser, TeamMember, LeadNote } from '@/types'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi, notesApi, usersApi, UpdateLeadData } from '@/lib/api'
+import { leadsApi, notesApi, usersApi, UpdateLeadData, documentsApi } from '@/lib/api'
 import { mockLeads } from '@/data/mockData'
 import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
+
+// ─── Lead Documents Tab ─────────────────────────────────────────────────────
+
+interface LeadDoc {
+  id: string
+  filename: string
+  mimeType: string
+  size: number
+  storagePath: string
+  url: string
+  description?: string
+  createdAt: string
+  uploadedBy: { id: string; firstName: string; lastName: string }
+}
+
+function LeadDocumentsTab({ leadId }: { leadId: string }) {
+  const [uploading, setUploading] = useState(false)
+  const { toast } = useToast()
+  const showConfirm = useConfirm()
+  const queryClient = useQueryClient()
+
+  const { data: docs = [], isLoading } = useQuery({
+    queryKey: ['lead-documents', leadId],
+    queryFn: async () => {
+      const res = await documentsApi.getDocuments(leadId)
+      return (res.data || []) as LeadDoc[]
+    },
+  })
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    setUploading(true)
+    try {
+      await documentsApi.uploadDocuments(leadId, files)
+      queryClient.invalidateQueries({ queryKey: ['lead-documents', leadId] })
+      toast.success(`${files.length} document(s) uploaded`)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Upload failed')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const handleDelete = async (docId: string, filename: string) => {
+    if (!await showConfirm({ title: 'Delete Document', message: `Delete "${filename}"?`, confirmLabel: 'Delete', variant: 'destructive' })) return
+    try {
+      await documentsApi.deleteDocument(leadId, docId)
+      queryClient.invalidateQueries({ queryKey: ['lead-documents', leadId] })
+      toast.success('Document deleted')
+    } catch (error) {
+      console.error('Failed to delete document:', error)
+      toast.error('Failed to delete document')
+    }
+  }
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const getFileIcon = (mime: string) => {
+    if (mime.startsWith('image/')) return '🖼️'
+    if (mime === 'application/pdf') return '📄'
+    if (mime.includes('word') || mime.includes('msword')) return '📝'
+    if (mime.includes('excel') || mime.includes('spreadsheet')) return '📊'
+    return '📎'
+  }
+
+  const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '') || ''
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Paperclip className="h-5 w-5" />
+            Documents
+            {docs.length > 0 && (
+              <Badge variant="secondary" className="text-xs">{docs.length}/20</Badge>
+            )}
+          </CardTitle>
+          <label>
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp"
+              onChange={handleUpload}
+              disabled={uploading}
+            />
+            <Button size="sm" variant="outline" asChild disabled={uploading}>
+              <span>
+                <Upload className="h-4 w-4 mr-1.5" />
+                {uploading ? 'Uploading...' : 'Upload'}
+              </span>
+            </Button>
+          </label>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading documents...</p>
+        ) : docs.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <File className="h-10 w-10 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">No documents attached</p>
+            <p className="text-xs mt-1">Upload PDFs, images, or Office files (max 10 MB each, 20 per lead)</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {docs.map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 group">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="text-lg shrink-0">{getFileIcon(doc.mimeType)}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{doc.filename}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatSize(doc.size)} &middot; {doc.uploadedBy.firstName} {doc.uploadedBy.lastName} &middot; {new Date(doc.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <a href={`${apiBase}${doc.url}`} target="_blank" rel="noopener noreferrer" download>
+                    <Button size="sm" variant="ghost">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </a>
+                  <Button size="sm" variant="ghost" onClick={() => handleDelete(doc.id, doc.filename)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Main LeadDetail Component ──────────────────────────────────────────────
 
 function LeadDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const queryClient = useQueryClient()
   const [showEmailComposer, setShowEmailComposer] = useState(false)
   const [showSMSComposer, setShowSMSComposer] = useState(false)
@@ -51,7 +198,7 @@ function LeadDetail() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteText, setEditingNoteText] = useState('')
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<'overview' | 'communications' | 'notes' | 'tasks'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'communications' | 'notes' | 'tasks' | 'documents'>('overview')
   // AI Intelligence state
   const [aiPrediction, setAiPrediction] = useState<LeadPrediction | null>(null)
   const [aiEngagement, setAiEngagement] = useState<EngagementAnalysis | null>(null)
@@ -76,7 +223,8 @@ function LeadDetail() {
       try {
         const members = await usersApi.getTeamMembers()
         return Array.isArray(members) ? members : []
-      } catch {
+      } catch (error) {
+        console.error('Team members endpoint unavailable, trying fallback:', error)
         // Fallback to users list if team-members endpoint unavailable
         const result = await usersApi.getUsers({ limit: 50 })
         return result?.data?.users || result?.users || []
@@ -390,6 +538,30 @@ function LeadDetail() {
           )}
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const res = await aiApi.enrichLead(id!)
+                if (res.data?.suggestions) {
+                  const applied = Object.keys(res.data.suggestions).filter(k => res.data.suggestions[k])
+                  if (applied.length > 0) {
+                    await aiApi.applyEnrichment(id!, res.data.suggestions)
+                    queryClient.invalidateQueries({ queryKey: ['lead', id] })
+                    toast.success(`AI enriched ${applied.length} fields`)
+                  } else {
+                    toast.info('No new data to enrich')
+                  }
+                }
+              } catch (error) {
+                console.error('AI enrichment failed:', error)
+                toast.error('AI enrichment failed')
+              }
+            }}
+          >
+            <Wand2 className="mr-2 h-4 w-4" />
+            AI Enrich
+          </Button>
           <Button variant="outline" onClick={handleEditLead}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
@@ -482,6 +654,15 @@ function LeadDetail() {
             >
               <CheckSquare className="h-4 w-4 mr-1.5" />
               Tasks
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === 'documents' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('documents')}
+              className="h-9"
+            >
+              <Paperclip className="h-4 w-4 mr-1.5" />
+              Documents
             </Button>
           </div>
 
@@ -733,8 +914,8 @@ function LeadDetail() {
                               </button>
                               <button
                                 className="text-destructive hover:underline"
-                                onClick={() => {
-                                  if (confirm('Delete this note?')) {
+                                onClick={async () => {
+                                  if (await showConfirm({ title: 'Delete Note', message: 'Delete this note?', confirmLabel: 'Delete', variant: 'destructive' })) {
                                     deleteNoteMutation.mutate(note.id)
                                   }
                                 }}
@@ -770,6 +951,11 @@ function LeadDetail() {
                 />
               </CardContent>
             </Card>
+          )}
+
+          {/* Documents Tab */}
+          {activeTab === 'documents' && (
+            <LeadDocumentsTab leadId={id!} />
           )}
         </div>
 

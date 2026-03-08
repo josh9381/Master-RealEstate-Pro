@@ -122,7 +122,8 @@ export async function isPushSubscribed(): Promise<boolean> {
 
     const sub = await reg.pushManager.getSubscription()
     return !!sub
-  } catch {
+  } catch (error) {
+    console.error('Failed to check push subscription:', error)
     return false
   }
 }

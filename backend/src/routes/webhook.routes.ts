@@ -11,6 +11,7 @@ import { lookupGeo } from '../utils/geoip';
 import { webhookLimiter } from '../middleware/rateLimiter';
 import { verifyTwilioSignature, verifySendGridSignature } from '../middleware/webhookAuth';
 import { logger } from '../lib/logger';
+import { pushNotification, pushMessageUpdate } from '../config/socket';
 import {
   twilioSmsWebhookSchema,
   twilioStatusWebhookSchema,
@@ -38,7 +39,7 @@ async function createInboundNotification(
   message: string,
   link = '/communication'
 ): Promise<void> {
-  await prisma.notification.create({
+  const notif = await prisma.notification.create({
     data: {
       id: `notif_inbound_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       userId,
@@ -48,6 +49,14 @@ async function createInboundNotification(
       message,
       link,
     },
+  });
+  pushNotification(userId, {
+    id: notif.id,
+    type,
+    title,
+    message,
+    read: false,
+    createdAt: notif.createdAt.toISOString(),
   });
 }
 
@@ -127,6 +136,12 @@ router.post('/twilio/sms/:userId', verifyTwilioSignature, async (req, res) => {
     });
     
     logger.info({ messageId: message.id }, '[WEBHOOK] Inbound SMS saved');
+
+    // Push real-time update for inbound message
+    const msgOrgId = lead?.organizationId || config.user?.organizationId;
+    if (msgOrgId && msgOrgId !== 'clz0000000000000000000000') {
+      pushMessageUpdate(msgOrgId, { type: 'received', messageId: message.id, channel: 'sms', leadId: lead?.id });
+    }
 
     // TCPA: Process opt-out if STOP word detected
     if (isOptOut) {
@@ -673,6 +688,9 @@ router.post('/sendgrid/inbound', async (req, res) => {
 
     logger.info({ messageId: message.id, from: senderEmail, to: recipientEmail, subject }, '[WEBHOOK] Inbound email saved');
 
+    // Push real-time update for inbound email
+    pushMessageUpdate(organizationId, { type: 'received', messageId: message.id, channel: 'email', leadId: lead?.id });
+
     // 4. Create Notification for the recipient user (#83)
     if (recipientUser?.id) {
       try {
@@ -749,6 +767,125 @@ router.post('/workflow/:webhookKey', async (req, res) => {
   } catch (error) {
     logger.error({ error }, '[WEBHOOK] Error handling workflow trigger');
     res.status(500).json({ success: false, message: 'Internal error' });
+  }
+});
+
+/**
+ * Stripe Webhook Handler
+ * POST /api/webhooks/stripe
+ * Handles subscription lifecycle events
+ * Note: express.raw() middleware is mounted on this path in server.ts
+ */
+router.post('/stripe', async (req, res) => {
+  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return res.status(501).send('Stripe webhooks not configured');
+  }
+
+  const signature = req.headers['stripe-signature'] as string;
+  if (!signature) {
+    return res.status(400).send('Missing stripe-signature header');
+  }
+
+  try {
+    const { getStripeService } = await import('../services/stripe.service');
+    const stripe = getStripeService();
+    const event = await stripe.handleWebhook(req.body, signature);
+
+    logger.info({ type: event.type, id: event.id }, '[WEBHOOK] Stripe event received');
+
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as { customer: string; subscription: string; metadata?: Record<string, string> };
+        if (session.subscription) {
+          const sub = await prisma.subscription.findFirst({
+            where: { stripeCustomerId: session.customer as string },
+          });
+          if (sub) {
+            const stripeDetails = await stripe.getSubscription(session.subscription as string);
+            await prisma.subscription.update({
+              where: { id: sub.id },
+              data: {
+                stripeSubscriptionId: session.subscription as string,
+                status: stripeDetails.status === 'active' ? 'ACTIVE' : stripeDetails.status === 'trialing' ? 'TRIALING' : 'ACTIVE',
+                currentPeriodEnd: stripeDetails.currentPeriodEnd,
+              },
+            });
+          }
+        }
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as unknown as { id: string; status: string; current_period_end: number; cancel_at_period_end: boolean };
+        const sub = await prisma.subscription.findFirst({
+          where: { stripeSubscriptionId: subscription.id },
+        });
+        if (sub) {
+          const statusMap: Record<string, 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELLED' | 'INCOMPLETE'> = {
+            active: 'ACTIVE',
+            trialing: 'TRIALING',
+            past_due: 'PAST_DUE',
+            canceled: 'CANCELLED',
+            incomplete: 'INCOMPLETE',
+          };
+          await prisma.subscription.update({
+            where: { id: sub.id },
+            data: {
+              status: statusMap[subscription.status] || 'ACTIVE',
+              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              cancelAt: subscription.cancel_at_period_end ? new Date(subscription.current_period_end * 1000) : null,
+            },
+          });
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const deleted = event.data.object as { id: string };
+        const sub = await prisma.subscription.findFirst({
+          where: { stripeSubscriptionId: deleted.id },
+        });
+        if (sub) {
+          await prisma.subscription.update({
+            where: { id: sub.id },
+            data: {
+              status: 'CANCELLED',
+              canceledAt: new Date(),
+              stripeSubscriptionId: null,
+            },
+          });
+          await prisma.organization.update({
+            where: { id: sub.organizationId },
+            data: { subscriptionTier: 'STARTER' },
+          });
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as unknown as { customer: string; subscription: string };
+        if (invoice.subscription) {
+          const sub = await prisma.subscription.findFirst({
+            where: { stripeSubscriptionId: invoice.subscription as string },
+          });
+          if (sub) {
+            await prisma.subscription.update({
+              where: { id: sub.id },
+              data: { status: 'PAST_DUE' },
+            });
+          }
+        }
+        break;
+      }
+
+      default:
+        logger.info({ type: event.type }, '[WEBHOOK] Unhandled Stripe event type');
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    logger.error({ error }, '[WEBHOOK] Stripe webhook processing failed');
+    res.status(400).send('Webhook error');
   }
 });
 

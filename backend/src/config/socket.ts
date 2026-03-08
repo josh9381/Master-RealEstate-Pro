@@ -51,7 +51,8 @@ export function initSocketServer(httpServer: HttpServer): Server {
       socket.userId = decoded.userId
       socket.organizationId = decoded.organizationId
       next()
-    } catch {
+    } catch (error) {
+      console.error('[SOCKET] Token verification failed:', error)
       return next(new Error('Invalid or expired token'))
     }
   })
@@ -165,4 +166,49 @@ export function pushLeadUpdate(orgId: string, event: {
   count?: number
 }): void {
   emitToOrg(orgId, 'lead:update', event)
+}
+
+/**
+ * Broadcast a new inbound message (email/SMS).
+ */
+export function pushMessageUpdate(orgId: string, event: {
+  type: 'received' | 'sent'
+  messageId?: string
+  channel?: string
+  leadId?: string
+}): void {
+  emitToOrg(orgId, 'message:update', event)
+}
+
+/**
+ * Broadcast a task lifecycle event.
+ */
+export function pushTaskUpdate(orgId: string, event: {
+  type: 'created' | 'updated' | 'deleted' | 'completed'
+  taskId?: string
+  assignedToId?: string
+}): void {
+  emitToOrg(orgId, 'task:update', event)
+}
+
+/**
+ * Broadcast a call event (logged or inbound).
+ */
+export function pushCallUpdate(orgId: string, event: {
+  type: 'logged' | 'inbound'
+  callId?: string
+  leadId?: string
+}): void {
+  emitToOrg(orgId, 'call:update', event)
+}
+
+/**
+ * Broadcast a follow-up reminder firing event.
+ */
+export function pushReminderDue(orgId: string, event: {
+  reminderId: string
+  leadId: string
+  userId: string
+}): void {
+  emitToOrg(orgId, 'reminder:due', event)
 }

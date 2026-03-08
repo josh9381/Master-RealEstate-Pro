@@ -150,3 +150,50 @@ export const idParamSchema = z.object({
 export const leadIdParamSchema = z.object({
   leadId: z.string().min(1),
 });
+
+// ── Phase 7: Org AI Settings ────────────────────────────────────────
+export const updateOrgAISettingsSchema = z.object({
+  openaiApiKey: z.string().max(200).optional(),
+  openaiOrgId: z.string().max(200).optional(),
+  useOwnAIKey: z.boolean().optional(),
+  aiSystemPrompt: z.string().max(5000).optional(),
+  aiDefaultTone: z.string().max(50).optional(),
+  aiDefaultModel: z.string().max(100).optional(),
+  aiMaxTokensPerRequest: z.number().int().min(100).max(10000).optional(),
+  aiMonthlyTokenBudget: z.number().int().min(0).optional(),
+  aiIndustryContext: z.string().max(2000).optional(),
+  aiBudgetWarning: z.number().min(0).max(100000).optional(),
+  aiBudgetCaution: z.number().min(0).max(100000).optional(),
+  aiBudgetHardLimit: z.number().min(0).max(100000).optional(),
+  aiBudgetAlertEnabled: z.boolean().optional(),
+});
+
+// ── Phase 7: Feedback ───────────────────────────────────────────────
+export const chatFeedbackSchema = z.object({
+  feedback: z.enum(['positive', 'negative']),
+  note: z.string().max(1000).optional(),
+});
+
+export const insightFeedbackSchema = z.object({
+  feedback: z.enum(['helpful', 'not_helpful']),
+});
+
+// ── Phase 7: Lead Enrichment ────────────────────────────────────────
+export const applyEnrichmentSchema = z.object({
+  fields: z.object({
+    propertyType: z.string().max(100).optional(),
+    transactionType: z.string().max(100).optional(),
+    budgetMin: z.number().min(0).optional(),
+    budgetMax: z.number().min(0).optional(),
+    desiredLocation: z.string().max(500).optional(),
+    moveInTimeline: z.string().max(100).optional(),
+  }),
+});
+
+// ── Phase 7: Budget Settings ────────────────────────────────────────
+export const updateBudgetSettingsSchema = z.object({
+  warning: z.number().min(0).max(100000).optional(),
+  caution: z.number().min(0).max(100000).optional(),
+  hardLimit: z.number().min(0).max(100000).optional(),
+  alertEnabled: z.boolean().optional(),
+});
