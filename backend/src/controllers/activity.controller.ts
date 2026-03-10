@@ -21,7 +21,7 @@ export const getActivities = async (req: Request, res: Response) => {
 
   // Build where clause with role-based filtering
   const roleFilter = getRoleFilterFromRequest(req)
-  const where: any = getActivitiesFilter(roleFilter)
+  const where: Record<string, any> = getActivitiesFilter(roleFilter)
   
   if (type) where.type = type
   if (leadId) where.leadId = leadId
@@ -92,7 +92,7 @@ export const getActivities = async (req: Request, res: Response) => {
 export const getActivityStats = async (req: Request, res: Response) => {
   const { startDate, endDate } = req.query
 
-  const where: any = {
+  const where: Record<string, any> = {
     organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
   }
   
@@ -273,7 +273,7 @@ export const updateActivity = async (req: Request, res: Response) => {
     throw new NotFoundError('Activity not found')
   }
 
-  const updateData: any = {}
+  const updateData: Record<string, any> = {}
   if (validated.title !== undefined) updateData.title = validated.title
   if (validated.description !== undefined) updateData.description = validated.description
   if (validated.metadata !== undefined) updateData.metadata = validated.metadata

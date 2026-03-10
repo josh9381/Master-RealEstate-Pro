@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { FileText, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -105,7 +106,7 @@ const CampaignTemplates = () => {
       // Navigate to edit the new campaign
       navigate(`/campaigns/${campaignId}/edit`);
     } catch (error) {
-      console.error('Error creating campaign from template:', error);
+      logger.error('Error creating campaign from template:', error);
       toast.error('Failed to create campaign from template');
     }
   };

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Plug, CheckCircle, AlertCircle, Mail, MessageSquare, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -17,13 +18,13 @@ const IntegrationsHub = () => {
         const emailConfig = await settingsApi.getEmailConfig();
         emailConfigured = !!(emailConfig?.config?.isActive && emailConfig?.config?.apiKey !== null);
       } catch (error) {
-        console.error('Failed to load email config:', error);
+        logger.error('Failed to load email config:', error);
       }
       try {
         const smsConfig = await settingsApi.getSMSConfig();
         smsConfigured = !!(smsConfig?.config?.isActive && smsConfig?.config?.accountSid !== null && smsConfig?.config?.authToken !== null);
       } catch (error) {
-        console.error('Failed to load SMS config:', error);
+        logger.error('Failed to load SMS config:', error);
       }
       return { emailConfigured, smsConfigured };
     },

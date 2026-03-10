@@ -29,7 +29,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md">
+    <div aria-live="polite" aria-atomic="false" className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md">
       {toasts.map((toast) => {
         const Icon = icons[toast.type]
         
@@ -56,6 +56,7 @@ export function ToastContainer() {
               size="icon"
               className="h-6 w-6 -mr-2 -mt-1"
               onClick={() => removeToast(toast.id)}
+              aria-label="Dismiss notification"
             >
               <X className="h-4 w-4" />
             </Button>

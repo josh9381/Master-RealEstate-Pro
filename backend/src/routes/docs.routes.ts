@@ -2,6 +2,7 @@
  * Documentation Routes — Phase 9.7d
  * Public endpoints for browsing documentation articles
  */
+import { logger } from '../lib/logger'
 import { Router, Request, Response } from 'express'
 import prisma from '../config/database'
 
@@ -70,7 +71,7 @@ router.get('/', async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Error listing documentation:', error)
+    logger.error('Error listing documentation:', error)
     res.status(500).json({ success: false, message: 'Failed to list articles' })
   }
 })
@@ -93,7 +94,7 @@ router.get('/categories', async (_req: Request, res: Response) => {
       })),
     })
   } catch (error) {
-    console.error('Error fetching doc categories:', error)
+    logger.error('Error fetching doc categories:', error)
     res.status(500).json({ success: false, message: 'Failed to fetch categories' })
   }
 })
@@ -122,7 +123,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
 
     res.json({ success: true, data: article })
   } catch (error) {
-    console.error('Error fetching article:', error)
+    logger.error('Error fetching article:', error)
     res.status(500).json({ success: false, message: 'Failed to fetch article' })
   }
 })

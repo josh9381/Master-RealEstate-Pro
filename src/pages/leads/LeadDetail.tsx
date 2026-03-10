@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -34,8 +35,6 @@ import { Lead } from '@/types'
 import type { AssignedUser, TeamMember, LeadNote } from '@/types'
 import { useToast } from '@/hooks/useToast'
 import { leadsApi, notesApi, usersApi, UpdateLeadData, documentsApi } from '@/lib/api'
-import { mockLeads } from '@/data/mockData'
-import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 
 // ─── Lead Documents Tab ─────────────────────────────────────────────────────
 
@@ -88,7 +87,7 @@ function LeadDocumentsTab({ leadId }: { leadId: string }) {
       queryClient.invalidateQueries({ queryKey: ['lead-documents', leadId] })
       toast.success('Document deleted')
     } catch (error) {
-      console.error('Failed to delete document:', error)
+      logger.error('Failed to delete document:', error)
       toast.error('Failed to delete document')
     }
   }
@@ -224,7 +223,7 @@ function LeadDetail() {
         const members = await usersApi.getTeamMembers()
         return Array.isArray(members) ? members : []
       } catch (error) {
-        console.error('Team members endpoint unavailable, trying fallback:', error)
+        logger.error('Team members endpoint unavailable, trying fallback:', error)
         // Fallback to users list if team-members endpoint unavailable
         const result = await usersApi.getUsers({ limit: 50 })
         return result?.data?.users || result?.users || []
@@ -241,11 +240,6 @@ function LeadDetail() {
         // Backend returns { success: true, data: { lead } }
         return response.data?.lead || response.data
       } catch (error) {
-        // If API fails, try to find lead in mock data (if enabled)
-        if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
-          const mockLead = mockLeads.find(lead => lead.id === Number(id))
-          return mockLead || null
-        }
         return null
       }
     },
@@ -363,10 +357,10 @@ function LeadDetail() {
         if (failures.length === results.length) {
           toast.error('Failed to load AI insights')
         } else if (failures.length > 0) {
-          console.warn('Some AI insights failed to load:', failures)
+          logger.warn('Some AI insights failed to load:', failures)
         }
       } catch (error) {
-        console.error('Error loading AI insights:', error)
+        logger.error('Error loading AI insights:', error)
         toast.error('Failed to load AI insights')
       } finally {
         setLoadingAI(false)
@@ -554,7 +548,7 @@ function LeadDetail() {
                   }
                 }
               } catch (error) {
-                console.error('AI enrichment failed:', error)
+                logger.error('AI enrichment failed:', error)
                 toast.error('AI enrichment failed')
               }
             }}
@@ -1239,7 +1233,7 @@ function LeadDetail() {
               <Button variant="ghost" size="icon" onClick={() => {
                 setShowEditModal(false)
                 setEditingLead(null)
-              }}>
+              }} aria-label="Close">
                 <X className="h-4 w-4" />
               </Button>
             </div>

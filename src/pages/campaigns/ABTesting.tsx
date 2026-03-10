@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TestTube2, TrendingUp, Users, Mail, RefreshCw } from 'lucide-react';
@@ -47,7 +48,7 @@ const ABTesting = () => {
             const results = await abtestService.getABTestResults(test.id);
             return { testId: test.id, data: results };
           } catch (error) {
-            console.error(`Error loading results for test ${test.id}:`, error);
+            logger.error(`Error loading results for test ${test.id}:`, error);
             return null;
           }
         });
@@ -100,7 +101,7 @@ const ABTesting = () => {
       toast.success('Test stopped successfully');
       loadABTests();
     } catch (error) {
-      console.error('Error stopping test:', error);
+      logger.error('Error stopping test:', error);
       toast.error('Failed to stop test');
     }
   };

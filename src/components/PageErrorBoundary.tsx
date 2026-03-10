@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Component, ReactNode } from 'react';
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -10,11 +11,13 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  isChunkError: boolean;
 }
 
 /**
  * PageErrorBoundary - Catches errors in individual pages
  * Shows a friendly message without breaking the entire app
+ * Detects chunk load failures and shows a clean "Reload page" card
  */
 export class PageErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -22,18 +25,27 @@ export class PageErrorBoundary extends Component<Props, State> {
     this.state = {
       hasError: false,
       error: null,
+      isChunkError: false,
     };
   }
 
   static getDerivedStateFromError(error: Error): State {
+    const msg = error.message.toLowerCase();
+    const isChunkError =
+      msg.includes('loading chunk') ||
+      msg.includes('loading css chunk') ||
+      msg.includes('dynamically imported module') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('importing a module script failed');
     return {
       hasError: true,
       error,
+      isChunkError,
     };
   }
 
   componentDidCatch(error: Error) {
-    console.error(`Error in ${this.props.pageName || 'page'}:`, error);
+    logger.error(`Error in ${this.props.pageName || 'page'}:`, error);
   }
 
   handleReset = () => {
@@ -46,6 +58,32 @@ export class PageErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // Chunk load error — clean card with reload button
+      if (this.state.isChunkError) {
+        return (
+          <div className="flex items-center justify-center min-h-[60vh] p-8">
+            <div className="max-w-sm w-full bg-white rounded-lg shadow-lg p-8 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                <RefreshCw className="h-8 w-8 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                Update Available
+              </h2>
+              <p className="text-gray-600 mb-6">
+                A newer version of this page is available. Please reload to continue.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Reload Page
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex items-center justify-center min-h-[60vh] p-8">
           <div className="max-w-md w-full">

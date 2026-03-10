@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import cron from 'node-cron'
 import { prisma } from '../config/database'
 import { acquireLock, releaseLock } from '../utils/distributedLock'
@@ -68,9 +69,9 @@ async function runReportScheduler() {
 
         // TODO: In production, send email with PDF attachment here
         // For now, the report is stored in-app in ReportHistory
-        console.log(`[ReportScheduler] Generated report "${schedule.savedReport.name}" for user ${schedule.user.email}`)
+        logger.info(`[ReportScheduler] Generated report "${schedule.savedReport.name}" for user ${schedule.user.email}`)
       } catch (err: any) {
-        console.error(`[ReportScheduler] Failed to generate report ${schedule.id}:`, err.message)
+        logger.error(`[ReportScheduler] Failed to generate report ${schedule.id}:`, err.message)
 
         // Record failure
         await prisma.reportHistory.create({
@@ -88,7 +89,7 @@ async function runReportScheduler() {
       }
     }
   } catch (error: any) {
-    console.error('[ReportScheduler] Error:', error.message)
+    logger.error('[ReportScheduler] Error:', error.message)
   } finally {
     await releaseLock(LOCK_KEY)
   }
@@ -198,10 +199,10 @@ let reportSchedulerTask: ReturnType<typeof cron.schedule> | null = null
 
 export function startReportScheduler() {
   reportSchedulerTask = cron.schedule('*/5 * * * *', runReportScheduler)
-  console.log('[ReportScheduler] Started — checking every 5 minutes')
+  logger.info('[ReportScheduler] Started — checking every 5 minutes')
 }
 
 export function stopReportScheduler() {
   reportSchedulerTask?.stop()
-  console.log('[ReportScheduler] Stopped')
+  logger.info('[ReportScheduler] Stopped')
 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -54,7 +55,7 @@ export default function LeadCreate() {
         const members = await usersApi.getTeamMembers()
         return Array.isArray(members) ? members : []
       } catch (error) {
-        console.error('Team members endpoint unavailable, trying fallback:', error)
+        logger.error('Team members endpoint unavailable, trying fallback:', error)
         // Fallback to users list if team-members endpoint unavailable
         const response = await usersApi.getUsers({ limit: 50 })
         return response.data?.users || response.data || []

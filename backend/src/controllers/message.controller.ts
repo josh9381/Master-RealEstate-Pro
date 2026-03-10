@@ -17,7 +17,7 @@ export const getMessages = async (req: Request, res: Response) => {
 
   // Build where clause with role-based filtering
   const roleFilter = getRoleFilterFromRequest(req)
-  const additionalWhere: Record<string, unknown> = {}
+  const additionalWhere: Record<string, any> = {}
 
   if (type) {
     additionalWhere.type = type as MessageType
@@ -166,11 +166,11 @@ export const getMessages = async (req: Request, res: Response) => {
   // Convert map to array and sort threads by most recent
   const threads = Array.from(threadMap.values()).map(thread => {
     // Sort messages within each thread by timestamp (oldest first, like iMessage)
-    thread.messages.sort((a: any, b: any) => 
+    thread.messages.sort((a: { createdAt: string }, b: { createdAt: string }) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     )
     // Calculate total unread count for the thread (only INBOUND messages that haven't been read)
-    thread.unread = thread.messages.filter((m: any) => m.unread).length
+    thread.unread = thread.messages.filter((m: { unread?: boolean }) => m.unread).length
     return thread
   }).sort((a, b) =>
     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -533,7 +533,7 @@ export const getMessageStats = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { organizationId }
+  const where: Record<string, any> = { organizationId }
   
   if (leadId) {
     where.leadId = leadId as string

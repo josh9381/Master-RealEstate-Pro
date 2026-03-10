@@ -32,6 +32,7 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
+          aria-label="Toggle sidebar"
         >
           <Menu className="h-5 w-5" />
         </Button>
@@ -58,6 +59,7 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={toggleTheme}
+          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
         >
           {theme === 'light' ? (
             <Moon className="h-5 w-5" />
@@ -70,10 +72,13 @@ export function Header() {
 
         {/* Profile Dropdown */}
         <div className="relative ml-2">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="flex items-center space-x-2"
             onClick={() => setShowProfileMenu(!showProfileMenu)}
+            aria-label="User menu"
+            aria-expanded={showProfileMenu}
+            aria-haspopup="true"
           >
             {user?.avatar ? (
               <img 

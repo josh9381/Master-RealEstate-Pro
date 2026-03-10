@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useRef, useEffect } from 'react'
 import { X, Send, Sparkles, TrendingUp, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -79,7 +80,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
         setMessages(formattedMessages)
       }
     } catch (err) {
-      console.error('Failed to load chat history:', err)
+      logger.error('Failed to load chat history:', err)
       hasLoadedHistory.current = false // Allow retry on error
       // Keep default welcome message if history fails
     } finally {
@@ -401,7 +402,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
             
           } catch (e) {
             // If parsing fails, keep original message
-            console.error('Failed to parse function response:', e)
+            logger.error('Failed to parse function response:', e)
           }
         }
 
@@ -410,7 +411,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
         throw new Error('Failed to get AI response')
       }
     } catch (err: unknown) {
-      console.error('AI chat error:', err)
+      logger.error('AI chat error:', err)
       
       // Remove typing indicator
       setMessages((prev) => prev.filter(m => m.id !== 'typing-indicator'))
@@ -650,7 +651,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
               className="flex-1"
               disabled={isTyping}
             />
-            <Button onClick={handleSendMessage} size="icon" disabled={isTyping || !input.trim()}>
+            <Button onClick={handleSendMessage} size="icon" disabled={isTyping || !input.trim()} aria-label="Send message">
               <Send className="h-4 w-4" />
             </Button>
           </div>

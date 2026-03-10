@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Crown, Check, TrendingUp, Users, Mail, Target, Workflow, MessageSquare, Phone, X, AlertTriangle, Calendar } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -61,7 +62,7 @@ export default function SubscriptionPage() {
   
   // Show error if API fails
   if (error) {
-    console.error('Failed to load subscription plans:', error)
+    logger.error('Failed to load subscription plans:', error)
   }
   
   // Fallback plans if API fails

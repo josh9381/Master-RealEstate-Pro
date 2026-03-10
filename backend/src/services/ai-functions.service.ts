@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { Prisma, TaskPriority, LeadStatus } from '@prisma/client';
 import { prisma } from '../config/database';
 import { getOpenAIService } from './openai.service';
@@ -995,7 +996,7 @@ export class AIFunctionsService {
         message: `✅ Created new lead: ${lead.firstName} ${lead.lastName}`,
       });
     } catch (error) {
-      console.error('Create lead error:', error);
+      logger.error('Create lead error:', error);
       return JSON.stringify({ error: 'Failed to create lead' });
     }
   }
@@ -1159,7 +1160,7 @@ export class AIFunctionsService {
         message: `✅ Added tag "${args.tagName}" to ${lead.firstName} ${lead.lastName}`,
       });
     } catch (error) {
-      console.error('Add tag error:', error);
+      logger.error('Add tag error:', error);
       return JSON.stringify({ error: 'Failed to add tag' });
     }
   }
@@ -1369,7 +1370,7 @@ export class AIFunctionsService {
         },
       });
     } catch (error) {
-      console.error('Schedule appointment error:', error);
+      logger.error('Schedule appointment error:', error);
       return JSON.stringify({ error: 'Failed to schedule appointment' });
     }
   }
@@ -2135,7 +2136,7 @@ Generate the script:`;
         message: `✅ Created campaign: ${campaign.name}`,
       });
     } catch (error) {
-      console.error('Create campaign error:', error);
+      logger.error('Create campaign error:', error);
       return JSON.stringify({ error: 'Failed to create campaign' });
     }
   }
@@ -2392,7 +2393,7 @@ Generate the script:`;
         message: `✅ Created workflow: ${workflow.name} (inactive - use toggle_workflow to activate)`,
       });
     } catch (error) {
-      console.error('Create workflow error:', error);
+      logger.error('Create workflow error:', error);
       return JSON.stringify({ error: 'Failed to create workflow' });
     }
   }
@@ -2869,7 +2870,7 @@ Generate the script:`;
         });
       }
     } catch (error) {
-      console.error('Connect integration error:', error);
+      logger.error('Connect integration error:', error);
       return JSON.stringify({ error: 'Failed to connect integration' });
     }
   }

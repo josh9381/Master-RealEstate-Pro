@@ -3,6 +3,7 @@
  * Logs significant actions to the AuditLog table.
  * Called from controllers/middleware to record who did what.
  */
+import { logger } from '../lib/logger'
 import { AuditAction } from '@prisma/client'
 import prisma from '../config/database'
 
@@ -42,7 +43,7 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
     })
   } catch (error) {
     // Audit logging should never break the main request
-    console.error('Failed to write audit log:', error)
+    logger.error('Failed to write audit log:', error)
   }
 }
 

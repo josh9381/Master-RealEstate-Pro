@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { CorsOptions } from 'cors';
 
 /**
@@ -61,7 +62,7 @@ export const corsOptions: CorsOptions = {
       return callback(null, true);
     }
 
-    console.warn(`⚠️  CORS blocked (prod): ${origin_str}`);
+    logger.warn(`⚠️  CORS blocked (prod): ${origin_str}`);
     return callback(new Error(`Origin ${origin_str} not allowed by CORS`));
   },
   credentials: true,
@@ -75,9 +76,9 @@ export const corsOptions: CorsOptions = {
 
 // Log CORS configuration on startup
 if (isDevelopment) {
-  console.log('✅ CORS: Development mode - permissive policy');
-  console.log('   Allowed:', developmentOrigins.slice(0, 5).join(', '), '...');
+  logger.info('✅ CORS: Development mode - permissive policy');
+  logger.info('   Allowed:', developmentOrigins.slice(0, 5).join(', '), '...');
 } else {
-  console.log('✅ CORS: Production mode - strict whitelist');
-  console.log('   Allowed origins:', productionOrigins.length);
+  logger.info('✅ CORS: Production mode - strict whitelist');
+  logger.info('   Allowed origins:', productionOrigins.length);
 }

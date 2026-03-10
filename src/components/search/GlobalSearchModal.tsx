@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, X, User, Mail, Target, Zap, Settings, FileText, DollarSign, Users, TrendingUp } from 'lucide-react'
+import { Search, X, User, Mail, Target, Zap, Settings, FileText, DollarSign, Users, TrendingUp, Clock, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { useAuthStore } from '@/store/authStore'
+import { getUserItem, setUserItem } from '@/lib/userStorage'
 
 interface GlobalSearchModalProps {
   isOpen: boolean
@@ -21,11 +23,38 @@ interface SearchResult {
   icon: React.ReactNode
 }
 
+const RECENT_SEARCHES_KEY = 'recent_searches'
+const MAX_RECENT_SEARCHES = 8
+
+function getRecentSearches(userId: string | undefined): string[] {
+  const raw = getUserItem(userId, RECENT_SEARCHES_KEY)
+  if (!raw) return []
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+function addRecentSearch(userId: string | undefined, query: string) {
+  if (!query || query.length < 2) return
+  const recent = getRecentSearches(userId)
+  const filtered = recent.filter((s: string) => s.toLowerCase() !== query.toLowerCase())
+  filtered.unshift(query)
+  setUserItem(userId, RECENT_SEARCHES_KEY, JSON.stringify(filtered.slice(0, MAX_RECENT_SEARCHES)))
+}
+
+function clearRecentSearches(userId: string | undefined) {
+  setUserItem(userId, RECENT_SEARCHES_KEY, JSON.stringify([]))
+}
+
 export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
   const navigate = useNavigate()
+  const userId = useAuthStore((s) => s.user?.id)
 
   // Debounce search input — 300ms delay, min 2 characters
   useEffect(() => {
@@ -144,9 +173,23 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   }, [searchQuery, leadsData, campaignsData, workflowsData, staticPages])
 
   const handleSelectResult = useCallback((result: SearchResult) => {
+    if (searchQuery.length >= 2) {
+      addRecentSearch(userId, searchQuery)
+    }
     navigate(result.url)
     onClose()
-  }, [navigate, onClose])
+  }, [navigate, onClose, searchQuery, userId])
+
+  const handleRecentSearchClick = useCallback((query: string) => {
+    setSearchQuery(query)
+    setDebouncedQuery(query)
+    setSelectedIndex(0)
+  }, [])
+
+  const handleClearRecent = useCallback(() => {
+    clearRecentSearches(userId)
+    setRecentSearches([])
+  }, [userId])
 
   // Keyboard navigation
   useEffect(() => {
@@ -185,8 +228,9 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
       setSearchQuery('')
       setDebouncedQuery('')
       setSelectedIndex(0)
+      setRecentSearches(getRecentSearches(userId))
     }
-  }, [isOpen])
+  }, [isOpen, userId])
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -221,7 +265,12 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-card rounded-lg shadow-2xl border">
+      <div
+        role="dialog"
+        aria-label="Global search"
+        aria-modal="true"
+        className="relative w-full max-w-2xl bg-card rounded-lg shadow-2xl border"
+      >
         {/* Search Input */}
         <div className="flex items-center border-b px-4 py-3">
           <Search className="w-5 h-5 text-muted-foreground mr-3" />
@@ -238,6 +287,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
             size="icon"
             onClick={onClose}
             className="ml-2"
+            aria-label="Close search"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -246,9 +296,42 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
         {/* Results */}
         <div className="max-h-96 overflow-y-auto">
           {searchQuery.length < 2 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">{searchQuery.length === 0 ? 'Start typing to search across your workspace' : 'Type at least 2 characters to search'}</p>
+            <div className="p-6 text-center text-muted-foreground">
+              {/* Recent searches */}
+              {recentSearches.length > 0 && searchQuery.length === 0 ? (
+                <div className="text-left">
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
+                      Recent Searches
+                    </span>
+                    <button
+                      onClick={handleClearRecent}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Clear
+                    </button>
+                  </div>
+                  <div className="space-y-0.5">
+                    {recentSearches.map((query, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleRecentSearchClick(query)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-left hover:bg-accent transition-colors"
+                      >
+                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm truncate">{query}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">{searchQuery.length === 0 ? 'Start typing to search across your workspace' : 'Type at least 2 characters to search'}</p>
+                </>
+              )}
               <div className="mt-4 flex flex-wrap gap-2 justify-center">
                 <kbd className="px-2 py-1 text-xs bg-muted rounded">↑</kbd>
                 <kbd className="px-2 py-1 text-xs bg-muted rounded">↓</kbd>

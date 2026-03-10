@@ -4,6 +4,7 @@
  * Supports both one-time and recurring campaigns
  */
 
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { executeCampaign } from './campaign-executor.service';
 import { processABTestAutoWinners } from './ab-test-evaluator.service';
@@ -46,18 +47,18 @@ async function processDeferredSendTimeOptimization() {
 
     if (campaignGroups.size === 0) return;
 
-    console.log(`[CAMPAIGN SCHEDULER] Processing ${campaignGroups.size} campaigns with deferred sends`);
+    logger.info(`[CAMPAIGN SCHEDULER] Processing ${campaignGroups.size} campaigns with deferred sends`);
 
     for (const [campaignId, leadIds] of campaignGroups) {
       try {
-        console.log(`[CAMPAIGN SCHEDULER] Sending deferred batch: ${leadIds.length} leads for campaign ${campaignId}`);
+        logger.info(`[CAMPAIGN SCHEDULER] Sending deferred batch: ${leadIds.length} leads for campaign ${campaignId}`);
         await executeCampaign({ campaignId, leadIds });
       } catch (err) {
-        console.error(`[CAMPAIGN SCHEDULER] Deferred send failed for campaign ${campaignId}:`, err);
+        logger.error(`[CAMPAIGN SCHEDULER] Deferred send failed for campaign ${campaignId}:`, err);
       }
     }
   } catch (err) {
-    console.error('[CAMPAIGN SCHEDULER] Error processing deferred sends:', err);
+    logger.error('[CAMPAIGN SCHEDULER] Error processing deferred sends:', err);
   }
 }
 
@@ -127,7 +128,7 @@ function calculateNextSendDate(
       break;
       
     default:
-      console.error(`[SCHEDULER] Unknown frequency: ${frequency}`);
+      logger.error(`[SCHEDULER] Unknown frequency: ${frequency}`);
       return null;
   }
   
@@ -141,7 +142,7 @@ function calculateNextSendDate(
 export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
   const now = new Date();
   
-  console.log(`[CAMPAIGN SCHEDULER] Checking for scheduled campaigns at ${now.toISOString()}`);
+  logger.info(`[CAMPAIGN SCHEDULER] Checking for scheduled campaigns at ${now.toISOString()}`);
 
   try {
     // Find campaigns that are:
@@ -191,11 +192,11 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
     const campaignsToSend = [...oneTimeCampaigns, ...recurringCampaigns];
 
     if (campaignsToSend.length === 0) {
-      console.log(`[CAMPAIGN SCHEDULER] No campaigns to send at this time`);
+      logger.info(`[CAMPAIGN SCHEDULER] No campaigns to send at this time`);
       return;
     }
 
-    console.log(
+    logger.info(
       `[CAMPAIGN SCHEDULER] Found ${campaignsToSend.length} campaign(s) to send ` +
       `(${oneTimeCampaigns.length} one-time, ${recurringCampaigns.length} recurring)`
     );
@@ -203,7 +204,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
     // Execute each campaign
     for (const campaign of campaignsToSend) {
       try {
-        console.log(
+        logger.info(
           `[CAMPAIGN SCHEDULER] Executing ${campaign.isRecurring ? 'recurring' : 'one-time'} ` +
           `campaign: ${campaign.name} (ID: ${campaign.id})`
         );
@@ -221,7 +222,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
         });
 
         if (result.success) {
-          console.log(
+          logger.info(
             `[CAMPAIGN SCHEDULER] ✅ Campaign "${campaign.name}" sent successfully! ` +
             `Sent: ${result.sent}, Failed: ${result.failed}`
           );
@@ -236,7 +237,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
             
             if (hasReachedMaxOccurrences || hasReachedEndDate) {
               // Campaign has reached its limit
-              console.log(
+              logger.info(
                 `[CAMPAIGN SCHEDULER] Campaign "${campaign.name}" has reached its end ` +
                 `(occurrences: ${newOccurrenceCount}/${campaign.maxOccurrences || '∞'}, ` +
                 `endDate: ${campaign.endDate || 'none'})`
@@ -260,7 +261,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
               );
               
               if (nextSendAt) {
-                console.log(
+                logger.info(
                   `[CAMPAIGN SCHEDULER] Next occurrence of "${campaign.name}" scheduled for ` +
                   `${nextSendAt.toISOString()}`
                 );
@@ -274,7 +275,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
                   },
                 });
               } else {
-                console.error(
+                logger.error(
                   `[CAMPAIGN SCHEDULER] Failed to calculate next send date for "${campaign.name}"`
                 );
                 
@@ -299,7 +300,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
             });
           }
         } else {
-          console.error(
+          logger.error(
             `[CAMPAIGN SCHEDULER] ❌ Campaign "${campaign.name}" failed to send:`,
             result.errors
           );
@@ -313,7 +314,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
           });
         }
       } catch (error) {
-        console.error(
+        logger.error(
           `[CAMPAIGN SCHEDULER] ❌ Error executing campaign "${campaign.name}":`,
           error
         );
@@ -328,7 +329,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
       }
     }
 
-    console.log(`[CAMPAIGN SCHEDULER] ✅ Finished processing ${campaignsToSend.length} campaign(s)`);
+    logger.info(`[CAMPAIGN SCHEDULER] ✅ Finished processing ${campaignsToSend.length} campaign(s)`);
     
     // Process deferred send-time optimization sends
     await processDeferredSendTimeOptimization();
@@ -336,7 +337,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
     // Process A/B test auto-winner evaluations
     await processABTestAutoWinners();
   } catch (error) {
-    console.error('[CAMPAIGN SCHEDULER] ❌ Error in scheduler:', error);
+    logger.error('[CAMPAIGN SCHEDULER] ❌ Error in scheduler:', error);
   }
 }
 

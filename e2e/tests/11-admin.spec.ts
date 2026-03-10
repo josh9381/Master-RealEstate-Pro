@@ -84,15 +84,6 @@ test.describe('11 - Admin Panel', () => {
     console.log('  ✅ Feature flags loaded');
   });
 
-  test('Admin debug console', async ({ page }) => {
-    console.log('\n🧪 TEST: Debug console');
-    await navigateTo(page, '/admin/debug', 'Debug Console');
-    await verifyPageLoaded(page);
-    await screenshot(page, '11-admin-debug');
-    await clickAllTabs(page);
-    console.log('  ✅ Debug console loaded');
-  });
-
   test('Admin backup & restore', async ({ page }) => {
     console.log('\n🧪 TEST: Backup & restore');
     await navigateTo(page, '/admin/backup', 'Backup & Restore');
@@ -114,15 +105,6 @@ test.describe('11 - Admin Panel', () => {
     await screenshot(page, '11-admin-export');
     await clickAllTabs(page);
     console.log('  ✅ Data export wizard loaded');
-  });
-
-  test('Admin retry queue', async ({ page }) => {
-    console.log('\n🧪 TEST: Retry queue');
-    await navigateTo(page, '/admin/retry-queue', 'Retry Queue');
-    await verifyPageLoaded(page);
-    await screenshot(page, '11-admin-retry-queue');
-    await clickAllTabs(page);
-    console.log('  ✅ Retry queue loaded');
   });
 
   test('Admin health check dashboard', async ({ page }) => {

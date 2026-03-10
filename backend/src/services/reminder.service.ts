@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { sendEmail } from './email.service';
 import { sendSMS } from './sms.service';
@@ -114,7 +115,7 @@ export async function sendAppointmentReminder(options: SendReminderOptions): Pro
         result.email = false;
       }
     } catch (error) {
-      console.error('Failed to send email reminder:', error);
+      logger.error('Failed to send email reminder:', error);
       result.email = false;
     }
   }
@@ -142,7 +143,7 @@ export async function sendAppointmentReminder(options: SendReminderOptions): Pro
         result.sms = false;
       }
     } catch (error) {
-      console.error('Failed to send SMS reminder:', error);
+      logger.error('Failed to send SMS reminder:', error);
       result.sms = false;
     }
   }
@@ -199,7 +200,7 @@ export async function sendUpcomingReminders(): Promise<number> {
       });
       sentCount++;
     } catch (error) {
-      console.error(`Failed to send reminder for appointment ${appointment.id}:`, error);
+      logger.error(`Failed to send reminder for appointment ${appointment.id}:`, error);
     }
   }
 

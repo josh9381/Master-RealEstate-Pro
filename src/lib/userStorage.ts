@@ -13,6 +13,10 @@ export const USER_SCOPED_KEYS = [
   'emailSignature',
   'autoAppendSignature',
   'onboarding_wizard_dismissed',
+  'onboarding_tour_completed',
+  'onboarding_tour_step',
+  'notification_sound_settings',
+  'recent_searches',
 ] as const;
 
 function prefixed(userId: string, key: string): string {

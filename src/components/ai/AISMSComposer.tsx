@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { X, Sparkles, Send, RefreshCw, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -75,7 +76,7 @@ export function AISMSComposer({
         })
       }
     } catch (error) {
-      console.error('Failed to generate SMS:', error)
+      logger.error('Failed to generate SMS:', error)
       const aiMsg = getAIUnavailableMessage(error)
       if (aiMsg) {
         toast.error(aiMsg)
@@ -105,7 +106,7 @@ export function AISMSComposer({
         onClose()
       }
     } catch (error) {
-      console.error('Failed to send SMS:', error)
+      logger.error('Failed to send SMS:', error)
       toast.error('Failed to send SMS. Please try again.')
     } finally {
       setIsSending(false)

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X, Filter, Calendar, Tag, User, Star, Building } from 'lucide-react'
@@ -38,7 +39,7 @@ export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: Ad
         const tags = response?.data?.tags || response?.tags || response || []
         return Array.isArray(tags) ? tags.map((t: { name: string }) => t.name) : []
       } catch (error) {
-        console.error('Failed to fetch tags:', error)
+        logger.error('Failed to fetch tags:', error)
         return ['Enterprise', 'Hot Lead', 'Demo Scheduled', 'Follow-up', 'High Value', 'Partner']
       }
     },
@@ -58,7 +59,7 @@ export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: Ad
             ), 'Unassigned']
           : ['Unassigned']
       } catch (error) {
-        console.error('Failed to fetch team members:', error)
+        logger.error('Failed to fetch team members:', error)
         return ['Unassigned']
       }
     },

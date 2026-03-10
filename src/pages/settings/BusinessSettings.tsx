@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Building, RefreshCw } from 'lucide-react';
@@ -85,7 +86,7 @@ const BusinessSettings = () => {
         queryClient.invalidateQueries({ queryKey: ['settings', 'business'] });
         toast.success('Logo uploaded successfully!');
       } catch (err) {
-        console.error('Logo upload failed:', err);
+        logger.error('Logo upload failed:', err);
         toast.error('Failed to upload logo. Please try again.');
       }
     };
@@ -101,7 +102,7 @@ const BusinessSettings = () => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'business'] });
     },
     onError: (error) => {
-      console.error('Failed to save settings:', error);
+      logger.error('Failed to save settings:', error);
       toast.error('Failed to save settings');
     },
   });

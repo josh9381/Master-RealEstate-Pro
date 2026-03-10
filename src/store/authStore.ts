@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, UserPermissions } from '@/types'
@@ -118,7 +119,7 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true })
           await authApi.logout()
         } catch (error) {
-          console.error('Logout error:', error)
+          logger.error('Logout error:', error)
         } finally {
           get().clearAuth()
           set({ isLoading: false })

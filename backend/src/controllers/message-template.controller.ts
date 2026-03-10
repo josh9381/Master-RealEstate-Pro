@@ -8,7 +8,7 @@ export async function getMessageTemplates(req: Request, res: Response) {
   const { category, isQuickReply, tier } = req.query;
 
   // Build where clause: user sees SYSTEM + ORGANIZATION + their TEAM + their PERSONAL
-  const where: Record<string, unknown> = {
+  const where: Record<string, any> = {
     isActive: true,
     OR: [
       { tier: 'SYSTEM', organizationId },
@@ -28,12 +28,21 @@ export async function getMessageTemplates(req: Request, res: Response) {
     where.tier = tier;
   }
 
-  const templates = await prisma.messageTemplate.findMany({
-    where,
-    orderBy: [{ tier: 'asc' }, { category: 'asc' }, { name: 'asc' }],
-  });
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+  const skip = (page - 1) * limit;
 
-  res.json({ templates });
+  const [templates, total] = await Promise.all([
+    prisma.messageTemplate.findMany({
+      where,
+      orderBy: [{ tier: 'asc' }, { category: 'asc' }, { name: 'asc' }],
+      skip,
+      take: limit,
+    }),
+    prisma.messageTemplate.count({ where }),
+  ]);
+
+  res.json({ templates, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
 }
 
 // GET /api/message-templates/categories

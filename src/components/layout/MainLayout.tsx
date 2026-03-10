@@ -6,6 +6,7 @@ import { Breadcrumbs } from './Breadcrumbs'
 import { ToastContainer } from '@/components/ui/ToastContainer'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FloatingAIButton } from '@/components/ai/FloatingAIButton'
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
 import { useUIStore } from '@/store/uiStore'
 import { useToast } from '@/hooks/useToast'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
@@ -33,8 +34,16 @@ export function MainLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Skip to main content link for keyboard/screen reader users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
       <Sidebar />
-      
+
       <div
         className={cn(
           'flex flex-1 flex-col overflow-hidden transition-all duration-300',
@@ -42,8 +51,8 @@ export function MainLayout() {
         )}
       >
         <Header />
-        
-        <main className="flex-1 overflow-y-auto bg-muted/10 p-6">
+
+        <main id="main-content" className="flex-1 overflow-y-auto bg-muted/10 p-6">
           <Breadcrumbs />
           <Outlet />
         </main>
@@ -52,6 +61,7 @@ export function MainLayout() {
       <ToastContainer />
       <ConfirmDialog />
       <FloatingAIButton />
+      <OnboardingTour />
     </div>
   )
 }

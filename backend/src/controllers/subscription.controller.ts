@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { SubscriptionTier } from '@prisma/client';
 import { 
@@ -116,7 +117,7 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching subscription:', error);
+    logger.error('Error fetching subscription:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch subscription' });
   }
 };
@@ -152,7 +153,7 @@ export const getAvailablePlans = async (req: Request, res: Response) => {
 
     res.json({ success: true, data: { plans } });
   } catch (error) {
-    console.error('Error fetching plans:', error);
+    logger.error('Error fetching plans:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch plans' });
   }
 };
@@ -240,7 +241,7 @@ export const changePlan = async (req: Request, res: Response) => {
       message: 'Subscription updated successfully',
     });
   } catch (error) {
-    console.error('Error changing plan:', error);
+    logger.error('Error changing plan:', error);
     res.status(500).json({ success: false, message: 'Failed to change subscription plan' });
   }
 };
@@ -329,7 +330,7 @@ export const getUsageStats = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching usage stats:', error);
+    logger.error('Error fetching usage stats:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch usage statistics' });
   }
 };

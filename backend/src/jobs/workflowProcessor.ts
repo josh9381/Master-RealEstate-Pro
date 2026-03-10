@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { processTimeBasedWorkflows, getQueueStatus, getExecutionStats } from '../services/workflowExecutor.service';
 
 /**
@@ -31,11 +32,11 @@ const INTERVALS = {
  */
 async function timeBasedWorkflowJob() {
   try {
-    console.log('[Job] Processing time-based workflows...');
+    logger.info('[Job] Processing time-based workflows...');
     await processTimeBasedWorkflows();
-    console.log('[Job] Time-based workflow processing complete');
+    logger.info('[Job] Time-based workflow processing complete');
   } catch (error) {
-    console.error('[Job] Error processing time-based workflows:', error);
+    logger.error('[Job] Error processing time-based workflows:', error);
   }
 }
 
@@ -48,16 +49,16 @@ async function queueMonitorJob() {
     const status = getQueueStatus();
     
     if (status.queueSize > 1000) {
-      console.warn(`[Job] ⚠️ Queue size is large: ${status.queueSize} items`);
+      logger.warn(`[Job] ⚠️ Queue size is large: ${status.queueSize} items`);
       // Could send alert/notification here
     }
     
     if (status.queueSize > 0) {
-      console.log(`[Job] Queue status: ${status.queueSize} items, Processing: ${status.isProcessing}`);
-      console.log(`[Job] Breakdown - Critical: ${status.breakdown.critical}, High: ${status.breakdown.high}, Normal: ${status.breakdown.normal}, Low: ${status.breakdown.low}`);
+      logger.info(`[Job] Queue status: ${status.queueSize} items, Processing: ${status.isProcessing}`);
+      logger.info(`[Job] Breakdown - Critical: ${status.breakdown.critical}, High: ${status.breakdown.high}, Normal: ${status.breakdown.normal}, Low: ${status.breakdown.low}`);
     }
   } catch (error) {
-    console.error('[Job] Error monitoring queue:', error);
+    logger.error('[Job] Error monitoring queue:', error);
   }
 }
 
@@ -66,18 +67,18 @@ async function queueMonitorJob() {
  */
 async function statsReportJob() {
   try {
-    console.log('[Job] Generating execution statistics...');
+    logger.info('[Job] Generating execution statistics...');
     const stats = await getExecutionStats(7);
     
-    console.log('[Job] Execution Stats (Last 7 days):');
-    console.log(`  - Total Executions: ${stats.totalExecutions}`);
-    console.log(`  - Successful: ${stats.successfulExecutions} (${stats.successRate.toFixed(1)}%)`);
-    console.log(`  - Failed: ${stats.failedExecutions}`);
-    console.log(`  - Running: ${stats.runningExecutions}`);
-    console.log(`  - Avg Duration: ${stats.avgDurationMs}ms`);
-    console.log(`  - Current Queue Size: ${stats.queueStatus.queueSize}`);
+    logger.info('[Job] Execution Stats (Last 7 days):');
+    logger.info(`  - Total Executions: ${stats.totalExecutions}`);
+    logger.info(`  - Successful: ${stats.successfulExecutions} (${stats.successRate.toFixed(1)}%)`);
+    logger.info(`  - Failed: ${stats.failedExecutions}`);
+    logger.info(`  - Running: ${stats.runningExecutions}`);
+    logger.info(`  - Avg Duration: ${stats.avgDurationMs}ms`);
+    logger.info(`  - Current Queue Size: ${stats.queueStatus.queueSize}`);
   } catch (error) {
-    console.error('[Job] Error generating stats report:', error);
+    logger.error('[Job] Error generating stats report:', error);
   }
 }
 
@@ -87,7 +88,7 @@ async function statsReportJob() {
  */
 async function logCleanupJob() {
   try {
-    console.log('[Job] Starting log cleanup...');
+    logger.info('[Job] Starting log cleanup...');
     
     const { prisma } = await import('../config/database');
     
@@ -103,9 +104,9 @@ async function logCleanupJob() {
       },
     });
     
-    console.log(`[Job] Cleaned up ${result.count} old execution logs`);
+    logger.info(`[Job] Cleaned up ${result.count} old execution logs`);
   } catch (error) {
-    console.error('[Job] Error cleaning up logs:', error);
+    logger.error('[Job] Error cleaning up logs:', error);
   }
 }
 
@@ -119,7 +120,7 @@ const scheduledJobs: NodeJS.Timeout[] = [];
  * Start all background jobs
  */
 export function startWorkflowJobs() {
-  console.log('[Job Scheduler] Starting workflow background jobs...');
+  logger.info('[Job Scheduler] Starting workflow background jobs...');
 
   // Time-based workflow processor
   const timeBasedJob = setInterval(timeBasedWorkflowJob, INTERVALS.TIME_BASED_CHECK);
@@ -141,23 +142,23 @@ export function startWorkflowJobs() {
   timeBasedWorkflowJob();
   statsReportJob();
 
-  console.log('[Job Scheduler] All background jobs started');
-  console.log(`[Job Scheduler] Time-based check: every ${INTERVALS.TIME_BASED_CHECK / 1000}s`);
-  console.log(`[Job Scheduler] Queue monitor: every ${INTERVALS.QUEUE_MONITOR / 1000}s`);
-  console.log(`[Job Scheduler] Stats report: every ${INTERVALS.STATS_REPORT / 1000 / 60}min`);
-  console.log(`[Job Scheduler] Log cleanup: every ${INTERVALS.LOG_CLEANUP / 1000 / 60 / 60}hrs`);
+  logger.info('[Job Scheduler] All background jobs started');
+  logger.info(`[Job Scheduler] Time-based check: every ${INTERVALS.TIME_BASED_CHECK / 1000}s`);
+  logger.info(`[Job Scheduler] Queue monitor: every ${INTERVALS.QUEUE_MONITOR / 1000}s`);
+  logger.info(`[Job Scheduler] Stats report: every ${INTERVALS.STATS_REPORT / 1000 / 60}min`);
+  logger.info(`[Job Scheduler] Log cleanup: every ${INTERVALS.LOG_CLEANUP / 1000 / 60 / 60}hrs`);
 }
 
 /**
  * Stop all background jobs
  */
 export function stopWorkflowJobs() {
-  console.log('[Job Scheduler] Stopping workflow background jobs...');
+  logger.info('[Job Scheduler] Stopping workflow background jobs...');
   
   scheduledJobs.forEach(job => clearInterval(job));
   scheduledJobs.length = 0;
   
-  console.log('[Job Scheduler] All background jobs stopped');
+  logger.info('[Job Scheduler] All background jobs stopped');
 }
 
 /**
@@ -165,7 +166,7 @@ export function stopWorkflowJobs() {
  */
 export function setupGracefulShutdown() {
   const handleShutdown = (signal: string) => {
-    console.log(`\n[Job Scheduler] Received ${signal}. Shutting down gracefully...`);
+    logger.info(`\n[Job Scheduler] Received ${signal}. Shutting down gracefully...`);
     stopWorkflowJobs();
     process.exit(0);
   };
@@ -182,7 +183,7 @@ export function setupGracefulShutdown() {
  * Run a specific job manually (useful for testing)
  */
 export async function runJob(jobName: string) {
-  console.log(`[Job] Manually running job: ${jobName}`);
+  logger.info(`[Job] Manually running job: ${jobName}`);
   
   switch (jobName) {
     case 'time-based':
@@ -198,7 +199,7 @@ export async function runJob(jobName: string) {
       await logCleanupJob();
       break;
     default:
-      console.error(`[Job] Unknown job: ${jobName}`);
+      logger.error(`[Job] Unknown job: ${jobName}`);
   }
 }
 

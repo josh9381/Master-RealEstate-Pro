@@ -530,14 +530,15 @@ export async function executeImport(
         await prisma.lead.create({ data: leadData as any });
         imported++;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       skipped++;
       if (errors.length < 20) {
+        const prismaErr = err as { code?: string; message?: string };
         // Unique constraint violation → duplicate
-        if (err.code === 'P2002') {
+        if (prismaErr.code === 'P2002') {
           errors.push(`Row ${i + 2}: Duplicate email — lead already exists`);
         } else {
-          errors.push(`Row ${i + 2}: ${err.message}`);
+          errors.push(`Row ${i + 2}: ${prismaErr.message || 'Unknown error'}`);
         }
       }
     }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -254,7 +255,7 @@ export function EmailBlockEditor({
                   const result = await campaignsApi.compileEmail(serializeBlocks(blocks))
                   setCompiledHtml(result.html)
                 } catch (error) {
-                  console.error('Failed to compile email:', error)
+                  logger.error('Failed to compile email:', error)
                   setCompiledHtml(null)
                 } finally {
                   setIsCompiling(false)

@@ -1,8 +1,8 @@
-import { Facebook, Twitter, Instagram, Linkedin, Share2, AlertTriangle, Calendar, BarChart3, Users, TrendingUp, Clock, ExternalLink } from 'lucide-react'
+import { Facebook, Twitter, Instagram, Linkedin, Share2, Calendar, BarChart3, Users, TrendingUp, Clock, ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Link } from 'react-router-dom'
+import { ComingSoon } from '@/components/shared/ComingSoon'
 
 const platforms = [
   {
@@ -55,27 +55,17 @@ const plannedFeatures = [
 const SocialMediaDashboard = () => {
   return (
     <div className="space-y-6">
-      {/* Coming Soon Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <h3 className="font-semibold text-amber-800">Coming Soon — Social Media Integration</h3>
-          <p className="text-sm text-amber-700 mt-1">
-            Social media management requires platform API integrations (Facebook Graph API, Twitter API v2, Instagram Basic Display API, LinkedIn Marketing API)
-            which are not yet connected. This page shows the planned features and layout. Use the{' '}
-            <Link to="/communication/inbox" className="underline font-medium">Communications inbox</Link>{' '}
-            for Email and SMS in the meantime.
-          </p>
-        </div>
-        <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
-      </div>
-
-      <div>
-        <h1 className="text-3xl font-bold">Social Media Dashboard</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage and schedule posts across all platforms from one place
-        </p>
-      </div>
+      <ComingSoon
+        title="Social Media Dashboard"
+        description="Manage and schedule posts across all platforms from one place. Connect Facebook, Twitter/X, Instagram, and LinkedIn to publish content, track engagement, and grow your audience."
+        icon={Share2}
+        previewItems={[
+          'Unified post scheduler across all platforms',
+          'Cross-platform analytics and engagement tracking',
+          'AI-powered best time to post recommendations',
+          'Content library with reusable templates',
+        ]}
+      />
 
       {/* Platform Cards */}
       <div>

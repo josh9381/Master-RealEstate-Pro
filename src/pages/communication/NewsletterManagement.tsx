@@ -1,6 +1,7 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Mail, Users, Send, Calendar, BarChart3, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Mail, Users, Send, Calendar, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -8,6 +9,7 @@ import { useToast } from '@/hooks/useToast'
 import { messagesApi } from '@/lib/api'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { useNavigate } from 'react-router-dom'
+import { ComingSoon } from '@/components/shared/ComingSoon'
 
 const NewsletterManagement = () => {
   const { toast } = useToast()
@@ -31,18 +33,17 @@ const NewsletterManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Coming Soon Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <h3 className="font-semibold text-amber-800">Coming Soon — Newsletter Management</h3>
-          <p className="text-sm text-amber-700 mt-1">
-            Newsletter management requires a subscriber management backend which is not yet available.
-            This feature is on the roadmap. In the meantime, use Email Campaigns to send bulk emails to your leads.
-          </p>
-        </div>
-        <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
-      </div>
+      <ComingSoon
+        title="Newsletter Management"
+        description="Create, manage, and send beautiful newsletters to your subscriber lists. Design templates, track open rates, and grow your audience with automated newsletter campaigns."
+        icon={Mail}
+        previewItems={[
+          'Drag-and-drop newsletter designer',
+          'Subscriber list management',
+          'Automated send scheduling',
+          'Open rate and click tracking analytics',
+        ]}
+      />
 
       <div className="flex items-center justify-between">
         <div>
@@ -199,7 +200,7 @@ const NewsletterManagement = () => {
                             toast.success(`"${newsletter.name}" sent successfully`);
                             refetch();
                           } catch (error) {
-                            console.error('Failed to send newsletter:', error)
+                            logger.error('Failed to send newsletter:', error)
                             toast.error(`Failed to send "${newsletter.name}"`);
                           } finally {
                             setSendingId(null);

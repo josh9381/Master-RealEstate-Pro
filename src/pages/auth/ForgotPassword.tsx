@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Mail, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -26,7 +27,7 @@ const ForgotPassword = () => {
       await authApi.forgotPassword(email);
       toast.success('Email sent!', 'If that email is registered, a reset link has been sent.');
     } catch (error) {
-      console.error('Forgot password request failed:', error)
+      logger.error('Forgot password request failed:', error)
       toast.error('Something went wrong', 'Please try again later.');
     } finally {
       setLoading(false);

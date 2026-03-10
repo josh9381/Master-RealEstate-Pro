@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -134,7 +135,7 @@ const SecuritySettings = () => {
       setSetupSecret(data.secret || '');
       setShow2FASetup(true);
     } catch (error) {
-      console.error('Failed to start 2FA setup:', error)
+      logger.error('Failed to start 2FA setup:', error)
       toast.error('Failed to start 2FA setup');
     } finally {
       setSetupLoading(false);
@@ -157,7 +158,7 @@ const SecuritySettings = () => {
       setTwoFactorEnabled(true);
       queryClient.invalidateQueries({ queryKey: ['settings', 'security'] });
     } catch (error) {
-      console.error('Failed to verify 2FA code:', error)
+      logger.error('Failed to verify 2FA code:', error)
       toast.error('Invalid code. Please try again.');
     } finally {
       setSetupLoading(false);
@@ -179,7 +180,7 @@ const SecuritySettings = () => {
       setTwoFactorEnabled(false);
       queryClient.invalidateQueries({ queryKey: ['settings', 'security'] });
     } catch (error) {
-      console.error('Failed to disable 2FA:', error)
+      logger.error('Failed to disable 2FA:', error)
       toast.error('Invalid password or 2FA code');
     }
   };

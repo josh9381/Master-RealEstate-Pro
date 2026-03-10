@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import crypto from 'crypto';
 
 // Master encryption key from environment variable (must be 32 bytes)
@@ -54,7 +55,7 @@ export function encryptForUser(userId: string, text: string): string {
     // Return format: iv:authTag:encrypted
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
   } catch (error) {
-    console.error('Encryption error:', error);
+    logger.error('Encryption error:', error);
     throw new Error('Failed to encrypt data');
   }
 }
@@ -93,7 +94,7 @@ export function decryptForUser(userId: string, encryptedData: string): string {
     
     return decrypted;
   } catch (error) {
-    console.error('Decryption error:', error);
+    logger.error('Decryption error:', error);
     throw new Error('Failed to decrypt data');
   }
 }
@@ -127,7 +128,7 @@ export function encrypt(text: string): string {
     // Return format: iv:authTag:encrypted
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
   } catch (error) {
-    console.error('Encryption error:', error);
+    logger.error('Encryption error:', error);
     throw new Error('Failed to encrypt data');
   }
 }
@@ -166,7 +167,7 @@ export function decrypt(encryptedData: string): string {
     
     return decrypted;
   } catch (error) {
-    console.error('Decryption error:', error);
+    logger.error('Decryption error:', error);
     throw new Error('Failed to decrypt data');
   }
 }

@@ -52,7 +52,7 @@ export function initSocketServer(httpServer: HttpServer): Server {
       socket.organizationId = decoded.organizationId
       next()
     } catch (error) {
-      console.error('[SOCKET] Token verification failed:', error)
+      logger.error('[SOCKET] Token verification failed:', error)
       return next(new Error('Invalid or expired token'))
     }
   })

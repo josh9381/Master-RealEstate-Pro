@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -80,7 +81,7 @@ function LeadsPipeline() {
         const response = await pipelinesApi.getPipelineLeads(activePipeline.id)
         return response.data
       } catch (error) {
-        console.error('Pipeline leads endpoint unavailable, using fallback:', error)
+        logger.error('Pipeline leads endpoint unavailable, using fallback:', error)
         // Fallback: fetch all leads and group by status
         const response = await leadsApi.getLeads({ limit: 200 })
         const leads = response.data?.leads || []

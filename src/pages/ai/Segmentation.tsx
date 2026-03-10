@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react';
 import { Users, Plus, Filter, Trash2, Edit, RefreshCw, Eye, X, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -182,7 +183,7 @@ const Segmentation = () => {
       setMembers(response.data || response.members || []);
       setMembersTotal(response.total || 0);
     } catch (error) {
-      console.error('Error loading members:', error);
+      logger.error('Error loading members:', error);
       toast.error('Failed to load segment members');
     }
   };
@@ -193,7 +194,7 @@ const Segmentation = () => {
       await refetchSegments();
       toast.success('Segment counts refreshed');
     } catch (error) {
-      console.error('Error refreshing:', error);
+      logger.error('Error refreshing:', error);
       toast.error('Failed to refresh');
     }
   };

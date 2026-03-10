@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { getOpenAIService } from './openai.service';
 
@@ -101,7 +102,7 @@ export class IntelligenceService {
 
       if (scoringModel && scoringModel.factors) {
         weights = scoringModel.factors as any;
-        console.log(`📊 Using personalized weights for user ${userId}`);
+        logger.info(`📊 Using personalized weights for user ${userId}`);
       }
     }
 
@@ -397,7 +398,7 @@ export class IntelligenceService {
           });
         }
       } catch (error) {
-        console.error(`Error predicting lead ${lead.id}:`, error);
+        logger.error(`Error predicting lead ${lead.id}:`, error);
       }
     }
     topOpportunitiesData.sort((a, b) => b.conversionProbability - a.conversionProbability);
@@ -569,7 +570,7 @@ export class IntelligenceService {
           timestamp: new Date(),
         };
       } catch (error) {
-        console.error('AI scoring failed, falling back to rule-based:', error);
+        logger.error('AI scoring failed, falling back to rule-based:', error);
         // Fall through to rule-based scoring
       }
     }
@@ -733,7 +734,7 @@ export class IntelligenceService {
         type: type || 'email'
       };
     } catch (error) {
-      console.error('Error enhancing message:', error);
+      logger.error('Error enhancing message:', error);
       return {
         original: message,
         enhanced: message,

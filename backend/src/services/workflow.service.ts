@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { WorkflowTrigger, ExecutionStatus } from '@prisma/client';
 import { sendEmail } from './email.service';
@@ -329,7 +330,7 @@ export async function triggerWorkflowsForLead(
       const executionId = await executeWorkflow(workflow.id, leadId, metadata);
       results.push({ workflowId: workflow.id, executionId });
     } catch (error) {
-      console.error(`Error executing workflow ${workflow.id}:`, error);
+      logger.error(`Error executing workflow ${workflow.id}:`, error);
       results.push({
         workflowId: workflow.id,
         executionId: null,
@@ -568,7 +569,7 @@ async function logExecutionStep(data: {
     });
   } catch (err) {
     // Never let step-logging break the workflow
-    console.error('[Workflow] Failed to log execution step:', err);
+    logger.error('[Workflow] Failed to log execution step:', err);
   }
 }
 
@@ -627,10 +628,10 @@ async function notifyWorkflowFailure(params: {
       });
     }
 
-    console.log(`[Workflow] Failure notification sent to ${orgUsers.length} user(s) for workflow ${params.workflowId}`);
+    logger.info(`[Workflow] Failure notification sent to ${orgUsers.length} user(s) for workflow ${params.workflowId}`);
   } catch (err) {
     // Never let notification failures break the workflow
-    console.error('[Workflow] Failed to send failure notification:', err);
+    logger.error('[Workflow] Failed to send failure notification:', err);
   }
 }
 
@@ -670,11 +671,11 @@ async function executeActionSequence(
       const delayMs = calculateDelayMs(action.config);
       
       if (dryRun) {
-        console.log(`[DRY RUN] Would delay for ${delayMs}ms`);
+        logger.info(`[DRY RUN] Would delay for ${delayMs}ms`);
         continue;
       }
       
-      console.log(`[Workflow] Scheduling remaining ${actions.length - i - 1} actions after ${delayMs}ms delay`);
+      logger.info(`[Workflow] Scheduling remaining ${actions.length - i - 1} actions after ${delayMs}ms delay`);
 
       // Log the delay step
       if (executionId) {
@@ -705,11 +706,11 @@ async function executeActionSequence(
       const conditionMet = await evaluateActionCondition(action.config, leadId);
       
       if (dryRun) {
-        console.log(`[DRY RUN] Condition evaluated: ${conditionMet}`);
+        logger.info(`[DRY RUN] Condition evaluated: ${conditionMet}`);
         continue;
       }
       
-      console.log(`[Workflow] Condition evaluated: ${conditionMet}`);
+      logger.info(`[Workflow] Condition evaluated: ${conditionMet}`);
 
       // Log the condition step
       if (executionId) {
@@ -757,7 +758,7 @@ async function executeActionSequence(
         break; // Success — move to next action
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
-        console.warn(
+        logger.warn(
           `[Workflow] Action ${action.type} attempt ${attempt + 1}/${maxRetries} failed: ${lastError.message}`
         );
         if (attempt < maxRetries - 1) {
@@ -785,7 +786,7 @@ async function executeActionSequence(
     }
 
     if (lastError) {
-      console.error(
+      logger.error(
         `[Workflow] Action ${action.type} failed after ${maxRetries} retries – notifying user and continuing`
       );
 
@@ -864,16 +865,16 @@ function scheduleDelayedActions(
     }).catch(err => {
       // This is a fire-and-forget persistence write for recovery data.
       // Log with execution ID so it can be investigated if delayed actions fail.
-      console.error(`[Workflow] Failed to save scheduled actions for execution ${executionId}:`, err);
+      logger.error(`[Workflow] Failed to save scheduled actions for execution ${executionId}:`, err);
     });
   }
 
   setTimeout(async () => {
     try {
-      console.log(`[Workflow] Executing ${actions.length} delayed actions`);
+      logger.info(`[Workflow] Executing ${actions.length} delayed actions`);
       await executeActionSequence(actions, leadId, metadata, organizationId, false, executionId);
     } catch (error) {
-      console.error('[Workflow] Failed to execute delayed actions:', error);
+      logger.error('[Workflow] Failed to execute delayed actions:', error);
     }
   }, cappedDelay);
 }
@@ -995,12 +996,12 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
   if (dryRun) {
     const requiresLead: WorkflowAction['type'][] = ['UPDATE_LEAD', 'ADD_TAG', 'REMOVE_TAG', 'UPDATE_SCORE', 'CREATE_TASK', 'ASSIGN_LEAD', 'ADD_TO_CAMPAIGN', 'SEND_EMAIL', 'SEND_SMS'];
     if (requiresLead.includes(action.type) && !leadId) {
-      console.log(`[DRY RUN] Action ${action.type} would require a lead ID`);
+      logger.info(`[DRY RUN] Action ${action.type} would require a lead ID`);
     }
     if (!action.config) {
       throw new Error(`Action ${action.type} is missing config`);
     }
-    console.log(`[DRY RUN] Validated action: ${action.type}`);
+    logger.info(`[DRY RUN] Validated action: ${action.type}`);
     return;
   }
 
@@ -1134,7 +1135,7 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
       if (!leadId) throw new Error('Lead ID required for ADD_TO_CAMPAIGN action');
       // This would require campaign recipient management
       // For now, just log the action
-      console.log(`Adding lead ${leadId} to campaign ${action.config.campaignId}`);
+      logger.info(`Adding lead ${leadId} to campaign ${action.config.campaignId}`);
       break;
 
     case 'SEND_EMAIL':
@@ -1145,7 +1146,7 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
         select: { email: true, firstName: true, lastName: true, organizationId: true, assignedToId: true }
       });
       if (!emailLead?.email) {
-        console.warn(`[Workflow] Lead ${leadId} has no email address, skipping SEND_EMAIL`);
+        logger.warn(`[Workflow] Lead ${leadId} has no email address, skipping SEND_EMAIL`);
         break;
       }
       const emailOrgId = organizationId || emailLead.organizationId;
@@ -1159,7 +1160,7 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
         userId: emailLead.assignedToId || undefined,
         organizationId: emailOrgId,
       });
-      console.log(`[Workflow] Email sent to lead ${leadId} (${emailLead.email})`);
+      logger.info(`[Workflow] Email sent to lead ${leadId} (${emailLead.email})`);
       break;
 
     case 'SEND_SMS':
@@ -1170,7 +1171,7 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
         select: { phone: true, firstName: true, lastName: true, organizationId: true, assignedToId: true }
       });
       if (!smsLead?.phone) {
-        console.warn(`[Workflow] Lead ${leadId} has no phone number, skipping SEND_SMS`);
+        logger.warn(`[Workflow] Lead ${leadId} has no phone number, skipping SEND_SMS`);
         break;
       }
       const smsOrgId = organizationId || smsLead.organizationId;
@@ -1182,12 +1183,12 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
         userId: smsLead.assignedToId || undefined,
         organizationId: smsOrgId,
       });
-      console.log(`[Workflow] SMS sent to lead ${leadId} (${smsLead.phone})`);
+      logger.info(`[Workflow] SMS sent to lead ${leadId} (${smsLead.phone})`);
       break;
 
     case 'SEND_NOTIFICATION':
       if (!leadId) {
-        console.warn('[Workflow] No leadId for SEND_NOTIFICATION, skipping');
+        logger.warn('[Workflow] No leadId for SEND_NOTIFICATION, skipping');
         break;
       }
       // Send an in-app notification via the notification table
@@ -1211,9 +1212,9 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
             read: false,
           },
         });
-        console.log(`[Workflow] Notification created for user ${notifLead.assignedToId} re: lead ${leadId}`);
+        logger.info(`[Workflow] Notification created for user ${notifLead.assignedToId} re: lead ${leadId}`);
       } else {
-        console.warn(`[Workflow] Lead ${leadId} has no assignedTo, skipping SEND_NOTIFICATION`);
+        logger.warn(`[Workflow] Lead ${leadId} has no assignedTo, skipping SEND_NOTIFICATION`);
       }
       break;
 
@@ -1221,7 +1222,7 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
       // Make HTTP request to configured webhook URL
       const webhookUrl = action.config.url;
       if (!webhookUrl) {
-        console.warn('[Workflow] No URL configured for WEBHOOK action, skipping');
+        logger.warn('[Workflow] No URL configured for WEBHOOK action, skipping');
         break;
       }
       try {
@@ -1241,14 +1242,14 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
           body: JSON.stringify(webhookPayload),
           signal: AbortSignal.timeout(10000), // 10s timeout
         });
-        console.log(`[Workflow] Webhook called: ${webhookUrl} — status ${webhookResponse.status}`);
+        logger.info(`[Workflow] Webhook called: ${webhookUrl} — status ${webhookResponse.status}`);
       } catch (webhookErr) {
-        console.error(`[Workflow] Webhook failed for ${webhookUrl}:`, webhookErr);
+        logger.error(`[Workflow] Webhook failed for ${webhookUrl}:`, webhookErr);
       }
       break;
 
     default:
-      console.warn(`Unknown action type: ${action.type}`);
+      logger.warn(`Unknown action type: ${action.type}`);
   }
 }
 
@@ -1426,27 +1427,27 @@ export async function recoverDelayedWorkflowActions(): Promise<number> {
 
       if (scheduledFor <= now) {
         // Already past due — execute immediately
-        console.log(`[Workflow Recovery] Executing ${actions.length} overdue delayed actions for execution ${exec.id}`);
+        logger.info(`[Workflow Recovery] Executing ${actions.length} overdue delayed actions for execution ${exec.id}`);
         try {
           await executeActionSequence(actions, exec.leadId || undefined, meta, workflow?.organizationId, false, exec.id);
           recovered++;
         } catch (err) {
-          console.error(`[Workflow Recovery] Failed to execute overdue actions for ${exec.id}:`, err);
+          logger.error(`[Workflow Recovery] Failed to execute overdue actions for ${exec.id}:`, err);
         }
       } else {
         // Still in the future — reschedule via setTimeout
         const remainingMs = scheduledFor.getTime() - now.getTime();
-        console.log(`[Workflow Recovery] Rescheduling ${actions.length} actions for execution ${exec.id} (${Math.round(remainingMs / 60000)}min from now)`);
+        logger.info(`[Workflow Recovery] Rescheduling ${actions.length} actions for execution ${exec.id} (${Math.round(remainingMs / 60000)}min from now)`);
         scheduleDelayedActions(actions, remainingMs, exec.leadId || undefined, meta, workflow?.organizationId, exec.id);
         recovered++;
       }
     }
 
     if (recovered > 0) {
-      console.log(`[Workflow Recovery] Recovered ${recovered} delayed workflow executions`);
+      logger.info(`[Workflow Recovery] Recovered ${recovered} delayed workflow executions`);
     }
   } catch (err) {
-    console.error('[Workflow Recovery] Error recovering delayed actions:', err);
+    logger.error('[Workflow Recovery] Error recovering delayed actions:', err);
   }
 
   return recovered;

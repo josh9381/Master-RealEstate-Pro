@@ -5,6 +5,7 @@
  * - Twilio: validates X-Twilio-Signature using auth token
  * - SendGrid: validates using event webhook signing key
  */
+import { logger } from '../lib/logger'
 import { Request, Response, NextFunction } from 'express';
 import twilio from 'twilio';
 
@@ -17,7 +18,7 @@ export function verifyTwilioSignature(req: Request, res: Response, next: NextFun
   const authToken = process.env.TWILIO_AUTH_TOKEN;
 
   if (!authToken) {
-    console.warn('[WEBHOOK] TWILIO_AUTH_TOKEN not set — rejecting webhook request');
+    logger.warn('[WEBHOOK] TWILIO_AUTH_TOKEN not set — rejecting webhook request');
     res.status(401).json({ error: 'Webhook authentication not configured' });
     return;
   }
@@ -30,7 +31,7 @@ export function verifyTwilioSignature(req: Request, res: Response, next: NextFun
   const signature = req.headers['x-twilio-signature'] as string;
 
   if (!signature) {
-    console.warn('[WEBHOOK] Missing X-Twilio-Signature header');
+    logger.warn('[WEBHOOK] Missing X-Twilio-Signature header');
     res.status(403).json({ error: 'Missing Twilio signature' });
     return;
   }
@@ -38,7 +39,7 @@ export function verifyTwilioSignature(req: Request, res: Response, next: NextFun
   const isValid = twilio.validateRequest(authToken, signature, url, req.body || {});
 
   if (!isValid) {
-    console.warn('[WEBHOOK] Invalid Twilio signature for', req.originalUrl);
+    logger.warn('[WEBHOOK] Invalid Twilio signature for', req.originalUrl);
     res.status(403).json({ error: 'Invalid Twilio signature' });
     return;
   }
@@ -58,7 +59,7 @@ export function verifySendGridSignature(req: Request, res: Response, next: NextF
   const verificationKey = process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY;
 
   if (!verificationKey) {
-    console.warn('[WEBHOOK] SENDGRID_WEBHOOK_VERIFICATION_KEY not set — rejecting webhook request');
+    logger.warn('[WEBHOOK] SENDGRID_WEBHOOK_VERIFICATION_KEY not set — rejecting webhook request');
     res.status(401).json({ error: 'Webhook authentication not configured' });
     return;
   }
@@ -68,7 +69,7 @@ export function verifySendGridSignature(req: Request, res: Response, next: NextF
   const signature = req.headers['x-twilio-email-event-webhook-signature'] as string;
 
   if (!timestamp || !signature) {
-    console.warn('[WEBHOOK] Missing SendGrid signature headers');
+    logger.warn('[WEBHOOK] Missing SendGrid signature headers');
     res.status(403).json({ error: 'Missing SendGrid signature headers' });
     return;
   }
@@ -89,12 +90,12 @@ export function verifySendGridSignature(req: Request, res: Response, next: NextF
     );
 
     if (!isValid) {
-      console.warn('[WEBHOOK] Invalid SendGrid signature');
+      logger.warn('[WEBHOOK] Invalid SendGrid signature');
       res.status(403).json({ error: 'Invalid SendGrid signature' });
       return;
     }
   } catch (err) {
-    console.error('[WEBHOOK] SendGrid signature verification error:', err);
+    logger.error('[WEBHOOK] SendGrid signature verification error:', err);
     res.status(403).json({ error: 'Signature verification failed' });
     return;
   }

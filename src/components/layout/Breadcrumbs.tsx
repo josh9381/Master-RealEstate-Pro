@@ -56,7 +56,7 @@ const LABEL_MAP: Record<string, string> = {
   'google-integration': 'Google Integration',
   'twilio-setup': 'Twilio Setup',
   'service-config': 'Service Config',
-  'demo-data': 'Demo Data',
+
   'password-security': 'Password',
   'tags-manager': 'Tags',
   'custom-fields': 'Custom Fields',
@@ -64,9 +64,9 @@ const LABEL_MAP: Record<string, string> = {
   subscription: 'Subscription',
   'system-settings': 'System',
   'feature-flags': 'Feature Flags',
-  'debug-console': 'Debug Console',
+
   'data-export': 'Data Export',
-  'retry-queue': 'Retry Queue',
+
   'health-check': 'Health Check',
   'database-maintenance': 'Database',
   'audit-trail': 'Audit Trail',

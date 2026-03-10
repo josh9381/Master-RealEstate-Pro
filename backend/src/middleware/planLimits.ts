@@ -4,6 +4,7 @@
  * Returns 403 with upgrade prompt when a plan limit is reached.
  */
 
+import { logger } from '../lib/logger'
 import { Request, Response, NextFunction } from 'express'
 import { SubscriptionTier } from '@prisma/client'
 import { checkUsageLimit, getUpgradeMessage } from '../config/subscriptions'
@@ -67,7 +68,7 @@ export function enforcePlanLimit(resource: PlanResource) {
 
       next()
     } catch (error) {
-      console.error(`Plan limit check error (${resource}):`, error)
+      logger.error(`Plan limit check error (${resource}):`, error)
       // Don't block on limit check errors — let the request through
       next()
     }

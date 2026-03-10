@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { ExecutionStatus, WorkflowTrigger } from '@prisma/client';
 import { executeWorkflow, triggerWorkflowsForLead } from './workflow.service';
@@ -67,7 +68,7 @@ export function enqueueWorkflow(item: ExecutionQueueItem): void {
     executionQueue.push(queueItem);
   }
 
-  console.log(`Enqueued workflow ${item.workflowId} with priority ${queueItem.priority}. Queue size: ${executionQueue.length}`);
+  logger.info(`Enqueued workflow ${item.workflowId} with priority ${queueItem.priority}. Queue size: ${executionQueue.length}`);
 
   // Start processing if not already running
   if (!isProcessing) {
@@ -97,7 +98,7 @@ export function getQueueStatus() {
 export function clearQueue(): void {
   const originalSize = executionQueue.length;
   executionQueue.length = 0;
-  console.log(`Cleared ${originalSize} items from execution queue`);
+  logger.info(`Cleared ${originalSize} items from execution queue`);
 }
 
 // ===================================
@@ -131,7 +132,7 @@ async function processQueue(): Promise<void> {
     try {
       await executeQueueItem(item);
     } catch (error) {
-      console.error(`Error executing workflow ${item.workflowId}:`, error);
+      logger.error(`Error executing workflow ${item.workflowId}:`, error);
       
       // Handle retry logic
       if (item.retryCount !== undefined && item.retryCount < maxRetries) {
@@ -155,7 +156,7 @@ async function executeQueueItem(item: ExecutionQueueItem): Promise<ExecutionResu
   const startTime = Date.now();
 
   try {
-    console.log(`Executing workflow ${item.workflowId} for lead ${item.leadId || 'N/A'}`);
+    logger.info(`Executing workflow ${item.workflowId} for lead ${item.leadId || 'N/A'}`);
 
     const executionId = await executeWorkflow(item.workflowId, item.leadId, item.metadata);
 
@@ -170,7 +171,7 @@ async function executeQueueItem(item: ExecutionQueueItem): Promise<ExecutionResu
       duration,
     };
 
-    console.log(`Workflow ${item.workflowId} completed successfully in ${duration}ms`);
+    logger.info(`Workflow ${item.workflowId} completed successfully in ${duration}ms`);
 
     return result;
   } catch (error) {
@@ -197,7 +198,7 @@ async function handleRetry(item: ExecutionQueueItem, error: unknown): Promise<vo
   const retryCount = (item.retryCount || 0) + 1;
   const delay = retryDelays[retryCount - 1] || retryDelays[retryDelays.length - 1];
 
-  console.log(`Scheduling retry ${retryCount}/${maxRetries} for workflow ${item.workflowId} in ${delay}ms`);
+  logger.info(`Scheduling retry ${retryCount}/${maxRetries} for workflow ${item.workflowId} in ${delay}ms`);
 
   // Schedule retry
   setTimeout(() => {
@@ -216,7 +217,7 @@ async function handleRetry(item: ExecutionQueueItem, error: unknown): Promise<vo
  * Log failed execution after all retries exhausted
  */
 async function logFailedExecution(item: ExecutionQueueItem, error: unknown): Promise<void> {
-  console.error(`Workflow ${item.workflowId} failed after ${item.retryCount} retries`);
+  logger.error(`Workflow ${item.workflowId} failed after ${item.retryCount} retries`);
 
   // Could send alert/notification here
   await createExecutionLog({
@@ -272,7 +273,7 @@ async function createExecutionLog(data: {
       },
     });
   } catch (error) {
-    console.error('Failed to create execution log:', error);
+    logger.error('Failed to create execution log:', error);
   }
 }
 
@@ -288,7 +289,7 @@ export async function batchExecuteWorkflows(
   leadIds: string[],
   metadata?: Record<string, unknown>
 ): Promise<void> {
-  console.log(`Batch executing workflow ${workflowId} for ${leadIds.length} leads`);
+  logger.info(`Batch executing workflow ${workflowId} for ${leadIds.length} leads`);
 
   for (const leadId of leadIds) {
     enqueueWorkflow({
@@ -305,7 +306,7 @@ export async function batchExecuteWorkflows(
  * Process time-based workflows (should be called by cron job)
  */
 export async function processTimeBasedWorkflows(): Promise<void> {
-  console.log('Processing time-based workflows...');
+  logger.info('Processing time-based workflows...');
 
   const timeBasedWorkflows = await prisma.workflow.findMany({
     where: {
@@ -337,7 +338,7 @@ export async function processTimeBasedWorkflows(): Promise<void> {
  * Handle lead created event
  */
 export async function onLeadCreated(leadId: string): Promise<void> {
-  console.log(`Lead created: ${leadId}. Triggering workflows...`);
+  logger.info(`Lead created: ${leadId}. Triggering workflows...`);
 
   try {
     const results = await triggerWorkflowsForLead(
@@ -346,9 +347,9 @@ export async function onLeadCreated(leadId: string): Promise<void> {
       { event: 'lead_created' }
     );
 
-    console.log(`Triggered ${results.length} workflows for new lead ${leadId}`);
+    logger.info(`Triggered ${results.length} workflows for new lead ${leadId}`);
   } catch (error) {
-    console.error(`Failed to trigger workflows for new lead ${leadId}:`, error);
+    logger.error(`Failed to trigger workflows for new lead ${leadId}:`, error);
   }
 }
 
@@ -360,7 +361,7 @@ export async function onLeadStatusChanged(
   fromStatus: string,
   toStatus: string
 ): Promise<void> {
-  console.log(`Lead ${leadId} status changed: ${fromStatus} → ${toStatus}`);
+  logger.info(`Lead ${leadId} status changed: ${fromStatus} → ${toStatus}`);
 
   try {
     const results = await triggerWorkflowsForLead(
@@ -369,9 +370,9 @@ export async function onLeadStatusChanged(
       { event: 'status_changed', fromStatus, toStatus }
     );
 
-    console.log(`Triggered ${results.length} workflows for status change`);
+    logger.info(`Triggered ${results.length} workflows for status change`);
   } catch (error) {
-    console.error(`Failed to trigger workflows for status change:`, error);
+    logger.error(`Failed to trigger workflows for status change:`, error);
   }
 }
 
@@ -383,7 +384,7 @@ export async function onEmailOpened(
   campaignId: string,
   messageId: string
 ): Promise<void> {
-  console.log(`Lead ${leadId} opened email from campaign ${campaignId}`);
+  logger.info(`Lead ${leadId} opened email from campaign ${campaignId}`);
 
   try {
     const results = await triggerWorkflowsForLead(
@@ -392,9 +393,9 @@ export async function onEmailOpened(
       { event: 'email_opened', campaignId, messageId }
     );
 
-    console.log(`Triggered ${results.length} workflows for email open`);
+    logger.info(`Triggered ${results.length} workflows for email open`);
   } catch (error) {
-    console.error(`Failed to trigger workflows for email open:`, error);
+    logger.error(`Failed to trigger workflows for email open:`, error);
   }
 }
 
@@ -406,7 +407,7 @@ export async function onScoreThresholdCrossed(
   previousScore: number,
   newScore: number
 ): Promise<void> {
-  console.log(`Lead ${leadId} score changed: ${previousScore} → ${newScore}`);
+  logger.info(`Lead ${leadId} score changed: ${previousScore} → ${newScore}`);
 
   try {
     const results = await triggerWorkflowsForLead(
@@ -415,9 +416,9 @@ export async function onScoreThresholdCrossed(
       { event: 'score_changed', previousScore, newScore }
     );
 
-    console.log(`Triggered ${results.length} workflows for score change`);
+    logger.info(`Triggered ${results.length} workflows for score change`);
   } catch (error) {
-    console.error(`Failed to trigger workflows for score change:`, error);
+    logger.error(`Failed to trigger workflows for score change:`, error);
   }
 }
 
@@ -425,7 +426,7 @@ export async function onScoreThresholdCrossed(
  * Handle campaign completed event
  */
 export async function onCampaignCompleted(campaignId: string): Promise<void> {
-  console.log(`Campaign ${campaignId} completed`);
+  logger.info(`Campaign ${campaignId} completed`);
 
   // Get all leads from the campaign activities
   const activities = await prisma.activity.findMany({
@@ -446,7 +447,7 @@ export async function onCampaignCompleted(campaignId: string): Promise<void> {
           { event: 'campaign_completed', campaignId }
         );
       } catch (error) {
-        console.error(`Failed to trigger workflows for lead ${activity.leadId}:`, error);
+        logger.error(`Failed to trigger workflows for lead ${activity.leadId}:`, error);
       }
     }
   }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react'
 import { Sparkles, RefreshCw, Copy, Send, Settings, X, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -123,7 +124,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         setUseStreaming(prefs.autoGenerate ?? false)
       }
     } catch (error) {
-      console.error('Load preferences error:', error)
+      logger.error('Load preferences error:', error)
       // Set defaults on error
       setTone('professional')
       setLength('standard')
@@ -145,7 +146,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         autoGenerate: useStreaming
       })
     } catch (error) {
-      console.error('Save preferences error:', error)
+      logger.error('Save preferences error:', error)
     }
   }
   
@@ -157,7 +158,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         setTemplates(response.data.data)
       }
     } catch (error) {
-      console.error('Load templates error:', error)
+      logger.error('Load templates error:', error)
     }
   }
   
@@ -193,7 +194,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         toast.error('Failed to generate message')
       }
     } catch (error: any) {
-      console.error('Generate message error:', error)
+      logger.error('Generate message error:', error)
       const aiMsg = getAIUnavailableMessage(error)
       if (aiMsg) {
         toast.error(aiMsg)
@@ -268,7 +269,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         }
       }
     } catch (error: any) {
-      console.error('Stream error:', error)
+      logger.error('Stream error:', error)
       if (error.message?.includes('401')) {
         toast.error('Session expired. Please refresh the page.')
       } else {
@@ -311,7 +312,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         toast.success('Template applied!')
       }
     } catch (error) {
-      console.error('Generate from template error:', error)
+      logger.error('Generate from template error:', error)
       toast.error('Failed to apply template')
     } finally {
       setGenerating(false)
@@ -339,7 +340,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         loadTemplates()
       }
     } catch (error) {
-      console.error('Save template error:', error)
+      logger.error('Save template error:', error)
       toast.error('Failed to save template')
     }
   }
@@ -378,7 +379,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         toast.error('Failed to generate variations')
       }
     } catch (error) {
-      console.error('Generate variations error:', error)
+      logger.error('Generate variations error:', error)
       toast.error('Error generating variations')
     } finally {
       setLoadingVariations(false)

@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 
@@ -31,7 +32,7 @@ export async function generateQRCode(otpauthUrl: string): Promise<string> {
     const qrCodeDataURL = await QRCode.toDataURL(otpauthUrl);
     return qrCodeDataURL;
   } catch (error) {
-    console.error('QR Code generation error:', error);
+    logger.error('QR Code generation error:', error);
     throw new Error('Failed to generate QR code');
   }
 }
@@ -52,7 +53,7 @@ export function verify2FAToken(token: string, secret: string, window: number = 1
       window // Allow some time drift
     });
   } catch (error) {
-    console.error('2FA verification error:', error);
+    logger.error('2FA verification error:', error);
     return false;
   }
 }

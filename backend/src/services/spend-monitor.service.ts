@@ -10,6 +10,7 @@
  */
 
 import prisma from '../config/database'
+import { logger } from '../lib/logger'
 import { aiLogger } from '../utils/ai-logger'
 import { calculateCost, MODEL_TIERS } from './ai-config.service'
 
@@ -48,7 +49,7 @@ export async function checkPlatformSpend(): Promise<void> {
         period: currentMonth,
       })
       markAlerted(alertKey, 'critical')
-      console.error(`🚨 [SPEND ALERT] Platform AI spend $${totalSpend.toFixed(2)} has exceeded threshold $${PLATFORM_MONTHLY_THRESHOLD}`)
+      logger.error(`🚨 [SPEND ALERT] Platform AI spend $${totalSpend.toFixed(2)} has exceeded threshold $${PLATFORM_MONTHLY_THRESHOLD}`)
     }
   } else if (totalSpend >= PLATFORM_MONTHLY_THRESHOLD * ALERT_WARNING_PERCENT) {
     if (!hasAlerted(alertKey, 'warning')) {
@@ -59,7 +60,7 @@ export async function checkPlatformSpend(): Promise<void> {
         period: currentMonth,
       })
       markAlerted(alertKey, 'warning')
-      console.warn(`⚠️ [SPEND WARNING] Platform AI spend $${totalSpend.toFixed(2)} is at ${Math.round((totalSpend / PLATFORM_MONTHLY_THRESHOLD) * 100)}% of threshold $${PLATFORM_MONTHLY_THRESHOLD}`)
+      logger.warn(`⚠️ [SPEND WARNING] Platform AI spend $${totalSpend.toFixed(2)} is at ${Math.round((totalSpend / PLATFORM_MONTHLY_THRESHOLD) * 100)}% of threshold $${PLATFORM_MONTHLY_THRESHOLD}`)
     }
   }
 }

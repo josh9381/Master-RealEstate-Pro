@@ -17,6 +17,17 @@ dist
 dist-ssr
 *.local
 
+# Build artifacts
+*.tsbuildinfo
+backend/dist/
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+e2e/screenshots/
+e2e/e2e/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

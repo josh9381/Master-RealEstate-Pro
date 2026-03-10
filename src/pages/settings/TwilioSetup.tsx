@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Phone, MessageSquare, Power, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -80,11 +81,11 @@ const TwilioSetup = () => {
             try {
               const payload = JSON.parse(atob(token.split('.')[1]));
               if (payload.userId) setUserId(payload.userId);
-            } catch (e) { console.error('Failed to decode JWT:', e); }
+            } catch (e) { logger.error('Failed to decode JWT:', e); }
           }
         }
       } catch (error) {
-        console.error('Failed to load user:', error);
+        logger.error('Failed to load user:', error);
       }
     };
     loadCurrentUser();
@@ -215,7 +216,7 @@ const TwilioSetup = () => {
       setConnected(true);
       await queryClient.invalidateQueries({ queryKey: ['settings', 'twilio', 'config'] });
     } catch (error: unknown) {
-      console.error('Failed to save credentials:', error);
+      logger.error('Failed to save credentials:', error);
       const err = error as { response?: { data?: { error?: string } } }
       const errorMsg = err?.response?.data?.error || 'Failed to save credentials';
       toast.error(errorMsg);
@@ -249,7 +250,7 @@ const TwilioSetup = () => {
         toast.success(`Test SMS sent successfully in PRODUCTION mode!`);
       }
     } catch (error) {
-      console.error('Failed to test connection:', error);
+      logger.error('Failed to test connection:', error);
       const message = (error as {response?: {data?: {error?: string}}, message?: string})?.response?.data?.error || (error as Error)?.message || 'Failed to send test SMS';
       toast.error(message);
       setConnected(false);
@@ -282,7 +283,7 @@ const TwilioSetup = () => {
       
       queryClient.invalidateQueries({ queryKey: ['settings', 'twilio', 'config'] });
     } catch (error: unknown) {
-      console.error('Failed to delete credentials:', error);
+      logger.error('Failed to delete credentials:', error);
       const err = error as { response?: { data?: { error?: string } } }
       const errorMsg = err?.response?.data?.error || 'Failed to delete credentials';
       toast.error(errorMsg);

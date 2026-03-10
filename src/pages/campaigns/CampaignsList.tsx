@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -11,7 +12,6 @@ import {
   LayoutGrid, Download, Share2, BarChart3, LayoutList, X, Pause,
   PlayCircle, Copy, Trash2, Edit, Archive, ArchiveRestore
 } from 'lucide-react'
-import { mockCampaigns } from '@/data/mockData'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { Campaign } from '@/types'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -19,11 +19,7 @@ import { useToast } from '@/hooks/useToast'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
 import { exportToCSV, campaignExportColumns } from '@/lib/exportService'
-import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
-import { MockModeBanner } from '@/components/shared/MockModeBanner'
-import { AlertTriangle } from 'lucide-react'
-
 type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE'
 
 function CampaignsList() {
@@ -75,7 +71,7 @@ function CampaignsList() {
         const response = await campaignsApi.getCampaigns(params)
         return response.data
       } catch (error) {
-        console.error('Failed to fetch campaigns:', error)
+        logger.error('Failed to fetch campaigns:', error)
         throw error
       }
     },
@@ -83,13 +79,9 @@ function CampaignsList() {
     refetchOnWindowFocus: false,
   })
 
-  // Smart data source - use API data or fallback to mock (if enabled)
   const campaigns = useMemo(() => {
     if (campaignsResponse?.campaigns && campaignsResponse.campaigns.length > 0) {
       return campaignsResponse.campaigns as Campaign[]
-    }
-    if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
-      return mockCampaigns as Campaign[]
     }
     return []
   }, [campaignsResponse])
@@ -419,9 +411,6 @@ function CampaignsList() {
       {/* Sub Navigation */}
       <CampaignsSubNav />
 
-      {/* Mock Mode Warning */}
-      <MockModeBanner />
-
       {/* Campaign Type Filter Tabs */}
       <div className="flex gap-2">
         {(['all', 'EMAIL', 'SMS', 'PHONE'] as const).map(type => {
@@ -453,15 +442,13 @@ function CampaignsList() {
 
       {/* Phone Coming Soon Banner */}
       {typeFilter === 'PHONE' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-          <div>
-            <h3 className="font-semibold text-amber-800">Coming Soon — Voice Telephony</h3>
-            <p className="text-sm text-amber-700 mt-1">
-              Phone campaigns require voice telephony integration which is not yet available.
-              This feature is on the roadmap. In the meantime, use Email or SMS campaigns.
-            </p>
-          </div>
+        <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-4 text-center">
+          <span className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium mb-2">
+            Coming Soon
+          </span>
+          <p className="text-sm text-amber-700">
+            Voice telephony integration is on the roadmap. Use Email or SMS campaigns in the meantime.
+          </p>
         </div>
       )}
 
@@ -839,10 +826,11 @@ function CampaignsList() {
                     </div>
                   </div>
                   <div className="relative">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="icon"
                       onClick={() => setShowRowMenu(showRowMenu === campaign.id ? null : String(campaign.id))}
+                      aria-label="Campaign actions"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
@@ -1006,10 +994,11 @@ function CampaignsList() {
                     className="rounded"
                   />
                   <div className="relative">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="icon"
                       onClick={() => setShowRowMenu(showRowMenu === campaign.id ? null : String(campaign.id))}
+                      aria-label="Campaign actions"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>

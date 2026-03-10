@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Users, UserPlus, Mail, MoreVertical, Crown, X, Trash2, Edit2, Upload, Activity, Award, CheckCircle2, RefreshCw } from 'lucide-react';
@@ -133,7 +134,7 @@ const TeamManagement = () => {
       setInviteEmail('');
       queryClient.invalidateQueries({ queryKey: ['team', 'members'] });
     } catch (error) {
-      console.error('Failed to invite member:', error);
+      logger.error('Failed to invite member:', error);
       toast.error('Failed to send invitation');
     } finally {
       setSaving(false);
@@ -145,7 +146,7 @@ const TeamManagement = () => {
       await teamsApi.inviteMember('1', { email, role: 'Sales Rep' });
       toast.success(`Invitation resent to ${email}`);
     } catch (error) {
-      console.error('Failed to resend invite:', error);
+      logger.error('Failed to resend invite:', error);
       toast.error('Failed to resend invitation');
     }
   };
@@ -156,7 +157,7 @@ const TeamManagement = () => {
       setTeamMembers(teamMembers.filter(m => m.id !== id));
       toast.success('Team member removed');
     } catch (error) {
-      console.error('Failed to remove member:', error);
+      logger.error('Failed to remove member:', error);
       toast.error('Failed to remove team member');
     }
   };

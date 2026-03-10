@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Merge, AlertTriangle, CheckCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -106,7 +107,7 @@ const LeadsMerge = () => {
           },
         };
       } catch (error) {
-        console.error('Failed to scan for duplicates:', error)
+        logger.error('Failed to scan for duplicates:', error)
         toast.error('Failed to scan for duplicates');
         return { duplicates: [], stats: { potential: 0, mergedMonth: 0, autoMerged: 0 } };
       }
@@ -156,7 +157,7 @@ const LeadsMerge = () => {
       if (err?.response?.status === 404) {
         toast.error('Merge endpoint not available yet.');
       } else {
-        console.error('Error merging leads:', error);
+        logger.error('Error merging leads:', error);
         toast.error('Failed to merge leads');
       }
     }

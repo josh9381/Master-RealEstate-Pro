@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { NotFoundError, ForbiddenError } from '../middleware/errorHandler';
@@ -26,7 +27,7 @@ export const getCampaigns = async (req: Request, res: Response) => {
 
   // Build where clause with role-based filtering
   const roleFilter = getRoleFilterFromRequest(req);
-  const where: any = getCampaignsFilter(roleFilter);
+  const where: Record<string, any> = getCampaignsFilter(roleFilter);
 
   if (status) where.status = status as CampaignStatus;
   if (type) where.type = type as CampaignType;
@@ -271,7 +272,7 @@ export const updateCampaign = async (req: Request, res: Response) => {
   }
 
   // Process date fields
-  const processedData: any = { ...updateData };
+  const processedData: Record<string, any> = { ...updateData };
   if (updateData.startDate !== undefined) {
     processedData.startDate = updateData.startDate ? new Date(updateData.startDate) : null;
   }
@@ -529,7 +530,7 @@ export const sendCampaign = async (req: Request, res: Response) => {
   }
 
   // Execute the campaign (actually send messages)
-  console.log(`[CAMPAIGN] Starting execution for campaign: ${existingCampaign.name}`);
+  logger.info(`[CAMPAIGN] Starting execution for campaign: ${existingCampaign.name}`);
   
   const executionResult = await executeCampaign({
     campaignId: id,
@@ -602,7 +603,7 @@ export const sendCampaignNow = async (req: Request, res: Response) => {
     return;
   }
 
-  console.log(`[CAMPAIGN] Manually triggering scheduled campaign: ${campaign.name}`);
+  logger.info(`[CAMPAIGN] Manually triggering scheduled campaign: ${campaign.name}`);
 
   // Execute the campaign
   const executionResult = await executeCampaign({
@@ -708,7 +709,7 @@ export const rescheduleCampaign = async (req: Request, res: Response) => {
     },
   });
 
-  console.log(
+  logger.info(
     `[CAMPAIGN] Rescheduled campaign "${campaign.name}" to ${newStartDate.toISOString()}`
   );
 
@@ -753,10 +754,10 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
   }
 
   // Get target leads based on campaign audience
-  let leads: any[] = [];
+  let leads: Record<string, any>[] = [];
   
   // Build where clause for leads
-  const where: any = {};
+  const where: Record<string, any> = {};
   
   // If campaign has tags, filter by those tags
   if (campaign.tags && campaign.tags.length > 0) {
@@ -859,7 +860,7 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
         body: bodyTemplate(templateData),
       };
     } catch (error) {
-      console.error('[CAMPAIGN] Error rendering preview template:', error);
+      logger.error('[CAMPAIGN] Error rendering preview template:', error);
       // Keep default preview if template rendering fails
     }
   }

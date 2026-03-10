@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { BounceType } from '@prisma/client'
 import {
@@ -51,7 +52,7 @@ export async function handleBounce(req: Request, res: Response): Promise<void> {
     })
   } catch (error) {
     const err = error as Error
-    console.error('Error recording bounce:', err)
+    logger.error('Error recording bounce:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to record bounce event',
@@ -90,7 +91,7 @@ export async function handleSpamComplaint(
     })
   } catch (error) {
     const err = error as Error
-    console.error('Error recording spam complaint:', err)
+    logger.error('Error recording spam complaint:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to record spam complaint',
@@ -118,7 +119,7 @@ export async function getCampaignStats(
     })
   } catch (error) {
     const err = error as Error
-    console.error('Error getting campaign deliverability:', err)
+    logger.error('Error getting campaign deliverability:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to get campaign deliverability statistics',
@@ -146,7 +147,7 @@ export async function getStats(req: Request, res: Response): Promise<void> {
     })
   } catch (error) {
     const err = error as Error
-    console.error('Error getting overall deliverability:', err)
+    logger.error('Error getting overall deliverability:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to get deliverability statistics',
@@ -172,7 +173,7 @@ export async function getRetryable(req: Request, res: Response): Promise<void> {
     })
   } catch (error) {
     const err = error as Error
-    console.error('Error getting retryable messages:', err)
+    logger.error('Error getting retryable messages:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to get retryable messages',
@@ -204,7 +205,7 @@ export async function retryMessage(req: Request, res: Response): Promise<void> {
     }
   } catch (error) {
     const err = error as Error
-    console.error('Error retrying message:', err)
+    logger.error('Error retrying message:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to retry message',
@@ -238,7 +239,7 @@ export async function batchRetry(req: Request, res: Response): Promise<void> {
     })
   } catch (error) {
     const err = error as Error
-    console.error('Error batch retrying messages:', err)
+    logger.error('Error batch retrying messages:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to batch retry messages',
@@ -269,7 +270,7 @@ export async function getBounceReportData(
     })
   } catch (error) {
     const err = error as Error
-    console.error('Error getting bounce report:', err)
+    logger.error('Error getting bounce report:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to get bounce report',
@@ -293,7 +294,7 @@ export async function getSuppressed(req: Request, res: Response): Promise<void> 
     })
   } catch (error) {
     const err = error as Error
-    console.error('Error getting suppressed emails:', err)
+    logger.error('Error getting suppressed emails:', err)
     res.status(500).json({
       success: false,
       message: 'Failed to get suppressed emails',

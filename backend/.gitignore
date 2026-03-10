@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Environment variables
 .env
@@ -14,7 +13,6 @@ build/
 # Database
 *.db
 *.db-journal
-prisma/migrations/
 
 # Test coverage
 coverage/

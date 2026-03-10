@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { MessageSquare, Send, Clock, CheckCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -166,7 +167,7 @@ const SMSCampaigns = () => {
                     setSmsMessage('');
                     loadCampaigns();
                   } catch (error) {
-                    console.error('Failed to send SMS campaign:', error)
+                    logger.error('Failed to send SMS campaign:', error)
                     toast.error('Failed to send SMS campaign');
                   }
                 }}
@@ -187,7 +188,7 @@ const SMSCampaigns = () => {
                     setSmsMessage('');
                     loadCampaigns();
                   } catch (error) {
-                    console.error('Failed to schedule SMS campaign:', error)
+                    logger.error('Failed to schedule SMS campaign:', error)
                     toast.error('Failed to schedule SMS campaign');
                   }
                 }}
@@ -208,7 +209,7 @@ const SMSCampaigns = () => {
                     setSmsMessage('');
                     loadCampaigns();
                   } catch (error) {
-                    console.error('Failed to save SMS draft:', error)
+                    logger.error('Failed to save SMS draft:', error)
                     toast.error('Failed to save draft');
                   }
                 }}

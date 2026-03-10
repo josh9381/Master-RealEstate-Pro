@@ -205,7 +205,7 @@ export const updateUser = async (req: Request, res: Response) => {
   }
 
   // Build update data
-  const updateData: any = {};
+  const updateData: Record<string, any> = {};
   if (firstName !== undefined) updateData.firstName = firstName;
   if (lastName !== undefined) updateData.lastName = lastName;
   if (avatar !== undefined) updateData.avatar = avatar;

@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errors'
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { getIntelligenceService } from '../services/intelligence.service'
 import { getOpenAIService, ASSISTANT_TONES, AssistantTone } from '../services/openai.service'
@@ -180,7 +182,7 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
     }
 
   } catch (error) {
-    console.error('Error generating insights:', error)
+    logger.error('Error generating insights:', error)
     // Don't throw — insights generation is best-effort
   }
 }
@@ -295,11 +297,11 @@ export const getAIStats = async (req: Request, res: Response) => {
         totalCostThisMonth: costData._sum.cost ? Math.round(costData._sum.cost * 100) / 100 : 0,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch AI statistics',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -434,11 +436,11 @@ export const getAIFeatures = async (req: Request, res: Response) => {
       success: true,
       data: features,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch AI features',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -514,11 +516,11 @@ export const getModelPerformance = async (req: Request, res: Response) => {
         },
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch model performance',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -574,11 +576,11 @@ export const getTrainingModels = async (req: Request, res: Response) => {
           })),
       })),
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch training models',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -683,17 +685,17 @@ export const uploadTrainingData = async (req: Request, res: Response) => {
               metadata: { source: 'training_upload', recordsProcessed: processed } as any,
             },
           })
-          console.log(`✅ Training upload recalibration complete for user ${userId}: accuracy ${result.accuracy}%`)
+          logger.info(`✅ Training upload recalibration complete for user ${userId}: accuracy ${result.accuracy}%`)
         })
         .catch((err) => {
-          console.error(`❌ Training upload recalibration failed for user ${userId}:`, err)
+          logger.error(`❌ Training upload recalibration failed for user ${userId}:`, err)
         })
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to upload training data',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -710,11 +712,11 @@ export const getDataQuality = async (req: Request, res: Response) => {
       success: true,
       data: quality
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch data quality metrics',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -737,7 +739,7 @@ export const getInsights = async (req: Request, res: Response) => {
     await generateAndStoreInsights(organizationId)
 
     // Fetch insights from DB
-    const where: any = { organizationId }
+    const where: Record<string, any> = { organizationId }
 
     // Status-based filtering (new param takes precedence over legacy showDismissed)
     if (status === 'dismissed') {
@@ -773,7 +775,7 @@ export const getInsights = async (req: Request, res: Response) => {
     // Determine sort order
     // For priority sort, fetch extra rows from DB (alphabetical sort is imprecise)
     // then apply correct priority ordering in JS and slice to the requested limit.
-    let orderBy: any[] = [{ createdAt: 'desc' }]
+    let orderBy: Record<string, string>[] = [{ createdAt: 'desc' }]
     if (sortBy === 'newest') {
       orderBy = [{ createdAt: 'desc' }]
     }
@@ -812,11 +814,11 @@ export const getInsights = async (req: Request, res: Response) => {
         createdAt: i.createdAt,
       })),
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch insights',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -844,11 +846,11 @@ export const getInsightById = async (req: Request, res: Response) => {
       success: true,
       data: insight,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch insight',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -886,11 +888,11 @@ export const dismissInsight = async (req: Request, res: Response) => {
       success: true,
       message: 'Insight dismissed successfully'
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to dismiss insight',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -930,11 +932,11 @@ export const actOnInsight = async (req: Request, res: Response) => {
       success: true,
       message: 'Insight marked as acted upon'
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to mark insight as acted upon',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1084,11 +1086,11 @@ export const getRecommendations = async (req: Request, res: Response) => {
       success: true,
       data: recommendations,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch recommendations',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1106,11 +1108,11 @@ export const getLeadScore = async (req: Request, res: Response) => {
       success: true,
       data: score
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to calculate lead score',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1124,11 +1126,11 @@ export const getLeadScoreFactors = async (req: Request, res: Response) => {
     const { leadId } = req.params
     const breakdown = await getLeadScoreBreakdown(leadId)
     res.json({ success: true, data: breakdown })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to get score factors',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1168,16 +1170,16 @@ export const recalculateScores = async (req: Request, res: Response) => {
     // Fire-and-forget: recalculate with user's custom weights
     const leadIds = leads.map((l) => l.id)
     updateMultipleLeadScores(leadIds, userId).catch((err) => {
-      console.error('Background recalculation error:', err)
+      logger.error('Background recalculation error:', err)
     })
 
     // Track usage
     await incrementAIUsage(organizationId, 'scoringRecalculations')
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to recalculate scores',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1358,11 +1360,11 @@ export const getGlobalPredictions = async (req: Request, res: Response) => {
         },
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to generate global predictions',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1394,11 +1396,11 @@ export const getPredictions = async (req: Request, res: Response) => {
         reasoning: prediction.reasoning,
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to generate predictions',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1428,11 +1430,11 @@ export const enhanceMessage = async (req: Request, res: Response) => {
       success: true,
       data: enhanced
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to enhance message',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1455,11 +1457,11 @@ export const suggestActions = async (req: Request, res: Response) => {
       success: true,
       data: actions
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to suggest actions',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1505,11 +1507,11 @@ export const getFeatureImportance = async (req: Request, res: Response) => {
       success: true,
       data,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch feature importance',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1519,11 +1521,11 @@ export const getFeatureImportance = async (req: Request, res: Response) => {
  */
 export const chatWithAI = async (req: Request, res: Response) => {
   try {
-    console.log('🎤 Chat request received:', req.body?.message?.substring(0, 100))
+    logger.info('🎤 Chat request received:', req.body?.message?.substring(0, 100))
     const { message, conversationHistory, tone } = req.body
     const userId = req.user!.userId
     const organizationId = req.user!.organizationId
-    console.log('👤 User:', userId, 'Org:', organizationId)
+    logger.info('👤 User:', userId, 'Org:', organizationId)
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({
@@ -1611,7 +1613,7 @@ TONE SETTINGS: ${toneConfig.systemAddition}`,
     const response = await openAI.chatWithFunctions(messages, AI_FUNCTIONS, userId, organizationId)
 
     if (response.functionCall) {
-      console.log(`🎯 Executing function: ${response.functionCall.name}`)
+      logger.info(`🎯 Executing function: ${response.functionCall.name}`)
       
       const functionResult = await functionsService.executeFunction(
         response.functionCall.name,
@@ -1620,7 +1622,7 @@ TONE SETTINGS: ${toneConfig.systemAddition}`,
         userId
       )
 
-      console.log(`✅ Function result:`, functionResult.substring(0, 200))
+      logger.info(`✅ Function result:`, functionResult.substring(0, 200))
 
       // Use tools format for OpenAI SDK v4+
       const finalMessages = [
@@ -1725,12 +1727,12 @@ TONE SETTINGS: ${toneConfig.systemAddition}`,
         cost: response.cost,
       },
     })
-  } catch (error: any) {
-    console.error('Chat error:', error)
+  } catch (error: unknown) {
+    logger.error('Chat error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to process chat message',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1764,12 +1766,12 @@ export const getChatHistory = async (req: Request, res: Response) => {
       success: true,
       data: { messages, total: messages.length },
     })
-  } catch (error: any) {
-    console.error('Chat history error:', error)
+  } catch (error: unknown) {
+    logger.error('Chat history error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch chat history',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1790,12 +1792,12 @@ export const clearChatHistory = async (req: Request, res: Response) => {
       success: true,
       data: { deleted: result.count },
     })
-  } catch (error: any) {
-    console.error('Clear chat history error:', error)
+  } catch (error: unknown) {
+    logger.error('Clear chat history error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to clear chat history',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1835,12 +1837,12 @@ export const getAIUsage = async (req: Request, res: Response) => {
         monthly: usageWithLimits,
       },
     })
-  } catch (error: any) {
-    console.error('Usage stats error:', error)
+  } catch (error: unknown) {
+    logger.error('Usage stats error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch usage statistics',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -1862,12 +1864,12 @@ export const getAIUsageLimits = async (req: Request, res: Response) => {
         costHistory,
       },
     })
-  } catch (error: any) {
-    console.error('Usage limits error:', error)
+  } catch (error: unknown) {
+    logger.error('Usage limits error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch usage limits',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1902,12 +1904,12 @@ export const generateEmailSequence = async (req: Request, res: Response) => {
       success: true,
       data: { emails, count: emails.length },
     })
-  } catch (error: any) {
-    console.error('Email sequence generation error:', error)
+  } catch (error: unknown) {
+    logger.error('Email sequence generation error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to generate email sequence',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1938,12 +1940,12 @@ export const generateSMS = async (req: Request, res: Response) => {
       success: true,
       data: { message: sms, length: sms.length },
     })
-  } catch (error: any) {
-    console.error('SMS generation error:', error)
+  } catch (error: unknown) {
+    logger.error('SMS generation error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to generate SMS',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1978,12 +1980,12 @@ export const generatePropertyDescription = async (req: Request, res: Response) =
       success: true,
       data: { description, wordCount: description.split(' ').length },
     })
-  } catch (error: any) {
-    console.error('Property description generation error:', error)
+  } catch (error: unknown) {
+    logger.error('Property description generation error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to generate property description',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -2014,12 +2016,12 @@ export const generateSocialPosts = async (req: Request, res: Response) => {
       success: true,
       data: { posts, platforms: Object.keys(posts) },
     })
-  } catch (error: any) {
-    console.error('Social posts generation error:', error)
+  } catch (error: unknown) {
+    logger.error('Social posts generation error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to generate social posts',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -2051,12 +2053,12 @@ export const generateListingPresentation = async (req: Request, res: Response) =
       success: true,
       data: presentation,
     })
-  } catch (error: any) {
-    console.error('Listing presentation generation error:', error)
+  } catch (error: unknown) {
+    logger.error('Listing presentation generation error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to generate listing presentation',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -2149,12 +2151,12 @@ Return JSON: { "content": "..." }`
       success: true,
       data: result
     })
-  } catch (error: any) {
-    console.error('Compose message error:', error)
+  } catch (error: unknown) {
+    logger.error('Compose message error:', error)
     res.status(500).json({ 
       success: false, 
       message: 'Failed to compose message',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -2196,12 +2198,12 @@ export const composeVariations = async (req: Request, res: Response) => {
       success: true,
       data: { variations, count: variations.length }
     })
-  } catch (error: any) {
-    console.error('Generate variations error:', error)
+  } catch (error: unknown) {
+    logger.error('Generate variations error:', error)
     res.status(500).json({ 
       success: false, 
       message: 'Failed to generate variations',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -2272,11 +2274,11 @@ Improve it with ${composeSettings.tone} tone, personalize with lead context, and
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
     res.end()
 
-  } catch (error: any) {
-    console.error('Stream message error:', error)
+  } catch (error: unknown) {
+    logger.error('Stream message error:', error)
     res.write(`data: ${JSON.stringify({ 
       type: 'error', 
-      message: error.message 
+      message: getErrorMessage(error) 
     })}\n\n`)
     res.end()
   }
@@ -2299,11 +2301,11 @@ export const getTemplates = async (req: Request, res: Response) => {
       success: true,
       data: templates
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to load templates',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -2336,11 +2338,11 @@ export const generateTemplateMessage = async (req: Request, res: Response) => {
       success: true,
       data: result
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to generate from template',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -2373,11 +2375,11 @@ export const saveMessageAsTemplate = async (req: Request, res: Response) => {
       success: true,
       data: template
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to save template',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -2396,11 +2398,11 @@ export const getPreferences = async (req: Request, res: Response) => {
       success: true,
       data: preferences
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to load preferences',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -2416,7 +2418,7 @@ export const savePreferences = async (req: Request, res: Response) => {
     const body = req.body
 
     // Support both legacy flat format (composer-only) and new structured format
-    let prefsToSave: any = body
+    let prefsToSave: Record<string, any> = body
     if (body.defaultTone !== undefined || body.defaultLength !== undefined || body.defaultCTA !== undefined) {
       // Legacy flat format — wrap in composer
       prefsToSave = { composer: body }
@@ -2428,11 +2430,11 @@ export const savePreferences = async (req: Request, res: Response) => {
       success: true,
       data: updated
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to save preferences',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -2527,18 +2529,18 @@ export const recalibrateModel = async (req: Request, res: Response) => {
       // Track usage
       await incrementAIUsage(organizationId, 'scoringRecalculations')
 
-      console.log(`✅ Recalibration complete for user ${userId}: accuracy ${result.accuracy}%`)
-    } catch (err: any) {
+      logger.info(`✅ Recalibration complete for user ${userId}: accuracy ${result.accuracy}%`)
+    } catch (err: unknown) {
       job.status = 'failed'
       job.completedAt = new Date()
-      job.error = err.message || 'Unknown error'
-      console.error(`❌ Recalibration failed for user ${userId}:`, err)
+      job.error = getErrorMessage(err) || 'Unknown error'
+      logger.error(`❌ Recalibration failed for user ${userId}:`, err)
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to start recalibration',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -2570,11 +2572,11 @@ export const getRecalibrationStatus = async (req: Request, res: Response) => {
         error: job.error,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to get recalibration status',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -2594,11 +2596,11 @@ export const resetPreferences = async (req: Request, res: Response) => {
       success: true,
       data: defaults
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to reset preferences',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -2615,8 +2617,8 @@ export const getOrgSettings = async (req: Request, res: Response) => {
     const organizationId = req.user!.organizationId
     const settings = await getOrgAISettings(organizationId)
     res.json({ success: true, data: settings })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to fetch org AI settings', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to fetch org AI settings', error: getErrorMessage(error) })
   }
 }
 
@@ -2628,8 +2630,8 @@ export const updateOrgSettings = async (req: Request, res: Response) => {
     const organizationId = req.user!.organizationId
     const result = await updateOrgAISettings(organizationId, req.body)
     res.json({ success: true, data: result })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to update org AI settings', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to update org AI settings', error: getErrorMessage(error) })
   }
 }
 
@@ -2654,8 +2656,8 @@ export const getAvailableModels = async (req: Request, res: Response) => {
       }
     })
     res.json({ success: true, data: models })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to fetch available models', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to fetch available models', error: getErrorMessage(error) })
   }
 }
 
@@ -2761,8 +2763,8 @@ export const getCostDashboard = async (req: Request, res: Response) => {
         }),
       },
     })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to fetch cost dashboard', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to fetch cost dashboard', error: getErrorMessage(error) })
   }
 }
 
@@ -2794,8 +2796,8 @@ export const submitChatFeedback = async (req: Request, res: Response) => {
     })
 
     res.json({ success: true, data: { id: updated.id, feedback: updated.feedback } })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to submit feedback', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to submit feedback', error: getErrorMessage(error) })
   }
 }
 
@@ -2827,8 +2829,8 @@ export const submitInsightFeedback = async (req: Request, res: Response) => {
     })
 
     res.json({ success: true, data: { id: updated.id, feedback: updated.feedback } })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to submit insight feedback', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to submit insight feedback', error: getErrorMessage(error) })
   }
 }
 
@@ -2864,8 +2866,8 @@ export const getFeedbackStats = async (req: Request, res: Response) => {
         },
       },
     })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to fetch feedback stats', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to fetch feedback stats', error: getErrorMessage(error) })
   }
 }
 
@@ -2970,8 +2972,8 @@ Respond in JSON format with only the fields you can confidently infer:
         cost: result.cost,
       },
     })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to enrich lead', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to enrich lead', error: getErrorMessage(error) })
   }
 }
 
@@ -3012,8 +3014,8 @@ export const applyEnrichment = async (req: Request, res: Response) => {
     })
 
     res.json({ success: true, data: updated, message: `Updated ${Object.keys(updateData).length} field(s)` })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to apply enrichment', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to apply enrichment', error: getErrorMessage(error) })
   }
 }
 
@@ -3042,8 +3044,8 @@ export const getBudgetSettings = async (req: Request, res: Response) => {
         alertEnabled: org?.aiBudgetAlertEnabled ?? true,
       },
     })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to fetch budget settings', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to fetch budget settings', error: getErrorMessage(error) })
   }
 }
 
@@ -3077,7 +3079,7 @@ export const updateBudgetSettings = async (req: Request, res: Response) => {
         alertEnabled: updated.aiBudgetAlertEnabled,
       },
     })
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to update budget settings', error: error.message })
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: 'Failed to update budget settings', error: getErrorMessage(error) })
   }
 }

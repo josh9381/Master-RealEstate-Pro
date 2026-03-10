@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -11,6 +11,8 @@ function Register() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { register, isLoading } = useAuthStore()
+  const navTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => { clearTimeout(navTimerRef.current) }, [])
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -57,7 +59,7 @@ function Register() {
         tosAccepted: true,
       })
       toast.success('Account created!', 'Please check your email to verify your account.')
-      setTimeout(() => navigate('/'), 500)
+      navTimerRef.current = setTimeout(() => navigate('/'), 500)
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string; errors?: unknown } } }
       const errorMessage = err.response?.data?.message || 'Could not create account'

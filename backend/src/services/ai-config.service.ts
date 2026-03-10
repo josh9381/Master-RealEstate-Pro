@@ -14,6 +14,7 @@
  * - OpenAI client caching per org
  */
 
+import { logger } from '../lib/logger'
 import OpenAI from 'openai'
 import prisma from '../config/database'
 import { decrypt, encrypt, maskSensitive } from '../utils/encryption'
@@ -100,7 +101,7 @@ export async function resolveAIConfig(organizationId: string): Promise<AIConfig>
       orgId = org.openaiOrgId || undefined
     } catch {
       // If decryption fails, fall back to platform key
-      console.warn(`Failed to decrypt API key for org ${organizationId}, using platform key`)
+      logger.warn(`Failed to decrypt API key for org ${organizationId}, using platform key`)
       apiKey = process.env.OPENAI_API_KEY || ''
     }
   } else {

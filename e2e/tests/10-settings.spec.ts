@@ -139,20 +139,6 @@ test.describe('10 - Settings', () => {
     console.log('  ✅ Service configuration loaded');
   });
 
-  test('Demo data generator', async ({ page }) => {
-    console.log('\n🧪 TEST: Demo data generator');
-    await navigateTo(page, '/settings/demo-data', 'Demo Data Generator');
-    await verifyPageLoaded(page);
-    await screenshot(page, '10-settings-demo-data');
-
-    // Check for generate button (don't click)
-    const generateBtn = page.locator('button').filter({ hasText: /generate|create|seed/i }).first();
-    if (await generateBtn.isVisible().catch(() => false)) {
-      console.log('  ✅ Generate button present');
-    }
-    console.log('  ✅ Demo data generator loaded');
-  });
-
   test('Tags manager', async ({ page }) => {
     console.log('\n🧪 TEST: Tags manager');
     await navigateTo(page, '/settings/tags', 'Tags Manager');

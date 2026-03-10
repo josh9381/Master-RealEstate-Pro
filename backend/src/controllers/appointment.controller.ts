@@ -27,7 +27,7 @@ export async function listAppointments(req: Request, res: Response): Promise<voi
   const skip = (pageNum - 1) * limitNum;
 
   // Build where clause
-  const where: any = {
+  const where: Record<string, any> = {
     organizationId: req.user.organizationId,  // CRITICAL: Filter by organization
     userId: req.user.userId,
   };
@@ -256,7 +256,7 @@ export async function updateAppointment(req: Request, res: Response): Promise<vo
   }
 
   // Build update data
-  const updateData: any = {};
+  const updateData: Record<string, any> = {};
   if (title !== undefined) updateData.title = title;
   if (description !== undefined) updateData.description = description;
   if (startTime !== undefined) updateData.startTime = new Date(startTime);
@@ -414,11 +414,11 @@ export async function getCalendarView(req: Request, res: Response): Promise<void
   // Calculate summary statistics
   const summary = {
     total: appointments.length,
-    byType: appointments.reduce((acc: any, apt) => {
+    byType: appointments.reduce((acc: Record<string, number>, apt) => {
       acc[apt.type] = (acc[apt.type] || 0) + 1;
       return acc;
     }, {}),
-    byStatus: appointments.reduce((acc: any, apt) => {
+    byStatus: appointments.reduce((acc: Record<string, number>, apt) => {
       acc[apt.status] = (acc[apt.status] || 0) + 1;
       return acc;
     }, {}),

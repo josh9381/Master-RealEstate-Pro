@@ -1,10 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { MainLayout } from './components/layout/MainLayout'
 import { AuthLayout } from './components/layout/AuthLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { RequireAdmin } from './components/auth/RequireRole'
 import { PageErrorBoundary } from './components/PageErrorBoundary'
+import { lazyWithRetry } from './lib/lazyWithRetry'
 
 // Loading fallback for lazy components
 const PageLoader = () => (
@@ -28,116 +29,113 @@ import VerifyEmail from './pages/auth/VerifyEmail'
 import { UnsubscribePage } from './pages/unsubscribe/UnsubscribePage'
 
 // Leads (lazy loaded)
-const LeadsList = lazy(() => import('./pages/leads/LeadsList'))
-const LeadDetail = lazy(() => import('./pages/leads/LeadDetail'))
-const LeadsPipeline = lazy(() => import('./pages/leads/LeadsPipeline'))
-const LeadsImport = lazy(() => import('./pages/leads/LeadsImport'))
-const LeadsExport = lazy(() => import('./pages/leads/LeadsExport'))
-const LeadsFollowups = lazy(() => import('./pages/leads/LeadsFollowups'))
-const LeadHistory = lazy(() => import('./pages/leads/LeadHistory'))
-const LeadsMerge = lazy(() => import('./pages/leads/LeadsMerge'))
-const LeadCreate = lazy(() => import('./pages/leads/LeadCreate'))
+const LeadsList = lazyWithRetry(() => import('./pages/leads/LeadsList'))
+const LeadDetail = lazyWithRetry(() => import('./pages/leads/LeadDetail'))
+const LeadsPipeline = lazyWithRetry(() => import('./pages/leads/LeadsPipeline'))
+const LeadsImport = lazyWithRetry(() => import('./pages/leads/LeadsImport'))
+const LeadsExport = lazyWithRetry(() => import('./pages/leads/LeadsExport'))
+const LeadsFollowups = lazyWithRetry(() => import('./pages/leads/LeadsFollowups'))
+const LeadHistory = lazyWithRetry(() => import('./pages/leads/LeadHistory'))
+const LeadsMerge = lazyWithRetry(() => import('./pages/leads/LeadsMerge'))
+const LeadCreate = lazyWithRetry(() => import('./pages/leads/LeadCreate'))
 
 // Campaigns (lazy loaded)
-const CampaignsList = lazy(() => import('./pages/campaigns/CampaignsList'))
-const CampaignCreate = lazy(() => import('./pages/campaigns/CampaignCreate'))
-const CampaignDetail = lazy(() => import('./pages/campaigns/CampaignDetail'))
-const CampaignEdit = lazy(() => import('./pages/campaigns/CampaignEdit'))
-const CampaignTemplates = lazy(() => import('./pages/campaigns/CampaignTemplates'))
-const CampaignSchedule = lazy(() => import('./pages/campaigns/CampaignSchedule'))
-const CampaignReports = lazy(() => import('./pages/campaigns/CampaignReports'))
+const CampaignsList = lazyWithRetry(() => import('./pages/campaigns/CampaignsList'))
+const CampaignCreate = lazyWithRetry(() => import('./pages/campaigns/CampaignCreate'))
+const CampaignDetail = lazyWithRetry(() => import('./pages/campaigns/CampaignDetail'))
+const CampaignEdit = lazyWithRetry(() => import('./pages/campaigns/CampaignEdit'))
+const CampaignTemplates = lazyWithRetry(() => import('./pages/campaigns/CampaignTemplates'))
+const CampaignSchedule = lazyWithRetry(() => import('./pages/campaigns/CampaignSchedule'))
+const CampaignReports = lazyWithRetry(() => import('./pages/campaigns/CampaignReports'))
 // EmailCampaigns, SMSCampaigns, PhoneCampaigns merged into CampaignsList (filter tabs) — old URLs redirect
-const ABTesting = lazy(() => import('./pages/campaigns/ABTesting'))
+const ABTesting = lazyWithRetry(() => import('./pages/campaigns/ABTesting'))
 
 // AI Hub (lazy loaded)
-const AIHub = lazy(() => import('./pages/ai/AIHub'))
-const LeadScoring = lazy(() => import('./pages/ai/LeadScoring'))
-const Segmentation = lazy(() => import('./pages/ai/Segmentation'))
-const PredictiveAnalytics = lazy(() => import('./pages/ai/PredictiveAnalytics'))
-const IntelligenceInsights = lazy(() => import('./pages/ai/IntelligenceInsights'))
-const AIAnalytics = lazy(() => import('./pages/ai/AIAnalytics'))
-const AISettings = lazy(() => import('./pages/ai/AISettings'))
-const OrgAISettings = lazy(() => import('./pages/ai/OrgAISettings'))
-const AICostDashboard = lazy(() => import('./pages/ai/AICostDashboard'))
+const AIHub = lazyWithRetry(() => import('./pages/ai/AIHub'))
+const LeadScoring = lazyWithRetry(() => import('./pages/ai/LeadScoring'))
+const Segmentation = lazyWithRetry(() => import('./pages/ai/Segmentation'))
+const PredictiveAnalytics = lazyWithRetry(() => import('./pages/ai/PredictiveAnalytics'))
+const IntelligenceInsights = lazyWithRetry(() => import('./pages/ai/IntelligenceInsights'))
+const AIAnalytics = lazyWithRetry(() => import('./pages/ai/AIAnalytics'))
+const AISettings = lazyWithRetry(() => import('./pages/ai/AISettings'))
+const OrgAISettings = lazyWithRetry(() => import('./pages/ai/OrgAISettings'))
+const AICostDashboard = lazyWithRetry(() => import('./pages/ai/AICostDashboard'))
 
 // Analytics (lazy loaded)
-const AnalyticsDashboard = lazy(() => import('./pages/analytics/AnalyticsDashboard'))
-const LeadAnalytics = lazy(() => import('./pages/analytics/LeadAnalytics'))
-const ConversionReports = lazy(() => import('./pages/analytics/ConversionReports'))
-const UsageAnalytics = lazy(() => import('./pages/analytics/UsageAnalytics'))
-const CustomReports = lazy(() => import('./pages/analytics/CustomReports'))
-const AttributionReport = lazy(() => import('./pages/analytics/AttributionReport'))
-const GoalTracking = lazy(() => import('./pages/analytics/GoalTracking'))
-const LeadVelocity = lazy(() => import('./pages/analytics/LeadVelocity'))
-const SourceROI = lazy(() => import('./pages/analytics/SourceROI'))
-const FollowUpAnalytics = lazy(() => import('./pages/analytics/FollowUpAnalytics'))
-const PeriodComparison = lazy(() => import('./pages/analytics/PeriodComparison'))
+const AnalyticsDashboard = lazyWithRetry(() => import('./pages/analytics/AnalyticsDashboard'))
+const LeadAnalytics = lazyWithRetry(() => import('./pages/analytics/LeadAnalytics'))
+const ConversionReports = lazyWithRetry(() => import('./pages/analytics/ConversionReports'))
+const UsageAnalytics = lazyWithRetry(() => import('./pages/analytics/UsageAnalytics'))
+const CustomReports = lazyWithRetry(() => import('./pages/analytics/CustomReports'))
+const AttributionReport = lazyWithRetry(() => import('./pages/analytics/AttributionReport'))
+const GoalTracking = lazyWithRetry(() => import('./pages/analytics/GoalTracking'))
+const LeadVelocity = lazyWithRetry(() => import('./pages/analytics/LeadVelocity'))
+const SourceROI = lazyWithRetry(() => import('./pages/analytics/SourceROI'))
+const FollowUpAnalytics = lazyWithRetry(() => import('./pages/analytics/FollowUpAnalytics'))
+const PeriodComparison = lazyWithRetry(() => import('./pages/analytics/PeriodComparison'))
 
 // Communication (lazy loaded)
-const CommunicationInbox = lazy(() => import('./pages/communication/CommunicationInbox'))
-const EmailTemplatesLibrary = lazy(() => import('./pages/communication/EmailTemplatesLibrary'))
-const CallCenter = lazy(() => import('./pages/communication/CallCenter'))
-const SocialMediaDashboard = lazy(() => import('./pages/communication/SocialMediaDashboard'))
-const NewsletterManagement = lazy(() => import('./pages/communication/NewsletterManagement'))
+const CommunicationInbox = lazyWithRetry(() => import('./pages/communication/CommunicationInbox'))
+const EmailTemplatesLibrary = lazyWithRetry(() => import('./pages/communication/EmailTemplatesLibrary'))
+const CallCenter = lazyWithRetry(() => import('./pages/communication/CallCenter'))
+const SocialMediaDashboard = lazyWithRetry(() => import('./pages/communication/SocialMediaDashboard'))
+const NewsletterManagement = lazyWithRetry(() => import('./pages/communication/NewsletterManagement'))
 
 // Workflows (lazy loaded)
-const WorkflowsList = lazy(() => import('./pages/workflows/WorkflowsList'))
-const WorkflowBuilder = lazy(() => import('./pages/workflows/WorkflowBuilder'))
-const AutomationRules = lazy(() => import('./pages/workflows/AutomationRules'))
+const WorkflowsList = lazyWithRetry(() => import('./pages/workflows/WorkflowsList'))
+const WorkflowBuilder = lazyWithRetry(() => import('./pages/workflows/WorkflowBuilder'))
+const AutomationRules = lazyWithRetry(() => import('./pages/workflows/AutomationRules'))
 
 // Settings (lazy loaded)
-const SettingsHub = lazy(() => import('./pages/settings/SettingsHub'))
-const ProfileSettings = lazy(() => import('./pages/settings/ProfileSettings'))
-const BusinessSettings = lazy(() => import('./pages/settings/BusinessSettings'))
-const TeamManagement = lazy(() => import('./pages/settings/TeamManagement'))
-const EmailConfiguration = lazy(() => import('./pages/settings/EmailConfiguration'))
-const NotificationSettings = lazy(() => import('./pages/settings/NotificationSettings'))
-const SecuritySettings = lazy(() => import('./pages/settings/SecuritySettings'))
-const ComplianceSettings = lazy(() => import('./pages/settings/ComplianceSettings'))
-const GoogleIntegration = lazy(() => import('./pages/settings/GoogleIntegration'))
-const TwilioSetup = lazy(() => import('./pages/settings/TwilioSetup'))
-const ServiceConfiguration = lazy(() => import('./pages/settings/ServiceConfiguration'))
-const DemoDataGenerator = lazy(() => import('./pages/settings/DemoDataGenerator'))
+const SettingsHub = lazyWithRetry(() => import('./pages/settings/SettingsHub'))
+const ProfileSettings = lazyWithRetry(() => import('./pages/settings/ProfileSettings'))
+const BusinessSettings = lazyWithRetry(() => import('./pages/settings/BusinessSettings'))
+const TeamManagement = lazyWithRetry(() => import('./pages/settings/TeamManagement'))
+const EmailConfiguration = lazyWithRetry(() => import('./pages/settings/EmailConfiguration'))
+const NotificationSettings = lazyWithRetry(() => import('./pages/settings/NotificationSettings'))
+const SecuritySettings = lazyWithRetry(() => import('./pages/settings/SecuritySettings'))
+const ComplianceSettings = lazyWithRetry(() => import('./pages/settings/ComplianceSettings'))
+const GoogleIntegration = lazyWithRetry(() => import('./pages/settings/GoogleIntegration'))
+const TwilioSetup = lazyWithRetry(() => import('./pages/settings/TwilioSetup'))
+const ServiceConfiguration = lazyWithRetry(() => import('./pages/settings/ServiceConfiguration'))
 
 // Admin (lazy loaded)
-const AdminPanel = lazy(() => import('./pages/admin/AdminPanel'))
-const SubscriptionPage = lazy(() => import('./pages/admin/Subscription'))
-const SystemSettings = lazy(() => import('./pages/admin/SystemSettings'))
-const FeatureFlags = lazy(() => import('./pages/admin/FeatureFlags'))
-const DebugConsole = lazy(() => import('./pages/admin/DebugConsole'))
-const DataExportWizard = lazy(() => import('./pages/admin/DataExportWizard'))
-const RetryQueue = lazy(() => import('./pages/admin/RetryQueue'))
-const HealthCheckDashboard = lazy(() => import('./pages/admin/HealthCheckDashboard'))
-const DatabaseMaintenance = lazy(() => import('./pages/admin/DatabaseMaintenance'))
-const AuditTrail = lazy(() => import('./pages/admin/AuditTrail'))
+const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'))
+const SubscriptionPage = lazyWithRetry(() => import('./pages/admin/Subscription'))
+const SystemSettings = lazyWithRetry(() => import('./pages/admin/SystemSettings'))
+const FeatureFlags = lazyWithRetry(() => import('./pages/admin/FeatureFlags'))
+const DataExportWizard = lazyWithRetry(() => import('./pages/admin/DataExportWizard'))
+const HealthCheckDashboard = lazyWithRetry(() => import('./pages/admin/HealthCheckDashboard'))
+const DatabaseMaintenance = lazyWithRetry(() => import('./pages/admin/DatabaseMaintenance'))
+const AuditTrail = lazyWithRetry(() => import('./pages/admin/AuditTrail'))
 
 // Billing (lazy loaded)
-const BillingPage = lazy(() => import('./pages/billing/BillingPage'))
-const InvoiceDetail = lazy(() => import('./pages/billing/InvoiceDetail'))
+const BillingPage = lazyWithRetry(() => import('./pages/billing/BillingPage'))
+const InvoiceDetail = lazyWithRetry(() => import('./pages/billing/InvoiceDetail'))
 
 // Help (lazy loaded)
-const HelpCenter = lazy(() => import('./pages/help/HelpCenter'))
-const DocumentationPages = lazy(() => import('./pages/help/DocumentationPages'))
-const SupportTicketSystem = lazy(() => import('./pages/help/SupportTicketSystem'))
-const VideoTutorialLibrary = lazy(() => import('./pages/help/VideoTutorialLibrary'))
+const HelpCenter = lazyWithRetry(() => import('./pages/help/HelpCenter'))
+const DocumentationPages = lazyWithRetry(() => import('./pages/help/DocumentationPages'))
+const SupportTicketSystem = lazyWithRetry(() => import('./pages/help/SupportTicketSystem'))
+const VideoTutorialLibrary = lazyWithRetry(() => import('./pages/help/VideoTutorialLibrary'))
 
 // Integrations (lazy loaded)
-const IntegrationsHub = lazy(() => import('./pages/integrations/IntegrationsHub'))
-const APIIntegrationsPage = lazy(() => import('./pages/integrations/APIIntegrationsPage'))
+const IntegrationsHub = lazyWithRetry(() => import('./pages/integrations/IntegrationsHub'))
+const APIIntegrationsPage = lazyWithRetry(() => import('./pages/integrations/APIIntegrationsPage'))
 
 // Other lazy pages
-const CalendarPage = lazy(() => import('./pages/calendar/CalendarPage'))
-const ActivityPage = lazy(() => import('./pages/activity/ActivityPage'))
-const TasksPage = lazy(() => import('./pages/tasks/TasksPage'))
-const PasswordSecurityPage = lazy(() => import('./pages/settings/PasswordSecurityPage'))
+const CalendarPage = lazyWithRetry(() => import('./pages/calendar/CalendarPage'))
+const ActivityPage = lazyWithRetry(() => import('./pages/activity/ActivityPage'))
+const TasksPage = lazyWithRetry(() => import('./pages/tasks/TasksPage'))
+const PasswordSecurityPage = lazyWithRetry(() => import('./pages/settings/PasswordSecurityPage'))
 
 // Phase 5 - Components (lazy loaded)
-const TagsManager = lazy(() => import('./components/settings/TagsManager').then(m => ({ default: m.TagsManager })))
-const CustomFieldsManager = lazy(() => import('./components/settings/CustomFieldsManager').then(m => ({ default: m.CustomFieldsManager })))
-const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
+const TagsManager = lazyWithRetry(() => import('./components/settings/TagsManager').then(m => ({ default: m.TagsManager })))
+const CustomFieldsManager = lazyWithRetry(() => import('./components/settings/CustomFieldsManager').then(m => ({ default: m.CustomFieldsManager })))
+const NotificationsPage = lazyWithRetry(() => import('./pages/notifications/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
 
 // 404
-const NotFound = lazy(() => import('./pages/NotFound'))
+const NotFound = lazyWithRetry(() => import('./pages/NotFound'))
 
 function App() {
   return (
@@ -240,7 +238,6 @@ function App() {
         <Route path="/settings/google" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Google Integration"><GoogleIntegration /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/twilio" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Twilio Setup"><TwilioSetup /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/services" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Services"><ServiceConfiguration /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/demo-data" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Demo Data"><DemoDataGenerator /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/tags" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Tags"><TagsManager /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/custom-fields" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Custom Fields"><CustomFieldsManager /></PageErrorBoundary></Suspense>} />
         <Route path="/settings/security/password" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Password Security"><PasswordSecurityPage /></PageErrorBoundary></Suspense>} />
@@ -254,9 +251,7 @@ function App() {
         <Route path="/admin/subscription" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Subscription Management"><SubscriptionPage /></PageErrorBoundary></Suspense></RequireAdmin>} />
         <Route path="/admin/system" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="System Settings"><SystemSettings /></PageErrorBoundary></Suspense></RequireAdmin>} />
         <Route path="/admin/features" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Feature Flags"><FeatureFlags /></PageErrorBoundary></Suspense></RequireAdmin>} />
-        <Route path="/admin/debug" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Debug Console"><DebugConsole /></PageErrorBoundary></Suspense></RequireAdmin>} />
         <Route path="/admin/export" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Data Export"><DataExportWizard /></PageErrorBoundary></Suspense></RequireAdmin>} />
-        <Route path="/admin/retry-queue" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Retry Queue"><RetryQueue /></PageErrorBoundary></Suspense></RequireAdmin>} />
         <Route path="/admin/health" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Health Check"><HealthCheckDashboard /></PageErrorBoundary></Suspense></RequireAdmin>} />
         <Route path="/admin/database" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Database Maintenance"><DatabaseMaintenance /></PageErrorBoundary></Suspense></RequireAdmin>} />
         <Route path="/admin/audit" element={<RequireAdmin><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Audit Trail"><AuditTrail /></PageErrorBoundary></Suspense></RequireAdmin>} />

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { X, Sparkles, Send, RefreshCw, Edit3, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -68,7 +69,7 @@ export function AIEmailComposer({
         setConfidenceScore(result.confidenceScore || result.confidence || null)
       }
     } catch (error) {
-      console.error('Failed to generate email:', error)
+      logger.error('Failed to generate email:', error)
       const aiMsg = getAIUnavailableMessage(error)
       if (aiMsg) {
         toast.error(aiMsg)
@@ -112,7 +113,7 @@ export function AIEmailComposer({
         onClose()
       }
     } catch (error) {
-      console.error('Failed to send email:', error)
+      logger.error('Failed to send email:', error)
       toast.error('Failed to send email. Please try again.')
     } finally {
       setIsSending(false)

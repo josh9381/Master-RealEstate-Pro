@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Chrome, Calendar, Mail, Shield, CheckCircle, RefreshCw } from 'lucide-react';
@@ -59,7 +60,7 @@ const GoogleIntegration = () => {
       toast.success('Connected to Google Workspace successfully');
       queryClient.invalidateQueries({ queryKey: ['settings', 'integration', 'google'] });
     } catch (error) {
-      console.error('Failed to connect:', error);
+      logger.error('Failed to connect:', error);
       toast.error('Failed to connect to Google');
     } finally {
       setSaving(false);
@@ -75,7 +76,7 @@ const GoogleIntegration = () => {
       setConnected(false);
       toast.success('Disconnected from Google Workspace');
     } catch (error) {
-      console.error('Failed to disconnect:', error);
+      logger.error('Failed to disconnect:', error);
       toast.error('Failed to disconnect');
     } finally {
       setSaving(false);

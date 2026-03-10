@@ -35,7 +35,7 @@ export function correlationId(req: Request, res: Response, next: NextFunction): 
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const startTime = Date.now();
 
-  const reqLog = logger.child({ requestId: req.requestId });
+  const reqLog = logger.pino.child({ requestId: req.requestId });
 
   // Log incoming request at debug level (won't appear in production default 'info' level)
   reqLog.debug({

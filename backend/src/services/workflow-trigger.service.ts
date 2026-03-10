@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database'
 import type { WorkflowTrigger, Workflow } from '@prisma/client'
 import { executeWorkflow } from './workflow.service'
@@ -30,8 +31,8 @@ export class WorkflowTriggerService {
    */
   async detectTriggers(event: TriggerEvent): Promise<Workflow[]> {
     try {
-      console.log(`🔔 Trigger detected: ${event.type}`)
-      console.log(`   Event data:`, JSON.stringify(event.data, null, 2))
+      logger.info(`🔔 Trigger detected: ${event.type}`)
+      logger.info(`   Event data:`, JSON.stringify(event.data, null, 2))
       
       // Find all active workflows with matching trigger type
       const matchingWorkflows = await prisma.workflow.findMany({
@@ -41,30 +42,30 @@ export class WorkflowTriggerService {
         },
       })
 
-      console.log(`   Found ${matchingWorkflows.length} active workflows with trigger type ${event.type}`)
+      logger.info(`   Found ${matchingWorkflows.length} active workflows with trigger type ${event.type}`)
 
       const triggeredWorkflows: Workflow[] = []
 
       // Evaluate conditions for each workflow
       for (const workflow of matchingWorkflows) {
-        console.log(`   Evaluating workflow: ${workflow.name} (${workflow.id})`)
+        logger.info(`   Evaluating workflow: ${workflow.name} (${workflow.id})`)
         const conditionsMatch = await this.evaluateConditions(workflow, event.data)
         
         if (conditionsMatch) {
           // Queue the workflow for execution
           await this.queueWorkflow(workflow.id, event.data, event.leadId)
           triggeredWorkflows.push(workflow)
-          console.log(`   ✅ Workflow ${workflow.name} triggered`)
+          logger.info(`   ✅ Workflow ${workflow.name} triggered`)
         } else {
-          console.log(`   ❌ Workflow ${workflow.name} conditions not met`)
+          logger.info(`   ❌ Workflow ${workflow.name} conditions not met`)
         }
       }
 
-      console.log(`   Final matched workflows: ${triggeredWorkflows.length}`)
+      logger.info(`   Final matched workflows: ${triggeredWorkflows.length}`)
       
       return triggeredWorkflows
     } catch (error) {
-      console.error('Error detecting triggers:', error)
+      logger.error('Error detecting triggers:', error)
       throw error
     }
   }
@@ -93,8 +94,8 @@ export class WorkflowTriggerService {
       const fieldValue = this.getNestedValue(eventData, condition.field)
       const conditionMet = this.evaluateCondition(fieldValue, condition.operator, condition.value)
       
-      console.log(`   Condition check: ${condition.field} ${condition.operator} ${condition.value}`)
-      console.log(`   Field value: ${fieldValue}, Match: ${conditionMet}`)
+      logger.info(`   Condition check: ${condition.field} ${condition.operator} ${condition.value}`)
+      logger.info(`   Field value: ${fieldValue}, Match: ${conditionMet}`)
       
       if (!conditionMet) {
         return false
@@ -131,13 +132,13 @@ export class WorkflowTriggerService {
         return value
       }))
 
-      console.log(`📝 Workflow queued for execution: ${workflowId}`)
+      logger.info(`📝 Workflow queued for execution: ${workflowId}`)
 
       // Execute the workflow using the main workflow service
       // executeWorkflow handles its own execution record creation, stats updates, and error tracking
       this.executeWorkflowAsync(workflowId, serializedData, leadId)
     } catch (error) {
-      console.error('Error queueing workflow:', error)
+      logger.error('Error queueing workflow:', error)
       throw error
     }
   }
@@ -153,7 +154,7 @@ export class WorkflowTriggerService {
     try {
       await executeWorkflow(workflowId, leadId, eventData)
     } catch (error) {
-      console.error(`Error executing workflow ${workflowId}:`, error)
+      logger.error(`Error executing workflow ${workflowId}:`, error)
       // Error is already logged in executeWorkflow and execution marked as failed
     }
   }
@@ -222,7 +223,7 @@ export class WorkflowTriggerService {
         return fieldValue !== undefined && fieldValue !== null
       
       default:
-        console.warn(`Unknown operator: ${operator}`)
+        logger.warn(`Unknown operator: ${operator}`)
         return false
     }
   }

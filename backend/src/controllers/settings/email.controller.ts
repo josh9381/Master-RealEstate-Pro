@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger'
 import { Request, Response } from 'express';
 import { prisma } from '../../config/database';
 import { UnauthorizedError } from '../../middleware/errorHandler';
@@ -37,7 +38,7 @@ export async function getEmailConfig(req: Request, res: Response): Promise<void>
     }
   } catch (error) {
     // If decryption fails, it might be plain text or corrupted
-    console.error('Failed to decrypt API key:', error);
+    logger.error('Failed to decrypt API key:', error);
     maskedApiKey = config.apiKey ? '••••••••' : null;
   }
 

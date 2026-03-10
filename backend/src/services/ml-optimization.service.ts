@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { getIntelligenceService } from './intelligence.service';
 const intelligenceService = getIntelligenceService();
@@ -31,7 +32,7 @@ export class MLOptimizationService {
    * Each user's model learns only from their own conversion data
    */
   async optimizeScoringWeights(userId: string, organizationId: string): Promise<OptimizationResult> {
-    console.log(`🤖 Starting ML optimization for user ${userId} in org ${organizationId}...`);
+    logger.info(`🤖 Starting ML optimization for user ${userId} in org ${organizationId}...`);
 
     // Get current model or create default
     let scoringModel = await prisma.leadScoringModel.findUnique({
@@ -67,7 +68,7 @@ export class MLOptimizationService {
     });
 
     if (leads.length < 20) {
-      console.log(`⚠️ Not enough conversion data (${leads.length} leads). Need at least 20.`);
+      logger.info(`⚠️ Not enough conversion data (${leads.length} leads). Need at least 20.`);
       return {
         oldWeights,
         newWeights: oldWeights,
@@ -114,7 +115,7 @@ export class MLOptimizationService {
       });
     }
 
-    console.log(`✅ ML optimization complete for user ${userId}. Accuracy: ${accuracy.toFixed(1)}%`);
+    logger.info(`✅ ML optimization complete for user ${userId}. Accuracy: ${accuracy.toFixed(1)}%`);
 
     return {
       oldWeights,
@@ -246,7 +247,7 @@ export class MLOptimizationService {
           correct++;
         }
       } catch (error) {
-        console.error(`Error calculating accuracy for lead ${lead.id}:`, error);
+        logger.error(`Error calculating accuracy for lead ${lead.id}:`, error);
       }
     }
 
@@ -344,7 +345,7 @@ export class MLOptimizationService {
       },
     });
 
-    console.log(`✅ Recorded conversion outcome for lead ${leadId}: ${converted ? 'WON' : 'LOST'}`);
+    logger.info(`✅ Recorded conversion outcome for lead ${leadId}: ${converted ? 'WON' : 'LOST'}`);
 
     // Increment training data count FOR THE ASSIGNED USER
     if (lead.assignedToId) {

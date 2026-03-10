@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errors'
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/errorHandler';
@@ -58,7 +60,7 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
   const roleFilter = getRoleFilterFromRequest(req);
   
   // Build additional filters
-  const additionalWhere: Record<string, unknown> = {};
+  const additionalWhere: Record<string, any> = {};
   
   if (status) additionalWhere.status = status as LeadStatus;
   if (source) additionalWhere.source = source;
@@ -324,7 +326,7 @@ export async function createLead(req: Request, res: Response): Promise<void> {
         },
       });
     } catch (error) {
-      console.error('Error creating initial note for lead:', error);
+      logger.error('Error creating initial note for lead:', error);
       // Don't fail lead creation if note creation fails
     }
   }
@@ -346,7 +348,7 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       },
     });
   } catch (error) {
-    console.error('Error creating activity:', error);
+    logger.error('Error creating activity:', error);
     // Don't fail lead creation if activity logging fails
   }
 
@@ -358,7 +360,7 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       leadId: lead.id,
     });
   } catch (error) {
-    console.error('Error triggering workflows for lead creation:', error);
+    logger.error('Error triggering workflows for lead creation:', error);
     // Don't fail the lead creation if workflow trigger fails
   }
 
@@ -446,7 +448,7 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
   });
 
   // Log activity for significant changes
-  const activityData: any[] = [];
+  const activityData: Record<string, any>[] = [];
 
   if (updates.status && updates.status !== existingLead.status) {
     activityData.push({
@@ -510,7 +512,7 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
         leadId: lead.id,
       });
     } catch (error) {
-      console.error('Error triggering workflows for status change:', error);
+      logger.error('Error triggering workflows for status change:', error);
       // Don't fail the lead update if workflow trigger fails
     }
   }
@@ -528,7 +530,7 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
         leadId: lead.id,
       });
     } catch (error) {
-      console.error('Error triggering workflows for lead assignment:', error);
+      logger.error('Error triggering workflows for lead assignment:', error);
       // Don't fail the lead update if workflow trigger fails
     }
   }
@@ -659,7 +661,7 @@ export async function getLeadStats(req: Request, res: Response): Promise<void> {
 
   // Get role-based filter
   const roleFilter = getRoleFilterFromRequest(req);
-  const additionalWhere: Record<string, unknown> = {};
+  const additionalWhere: Record<string, any> = {};
   
   if (assignedToId) {
     additionalWhere.assignedToId = assignedToId as string;
@@ -744,7 +746,7 @@ export async function countFilteredLeads(req: Request, res: Response): Promise<v
   }
 
   // Build where clause from filters
-  const where: any = {};
+  const where: Record<string, any> = {};
 
   filters.forEach((filter) => {
     const { field, operator, value } = filter;
@@ -849,12 +851,12 @@ export async function countFilteredLeads(req: Request, res: Response): Promise<v
       success: true,
       data: { count },
     });
-  } catch (error: any) {
-    console.error('Error counting filtered leads:', error);
+  } catch (error: unknown) {
+    logger.error('Error counting filtered leads:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to count filtered leads',
-      error: error.message,
+      error: getErrorMessage(error),
     });
   }
 }
@@ -875,9 +877,9 @@ export async function recalculateLeadScore(req: Request, res: Response): Promise
       data: { score, category },
       message: 'Lead score updated successfully',
     });
-  } catch (error: any) {
-    console.error('Error recalculating lead score:', error);
-    if (error.message.includes('not found')) {
+  } catch (error: unknown) {
+    logger.error('Error recalculating lead score:', error);
+    if (getErrorMessage(error).includes('not found')) {
       res.status(404).json({
         success: false,
         message: 'Lead not found',
@@ -886,7 +888,7 @@ export async function recalculateLeadScore(req: Request, res: Response): Promise
       res.status(500).json({
         success: false,
         message: 'Failed to recalculate lead score',
-        error: error.message,
+        error: getErrorMessage(error),
       });
     }
   }
@@ -914,12 +916,12 @@ export async function batchRecalculateScores(req: Request, res: Response): Promi
       success: true,
       message: `Successfully updated scores for ${leadIds.length} leads`,
     });
-  } catch (error: any) {
-    console.error('Error batch recalculating scores:', error);
+  } catch (error: unknown) {
+    logger.error('Error batch recalculating scores:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to batch recalculate scores',
-      error: error.message,
+      error: getErrorMessage(error),
     });
   }
 }
@@ -937,12 +939,12 @@ export async function recalculateAllScores(req: Request, res: Response): Promise
       data: result,
       message: `Updated ${result.updated} leads, ${result.errors} errors`,
     });
-  } catch (error: any) {
-    console.error('Error recalculating all scores:', error);
+  } catch (error: unknown) {
+    logger.error('Error recalculating all scores:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to recalculate all scores',
-      error: error.message,
+      error: getErrorMessage(error),
     });
   }
 }
@@ -1003,8 +1005,8 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
 
       res.json({ success: true, data: result });
       return;
-    } catch (err: any) {
-      res.status(500).json({ success: false, message: `Import failed: ${err.message}` });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, message: `Import failed: ${getErrorMessage(err)}` });
       return;
     }
   }
@@ -1020,8 +1022,8 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
       trim: true,
       relax_quotes: true,
     });
-  } catch (parseErr: any) {
-    res.status(400).json({ success: false, message: `CSV parse error: ${parseErr.message}` });
+  } catch (parseErr: unknown) {
+    res.status(400).json({ success: false, message: `CSV parse error: ${getErrorMessage(parseErr)}` });
     return;
   }
 
@@ -1065,9 +1067,9 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
 
       await prisma.lead.create({ data: leadData as any });
       imported++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       skipped++;
-      errors.push(`Row ${i}: ${err.message}`);
+      errors.push(`Row ${i}: ${getErrorMessage(err)}`);
     }
   }
 
@@ -1125,8 +1127,8 @@ export async function previewImport(req: Request, res: Response): Promise<void> 
         mappableFields: MAPPABLE_FIELDS,
       },
     });
-  } catch (err: any) {
-    res.status(400).json({ success: false, message: `Failed to parse file: ${err.message}` });
+  } catch (err: unknown) {
+    res.status(400).json({ success: false, message: `Failed to parse file: ${getErrorMessage(err)}` });
   }
 }
 
@@ -1175,8 +1177,8 @@ export async function checkImportDuplicates(req: Request, res: Response): Promis
         duplicates: duplicates.slice(0, 50), // Limit to first 50
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: `Duplicate check failed: ${err.message}` });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, message: `Duplicate check failed: ${getErrorMessage(err)}` });
   }
 }
 
@@ -1204,12 +1206,12 @@ export async function getLeadsByScore(req: Request, res: Response): Promise<void
       data: leads,
       count: leads.length,
     });
-  } catch (error: any) {
-    console.error('Error getting leads by score category:', error);
+  } catch (error: unknown) {
+    logger.error('Error getting leads by score category:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get leads by score category',
-      error: error.message,
+      error: getErrorMessage(error),
     });
   }
 }
@@ -1420,8 +1422,8 @@ export async function mergeLeads(req: Request, res: Response): Promise<void> {
     });
 
     res.json({ success: true, data: merged });
-  } catch (error: any) {
-    console.error('Error merging leads:', error);
-    res.status(500).json({ success: false, message: `Merge failed: ${error.message}` });
+  } catch (error: unknown) {
+    logger.error('Error merging leads:', error);
+    res.status(500).json({ success: false, message: `Merge failed: ${getErrorMessage(error)}` });
   }
 }

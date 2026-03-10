@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errors'
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { prisma } from '../config/database'
 
@@ -77,14 +79,25 @@ export async function listGoals(req: Request, res: Response) {
     const userId = req.user!.userId
     const activeOnly = req.query.active === 'true'
 
-    const goals = await prisma.goal.findMany({
-      where: {
-        organizationId,
-        userId,
-        ...(activeOnly ? { isActive: true } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    const page = parseInt(req.query.page as string) || 1
+    const limit = Math.min(parseInt(req.query.limit as string) || 25, 100)
+    const skip = (page - 1) * limit
+
+    const goalWhere = {
+      organizationId,
+      userId,
+      ...(activeOnly ? { isActive: true } : {}),
+    }
+
+    const [goals, total] = await Promise.all([
+      prisma.goal.findMany({
+        where: goalWhere,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.goal.count({ where: goalWhere }),
+    ])
 
     // Auto-refresh current values for active goals
     const refreshed = await Promise.all(
@@ -115,16 +128,16 @@ export async function listGoals(req: Request, res: Response) {
 
           return { ...goal, currentValue, progress, isCompleted }
         } catch (error) {
-          console.error(`[GOALS] Failed to calculate metric for goal ${goal.id}:`, error)
+          logger.error(`[GOALS] Failed to calculate metric for goal ${goal.id}:`, error)
           return { ...goal, progress: goal.targetValue > 0 ? Math.round((goal.currentValue / goal.targetValue) * 1000) / 10 : 0 }
         }
       }),
     )
 
-    res.json({ success: true, data: refreshed })
-  } catch (error: any) {
-    console.error('Error listing goals:', error)
-    res.status(500).json({ success: false, message: 'Failed to list goals', error: error.message })
+    res.json({ success: true, data: refreshed, pagination: { page, limit, total, pages: Math.ceil(total / limit) } })
+  } catch (error: unknown) {
+    logger.error('Error listing goals:', error)
+    res.status(500).json({ success: false, message: 'Failed to list goals', error: getErrorMessage(error) })
   }
 }
 
@@ -165,9 +178,9 @@ export async function createGoal(req: Request, res: Response) {
 
     const progress = goal.targetValue > 0 ? Math.round((goal.currentValue / goal.targetValue) * 1000) / 10 : 0
     res.status(201).json({ success: true, data: { ...goal, progress } })
-  } catch (error: any) {
-    console.error('Error creating goal:', error)
-    res.status(500).json({ success: false, message: 'Failed to create goal', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error creating goal:', error)
+    res.status(500).json({ success: false, message: 'Failed to create goal', error: getErrorMessage(error) })
   }
 }
 
@@ -183,7 +196,7 @@ export async function updateGoal(req: Request, res: Response) {
       return res.status(404).json({ success: false, message: 'Goal not found' })
     }
 
-    const updateData: any = {}
+    const updateData: Record<string, any> = {}
     if (name !== undefined) updateData.name = name
     if (targetValue !== undefined) updateData.targetValue = parseFloat(targetValue)
     if (endDate !== undefined) updateData.endDate = new Date(endDate)
@@ -198,9 +211,9 @@ export async function updateGoal(req: Request, res: Response) {
     })
 
     res.json({ success: true, data: goal })
-  } catch (error: any) {
-    console.error('Error updating goal:', error)
-    res.status(500).json({ success: false, message: 'Failed to update goal', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error updating goal:', error)
+    res.status(500).json({ success: false, message: 'Failed to update goal', error: getErrorMessage(error) })
   }
 }
 
@@ -217,9 +230,9 @@ export async function deleteGoal(req: Request, res: Response) {
 
     await prisma.goal.delete({ where: { id } })
     res.json({ success: true, message: 'Goal deleted' })
-  } catch (error: any) {
-    console.error('Error deleting goal:', error)
-    res.status(500).json({ success: false, message: 'Failed to delete goal', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error deleting goal:', error)
+    res.status(500).json({ success: false, message: 'Failed to delete goal', error: getErrorMessage(error) })
   }
 }
 
@@ -245,8 +258,8 @@ export async function getGoal(req: Request, res: Response) {
     const progress = goal.targetValue > 0 ? Math.min(100, Math.round((currentValue / goal.targetValue) * 1000) / 10) : 0
 
     res.json({ success: true, data: { ...goal, currentValue, progress } })
-  } catch (error: any) {
-    console.error('Error fetching goal:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch goal', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching goal:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch goal', error: getErrorMessage(error) })
   }
 }

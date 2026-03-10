@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database'
 
 export interface MessageContext {
@@ -64,7 +65,7 @@ export async function gatherMessageContext(
   // If lead not found, this might be a direct message to email/phone (not a lead in system)
   // Get conversation messages to build context from actual communication
   if (!lead) {
-    console.log(`No lead record for ${leadId}, building context from conversation messages`)
+    logger.info(`No lead record for ${leadId}, building context from conversation messages`)
     
     // Get all messages in this conversation
     const messages = await prisma.message.findMany({
@@ -82,7 +83,7 @@ export async function gatherMessageContext(
     
     // If no messages at all, this is a brand new conversation
     if (messages.length === 0) {
-      console.log('New conversation with no history')
+      logger.info('New conversation with no history')
       
       // Use the leadId/conversationId as the identifier (could be phone or email)
       const isEmail = leadId.includes('@')

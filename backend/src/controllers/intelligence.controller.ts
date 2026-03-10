@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errors'
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { getIntelligenceService } from '../services/intelligence.service';
@@ -39,11 +41,11 @@ export async function getLeadPrediction(req: Request, res: Response): Promise<vo
       success: true,
       data: prediction,
     });
-  } catch (error: any) {
-    console.error('Error getting lead prediction:', error);
+  } catch (error: unknown) {
+    logger.error('Error getting lead prediction:', error);
     res.status(500).json({
       error: 'Failed to generate prediction',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }
@@ -80,11 +82,11 @@ export async function getLeadEngagement(req: Request, res: Response): Promise<vo
       success: true,
       data: engagement,
     });
-  } catch (error: any) {
-    console.error('Error analyzing lead engagement:', error);
+  } catch (error: unknown) {
+    logger.error('Error analyzing lead engagement:', error);
     res.status(500).json({
       error: 'Failed to analyze engagement',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }
@@ -122,11 +124,11 @@ export async function getNextAction(req: Request, res: Response): Promise<void> 
       success: true,
       data: action,
     });
-  } catch (error: any) {
-    console.error('Error getting next action suggestion:', error);
+  } catch (error: unknown) {
+    logger.error('Error getting next action suggestion:', error);
     res.status(500).json({
       error: 'Failed to generate action suggestion',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }
@@ -151,11 +153,11 @@ export async function getDashboardInsights(req: Request, res: Response): Promise
       success: true,
       data: insights,
     });
-  } catch (error: any) {
-    console.error('Error generating dashboard insights:', error);
+  } catch (error: unknown) {
+    logger.error('Error generating dashboard insights:', error);
     res.status(500).json({
       error: 'Failed to generate insights',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }
@@ -183,11 +185,11 @@ export async function getTrends(req: Request, res: Response): Promise<void> {
         summary: insights.summary,
       },
     });
-  } catch (error: any) {
-    console.error('Error getting trends:', error);
+  } catch (error: unknown) {
+    logger.error('Error getting trends:', error);
     res.status(500).json({
       error: 'Failed to get trends',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }
@@ -248,11 +250,11 @@ export async function analyzeBatch(req: Request, res: Response): Promise<void> {
             engagement,
             action,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           return {
             leadId,
             success: false,
-            error: error.message,
+            error: getErrorMessage(error),
           };
         }
       })
@@ -270,11 +272,11 @@ export async function analyzeBatch(req: Request, res: Response): Promise<void> {
         errors: failed,
       },
     });
-  } catch (error: any) {
-    console.error('Error in batch analysis:', error);
+  } catch (error: unknown) {
+    logger.error('Error in batch analysis:', error);
     res.status(500).json({
       error: 'Failed to analyze batch',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }
@@ -301,11 +303,11 @@ export async function optimizeScoring(req: Request, res: Response): Promise<void
       data: result,
       message: `Optimization complete. Accuracy: ${result.accuracy.toFixed(1)}% (${result.sampleSize} leads analyzed)`,
     });
-  } catch (error: any) {
-    console.error('Error optimizing scoring:', error);
+  } catch (error: unknown) {
+    logger.error('Error optimizing scoring:', error);
     res.status(500).json({
       error: 'Failed to optimize scoring',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }
@@ -351,11 +353,11 @@ export async function recordConversion(req: Request, res: Response): Promise<voi
       success: true,
       message: 'Conversion outcome recorded successfully',
     });
-  } catch (error: any) {
-    console.error('Error recording conversion:', error);
+  } catch (error: unknown) {
+    logger.error('Error recording conversion:', error);
     res.status(500).json({
       error: 'Failed to record conversion',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }
@@ -408,11 +410,11 @@ export async function getScoringModel(req: Request, res: Response): Promise<void
         message: `Your personalized AI model trained on ${model.trainingDataCount} conversions`,
       },
     });
-  } catch (error: any) {
-    console.error('Error getting scoring model:', error);
+  } catch (error: unknown) {
+    logger.error('Error getting scoring model:', error);
     res.status(500).json({
       error: 'Failed to get scoring model',
-      message: error.message,
+      message: getErrorMessage(error),
     });
   }
 }

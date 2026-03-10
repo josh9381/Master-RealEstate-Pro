@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Workflow as WorkflowIcon, Plus, Play, Pause, Edit, Trash2, BarChart3, RefreshCw, LayoutGrid, LayoutList, ChevronRight } from 'lucide-react';
@@ -109,7 +110,7 @@ const WorkflowsList = () => {
       toast.success(`Workflow ${newActiveState ? 'activated' : 'paused'} successfully`);
       await refetch();
     } catch (error: unknown) {
-      console.error('Failed to toggle workflow:', error);
+      logger.error('Failed to toggle workflow:', error);
       const errorMessage = (error as Error & { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to toggle workflow status';
       toast.error(errorMessage);
     }
@@ -133,7 +134,7 @@ const WorkflowsList = () => {
       toast.success('Workflow deleted successfully');
       await refetch();
     } catch (error: unknown) {
-      console.error('Failed to delete workflow:', error);
+      logger.error('Failed to delete workflow:', error);
       const errorMessage = (error as Error & { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete workflow';
       toast.error(errorMessage);
     }

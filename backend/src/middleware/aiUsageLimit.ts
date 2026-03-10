@@ -4,6 +4,7 @@
  * Returns 429 with upgrade message when limit is hit.
  */
 
+import { logger } from '../lib/logger'
 import { Request, Response, NextFunction } from 'express'
 import { checkUsageLimit, AIUsageType, getMonthlyUsage } from '../services/usage-tracking.service'
 import { getUpgradeMessage } from '../config/subscriptions'
@@ -73,8 +74,8 @@ export function checkAIUsage(type: AIUsageType) {
       }
 
       next()
-    } catch (error: any) {
-      console.error('AI usage check error:', error)
+    } catch (error: unknown) {
+      logger.error('AI usage check error:', error)
       // Don't block on usage check errors — let the request through
       next()
     }

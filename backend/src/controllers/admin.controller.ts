@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { Role, ActivityType } from '@prisma/client';
 import { prisma } from '../config/database';
@@ -37,7 +38,7 @@ export const getSystemSettings = async (req: Request, res: Response) => {
 
     res.json({ success: true, data: settings });
   } catch (error) {
-    console.error('Error fetching system settings:', error);
+    logger.error('Error fetching system settings:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch system settings' });
   }
 };
@@ -68,7 +69,7 @@ export const updateSystemSettings = async (req: Request, res: Response) => {
 
     res.json({ success: true, data: systemSettingsStore[organizationId] });
   } catch (error) {
-    console.error('Error updating system settings:', error);
+    logger.error('Error updating system settings:', error);
     res.status(500).json({ success: false, message: 'Failed to update system settings' });
   }
 };
@@ -92,7 +93,7 @@ export const healthCheck = async (req: Request, res: Response) => {
         uptime: '99.9%',
       });
     } catch (error) {
-      console.error('[ADMIN] Database health check failed:', error)
+      logger.error('[ADMIN] Database health check failed:', error)
       services.push({
         name: 'Database',
         status: 'down',
@@ -125,7 +126,7 @@ export const healthCheck = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error running health check:', error);
+    logger.error('Error running health check:', error);
     res.status(500).json({ success: false, message: 'Health check failed' });
   }
 };
@@ -143,7 +144,7 @@ export const runMaintenance = async (req: Request, res: Response) => {
     }
 
     // Log the maintenance request
-    console.log(`Maintenance operation requested: ${operation}`, { vacuumFull, analyze, table });
+    logger.info(`Maintenance operation requested: ${operation}`, { vacuumFull, analyze, table });
 
     switch (operation) {
       case 'optimize':
@@ -338,7 +339,7 @@ export const runMaintenance = async (req: Request, res: Response) => {
         return res.status(400).json({ success: false, message: `Unknown operation: ${operation}` });
     }
   } catch (error) {
-    console.error('Error running maintenance operation:', error);
+    logger.error('Error running maintenance operation:', error);
     res.status(500).json({ success: false, message: 'Maintenance operation failed' });
   }
 };
@@ -359,7 +360,7 @@ export const downloadBackup = async (req: Request, res: Response) => {
     try {
       await fs.access(backup.filePath);
     } catch (error) {
-      console.error('[ADMIN] Backup file not found on disk:', error)
+      logger.error('[ADMIN] Backup file not found on disk:', error)
       return res.status(404).json({ success: false, message: 'Backup file no longer available on disk' });
     }
 
@@ -368,7 +369,7 @@ export const downloadBackup = async (req: Request, res: Response) => {
     const fileStream = await fs.readFile(backup.filePath);
     return res.send(fileStream);
   } catch (error) {
-    console.error('Error downloading backup:', error);
+    logger.error('Error downloading backup:', error);
     res.status(500).json({ success: false, message: 'Failed to download backup' });
   }
 };
@@ -504,7 +505,7 @@ export const getAdminStats = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching admin stats:', error);
+    logger.error('Error fetching admin stats:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch admin statistics' });
   }
 };
@@ -560,7 +561,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching team members:', error);
+    logger.error('Error fetching team members:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch team members' });
   }
 };
@@ -670,7 +671,7 @@ export const getActivityLogs = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching activity logs:', error);
+    logger.error('Error fetching activity logs:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch activity logs' });
   }
 };

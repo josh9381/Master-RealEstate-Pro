@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Database, Cpu, HardDrive, Network, CheckCircle, AlertTriangle, XCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -39,7 +40,7 @@ const HealthCheckDashboard = () => {
       } catch (error: unknown) {
         const err = error as { response?: { status?: number } }
         if (err?.response?.status !== 404) {
-          console.error('Health check failed:', error);
+          logger.error('Health check failed:', error);
         }
       }
       return defaultServices;

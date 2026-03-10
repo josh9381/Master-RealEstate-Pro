@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -146,7 +147,7 @@ export function NotificationsPage() {
     try {
       await markAsReadMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Failed to mark notification as read:', error)
+      logger.error('Failed to mark notification as read:', error)
       toast.error('Failed to mark notification as read')
     }
   }
@@ -159,7 +160,7 @@ export function NotificationsPage() {
       setSelectedIds([])
       toast.success(`Marked ${count} notifications as read`)
     } catch (error) {
-      console.error('Failed to mark selected as read:', error)
+      logger.error('Failed to mark selected as read:', error)
       toast.error('Failed to mark selected as read')
     }
   }
@@ -176,7 +177,7 @@ export function NotificationsPage() {
       setSelectedIds([])
       toast.success(`Deleted ${count} notifications`)
     } catch (error) {
-      console.error('Failed to delete selected notifications:', error)
+      logger.error('Failed to delete selected notifications:', error)
       toast.error('Failed to delete selected notifications')
     }
   }
@@ -187,7 +188,7 @@ export function NotificationsPage() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('All notifications cleared')
     } catch (error) {
-      console.error('Failed to clear notifications:', error)
+      logger.error('Failed to clear notifications:', error)
       toast.error('Failed to clear notifications')
     }
   }
@@ -197,7 +198,7 @@ export function NotificationsPage() {
       await deleteMutation.mutateAsync(id)
       toast.success('Notification removed')
     } catch (error) {
-      console.error('Failed to delete notification:', error)
+      logger.error('Failed to delete notification:', error)
       toast.error('Failed to delete notification')
     }
   }

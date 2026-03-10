@@ -1,4 +1,4 @@
-import { Shield, Database, AlertTriangle, Settings, Download, RefreshCw } from 'lucide-react';
+import { Shield, Database, Settings, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -129,23 +129,7 @@ const AdminPanel = () => {
                   Data Export Wizard
                 </Button>
 
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => navigate('/admin/retry-queue')}
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Retry Queue
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => navigate('/admin/debug')}
-                >
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  System Logs
-                </Button>
+
                 
                 <Button 
                   variant="outline" 

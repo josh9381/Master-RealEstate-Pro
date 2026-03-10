@@ -6,6 +6,7 @@
  * and updates the ABTest record.
  */
 
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 
 export type WinnerMetric = 'open_rate' | 'click_rate';
@@ -173,7 +174,7 @@ export async function declareWinner(
     },
   });
 
-  console.log(`[A/B TEST] Winner declared for test ${testId}: Variant ${winnerVariant} (${metric}, confidence: ${(confidence * 100).toFixed(1)}%)`);
+  logger.info(`[A/B TEST] Winner declared for test ${testId}: Variant ${winnerVariant} (${metric}, confidence: ${(confidence * 100).toFixed(1)}%)`);
 }
 
 /**
@@ -228,7 +229,7 @@ export async function processABTestAutoWinners(): Promise<void> {
       const evalDeadline = new Date(testStart.getTime() + evalHours * 60 * 60 * 1000);
 
       if (now < evalDeadline) {
-        console.log(`[A/B TEST] Test ${test.id} not yet ready for evaluation (deadline: ${evalDeadline.toISOString()})`);
+        logger.info(`[A/B TEST] Test ${test.id} not yet ready for evaluation (deadline: ${evalDeadline.toISOString()})`);
         continue;
       }
 
@@ -236,14 +237,14 @@ export async function processABTestAutoWinners(): Promise<void> {
       const evaluation = await evaluateABTest(test.id, metric);
       await declareWinner(test.id, evaluation.winner, metric, evaluation.confidence);
 
-      console.log(
+      logger.info(
         `[A/B TEST] Auto-winner for test ${test.id}: ` +
         `Variant ${evaluation.winner} ` +
         `(A: ${evaluation.variantA.openRate.toFixed(1)}% open / ${evaluation.variantA.clickRate.toFixed(1)}% click, ` +
         `B: ${evaluation.variantB.openRate.toFixed(1)}% open / ${evaluation.variantB.clickRate.toFixed(1)}% click)`
       );
     } catch (err) {
-      console.error(`[A/B TEST] Error evaluating test ${test.id}:`, err);
+      logger.error(`[A/B TEST] Error evaluating test ${test.id}:`, err);
     }
   }
 }

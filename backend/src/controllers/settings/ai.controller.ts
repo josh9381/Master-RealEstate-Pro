@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../utils/errors'
 /**
  * AI Settings Controller (Phase 3C)
  * Org admins manage their AI configuration:
@@ -7,6 +8,7 @@
  * - Set monthly token budget
  */
 
+import { logger } from '../../lib/logger'
 import { Request, Response } from 'express'
 import { getOrgAISettings, updateOrgAISettings } from '../../services/ai-config.service'
 
@@ -23,12 +25,12 @@ export const getAISettings = async (req: Request, res: Response) => {
       success: true,
       data: settings,
     })
-  } catch (error: any) {
-    console.error('Get AI settings error:', error)
+  } catch (error: unknown) {
+    logger.error('Get AI settings error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch AI settings',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -92,12 +94,12 @@ export const updateAISettings = async (req: Request, res: Response) => {
       data: updated,
       message: 'AI settings updated successfully',
     })
-  } catch (error: any) {
-    console.error('Update AI settings error:', error)
+  } catch (error: unknown) {
+    logger.error('Update AI settings error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to update AI settings',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -119,12 +121,12 @@ export const removeAPIKey = async (req: Request, res: Response) => {
       success: true,
       message: 'API key removed. Your organization will use the platform AI key.',
     })
-  } catch (error: any) {
-    console.error('Remove API key error:', error)
+  } catch (error: unknown) {
+    logger.error('Remove API key error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to remove API key',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }

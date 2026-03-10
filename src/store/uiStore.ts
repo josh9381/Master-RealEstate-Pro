@@ -14,7 +14,7 @@ export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
       sidebarOpen: true,
-      theme: 'light',
+      theme: (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light',
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleTheme: () =>
@@ -31,9 +31,19 @@ export const useUIStore = create<UIState>()(
     {
       name: 'ui-preferences',
       partialize: (state) => ({ sidebarOpen: state.sidebarOpen, theme: state.theme }),
-      onRehydrateStorage: () => (rehydratedState) => {
+      onRehydrateStorage: () => (rehydratedState, error) => {
+        if (error) {
+          // If stored state is corrupted, fall back to system preference
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          document.documentElement.classList.toggle('dark', prefersDark)
+          return
+        }
         if (rehydratedState) {
           document.documentElement.classList.toggle('dark', rehydratedState.theme === 'dark')
+        } else {
+          // No stored preference — use system preference
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          document.documentElement.classList.toggle('dark', prefersDark)
         }
       },
     }

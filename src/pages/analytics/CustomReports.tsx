@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, TrendingUp, Filter, Download, RefreshCw, Layout, Plus, Settings, X, GripVertical, Clock, Trash2, Pause, Play, Calendar } from 'lucide-react';
@@ -412,7 +413,7 @@ const CustomReports = () => {
       newWidget.value = value;
       setWidgets(prev => [...prev, newWidget]);
     } catch (err) {
-      console.error('Drop parse error:', err);
+      logger.error('Drop parse error:', err);
     }
   };
 
@@ -1135,7 +1136,7 @@ const CustomReports = () => {
                   refetchSaved();
                   toast.success(`Report "${reportName}" saved successfully`);
                 } catch (error) {
-                  console.error('Failed to save report:', error)
+                  logger.error('Failed to save report:', error)
                   toast.error('Failed to save report. Please try again.');
                 }
               }}>Save Report</Button>

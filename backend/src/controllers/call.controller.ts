@@ -102,7 +102,7 @@ export async function getCalls(req: Request, res: Response) {
   const { leadId, direction, outcome, limit, offset, sortBy, sortOrder } =
     (req as any).validatedQuery || req.query;
 
-  const where: any = { organizationId };
+  const where: Record<string, any> = { organizationId };
   if (leadId) where.leadId = leadId;
   if (direction) where.direction = direction;
   if (outcome) where.outcome = outcome;
@@ -173,7 +173,7 @@ export async function updateCall(req: Request, res: Response) {
     return res.status(404).json({ success: false, message: 'Call not found' });
   }
 
-  const updateData: any = {};
+  const updateData: Record<string, any> = {};
   if (outcome !== undefined) updateData.outcome = outcome;
   if (duration !== undefined) updateData.duration = duration;
   if (notes !== undefined) updateData.notes = notes;
@@ -366,7 +366,7 @@ export async function getCallStats(req: Request, res: Response) {
   const organizationId = (req as any).user!.organizationId;
   const leadId = req.query.leadId as string | undefined;
 
-  const where: any = { organizationId };
+  const where: Record<string, any> = { organizationId };
   if (leadId) where.leadId = leadId;
 
   const [total, byOutcome, byDirection, avgDuration] = await Promise.all([

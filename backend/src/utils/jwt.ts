@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import jwt from "jsonwebtoken";
 import { UnauthorizedError } from "../middleware/errorHandler";
 
@@ -7,32 +8,32 @@ const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET;
 
 // Validate JWT secrets are configured
 if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
-  console.error('❌ FATAL: JWT secrets are not configured!');
-  console.error('Please set JWT_ACCESS_SECRET and JWT_REFRESH_SECRET in your .env file');
-  console.error('Generate strong secrets with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  logger.error('❌ FATAL: JWT secrets are not configured!');
+  logger.error('Please set JWT_ACCESS_SECRET and JWT_REFRESH_SECRET in your .env file');
+  logger.error('Generate strong secrets with: node -e "logger.info(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
   process.exit(1);
 }
 
 // Validate secret strength (minimum 32 characters for 256-bit security)
 if (ACCESS_TOKEN_SECRET.length < 32) {
-  console.error('❌ FATAL: JWT_ACCESS_SECRET must be at least 32 characters (256-bit)');
-  console.error('Current length:', ACCESS_TOKEN_SECRET.length);
+  logger.error('❌ FATAL: JWT_ACCESS_SECRET must be at least 32 characters (256-bit)');
+  logger.error('Current length:', ACCESS_TOKEN_SECRET.length);
   process.exit(1);
 }
 
 if (REFRESH_TOKEN_SECRET.length < 32) {
-  console.error('❌ FATAL: JWT_REFRESH_SECRET must be at least 32 characters (256-bit)');
-  console.error('Current length:', REFRESH_TOKEN_SECRET.length);
+  logger.error('❌ FATAL: JWT_REFRESH_SECRET must be at least 32 characters (256-bit)');
+  logger.error('Current length:', REFRESH_TOKEN_SECRET.length);
   process.exit(1);
 }
 
 // Warn if secrets are the same (should be different)
 if (ACCESS_TOKEN_SECRET === REFRESH_TOKEN_SECRET) {
-  console.warn('⚠️  WARNING: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET should be different!');
-  console.warn('Using the same secret for both tokens is not recommended.');
+  logger.warn('⚠️  WARNING: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET should be different!');
+  logger.warn('Using the same secret for both tokens is not recommended.');
 }
 
-console.log('✅ JWT secrets validated successfully');
+logger.info('✅ JWT secrets validated successfully');
 
 const ACCESS_TOKEN_EXPIRY = "15m"; // 15 minutes
 const REFRESH_TOKEN_EXPIRY_LONG = "7d"; // 7 days (remember me)

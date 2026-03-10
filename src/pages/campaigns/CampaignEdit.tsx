@@ -8,8 +8,6 @@ import { ArrowLeft, Save } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
-import { mockCampaigns } from '@/data/mockData'
-import { MOCK_DATA_CONFIG } from '@/config/mockData.config'
 
 function CampaignEdit() {
   const { id } = useParams()
@@ -38,10 +36,6 @@ function CampaignEdit() {
         const response = await campaignsApi.getCampaign(id!)
         return response.data?.campaign || response.data || null
       } catch (err) {
-        if (MOCK_DATA_CONFIG.USE_MOCK_DATA) {
-          const mockCampaign = mockCampaigns.find(c => String(c.id) === id)
-          return mockCampaign || null
-        }
         throw err
       }
     },
@@ -134,7 +128,7 @@ function CampaignEdit() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/campaigns/${id}`)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/campaigns/${id}`)} aria-label="Go back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>

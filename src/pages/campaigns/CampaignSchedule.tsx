@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -121,7 +122,7 @@ const CampaignSchedule = () => {
           toast.success(`Campaign "${campaignName}" sent successfully! Sent to ${result.data.sent} recipients.`);
           await loadCampaigns();
         } catch (error: unknown) {
-          console.error('Error sending campaign:', error);
+          logger.error('Error sending campaign:', error);
           toast.error(error instanceof Error ? error.message : 'Failed to send campaign');
         }
       }
@@ -140,7 +141,7 @@ const CampaignSchedule = () => {
           toast.success(`Campaign "${campaignName}" cancelled`);
           await loadCampaigns();
         } catch (error: unknown) {
-          console.error('Error cancelling campaign:', error);
+          logger.error('Error cancelling campaign:', error);
           toast.error(error instanceof Error ? error.message : 'Failed to cancel campaign');
         }
       }
@@ -198,7 +199,7 @@ const CampaignSchedule = () => {
       closeRescheduleModal();
       await loadCampaigns();
     } catch (error: unknown) {
-      console.error('Error rescheduling campaign:', error);
+      logger.error('Error rescheduling campaign:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to reschedule campaign');
     }
   };

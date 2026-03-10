@@ -8,6 +8,7 @@ import {
   MODEL_PRICING,
 } from './ai-config.service';
 import { withRetryAndFallback } from '../utils/ai-retry';
+import { logger } from '../lib/logger';
 import { aiLogger } from '../utils/ai-logger';
 import { buildCacheKey, getOrCompute } from './ai-cache.service';
 
@@ -99,7 +100,7 @@ export class OpenAIService {
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      console.warn('[OpenAI] OPENAI_API_KEY not set — AI features will be unavailable unless org provides their own key');
+      logger.warn('[OpenAI] OPENAI_API_KEY not set — AI features will be unavailable unless org provides their own key');
     }
 
     this.client = new OpenAI({
@@ -124,7 +125,7 @@ export class OpenAIService {
         const model = task ? getModelForTask(task, config.model) : config.model;
         return { client, model, config };
       } catch (error) {
-        console.warn('Failed to resolve org AI config, falling back to default:', error);
+        logger.warn('Failed to resolve org AI config, falling back to default:', error);
       }
     }
     return { client: this.client, model: this.model };
@@ -236,7 +237,7 @@ export class OpenAIService {
           const functionCall = toolCall.function;
           const functionArgs = JSON.parse(functionCall.arguments || '{}');
 
-          console.log(`🤖 AI wants to call function: ${functionCall.name}`, functionArgs);
+          logger.info(`🤖 AI wants to call function: ${functionCall.name}`, functionArgs);
 
           return {
             response: '',
@@ -255,7 +256,7 @@ export class OpenAIService {
       return { response, tokens, cost };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('OpenAI chat with functions error:', error);
+      logger.error('OpenAI chat with functions error:', error);
       throw new Error(`AI chat with functions failed: ${errorMessage}`);
     }
   }
@@ -301,7 +302,7 @@ Return only a number between 0-100.`;
 
         return Math.min(Math.max(score, 0), 100); // Clamp between 0-100
       } catch (error: unknown) {
-        console.error('OpenAI lead scoring error:', error);
+        logger.error('OpenAI lead scoring error:', error);
         return 50; // Default to neutral score on error
       }
     });
@@ -352,7 +353,7 @@ Return only the enhanced message, no explanations.`;
       return { enhanced, tokens, cost };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('OpenAI message enhancement error:', error);
+      logger.error('OpenAI message enhancement error:', error);
       throw new Error(`Message enhancement failed: ${errorMessage}`);
     }
   }
@@ -425,7 +426,7 @@ Return as JSON array:
       }));
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('OpenAI email sequence generation error:', error);
+      logger.error('OpenAI email sequence generation error:', error);
       throw new Error(`Email sequence generation failed: ${errorMessage}`);
     }
     }); // end getOrCompute
@@ -478,7 +479,7 @@ Return only the SMS text, no quotes or explanations.`;
       return sms.trim().substring(0, 160);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('OpenAI SMS generation error:', error);
+      logger.error('OpenAI SMS generation error:', error);
       throw new Error(`SMS generation failed: ${errorMessage}`);
     }
   }
@@ -540,7 +541,7 @@ Use vivid, descriptive language that helps buyers visualize living there.`;
       return completion.choices[0]?.message?.content || 'Beautiful property available.';
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('OpenAI property description generation error:', error);
+      logger.error('OpenAI property description generation error:', error);
       throw new Error(`Property description generation failed: ${errorMessage}`);
     }
     }); // end getOrCompute
@@ -604,7 +605,7 @@ Return as JSON:
       return JSON.parse(responseText);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('OpenAI social post generation error:', error);
+      logger.error('OpenAI social post generation error:', error);
       throw new Error(`Social post generation failed: ${errorMessage}`);
     }
     }); // end getOrCompute
@@ -686,7 +687,7 @@ Return as JSON:
       };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('OpenAI listing presentation generation error:', error);
+      logger.error('OpenAI listing presentation generation error:', error);
       throw new Error(`Listing presentation generation failed: ${errorMessage}`);
     }
     }); // end getOrCompute
@@ -728,7 +729,7 @@ Return as JSON:
       }
     } catch (error: unknown) {
       const err = error as Error
-      console.error('OpenAI streaming error:', err.message)
+      logger.error('OpenAI streaming error:', err.message)
       throw new Error(`OpenAI streaming failed: ${err.message}`)
     }
   }
@@ -781,7 +782,7 @@ export const getOpenAIService = (): OpenAIService => {
     try {
       openAIService = new OpenAIService();
     } catch (error) {
-      console.error('Failed to initialize OpenAIService:', error);
+      logger.error('Failed to initialize OpenAIService:', error);
       throw error;
     }
   }
@@ -800,5 +801,5 @@ export const rotatePlatformKey = (newKey?: string): void => {
     process.env.OPENAI_API_KEY = newKey;
   }
   openAIService = null;
-  console.log('[Key Rotation] OpenAI platform key rotated, singleton reset');
+  logger.info('[Key Rotation] OpenAI platform key rotated, singleton reset');
 };

@@ -4,6 +4,8 @@
  * Structured JSON format for production log aggregation.
  */
 
+import { logger } from '../lib/logger'
+
 export interface AILogEntry {
   timestamp: string
   event: 'ai_call_start' | 'ai_call_success' | 'ai_call_error' | 'ai_spend_alert'
@@ -56,7 +58,7 @@ class AILogger {
     }
 
     if (this.shouldLog('debug')) {
-      console.log(JSON.stringify(entry))
+      logger.info(JSON.stringify(entry))
     }
 
     return { startTime: Date.now() }
@@ -100,7 +102,7 @@ class AILogger {
     }
 
     if (this.shouldLog('info')) {
-      console.log(JSON.stringify(entry))
+      logger.info(JSON.stringify(entry))
     }
   }
 
@@ -134,7 +136,7 @@ class AILogger {
       metadata: params.metadata,
     }
 
-    console.error(JSON.stringify(entry))
+    logger.error(JSON.stringify(entry))
   }
 
   /**
@@ -161,7 +163,7 @@ class AILogger {
       },
     }
 
-    console.warn(JSON.stringify(entry))
+    logger.warn(JSON.stringify(entry))
   }
 
   private shouldLog(level: string): boolean {

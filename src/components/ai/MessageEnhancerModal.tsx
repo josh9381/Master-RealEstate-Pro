@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Sparkles, Loader2, Check, X } from 'lucide-react';
@@ -46,7 +47,7 @@ export function MessageEnhancerModal({
       setEnhancedText(result.data.enhanced);
       toast.success('Message enhanced successfully!');
     } catch (error) {
-      console.error('Enhancement error:', error);
+      logger.error('Enhancement error:', error);
       const aiMsg = getAIUnavailableMessage(error);
       if (aiMsg) {
         toast.error(aiMsg);
@@ -91,6 +92,7 @@ export function MessageEnhancerModal({
             size="icon"
             onClick={onClose}
             className="hover:bg-white/50"
+            aria-label="Close enhancer"
           >
             <X className="h-5 w-5" />
           </Button>

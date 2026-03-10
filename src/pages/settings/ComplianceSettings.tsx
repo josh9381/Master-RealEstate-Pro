@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Shield, CheckCircle, AlertTriangle, FileText, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -59,7 +60,7 @@ const ComplianceSettings = () => {
       }
       if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
-      console.error('Failed to load compliance settings:', error);
+      logger.error('Failed to load compliance settings:', error);
       toast.error('Failed to load settings, using defaults');
     } finally {
       setLoading(false);

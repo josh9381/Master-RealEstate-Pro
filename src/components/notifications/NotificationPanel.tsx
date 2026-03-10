@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
@@ -44,7 +45,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
       const response = await notificationsApi.getNotifications({ limit: 50 })
       setNotifications(response.data?.notifications || [])
     } catch (error) {
-      console.error('Failed to load notifications:', error)
+      logger.error('Failed to load notifications:', error)
       toast.error('Failed to load notifications')
     } finally {
       setIsLoading(false)
@@ -102,7 +103,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
         n.id === id ? { ...n, read: true } : n
       ))
     } catch (error) {
-      console.error('Failed to mark as read:', error)
+      logger.error('Failed to mark as read:', error)
     }
   }
 
@@ -113,7 +114,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
       onMarkAllRead()
       toast.success('All notifications marked as read')
     } catch (error) {
-      console.error('Failed to mark all as read:', error)
+      logger.error('Failed to mark all as read:', error)
       toast.error('Failed to mark all as read')
     }
   }
@@ -133,7 +134,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
       setNotifications(notifications.filter((n: Notification) => n.id !== id))
       toast.success('Notification removed')
     } catch (error) {
-      console.error('Failed to delete notification:', error)
+      logger.error('Failed to delete notification:', error)
       toast.error('Failed to remove notification')
     }
   }

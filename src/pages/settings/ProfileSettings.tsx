@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Camera, RefreshCw, Lock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -88,7 +89,7 @@ const ProfileSettings = () => {
         queryClient.invalidateQueries({ queryKey: ['settings', 'profile'] });
         toast.success('Profile photo updated!');
       } catch (err) {
-        console.error('Avatar upload failed:', err);
+        logger.error('Avatar upload failed:', err);
         toast.error('Failed to upload photo. Please try again.');
       }
     };
@@ -104,7 +105,7 @@ const ProfileSettings = () => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'profile'] });
     },
     onError: (error) => {
-      console.error('Failed to update profile:', error);
+      logger.error('Failed to update profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
       toast.error(errorMessage);
     },
@@ -141,7 +142,7 @@ const ProfileSettings = () => {
       setShowPasswordSection(false);
     },
     onError: (error) => {
-      console.error('Failed to change password:', error);
+      logger.error('Failed to change password:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to change password';
       toast.error(errorMessage);
     },

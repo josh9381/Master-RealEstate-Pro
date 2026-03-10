@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -155,7 +156,7 @@ const EmailTemplatesLibrary = () => {
       resetForm()
       refetch()
     } catch (error: unknown) {
-      console.error('Failed to save template:', error)
+      logger.error('Failed to save template:', error)
       const errMsg = error instanceof Error ? error.message : 'Failed to save template'
       const axiosError = error as { response?: { data?: { message?: string } } }
       toast.error(axiosError?.response?.data?.message || errMsg)
@@ -171,7 +172,7 @@ const EmailTemplatesLibrary = () => {
       setShowDeleteConfirm(null)
       refetch()
     } catch (error: unknown) {
-      console.error('Failed to delete template:', error)
+      logger.error('Failed to delete template:', error)
       const axiosError = error as { response?: { data?: { message?: string } } }
       toast.error(axiosError?.response?.data?.message || 'Failed to delete template')
     }

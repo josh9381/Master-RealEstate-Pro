@@ -4,6 +4,7 @@
  * Called after every AI request to increment counters.
  */
 
+import { logger } from '../lib/logger'
 import { SubscriptionTier } from '@prisma/client'
 import prisma from '../config/database'
 import { AI_PLAN_LIMITS } from '../config/subscriptions'
@@ -58,7 +59,7 @@ export async function incrementAIUsage(
   if (!subscription) {
     // No subscription = free tier; still track usage
     // Try to find or create a default subscription record
-    console.warn(`No subscription found for org ${organizationId}, skipping usage tracking`)
+    logger.warn(`No subscription found for org ${organizationId}, skipping usage tracking`)
     return
   }
 

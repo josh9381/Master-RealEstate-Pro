@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -39,7 +40,7 @@ const ConversionReports = () => {
       try {
         funnelData = await analyticsApi.getConversionFunnel(params);
       } catch (error) {
-        console.error('Conversion funnel endpoint unavailable:', error)
+        logger.error('Conversion funnel endpoint unavailable:', error)
         // Optional endpoint
       }
       const leadResult = leads?.data || leads;

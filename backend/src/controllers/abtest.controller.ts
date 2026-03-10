@@ -1,8 +1,10 @@
+import { getErrorMessage } from '../utils/errors'
 /**
  * A/B Testing Controller
  * Handles HTTP requests for A/B test management
  */
 
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { getABTestService } from '../services/abtest.service';
 import { ABTestType } from '@prisma/client';
@@ -50,7 +52,7 @@ export async function createTest(req: Request, res: Response) {
 
     res.status(201).json({ success: true, data: test });
   } catch (error) {
-    console.error('Error creating A/B test:', error);
+    logger.error('Error creating A/B test:', error);
     res.status(500).json({ success: false, message: 'Failed to create A/B test' });
   }
 }
@@ -71,7 +73,7 @@ export async function getTests(req: Request, res: Response) {
 
     res.json({ success: true, data: tests });
   } catch (error) {
-    console.error('Error fetching A/B tests:', error);
+    logger.error('Error fetching A/B tests:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch A/B tests' });
   }
 }
@@ -102,7 +104,7 @@ export async function getTest(req: Request, res: Response) {
 
     res.json({ success: true, data: test });
   } catch (error) {
-    console.error('Error fetching A/B test:', error);
+    logger.error('Error fetching A/B test:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch A/B test' });
   }
 }
@@ -137,7 +139,7 @@ export async function getTestResults(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error fetching test results:', error);
+    logger.error('Error fetching test results:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch test results' });
   }
 }
@@ -169,7 +171,7 @@ export async function startTest(req: Request, res: Response) {
 
     res.json({ success: true, data: updatedTest });
   } catch (error) {
-    console.error('Error starting A/B test:', error);
+    logger.error('Error starting A/B test:', error);
     res.status(500).json({ success: false, message: 'Failed to start A/B test' });
   }
 }
@@ -201,7 +203,7 @@ export async function pauseTest(req: Request, res: Response) {
 
     res.json({ success: true, data: updatedTest });
   } catch (error) {
-    console.error('Error pausing A/B test:', error);
+    logger.error('Error pausing A/B test:', error);
     res.status(500).json({ success: false, message: 'Failed to pause A/B test' });
   }
 }
@@ -233,7 +235,7 @@ export async function stopTest(req: Request, res: Response) {
 
     res.json({ success: true, data: updatedTest });
   } catch (error) {
-    console.error('Error stopping A/B test:', error);
+    logger.error('Error stopping A/B test:', error);
     res.status(500).json({ success: false, message: 'Failed to stop A/B test' });
   }
 }
@@ -261,9 +263,9 @@ export async function deleteTest(req: Request, res: Response) {
 
     res.json({ success: true, message: 'Test deleted successfully' });
   } catch (error: unknown) {
-    console.error('Error deleting A/B test:', error);
+    logger.error('Error deleting A/B test:', error);
     if (error instanceof Error) {
-      res.status(400).json({ success: false, message: error.message });
+      res.status(400).json({ success: false, message: getErrorMessage(error) });
     } else {
       res.status(500).json({ success: false, message: 'Failed to delete A/B test' });
     }
@@ -302,7 +304,7 @@ export async function recordInteraction(req: Request, res: Response) {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error('Error recording interaction:', error);
+    logger.error('Error recording interaction:', error);
     res.status(500).json({ success: false, message: 'Failed to record interaction' });
   }
 }

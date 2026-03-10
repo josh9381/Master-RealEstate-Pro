@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errors'
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { prisma } from '../config/database'
 
@@ -16,9 +18,9 @@ export const listSavedReports = async (req: Request, res: Response) => {
     })
 
     res.json({ success: true, data: reports })
-  } catch (error: any) {
-    console.error('Error listing saved reports:', error)
-    res.status(500).json({ success: false, error: error.message || 'Internal server error' })
+  } catch (error: unknown) {
+    logger.error('Error listing saved reports:', error)
+    res.status(500).json({ success: false, error: getErrorMessage(error) || 'Internal server error' })
   }
 }
 
@@ -42,9 +44,9 @@ export const getSavedReport = async (req: Request, res: Response) => {
     }
 
     res.json({ success: true, data: report })
-  } catch (error: any) {
-    console.error('Error getting saved report:', error)
-    res.status(500).json({ success: false, error: error.message || 'Internal server error' })
+  } catch (error: unknown) {
+    logger.error('Error getting saved report:', error)
+    res.status(500).json({ success: false, error: getErrorMessage(error) || 'Internal server error' })
   }
 }
 
@@ -71,9 +73,9 @@ export const createSavedReport = async (req: Request, res: Response) => {
     })
 
     res.status(201).json({ success: true, data: report })
-  } catch (error: any) {
-    console.error('Error creating saved report:', error)
-    res.status(500).json({ success: false, error: error.message || 'Internal server error' })
+  } catch (error: unknown) {
+    logger.error('Error creating saved report:', error)
+    res.status(500).json({ success: false, error: getErrorMessage(error) || 'Internal server error' })
   }
 }
 
@@ -104,9 +106,9 @@ export const updateSavedReport = async (req: Request, res: Response) => {
     })
 
     res.json({ success: true, data: report })
-  } catch (error: any) {
-    console.error('Error updating saved report:', error)
-    res.status(500).json({ success: false, error: error.message || 'Internal server error' })
+  } catch (error: unknown) {
+    logger.error('Error updating saved report:', error)
+    res.status(500).json({ success: false, error: getErrorMessage(error) || 'Internal server error' })
   }
 }
 
@@ -128,8 +130,8 @@ export const deleteSavedReport = async (req: Request, res: Response) => {
     await prisma.savedReport.delete({ where: { id } })
 
     res.json({ success: true, message: 'Report deleted' })
-  } catch (error: any) {
-    console.error('Error deleting saved report:', error)
-    res.status(500).json({ success: false, error: error.message || 'Internal server error' })
+  } catch (error: unknown) {
+    logger.error('Error deleting saved report:', error)
+    res.status(500).json({ success: false, error: getErrorMessage(error) || 'Internal server error' })
   }
 }

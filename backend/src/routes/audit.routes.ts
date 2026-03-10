@@ -2,6 +2,7 @@
  * Audit Log Routes — Phase 9.4
  * Admin-only endpoints for viewing audit trail
  */
+import { logger } from '../lib/logger'
 import { Router, Request, Response } from 'express'
 import { AuditAction } from '@prisma/client'
 import { authenticate, requireAdmin } from '../middleware/auth'
@@ -42,7 +43,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({ success: true, data: result })
   } catch (error) {
-    console.error('Error fetching audit logs:', error)
+    logger.error('Error fetching audit logs:', error)
     res.status(500).json({ success: false, message: 'Failed to fetch audit logs' })
   }
 })

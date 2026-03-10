@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, { useState } from 'react';
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability';
 import {
@@ -135,7 +136,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
         alert(result.message || 'Generation failed');
       }
     } catch (error) {
-      console.error('Content generation error:', error);
+      logger.error('Content generation error:', error);
       const aiMsg = getAIUnavailableMessage(error);
       alert(aiMsg || 'Failed to generate content. Please try again.');
     } finally {

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -128,7 +129,7 @@ function LeadsFollowups() {
       setNewFollowup({ leadId: '', type: 'call', date: new Date().toISOString().split('T')[0], time: '09:00', priority: 'medium', notes: '' })
       loadFollowups()
     } catch (error) {
-      console.error('Failed to create follow-up:', error)
+      logger.error('Failed to create follow-up:', error)
       toast.error('Failed to create follow-up')
     } finally {
       setIsCreating(false)
@@ -186,7 +187,7 @@ function LeadsFollowups() {
     try {
       await activitiesApi.updateActivity(String(id), { description: `Completed follow-up`, status: 'completed' })
     } catch (error) {
-      console.error('Failed to update activity status:', error)
+      logger.error('Failed to update activity status:', error)
       // Revert on failure
       queryClient.setQueryData(['followups'], previousData)
       toast.error('Failed to mark follow-up as complete')
@@ -430,7 +431,7 @@ function LeadsFollowups() {
           <Card className="w-full max-w-md p-6 m-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Add Follow-up</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowAddModal(false)}>
+              <Button variant="ghost" size="icon" onClick={() => setShowAddModal(false)} aria-label="Close">
                 <X className="h-4 w-4" />
               </Button>
             </div>

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../utils/errors'
 import { Request, Response } from 'express'
 import prisma from '../config/database'
 
@@ -73,11 +74,11 @@ export const getScoringConfig = async (req: Request, res: Response) => {
           : null,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch scoring configuration',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -143,11 +144,11 @@ export const updateScoringConfig = async (req: Request, res: Response) => {
       data: config,
       message: 'Scoring configuration updated',
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to update scoring configuration',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -174,11 +175,11 @@ export const resetScoringConfig = async (req: Request, res: Response) => {
       },
       message: 'Scoring configuration reset to defaults',
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
       message: 'Failed to reset scoring configuration',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }

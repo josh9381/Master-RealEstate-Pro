@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import Stripe from 'stripe';
 
 /**
@@ -60,7 +61,7 @@ export class StripeService {
       return customer.id;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe create customer error:', error);
+      logger.error('Stripe create customer error:', error);
       throw new Error(`Failed to create customer: ${errorMessage}`);
     }
   }
@@ -90,7 +91,7 @@ export class StripeService {
       return subscription.id;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe create subscription error:', error);
+      logger.error('Stripe create subscription error:', error);
       throw new Error(`Failed to create subscription: ${errorMessage}`);
     }
   }
@@ -122,7 +123,7 @@ export class StripeService {
       };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe get subscription error:', error);
+      logger.error('Stripe get subscription error:', error);
       throw new Error(`Failed to get subscription: ${errorMessage}`);
     }
   }
@@ -143,7 +144,7 @@ export class StripeService {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe cancel subscription error:', error);
+      logger.error('Stripe cancel subscription error:', error);
       throw new Error(`Failed to cancel subscription: ${errorMessage}`);
     }
   }
@@ -168,7 +169,7 @@ export class StripeService {
       });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe update subscription error:', error);
+      logger.error('Stripe update subscription error:', error);
       throw new Error(`Failed to update subscription: ${errorMessage}`);
     }
   }
@@ -205,7 +206,7 @@ export class StripeService {
       return session.url || '';
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe create checkout session error:', error);
+      logger.error('Stripe create checkout session error:', error);
       throw new Error(`Failed to create checkout session: ${errorMessage}`);
     }
   }
@@ -226,7 +227,7 @@ export class StripeService {
       return session.url;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe create billing portal error:', error);
+      logger.error('Stripe create billing portal error:', error);
       throw new Error(`Failed to create billing portal: ${errorMessage}`);
     }
   }
@@ -261,7 +262,7 @@ export class StripeService {
       }));
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe list invoices error:', error);
+      logger.error('Stripe list invoices error:', error);
       throw new Error(`Failed to list invoices: ${errorMessage}`);
     }
   }
@@ -289,7 +290,7 @@ export class StripeService {
       return event;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe webhook error:', error);
+      logger.error('Stripe webhook error:', error);
       throw new Error(`Webhook signature verification failed: ${errorMessage}`);
     }
   }
@@ -306,11 +307,11 @@ export class StripeService {
     try {
       // Usage records API - implementation depends on Stripe version
       // This will be implemented in Phase 4 with proper Stripe SDK version
-      console.log(`Recording usage: ${subscriptionItemId}, quantity: ${quantity}`);
+      logger.info(`Recording usage: ${subscriptionItemId}, quantity: ${quantity}`);
       throw new Error('Usage recording not yet implemented - Phase 4');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Stripe record usage error:', error);
+      logger.error('Stripe record usage error:', error);
       throw new Error(`Failed to record usage: ${errorMessage}`);
     }
   }

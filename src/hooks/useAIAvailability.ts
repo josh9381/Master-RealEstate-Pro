@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import api from '@/lib/api'
 
@@ -41,7 +42,7 @@ export function useAIAvailability(): AIAvailability {
           message: data.ai.configured ? '' : 'Configure OpenAI API key in Settings to enable AI features',
         })
       } catch (error) {
-        console.error('AI availability check failed:', error)
+        logger.error('AI availability check failed:', error)
         // Can't reach backend — assume available
         cachedStatus = { available: true, checked: true }
         setStatus({ available: true, loading: false, message: '' })

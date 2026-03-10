@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import api from './api'
 
 /**
@@ -37,14 +38,14 @@ export async function requestPushPermission(): Promise<NotificationPermission> {
 
 export async function registerPush(): Promise<boolean> {
   if (!isPushSupported()) {
-    console.warn('Push notifications not supported in this browser')
+    logger.warn('Push notifications not supported in this browser')
     return false
   }
 
   try {
     // 1. Register service worker
     swRegistration = await navigator.serviceWorker.register('/sw.js')
-    console.log('Service worker registered:', swRegistration.scope)
+    logger.log('Service worker registered:', swRegistration.scope)
 
     // Wait for SW to be ready
     await navigator.serviceWorker.ready
@@ -52,7 +53,7 @@ export async function registerPush(): Promise<boolean> {
     // 2. Request notification permission
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
-      console.warn('Push notification permission denied')
+      logger.warn('Push notification permission denied')
       return false
     }
 
@@ -60,7 +61,7 @@ export async function registerPush(): Promise<boolean> {
     const keyResponse = await api.get('/push/vapid-key')
     const vapidPublicKey = keyResponse.data?.data?.publicKey
     if (!vapidPublicKey) {
-      console.warn('VAPID public key not available')
+      logger.warn('VAPID public key not available')
       return false
     }
 
@@ -80,10 +81,10 @@ export async function registerPush(): Promise<boolean> {
       },
     })
 
-    console.log('Push notification subscription registered')
+    logger.log('Push notification subscription registered')
     return true
   } catch (error) {
-    console.error('Failed to register push notifications:', error)
+    logger.error('Failed to register push notifications:', error)
     return false
   }
 }
@@ -108,7 +109,7 @@ export async function unregisterPush(): Promise<boolean> {
 
     return true
   } catch (error) {
-    console.error('Failed to unregister push notifications:', error)
+    logger.error('Failed to unregister push notifications:', error)
     return false
   }
 }
@@ -123,7 +124,7 @@ export async function isPushSubscribed(): Promise<boolean> {
     const sub = await reg.pushManager.getSubscription()
     return !!sub
   } catch (error) {
-    console.error('Failed to check push subscription:', error)
+    logger.error('Failed to check push subscription:', error)
     return false
   }
 }

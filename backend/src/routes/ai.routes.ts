@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import * as aiController from '../controllers/ai.controller'
@@ -51,7 +52,7 @@ async function getUserTier(userId: string, organizationId: string): Promise<Subs
     tierCache.set(cacheKey, { tier, expiresAt: Date.now() + 60_000 })
     return tier
   } catch (error) {
-    console.error('[AI] Failed to get subscription tier:', error)
+    logger.error('[AI] Failed to get subscription tier:', error)
     return 'STARTER'
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mail, Server, Shield, CheckCircle, RefreshCw, Eye, EyeOff, AlertTriangle, Ban } from 'lucide-react';
@@ -157,7 +158,7 @@ const EmailConfiguration = () => {
         toast.success(`Test email sent successfully in PRODUCTION mode! Check ${fromEmail}`);
       }
     } catch (error: unknown) {
-      console.error('Failed to test connection:', error);
+      logger.error('Failed to test connection:', error);
       const err = error as { response?: { data?: { error?: string } }; message?: string }
       const message = err.response?.data?.error || err.message || 'Failed to send test email';
       toast.error(message);
@@ -184,7 +185,7 @@ const EmailConfiguration = () => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'emailConfig'] });
     },
     onError: (error) => {
-      console.error('Failed to save settings:', error);
+      logger.error('Failed to save settings:', error);
       toast.error('Failed to save settings');
     },
   });

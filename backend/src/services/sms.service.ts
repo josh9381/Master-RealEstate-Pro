@@ -3,6 +3,7 @@
  * Handles sending SMS via Twilio with tracking and template support
  */
 
+import { logger } from '../lib/logger'
 import twilio from 'twilio';
 import Handlebars from 'handlebars';
 import { prisma } from '../config/database';
@@ -48,7 +49,7 @@ async function getSMSConfig(userId?: string) {
         const authToken = decryptForUser(userId, config.authToken);
         const client = twilio(accountSid, authToken);
 
-        console.log(`[SMS] Using user's Twilio credentials (userId: ${userId})`);
+        logger.info(`[SMS] Using user's Twilio credentials (userId: ${userId})`);
         
         return {
           accountSid,
@@ -58,7 +59,7 @@ async function getSMSConfig(userId?: string) {
           mode: 'database' as const
         };
       } catch (decryptError) {
-        console.error('[SMS] Failed to decrypt user credentials:', decryptError);
+        logger.error('[SMS] Failed to decrypt user credentials:', decryptError);
         // Fall through to environment variables
       }
     }
@@ -72,7 +73,7 @@ async function getSMSConfig(userId?: string) {
       mode: 'environment' as const
     };
   } catch (error) {
-    console.error('Error fetching SMS config:', error);
+    logger.error('Error fetching SMS config:', error);
     // Fall back to environment variables on error
     return {
       accountSid: TWILIO_ACCOUNT_SID,
@@ -112,11 +113,11 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
 
     // Check if Twilio is configured
     if (!config.client) {
-      console.warn('[SMS] Twilio not configured, using mock mode');
+      logger.warn('[SMS] Twilio not configured, using mock mode');
       return mockSMSSend(options);
     }
 
-    console.log(`[SMS] Using config from ${config.mode} (userId: ${userId || 'none'})`);
+    logger.info(`[SMS] Using config from ${config.mode} (userId: ${userId || 'none'})`);
 
     // Validate phone number format
     const cleanedPhone = to.replace(/[\s-()]/g, '');
@@ -127,7 +128,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
     // SMS character limit (160 for standard SMS)
     if (message.length > 1600) {
       // Twilio will split into multiple messages
-      console.warn(`[SMS] Message length (${message.length}) exceeds standard SMS size`);
+      logger.warn(`[SMS] Message length (${message.length}) exceeds standard SMS size`);
     }
 
     // Send SMS via Twilio
@@ -138,7 +139,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
       ...(mediaUrl && mediaUrl.length > 0 ? { mediaUrl } : {}),
     });
 
-    console.log('[SMS] Sent successfully:', {
+    logger.info('[SMS] Sent successfully:', {
       to: cleanedPhone,
       messageId: twilioMessage.sid,
     });
@@ -169,7 +170,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[SMS] Send failed:', errorMessage);
+    logger.error('[SMS] Send failed:', errorMessage);
 
     // Get config for error logging (reuse if possible, or fetch again)
     const config = await getSMSConfig(userId);
@@ -243,7 +244,7 @@ export async function sendTemplateSMS(
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[SMS] Template send failed:', errorMessage);
+    logger.error('[SMS] Template send failed:', errorMessage);
     return {
       success: false,
       error: errorMessage,
@@ -297,9 +298,9 @@ export async function sendBulkSMS(
 async function mockSMSSend(options: SMSOptions): Promise<SMSResult> {
   const { to, message, leadId, organizationId } = options;
 
-  console.log('[SMS] MOCK MODE - SMS not actually sent:');
-  console.log('To:', to);
-  console.log('Message:', message.substring(0, 100) + (message.length > 100 ? '...' : ''));
+  logger.info('[SMS] MOCK MODE - SMS not actually sent:');
+  logger.info('To:', to);
+  logger.info('Message:', message.substring(0, 100) + (message.length > 100 ? '...' : ''));
 
   // Create message record
   const smsMessage = await createMessageRecord({
@@ -332,7 +333,7 @@ async function createMessageRecord(data: Record<string, unknown>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return await prisma.message.create({ data: data as any });
   } catch (error) {
-    console.error('[SMS] Failed to create message record:', error);
+    logger.error('[SMS] Failed to create message record:', error);
     return null;
   }
 }
@@ -345,7 +346,7 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
     const { MessageSid, MessageStatus } = event;
 
     if (!MessageSid) {
-      console.warn('[SMS] Webhook: Missing MessageSid');
+      logger.warn('[SMS] Webhook: Missing MessageSid');
       return;
     }
 
@@ -355,7 +356,7 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
     });
 
     if (!message) {
-      console.warn('[SMS] Webhook: Message not found:', MessageSid);
+      logger.warn('[SMS] Webhook: Message not found:', MessageSid);
       return;
     }
 
@@ -404,8 +405,8 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
       }
     }
 
-    console.log('[SMS] Webhook processed:', { MessageSid, MessageStatus, newStatus });
+    logger.info('[SMS] Webhook processed:', { MessageSid, MessageStatus, newStatus });
   } catch (error) {
-    console.error('[SMS] Webhook processing failed:', error);
+    logger.error('[SMS] Webhook processing failed:', error);
   }
 }

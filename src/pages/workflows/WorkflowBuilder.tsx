@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger'
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Workflow, Play, Plus, TrendingUp, Save, TestTube2, 
@@ -200,6 +201,8 @@ const WorkflowBuilder = () => {
   const [isTestRunning, setIsTestRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const deleteConfirmTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => { clearTimeout(deleteConfirmTimerRef.current) }, []);
   const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'active' | 'paused' | 'running'>('idle');
   const [activeExecutions, setActiveExecutions] = useState<number>(0);
   const [interactionMode, setInteractionMode] = useState<'click' | 'drag'>('drag');
@@ -342,7 +345,7 @@ const WorkflowBuilder = () => {
         })));
       }
     } catch (error) {
-      console.error('Failed to fetch workflow status:', error);
+      logger.error('Failed to fetch workflow status:', error);
     }
   };
 
@@ -382,7 +385,7 @@ const WorkflowBuilder = () => {
         const component = JSON.parse(data) as WorkflowComponent;
         addNodeFromComponent(component);
       } catch (error) {
-        console.error('Failed to parse dropped component:', error);
+        logger.error('Failed to parse dropped component:', error);
         toast.error('Failed to add component');
       }
     }
@@ -486,7 +489,8 @@ const WorkflowBuilder = () => {
       setShowDeleteConfirm(nodeId);
       toast.warning('Click delete again to confirm removal');
       // Auto-reset confirmation after 3 seconds
-      setTimeout(() => setShowDeleteConfirm(null), 3000);
+      clearTimeout(deleteConfirmTimerRef.current);
+      deleteConfirmTimerRef.current = setTimeout(() => setShowDeleteConfirm(null), 3000);
     }
   };
 
@@ -540,7 +544,7 @@ const WorkflowBuilder = () => {
         toast.success('Workflow created successfully');
       }
     } catch (error) {
-      console.error('Failed to save workflow:', error);
+      logger.error('Failed to save workflow:', error);
       toast.error('Failed to save workflow');
     } finally {
       setIsSaving(false);
@@ -562,7 +566,7 @@ const WorkflowBuilder = () => {
         toast.warning('Please save the workflow before testing');
       }
     } catch (error) {
-      console.error('Failed to test workflow:', error);
+      logger.error('Failed to test workflow:', error);
       toast.error('Test execution failed');
     } finally {
       setIsTestRunning(false);
@@ -1143,7 +1147,7 @@ const WorkflowBuilder = () => {
                         window.location.search = `?id=${newId}`
                       }
                     } catch (error) {
-                      console.error('Failed to duplicate workflow:', error)
+                      logger.error('Failed to duplicate workflow:', error)
                       toast.error('Failed to duplicate workflow')
                     }
                   }}>

@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../../utils/errors'
+import { logger } from '../../lib/logger'
 import { Request, Response } from 'express';
 import { prisma } from '../../config/database';
 import { UnauthorizedError } from '../../middleware/errorHandler';
@@ -15,12 +17,12 @@ async function verifyTwilioCredentials(accountSid: string, authToken: string): P
   try {
     // Basic format validation
     if (!accountSid || !accountSid.startsWith('AC') || accountSid.length !== 34) {
-      console.log('Invalid Account SID format');
+      logger.info('Invalid Account SID format');
       return false;
     }
     
     if (!authToken || authToken.length !== 32) {
-      console.log('Invalid Auth Token format');
+      logger.info('Invalid Auth Token format');
       return false;
     }
 
@@ -28,10 +30,10 @@ async function verifyTwilioCredentials(accountSid: string, authToken: string): P
     const twilio = require('twilio')(accountSid, authToken);
     await twilio.api.v2010.accounts(accountSid).fetch();
     
-    console.log('✅ Twilio credentials verified successfully');
+    logger.info('✅ Twilio credentials verified successfully');
     return true;
-  } catch (error: any) {
-    console.error('❌ Twilio verification failed:', error.message);
+  } catch (error: unknown) {
+    logger.error('❌ Twilio verification failed:', getErrorMessage(error));
     return false;
   }
 }
@@ -70,7 +72,7 @@ export async function getSMSConfig(req: Request, res: Response): Promise<void> {
       accountSidValue = decryptForUser(req.user.userId, config.accountSid);
     }
   } catch (error) {
-    console.error('❌ Failed to decrypt Account SID:', error);
+    logger.error('❌ Failed to decrypt Account SID:', error);
     accountSidValue = null;
   }
 

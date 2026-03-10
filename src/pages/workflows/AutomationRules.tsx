@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -147,7 +148,7 @@ const AutomationRules = () => {
       
       await refetch();
     } catch (error) {
-      console.error('Failed to toggle rule:', error);
+      logger.error('Failed to toggle rule:', error);
       toast.error('Failed to toggle rule status');
     }
   };
@@ -166,7 +167,7 @@ const AutomationRules = () => {
       setDeleteRuleId(null);
       await refetch();
     } catch (error) {
-      console.error('Failed to delete rule:', error);
+      logger.error('Failed to delete rule:', error);
       toast.error('Failed to delete rule');
     }
   };
@@ -219,7 +220,7 @@ const AutomationRules = () => {
       setShowBulkConfirm(false);
       await refetch();
     } catch (error) {
-      console.error('Bulk action failed:', error);
+      logger.error('Bulk action failed:', error);
       toast.error('Failed to perform bulk action');
     }
   };
@@ -290,7 +291,7 @@ const AutomationRules = () => {
       
       await refetch();
     } catch (error) {
-      console.error('Failed to create rule:', error);
+      logger.error('Failed to create rule:', error);
       toast.error('Failed to create rule');
     } finally {
       setIsCreating(false);

@@ -5,6 +5,8 @@
  * Used across Analytics, Communications, Campaigns, Workflows, and Leads pages.
  */
 
+import { logger } from '@/lib/logger'
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ExportColumn<T = Record<string, any>> {
   header: string
@@ -167,7 +169,7 @@ export async function printToPDF(
 
     pdf.save(filename)
   } catch (error) {
-    console.error('PDF export failed, falling back to print:', error)
+    logger.error('PDF export failed, falling back to print:', error)
     const originalTitle = document.title
     if (title) document.title = title
     window.print()
@@ -238,7 +240,7 @@ export async function exportAnalyticsAsPDF(
 
     pdf.save(filename)
   } catch (error) {
-    console.error('PDF table export failed, falling back to print:', error)
+    logger.error('PDF table export failed, falling back to print:', error)
     const win = window.open('', '_blank')
     if (!win) return
 

@@ -1,7 +1,10 @@
-import { Settings, User, Building2, Shield, Bell, CreditCard, Tag, List, FileCheck } from 'lucide-react';
+import { useState } from 'react';
+import { Settings, User, Building2, Shield, Bell, CreditCard, Tag, List, FileCheck, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Link } from 'react-router-dom';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 const SettingsHub = () => {
+  const [showTour, setShowTour] = useState(false);
   const settingsCategories = [
     {
       id: 'profile',
@@ -149,9 +152,20 @@ const SettingsHub = () => {
                 <p className="font-medium">Upgrade Plan</p>
               </div>
             </Link>
+            <button onClick={() => setShowTour(true)}>
+              <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors text-left">
+                <Sparkles className="h-5 w-5 mb-2 text-primary" />
+                <p className="font-medium">Show Getting Started Tour</p>
+              </div>
+            </button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Onboarding tour overlay */}
+      {showTour && (
+        <OnboardingTour forceShow onComplete={() => setShowTour(false)} />
+      )}
     </div>
   );
 };

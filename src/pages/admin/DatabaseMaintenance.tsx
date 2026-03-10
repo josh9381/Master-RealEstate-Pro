@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Database, Zap, RefreshCw, FileText, Loader2, AlertTriangle, Download } from 'lucide-react';
@@ -105,7 +106,7 @@ const DatabaseMaintenance = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Backup download failed:', error)
+      logger.error('Backup download failed:', error)
       toast.error('Failed to download backup');
     }
   };

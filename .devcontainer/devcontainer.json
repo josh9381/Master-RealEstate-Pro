@@ -1,12 +1,6 @@
 {
   "name": "Master RealEstate Pro",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
-  
-  "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "18"
-    }
-  },
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
 
   "forwardPorts": [3000, 8000],
   

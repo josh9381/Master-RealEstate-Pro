@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -14,7 +15,6 @@ import { MessageEnhancerModal } from '@/components/ai/MessageEnhancerModal'
 import { ContentGeneratorWizard } from '@/components/ai/ContentGeneratorWizard'
 import { DaysOfWeekPicker } from '@/components/ui/DaysOfWeekPicker'
 import { AdvancedAudienceFilters } from '@/components/campaigns/AdvancedAudienceFilters'
-import { MockModeBanner } from '@/components/shared/MockModeBanner'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
 import type { CampaignPreviewData, EmailTemplateResponse } from '@/types'
@@ -171,7 +171,7 @@ function CampaignCreate() {
           const response = await leadsApi.countFiltered(formData.audienceFilters)
           setFilteredLeadCount(response.data.count)
         } catch (error) {
-          console.error('Failed to fetch filtered lead count:', error)
+          logger.error('Failed to fetch filtered lead count:', error)
           setFilteredLeadCount(0)
         }
       } else {
@@ -378,7 +378,7 @@ function CampaignCreate() {
       try {
         await campaignsApi.deleteCampaign(createdCampaignId)
       } catch (error) {
-        console.error('Failed to delete draft campaign:', error)
+        logger.error('Failed to delete draft campaign:', error)
       }
     }
     
@@ -390,9 +390,6 @@ function CampaignCreate() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <CampaignsSubNav />
-
-      {/* Mock Mode Warning */}
-      <MockModeBanner />
 
       {/* Header */}
       <div className="flex items-center justify-between">

@@ -47,7 +47,7 @@ export async function getReminders(req: Request, res: Response): Promise<void> {
   const { leadId, status, page = 1, limit = 50 } = req.query
   const skip = (Number(page) - 1) * Number(limit)
 
-  const where: Record<string, unknown> = {
+  const where: Record<string, any> = {
     userId: req.user.userId,
     organizationId: req.user.organizationId,
   }

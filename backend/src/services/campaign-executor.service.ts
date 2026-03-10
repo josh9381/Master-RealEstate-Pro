@@ -3,6 +3,7 @@
  * Handles execution of campaigns - sending emails/SMS to leads
  */
 
+import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { sendBulkEmails } from './email.service';
 import { sendBulkSMS } from './sms.service';
@@ -29,9 +30,9 @@ async function createCampaignLeadRows(campaignId: string, organizationId: string
       })),
       skipDuplicates: true,
     });
-    console.log(`[CAMPAIGN] Created ${leadIds.length} CampaignLead tracking rows`);
+    logger.info(`[CAMPAIGN] Created ${leadIds.length} CampaignLead tracking rows`);
   } catch (err) {
-    console.error('[CAMPAIGN] Failed to create CampaignLead rows:', err);
+    logger.error('[CAMPAIGN] Failed to create CampaignLead rows:', err);
   }
 }
 
@@ -53,7 +54,7 @@ async function updateCampaignLeadStatus(
       },
     });
   } catch (error) {
-    console.error('[CAMPAIGN] Failed to record campaign activity:', error)
+    logger.error('[CAMPAIGN] Failed to record campaign activity:', error)
     // Non-critical — don't fail the send
   }
 }
@@ -116,7 +117,7 @@ export async function executeCampaign(
       };
     }
 
-    console.log(`[CAMPAIGN] Executing campaign ${campaign.name} to ${leads.length} leads`);
+    logger.info(`[CAMPAIGN] Executing campaign ${campaign.name} to ${leads.length} leads`);
 
     // Monthly sending limit check
     const msgType = campaign.type === 'EMAIL' ? 'emails' as const : 'sms' as const;
@@ -134,7 +135,7 @@ export async function executeCampaign(
     // Send-time optimization: If enabled, calculate per-lead optimal times
     const optimizationStrategy = (campaign.sendTimeOptimization || 'none') as OptimizationStrategy;
     if (optimizationStrategy !== 'none') {
-      console.log(`[CAMPAIGN] Send-time optimization: ${optimizationStrategy}`);
+      logger.info(`[CAMPAIGN] Send-time optimization: ${optimizationStrategy}`);
       
       const optimResult = await calculateOptimalSendTimes(
         leads.map((l) => l.id),
@@ -142,7 +143,7 @@ export async function executeCampaign(
       );
       
       const groups = groupLeadsBySendSlot(optimResult.slots);
-      console.log(`[CAMPAIGN] ${optimResult.uniqueTimeSlots} time slots across ${optimResult.totalSlots} recipients`);
+      logger.info(`[CAMPAIGN] ${optimResult.uniqueTimeSlots} time slots across ${optimResult.totalSlots} recipients`);
       
       const now = new Date();
       const immediateLeadIds = new Set<string>();
@@ -174,7 +175,7 @@ export async function executeCampaign(
       // Filter leads for immediate sending only
       if (immediateLeadIds.size < leads.length) {
         const deferredCount = leads.length - immediateLeadIds.size;
-        console.log(`[CAMPAIGN] Sending ${immediateLeadIds.size} now, ${deferredCount} deferred for optimal times`);
+        logger.info(`[CAMPAIGN] Sending ${immediateLeadIds.size} now, ${deferredCount} deferred for optimal times`);
         
         // Only keep leads that should be sent now
         const immLeads = leads.filter((l) => immediateLeadIds.has(l.id));
@@ -194,7 +195,7 @@ export async function executeCampaign(
     let result: { success: number; failed: number };
 
     if (campaign.isABTest && campaign.abTestData) {
-      console.log(`[CAMPAIGN] A/B Test detected — splitting audience 50/50`);
+      logger.info(`[CAMPAIGN] A/B Test detected — splitting audience 50/50`);
       result = await executeABTestCampaign(campaign, leads);
     } else if (campaign.type === 'EMAIL') {
       result = await sendEmailCampaign(campaign, leads);
@@ -214,7 +215,7 @@ export async function executeCampaign(
       },
     });
 
-    console.log(
+    logger.info(
       `[CAMPAIGN] Completed: ${result.success} sent, ${result.failed} failed`
     );
 
@@ -234,7 +235,7 @@ export async function executeCampaign(
       failed: result.failed,
     };
   } catch (error) {
-    console.error('[CAMPAIGN] Execution failed:', error);
+    logger.error('[CAMPAIGN] Execution failed:', error);
     return {
       success: false,
       totalLeads: 0,
@@ -367,7 +368,7 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
   if (isBlockBased) {
     const mjmlResult = compileEmailBlocks(campaign.body, { canSpam });
     if (mjmlResult.errors.length > 0) {
-      console.warn(`[CAMPAIGN] MJML compilation warnings:`, mjmlResult.errors);
+      logger.warn(`[CAMPAIGN] MJML compilation warnings:`, mjmlResult.errors);
     }
     compiledBodyTemplate = mjmlResult.html;
   } else {
@@ -399,7 +400,7 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
       try {
         unsubscribeToken = await ensureUnsubscribeToken(lead.id);
       } catch (error) {
-        console.error('[CAMPAIGN] Failed to generate unsubscribe token:', error)
+        logger.error('[CAMPAIGN] Failed to generate unsubscribe token:', error)
         // If token generation fails, use a fallback URL with leadId
         unsubscribeToken = lead.id;
       }
@@ -462,7 +463,7 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
   let totalSuccess = 0;
   let totalFailed = 0;
 
-  console.log(`[CAMPAIGN] Processing ${emails.length} emails in ${batches.length} batches of ${BATCH_SIZE}`);
+  logger.info(`[CAMPAIGN] Processing ${emails.length} emails in ${batches.length} batches of ${BATCH_SIZE}`);
 
   // Create CampaignLead tracking rows for per-recipient activity
   await createCampaignLeadRows(
@@ -479,7 +480,7 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
     const results = await Promise.allSettled(
       batchGroup.map((batch, batchIndex) => {
         const actualBatchNum = i + batchIndex + 1;
-        console.log(`[CAMPAIGN] Sending batch ${actualBatchNum}/${batches.length} (${batch.length} emails)`);
+        logger.info(`[CAMPAIGN] Sending batch ${actualBatchNum}/${batches.length} (${batch.length} emails)`);
         return sendBulkEmails(batch, campaign.id, userId, campaign.organizationId);
       })
     );
@@ -490,7 +491,7 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
         totalSuccess += result.value.success;
         totalFailed += result.value.failed;
       } else {
-        console.error(`[CAMPAIGN] Batch failed:`, result.reason);
+        logger.error(`[CAMPAIGN] Batch failed:`, result.reason);
         totalFailed += BATCH_SIZE; // Assume all failed in this batch
       }
     });
@@ -501,7 +502,7 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
     }
   }
 
-  console.log(`[CAMPAIGN] Email campaign completed: ${totalSuccess} sent, ${totalFailed} failed`);
+  logger.info(`[CAMPAIGN] Email campaign completed: ${totalSuccess} sent, ${totalFailed} failed`);
 
   return { success: totalSuccess, failed: totalFailed };
 }
@@ -570,7 +571,7 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
   let totalSuccess = 0;
   let totalFailed = 0;
 
-  console.log(`[CAMPAIGN] Processing ${messages.length} SMS in ${batches.length} batches of ${BATCH_SIZE}`);
+  logger.info(`[CAMPAIGN] Processing ${messages.length} SMS in ${batches.length} batches of ${BATCH_SIZE}`);
 
   // Create CampaignLead tracking rows for per-recipient activity
   await createCampaignLeadRows(
@@ -587,7 +588,7 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
     const results = await Promise.allSettled(
       batchGroup.map((batch, batchIndex) => {
         const actualBatchNum = i + batchIndex + 1;
-        console.log(`[CAMPAIGN] Sending batch ${actualBatchNum}/${batches.length} (${batch.length} SMS)`);
+        logger.info(`[CAMPAIGN] Sending batch ${actualBatchNum}/${batches.length} (${batch.length} SMS)`);
         return sendBulkSMS(batch, campaign.id, userId, campaign.organizationId);
       })
     );
@@ -598,7 +599,7 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
         totalSuccess += result.value.success;
         totalFailed += result.value.failed;
       } else {
-        console.error(`[CAMPAIGN] Batch failed:`, result.reason);
+        logger.error(`[CAMPAIGN] Batch failed:`, result.reason);
         totalFailed += BATCH_SIZE; // Assume all failed in this batch
       }
     });
@@ -609,7 +610,7 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
     }
   }
 
-  console.log(`[CAMPAIGN] SMS campaign completed: ${totalSuccess} sent, ${totalFailed} failed`);
+  logger.info(`[CAMPAIGN] SMS campaign completed: ${totalSuccess} sent, ${totalFailed} failed`);
 
   return { success: totalSuccess, failed: totalFailed };
 }
@@ -627,7 +628,7 @@ async function executeABTestCampaign(campaign: any, leads: any[]) {
   const groupA = shuffled.slice(0, midpoint);
   const groupB = shuffled.slice(midpoint);
 
-  console.log(`[A/B TEST] Variant A: ${groupA.length} leads, Variant B: ${groupB.length} leads`);
+  logger.info(`[A/B TEST] Variant A: ${groupA.length} leads, Variant B: ${groupB.length} leads`);
 
   // Find or create A/B test record
   let abTest = await prisma.aBTest.findFirst({
@@ -710,7 +711,7 @@ async function executeABTestCampaign(campaign: any, leads: any[]) {
     data: { participantCount: totalSuccess },
   });
 
-  console.log(`[A/B TEST] Completed: ${totalSuccess} sent, ${totalFailed} failed`);
+  logger.info(`[A/B TEST] Completed: ${totalSuccess} sent, ${totalFailed} failed`);
   return { success: totalSuccess, failed: totalFailed };
 }
 

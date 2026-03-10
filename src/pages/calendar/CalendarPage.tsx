@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, Users, Video, Loader2, MapPin, Trash2, Download } from 'lucide-react'
@@ -721,7 +722,7 @@ export default function CalendarPage() {
                       window.URL.revokeObjectURL(url);
                       toast.success('Calendar file downloaded');
                     } catch (error) {
-                      console.error('Failed to export calendar file:', error)
+                      logger.error('Failed to export calendar file:', error)
                       toast.error('Failed to export calendar file');
                     }
                   }}

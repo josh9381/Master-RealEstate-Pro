@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -67,6 +68,8 @@ const LeadScoring = () => {
   const [showConfig, setShowConfig] = useState(false)
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const breakdownRef = useRef<HTMLDivElement>(null)
+  const recalcTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => { clearTimeout(recalcTimerRef.current) }, [])
   const [activeTab, setActiveTab] = useState<ScoringTab>('scores')
   const [uploading, setUploading] = useState(false)
 
@@ -147,7 +150,7 @@ const LeadScoring = () => {
         toast.success('Training data uploaded successfully!')
         refetchTraining()
       } catch (error) {
-        console.error('Failed to upload training data:', error)
+        logger.error('Failed to upload training data:', error)
         toast.error('Failed to upload training data')
       } finally {
         setUploading(false)
@@ -272,7 +275,7 @@ const LeadScoring = () => {
             modelStatus = perfData.data.status
           }
         } catch (err) {
-          console.error('Failed to load model performance:', err)
+          logger.error('Failed to load model performance:', err)
           toast.error('Failed to load model performance data')
         }
         
@@ -288,7 +291,7 @@ const LeadScoring = () => {
             }))
           }
         } catch (err) {
-          console.error('Failed to load feature importance:', err)
+          logger.error('Failed to load feature importance:', err)
           toast.error('Failed to load feature importance data')
         }
 
@@ -307,7 +310,7 @@ const LeadScoring = () => {
       await aiApi.recalculateScores()
       toast.success('Score recalculation initiated')
       // Reload data after a short delay
-      setTimeout(() => refetch(), 2000)
+      recalcTimerRef.current = setTimeout(() => refetch(), 2000)
     } catch (error) {
       const err = error as Error
       toast.error(err.message || 'Failed to recalculate scores')

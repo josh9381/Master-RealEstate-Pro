@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -55,7 +56,7 @@ async function cleanupExpiredTokens(): Promise<void> {
     });
   } catch {
     // Non-critical — just log
-    console.warn('[AUTH] Failed to clean up expired tokens');
+    logger.warn('[AUTH] Failed to clean up expired tokens');
   }
 }
 
@@ -183,7 +184,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       organizationId: result.user.organizationId,
     });
   } catch (emailErr) {
-    console.error('[AUTH] Failed to send verification email:', emailErr);
+    logger.error('[AUTH] Failed to send verification email:', emailErr);
     // Non-blocking — user can resend later
   }
 
@@ -621,7 +622,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
         organizationId: user.organizationId,
       });
     } catch (emailError) {
-      console.error('[AUTH] Failed to send password reset email:', emailError);
+      logger.error('[AUTH] Failed to send password reset email:', emailError);
       // Still return success to not leak email existence
     }
   }

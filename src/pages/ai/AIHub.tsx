@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -8,7 +9,6 @@ import { Badge } from '@/components/ui/Badge';
 import { aiApi, tasksApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useQuery } from '@tanstack/react-query';
-import { MOCK_DATA_CONFIG } from '@/config/mockData.config';
 
 // Icon mapping for API responses
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -121,7 +121,7 @@ const AIHub = () => {
         usage: usageData.data as AIUsage | null,
       }
     },
-    meta: { useMockOnError: MOCK_DATA_CONFIG.USE_MOCK_DATA },
+
   })
 
   const stats = aiData?.stats ?? null
@@ -162,7 +162,7 @@ const AIHub = () => {
         toast.info(`Navigating to: ${rec.action}`)
       }
     } catch (error) {
-      console.error('Failed to execute AI action:', error)
+      logger.error('Failed to execute AI action:', error)
       toast.error('Failed to execute action. Please try again.')
     }
   }

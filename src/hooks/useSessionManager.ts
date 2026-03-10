@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useRef, useCallback } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import axios from 'axios'
@@ -97,7 +98,7 @@ export function useSessionManager() {
           scheduleRefresh()
         }
       } catch (err) {
-        console.warn('[SessionManager] Proactive refresh failed, will rely on reactive interceptor', err)
+        logger.warn('[SessionManager] Proactive refresh failed, will rely on reactive interceptor', err)
         // Don't logout—the interceptor in api.ts will handle 401 on next request
       }
     }, delay)
@@ -120,7 +121,7 @@ export function useSessionManager() {
     }, IDLE_WARNING_MS)
 
     idleTimerRef.current = setTimeout(() => {
-      console.info('[SessionManager] Auto-logout due to inactivity')
+      logger.info('[SessionManager] Auto-logout due to inactivity')
       clearAuth()
       window.location.href = '/auth/login?reason=idle'
     }, IDLE_TIMEOUT_MS)

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -5,12 +6,15 @@ import { Badge } from '@/components/ui/Badge'
 import { NotificationPanel } from './NotificationPanel'
 import { notificationsApi } from '@/lib/api'
 import { useSocketEvent } from '@/hooks/useSocket'
+import { useAuthStore } from '@/store/authStore'
+import { playNotificationSound } from '@/lib/notificationSounds'
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const userId = useAuthStore((s) => s.user?.id)
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -25,7 +29,7 @@ export function NotificationBell() {
       if ((error as { response?: { status?: number } })?.response?.status === 401) {
         setUnreadCount(0)
       } else {
-        console.error('Failed to fetch unread count:', error)
+        logger.error('Failed to fetch unread count:', error)
       }
     }
   }, [])
@@ -38,8 +42,9 @@ export function NotificationBell() {
   }, [fetchUnreadCount])
 
   // Real-time: listen for new notifications via Socket.io
-  useSocketEvent('notification', () => {
+  useSocketEvent<{ type?: string }>('notification', (data) => {
     setUnreadCount((prev) => prev + 1)
+    playNotificationSound(userId, data?.type || 'new-message')
   })
 
   // Real-time: listen for explicit count adjustments

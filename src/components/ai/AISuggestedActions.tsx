@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Sparkles, Mail, Phone, Calendar, TrendingUp, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -143,9 +144,9 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
       } catch (error) {
         const aiMsg = getAIUnavailableMessage(error)
         if (aiMsg) {
-          console.info('AI suggestions unavailable (API key not configured) — using defaults')
+          logger.info('AI suggestions unavailable (API key not configured) — using defaults')
         } else {
-          console.error('Failed to fetch AI suggestions:', error)
+          logger.error('Failed to fetch AI suggestions:', error)
         }
         // Keep fallback suggestions
       } finally {

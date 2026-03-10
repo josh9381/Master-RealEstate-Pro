@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
@@ -22,7 +23,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         try {
           await fetchCurrentUser()
         } catch (error) {
-          console.error('Failed to fetch current user:', error)
+          logger.error('Failed to fetch current user:', error)
         }
       }
       setIsChecking(false)

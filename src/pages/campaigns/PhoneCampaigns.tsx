@@ -1,4 +1,4 @@
-import { Phone, PhoneCall, Clock, TrendingUp, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Phone, PhoneCall, Clock, TrendingUp, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { campaignsApi } from '@/lib/api';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
+import { ComingSoon } from '@/components/shared/ComingSoon';
 import type { Campaign } from '@/types';
 
 const PhoneCampaigns = () => {
@@ -41,18 +42,17 @@ const PhoneCampaigns = () => {
       {/* Sub Navigation */}
       <CampaignsSubNav />
 
-      {/* Coming Soon Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <h3 className="font-semibold text-amber-800">Coming Soon — Voice Telephony</h3>
-          <p className="text-sm text-amber-700 mt-1">
-            Phone campaigns require voice telephony integration which is not yet available. 
-            This feature is on the roadmap. In the meantime, use Email or SMS campaigns to reach your leads.
-          </p>
-        </div>
-        <Badge variant="warning" className="shrink-0">Coming Soon</Badge>
-      </div>
+      <ComingSoon
+        title="Voice Telephony Campaigns"
+        description="Phone campaigns require voice telephony integration which is on the roadmap. In the meantime, use Email or SMS campaigns to reach your leads."
+        icon={Phone}
+        previewItems={[
+          'Auto-dial campaigns with call scripts',
+          'Call recording and transcription',
+          'Voicemail drop automation',
+          'Real-time call analytics dashboard',
+        ]}
+      />
 
       {isLoading && campaigns.length === 0 && (
         <div className="space-y-4">

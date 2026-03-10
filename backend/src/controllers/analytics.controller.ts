@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errors'
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { prisma } from '../config/database'
 
@@ -8,7 +10,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
   const { startDate, endDate } = req.query
 
   // Build date filter
-  const dateFilter: any = {}
+  const dateFilter: Record<string, any> = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
   if (endDate) dateFilter.lte = new Date(endDate as string)
 
@@ -154,7 +156,7 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
   const { startDate, endDate, groupBy = 'status' } = req.query
 
-  const dateFilter: any = {}
+  const dateFilter: Record<string, any> = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
   if (endDate) dateFilter.lte = new Date(endDate as string)
 
@@ -244,7 +246,7 @@ export const getCampaignAnalytics = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
   const { startDate, endDate } = req.query
 
-  const dateFilter: any = {}
+  const dateFilter: Record<string, any> = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
   if (endDate) dateFilter.lte = new Date(endDate as string)
 
@@ -321,12 +323,12 @@ export const getTaskAnalytics = async (req: Request, res: Response) => {
   tomorrow.setDate(tomorrow.getDate() + 1)
 
   // Build date filter for task analytics
-  const dateFilter: any = {}
+  const dateFilter: Record<string, any> = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
   if (endDate) dateFilter.lte = new Date(endDate as string)
   const hasDateFilter = Object.keys(dateFilter).length > 0
 
-  const orgWhere: any = { organizationId }
+  const orgWhere: Record<string, any> = { organizationId }
   if (hasDateFilter) {
     orgWhere.createdAt = dateFilter
   }
@@ -411,12 +413,12 @@ export const getActivityFeed = async (req: Request, res: Response) => {
   const skip = (pageNum - 1) * limitNum
 
   // Build date filter
-  const dateFilter: any = {}
+  const dateFilter: Record<string, any> = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
   if (endDate) dateFilter.lte = new Date(endDate as string)
   const hasDateFilter = Object.keys(dateFilter).length > 0
 
-  const orgWhere: any = { organizationId: req.user!.organizationId }
+  const orgWhere: Record<string, any> = { organizationId: req.user!.organizationId }
   if (hasDateFilter) {
     orgWhere.createdAt = dateFilter
   }
@@ -539,7 +541,7 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query
 
     // Build date filter
-    const dateFilter: any = {}
+    const dateFilter: Record<string, any> = {}
     if (startDate) dateFilter.gte = new Date(startDate as string)
     if (endDate) dateFilter.lte = new Date(endDate as string)
 
@@ -609,12 +611,12 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
         lostRate: totalLeads > 0 ? Math.round((funnelData.lost / totalLeads) * 100) : 0
       }
     })
-  } catch (error: any) {
-    console.error('Error fetching conversion funnel:', error)
+  } catch (error: unknown) {
+    logger.error('Error fetching conversion funnel:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch conversion funnel analytics',
-      error: error.message
+      error: getErrorMessage(error)
     })
   }
 }
@@ -724,12 +726,12 @@ export const getMonthlyPerformance = async (req: Request, res: Response) => {
       success: true,
       data: result,
     })
-  } catch (error: any) {
-    console.error('Error fetching monthly performance:', error)
+  } catch (error: unknown) {
+    logger.error('Error fetching monthly performance:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch monthly performance data',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -799,12 +801,12 @@ export const getHourlyEngagement = async (req: Request, res: Response) => {
         periodDays: Number(days),
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching hourly engagement:', error)
+  } catch (error: unknown) {
+    logger.error('Error fetching hourly engagement:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch hourly engagement data',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -819,7 +821,7 @@ export const getTeamPerformance = async (req: Request, res: Response) => {
     const organizationId = req.user!.organizationId
     const { startDate, endDate } = req.query
 
-    const dateFilter: any = {}
+    const dateFilter: Record<string, any> = {}
     if (startDate) dateFilter.gte = new Date(startDate as string)
     if (endDate) dateFilter.lte = new Date(endDate as string)
     const hasDateFilter = Object.keys(dateFilter).length > 0
@@ -839,9 +841,9 @@ export const getTeamPerformance = async (req: Request, res: Response) => {
     // Get per-user stats in parallel
     const userStats = await Promise.all(
       users.map(async (user) => {
-        const leadWhere: any = { assignedToId: user.id, organizationId }
-        const activityWhere: any = { userId: user.id, organizationId }
-        const taskWhere: any = { assignedToId: user.id, organizationId }
+        const leadWhere: Record<string, any> = { assignedToId: user.id, organizationId }
+        const activityWhere: Record<string, any> = { userId: user.id, organizationId }
+        const taskWhere: Record<string, any> = { assignedToId: user.id, organizationId }
 
         if (hasDateFilter) {
           leadWhere.createdAt = dateFilter
@@ -892,12 +894,12 @@ export const getTeamPerformance = async (req: Request, res: Response) => {
       success: true,
       data: userStats,
     })
-  } catch (error: any) {
-    console.error('Error fetching team performance:', error)
+  } catch (error: unknown) {
+    logger.error('Error fetching team performance:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch team performance data',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -994,12 +996,12 @@ export const getRevenueTimeline = async (req: Request, res: Response) => {
         totalDeals: wonLeads.length,
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching revenue timeline:', error)
+  } catch (error: unknown) {
+    logger.error('Error fetching revenue timeline:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch revenue timeline data',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1214,12 +1216,12 @@ export const getDashboardAlerts = async (req: Request, res: Response) => {
       success: true,
       data: { alerts },
     })
-  } catch (error: any) {
-    console.error('Error fetching dashboard alerts:', error)
+  } catch (error: unknown) {
+    logger.error('Error fetching dashboard alerts:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard alerts',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1228,7 +1230,7 @@ export const getDashboardAlerts = async (req: Request, res: Response) => {
  * GET /api/analytics/pipeline-metrics
  * Returns average time-in-stage for each pipeline stage based on Activity records
  */
-export async function getPipelineMetrics(req: any, res: any) {
+export async function getPipelineMetrics(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
 
@@ -1323,12 +1325,12 @@ export async function getPipelineMetrics(req: any, res: any) {
     })
 
     res.json({ success: true, data: { metrics } })
-  } catch (error: any) {
-    console.error('Error fetching pipeline metrics:', error)
+  } catch (error: unknown) {
+    logger.error('Error fetching pipeline metrics:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch pipeline metrics',
-      error: error.message,
+      error: getErrorMessage(error),
     })
   }
 }
@@ -1338,7 +1340,7 @@ export async function getPipelineMetrics(req: any, res: any) {
  * Aggregate device type data from EMAIL_OPENED / EMAIL_CLICKED activities
  * that have deviceType in their metadata (captured from SendGrid webhooks)
  */
-export async function getDeviceBreakdown(req: any, res: any) {
+export async function getDeviceBreakdown(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
     if (!organizationId) {
@@ -1401,9 +1403,9 @@ export async function getDeviceBreakdown(req: any, res: any) {
         total,
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching device breakdown:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch device breakdown', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching device breakdown:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch device breakdown', error: getErrorMessage(error) })
   }
 }
 
@@ -1411,7 +1413,7 @@ export async function getDeviceBreakdown(req: any, res: any) {
  * Phase 8.9: GET /api/analytics/geographic
  * Aggregate geographic data from EMAIL_OPENED / EMAIL_CLICKED activities
  */
-export async function getGeographicBreakdown(req: any, res: any) {
+export async function getGeographicBreakdown(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
     if (!organizationId) {
@@ -1473,9 +1475,9 @@ export async function getGeographicBreakdown(req: any, res: any) {
         total,
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching geographic breakdown:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch geographic breakdown', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching geographic breakdown:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch geographic breakdown', error: getErrorMessage(error) })
   }
 }
 
@@ -1596,7 +1598,7 @@ function activityToChannel(type: string): string {
  * Multi-touch attribution report with 5 models.
  * Query params: model (attribution model), startDate, endDate
  */
-export async function getAttributionReport(req: any, res: any) {
+export async function getAttributionReport(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
     if (!organizationId) {
@@ -1610,7 +1612,7 @@ export async function getAttributionReport(req: any, res: any) {
     }
 
     const { startDate, endDate } = req.query
-    const dateFilter: any = {}
+    const dateFilter: Record<string, any> = {}
     if (startDate) dateFilter.gte = new Date(startDate as string)
     if (endDate) dateFilter.lte = new Date(endDate as string)
     const dateWhere = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
@@ -1697,7 +1699,7 @@ export async function getAttributionReport(req: any, res: any) {
     const sourceCredits: Record<string, { credit: number; revenue: number; conversions: number }> = {}
     const campaignCredits: Record<string, { credit: number; revenue: number; conversions: number; name: string }> = {}
     const channelCredits: Record<string, { credit: number; revenue: number; conversions: number }> = {}
-    const leadResults: any[] = []
+    const leadResults: Record<string, any>[] = []
     let totalAttributedRevenue = 0
 
     // Get campaign names for lookup
@@ -1781,9 +1783,9 @@ export async function getAttributionReport(req: any, res: any) {
         leads: leadResults.slice(0, 50), // Top 50 leads with touchpoint details
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching attribution report:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch attribution report', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching attribution report:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch attribution report', error: getErrorMessage(error) })
   }
 }
 
@@ -1791,7 +1793,7 @@ export async function getAttributionReport(req: any, res: any) {
  * Phase 5.1: GET /api/analytics/attribution/touchpoints/:leadId
  * Get all touchpoints for a specific lead with attribution credits.
  */
-export async function getLeadTouchpoints(req: any, res: any) {
+export async function getLeadTouchpoints(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
     if (!organizationId) {
@@ -1862,9 +1864,9 @@ export async function getLeadTouchpoints(req: any, res: any) {
         })),
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching lead touchpoints:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch lead touchpoints', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching lead touchpoints:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch lead touchpoints', error: getErrorMessage(error) })
   }
 }
 
@@ -1877,7 +1879,7 @@ export async function getLeadTouchpoints(req: any, res: any) {
  * Compare current period vs previous period for key metrics.
  * Query params: startDate, endDate (current period). Previous period auto-calculated as same length prior.
  */
-export async function getPeriodComparison(req: any, res: any) {
+export async function getPeriodComparison(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
     if (!organizationId) {
@@ -1992,9 +1994,9 @@ export async function getPeriodComparison(req: any, res: any) {
         ],
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching period comparison:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch period comparison', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching period comparison:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch period comparison', error: getErrorMessage(error) })
   }
 }
 
@@ -2007,7 +2009,7 @@ export async function getPeriodComparison(req: any, res: any) {
  * Measures how quickly leads move through the pipeline.
  * Returns: avg days per stage, velocity trend, throughput by period.
  */
-export async function getLeadVelocity(req: any, res: any) {
+export async function getLeadVelocity(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
     if (!organizationId) {
@@ -2095,9 +2097,9 @@ export async function getLeadVelocity(req: any, res: any) {
           .map(([month, data]) => ({ month, ...data })),
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching lead velocity:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch lead velocity', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching lead velocity:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch lead velocity', error: getErrorMessage(error) })
   }
 }
 
@@ -2109,7 +2111,7 @@ export async function getLeadVelocity(req: any, res: any) {
  * Phase 5.6: GET /api/analytics/source-roi
  * Calculate return on investment per lead source.
  */
-export async function getSourceROI(req: any, res: any) {
+export async function getSourceROI(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
     if (!organizationId) {
@@ -2117,7 +2119,7 @@ export async function getSourceROI(req: any, res: any) {
     }
 
     const { startDate, endDate } = req.query
-    const dateFilter: any = {}
+    const dateFilter: Record<string, any> = {}
     if (startDate) dateFilter.gte = new Date(startDate as string)
     if (endDate) dateFilter.lte = new Date(endDate as string)
     const dateWhere = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
@@ -2170,9 +2172,9 @@ export async function getSourceROI(req: any, res: any) {
       success: true,
       data: { sources: results, totals },
     })
-  } catch (error: any) {
-    console.error('Error fetching source ROI:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch source ROI', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching source ROI:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch source ROI', error: getErrorMessage(error) })
   }
 }
 
@@ -2184,7 +2186,7 @@ export async function getSourceROI(req: any, res: any) {
  * Phase 5.9: GET /api/analytics/follow-up-analytics
  * Aggregate follow-up reminder completion rates, response times, and trends.
  */
-export async function getFollowUpAnalytics(req: any, res: any) {
+export async function getFollowUpAnalytics(req: Request, res: Response) {
   try {
     const organizationId = req.user?.organizationId
     if (!organizationId) {
@@ -2286,8 +2288,8 @@ export async function getFollowUpAnalytics(req: any, res: any) {
           .map(([month, data]) => ({ month, ...data })),
       },
     })
-  } catch (error: any) {
-    console.error('Error fetching follow-up analytics:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch follow-up analytics', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching follow-up analytics:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch follow-up analytics', error: getErrorMessage(error) })
   }
 }

@@ -58,7 +58,7 @@ const TITLE_MAP: Record<string, string> = {
   '/settings/google-integration': 'Google Integration',
   '/settings/twilio-setup': 'Twilio Setup',
   '/settings/service-config': 'Service Config',
-  '/settings/demo-data': 'Demo Data',
+
   '/settings/password-security': 'Password',
   '/settings/tags-manager': 'Tags',
   '/settings/custom-fields': 'Custom Fields',
@@ -66,9 +66,9 @@ const TITLE_MAP: Record<string, string> = {
   '/admin/subscription': 'Subscription',
   '/admin/system-settings': 'System Settings',
   '/admin/feature-flags': 'Feature Flags',
-  '/admin/debug-console': 'Debug Console',
+
   '/admin/data-export': 'Data Export',
-  '/admin/retry-queue': 'Retry Queue',
+
   '/admin/health-check': 'Health Check',
   '/admin/database-maintenance': 'Database Maintenance',
   '/admin/audit-trail': 'Audit Trail',

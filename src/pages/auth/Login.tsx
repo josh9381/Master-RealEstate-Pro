@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Shield } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -18,6 +18,10 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   
+  // Cleanup ref for navigation timeouts
+  const navTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => { clearTimeout(navTimerRef.current) }, [])
+
   // 2FA challenge state
   const [requires2FA, setRequires2FA] = useState(false)
   const [pendingToken, setPendingToken] = useState('')
@@ -54,7 +58,7 @@ function Login() {
       const payload = response.data || response
       setAuth(payload.user, payload.tokens?.accessToken, payload.tokens?.refreshToken)
       toast.success('Login successful!', 'Redirecting to dashboard...')
-      setTimeout(() => navigate('/'), 500)
+      navTimerRef.current = setTimeout(() => navigate('/'), 500)
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } }
       toast.error('Login failed', err.response?.data?.message || 'Invalid email or password')
@@ -78,7 +82,7 @@ function Login() {
       
       setAuth(data.user, data.tokens?.accessToken, data.tokens?.refreshToken)
       toast.success('Login successful!', 'Redirecting to dashboard...')
-      setTimeout(() => navigate('/'), 500)
+      navTimerRef.current = setTimeout(() => navigate('/'), 500)
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } }
       toast.error('Verification failed', err.response?.data?.message || 'Invalid 2FA code')

@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 
@@ -39,8 +40,8 @@ export function validate(schema: {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        console.error('❌ Validation error:', error.issues)
-        console.error('📥 Request body that failed validation:', JSON.stringify(req.body))
+        logger.error('❌ Validation error:', error.issues)
+        logger.error('📥 Request body that failed validation:', JSON.stringify(req.body))
         res.status(400).json({
           success: false,
           error: 'Validation error',

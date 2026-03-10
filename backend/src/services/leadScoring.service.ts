@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import prisma from '../config/database'
 
 /**
@@ -348,7 +349,7 @@ export async function updateLeadScore(leadId: string, userId?: string): Promise<
         RECENCY_BONUS_MAX: orgConfig.recencyBonusMax,
         FREQUENCY_BONUS_MAX: orgConfig.frequencyBonusMax,
       };
-      console.log(`📊 Using org-level scoring config for lead ${leadId}`);
+      logger.info(`📊 Using org-level scoring config for lead ${leadId}`);
     }
   }
 
@@ -379,7 +380,7 @@ export async function updateLeadScore(leadId: string, userId?: string): Promise<
         RECENCY_BONUS_MAX: SCORE_WEIGHTS.RECENCY_BONUS_MAX * recencyScale,
         FREQUENCY_BONUS_MAX: SCORE_WEIGHTS.FREQUENCY_BONUS_MAX * activityScale,
       };
-      console.log(`📊 Using personalized scoring weights for user ${userId}`);
+      logger.info(`📊 Using personalized scoring weights for user ${userId}`);
     }
   }
   
@@ -448,7 +449,7 @@ export async function updateMultipleLeadScores(leadIds: string[], userId?: strin
  * NOW UPDATES EACH USER'S LEADS WITH THEIR PERSONALIZED WEIGHTS
  */
 export async function updateAllLeadScores(): Promise<{ updated: number; errors: number }> {
-  console.log('🔄 Starting bulk lead score update with per-user personalization...');
+  logger.info('🔄 Starting bulk lead score update with per-user personalization...');
 
   // Get all users with scoring models
   const usersWithModels = await prisma.leadScoringModel.findMany({
@@ -466,7 +467,7 @@ export async function updateAllLeadScores(): Promise<{ updated: number; errors: 
     });
 
     if (userLeads.length > 0) {
-      console.log(`📊 Updating ${userLeads.length} leads for user ${userId} with personalized weights...`);
+      logger.info(`📊 Updating ${userLeads.length} leads for user ${userId} with personalized weights...`);
       
       // Process in batches of 50
       const batchSize = 50;
@@ -503,7 +504,7 @@ export async function updateAllLeadScores(): Promise<{ updated: number; errors: 
   });
 
   if (leadsWithoutPersonalizedScoring.length > 0) {
-    console.log(`📊 Updating ${leadsWithoutPersonalizedScoring.length} leads with default weights...`);
+    logger.info(`📊 Updating ${leadsWithoutPersonalizedScoring.length} leads with default weights...`);
     
     const batchSize = 50;
     for (let i = 0; i < leadsWithoutPersonalizedScoring.length; i += batchSize) {
@@ -522,7 +523,7 @@ export async function updateAllLeadScores(): Promise<{ updated: number; errors: 
     }
   }
 
-  console.log(`✅ Bulk update complete: ${updated} leads updated, ${errors} errors`);
+  logger.info(`✅ Bulk update complete: ${updated} leads updated, ${errors} errors`);
   return { updated, errors };
 }
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Download, FileSpreadsheet, FileJson, FileText, Calendar, Table } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -137,7 +138,7 @@ const LeadsExport = () => {
         filename,
       }, ...prev].slice(0, 10));
     } catch (error) {
-      console.error('Error exporting leads:', error);
+      logger.error('Error exporting leads:', error);
       toast.error('Failed to export leads');
     } finally {
       setIsExporting(false);
@@ -180,7 +181,7 @@ const LeadsExport = () => {
                 await exportApi.download('leads', 'xlsx', filters);
                 toast.success('Excel export downloaded successfully');
               } catch (error) {
-                console.error('Error exporting:', error);
+                logger.error('Error exporting:', error);
                 toast.error('Failed to export as Excel');
               } finally {
                 setIsExporting(false);

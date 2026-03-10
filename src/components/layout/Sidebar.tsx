@@ -107,13 +107,14 @@ export function Sidebar() {
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden"
+            aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4">
+        <nav aria-label="Main navigation" className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-1">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href || 
@@ -130,6 +131,7 @@ export function Sidebar() {
                   <li key={item.name}>
                     <button
                       onClick={() => setAiHubExpanded(!isExpanded)}
+                      aria-expanded={isExpanded}
                       className={cn(
                         'flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                         isChildActive
@@ -245,6 +247,9 @@ export function Sidebar() {
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center space-x-3 w-full rounded-lg p-2 hover:bg-accent transition-colors"
+              aria-expanded={showProfileMenu}
+              aria-haspopup="true"
+              aria-label="User menu"
             >
               {user?.avatar ? (
                 <img 

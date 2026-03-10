@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errors'
+import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { prisma } from '../config/database'
 
@@ -83,9 +85,9 @@ export async function listReportSchedules(req: Request, res: Response) {
     })
 
     res.json({ success: true, data: schedules })
-  } catch (error: any) {
-    console.error('Error listing report schedules:', error)
-    res.status(500).json({ success: false, message: 'Failed to list report schedules', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error listing report schedules:', error)
+    res.status(500).json({ success: false, message: 'Failed to list report schedules', error: getErrorMessage(error) })
   }
 }
 
@@ -125,9 +127,9 @@ export async function createReportSchedule(req: Request, res: Response) {
     })
 
     res.status(201).json({ success: true, data: schedule })
-  } catch (error: any) {
-    console.error('Error creating report schedule:', error)
-    res.status(500).json({ success: false, message: 'Failed to create report schedule', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error creating report schedule:', error)
+    res.status(500).json({ success: false, message: 'Failed to create report schedule', error: getErrorMessage(error) })
   }
 }
 
@@ -145,7 +147,7 @@ export async function updateReportSchedule(req: Request, res: Response) {
       return res.status(404).json({ success: false, message: 'Schedule not found' })
     }
 
-    const updateData: any = {}
+    const updateData: Record<string, any> = {}
     if (frequency !== undefined) updateData.frequency = frequency
     if (customInterval !== undefined) updateData.customInterval = customInterval
     if (dayOfWeek !== undefined) updateData.dayOfWeek = dayOfWeek
@@ -174,9 +176,9 @@ export async function updateReportSchedule(req: Request, res: Response) {
     })
 
     res.json({ success: true, data: schedule })
-  } catch (error: any) {
-    console.error('Error updating report schedule:', error)
-    res.status(500).json({ success: false, message: 'Failed to update report schedule', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error updating report schedule:', error)
+    res.status(500).json({ success: false, message: 'Failed to update report schedule', error: getErrorMessage(error) })
   }
 }
 
@@ -193,9 +195,9 @@ export async function deleteReportSchedule(req: Request, res: Response) {
 
     await prisma.reportSchedule.delete({ where: { id } })
     res.json({ success: true, message: 'Schedule deleted' })
-  } catch (error: any) {
-    console.error('Error deleting report schedule:', error)
-    res.status(500).json({ success: false, message: 'Failed to delete report schedule', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error deleting report schedule:', error)
+    res.status(500).json({ success: false, message: 'Failed to delete report schedule', error: getErrorMessage(error) })
   }
 }
 
@@ -218,8 +220,8 @@ export async function getReportHistory(req: Request, res: Response) {
     ])
 
     res.json({ success: true, data: history, pagination: { page, limit, total } })
-  } catch (error: any) {
-    console.error('Error fetching report history:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch report history', error: error.message })
+  } catch (error: unknown) {
+    logger.error('Error fetching report history:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch report history', error: getErrorMessage(error) })
   }
 }

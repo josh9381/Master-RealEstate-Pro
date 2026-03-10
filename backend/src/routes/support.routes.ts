@@ -2,6 +2,7 @@
  * Support Ticket Routes — Phase 9.7b
  * Authenticated endpoints for creating/managing support tickets
  */
+import { logger } from '../lib/logger'
 import { Router, Request, Response } from 'express'
 import { TicketStatus, TicketPriority } from '@prisma/client'
 import prisma from '../config/database'
@@ -78,7 +79,7 @@ router.get('/', async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Error listing support tickets:', error)
+    logger.error('Error listing support tickets:', error)
     res.status(500).json({ success: false, message: 'Failed to list tickets' })
   }
 })
@@ -105,7 +106,7 @@ router.get('/stats', async (req: Request, res: Response) => {
       data: { open, inProgress, resolved, closed, total: open + inProgress + resolved + closed },
     })
   } catch (error) {
-    console.error('Error fetching ticket stats:', error)
+    logger.error('Error fetching ticket stats:', error)
     res.status(500).json({ success: false, message: 'Failed to fetch stats' })
   }
 })
@@ -138,7 +139,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json({ success: true, data: ticket })
   } catch (error) {
-    console.error('Error fetching ticket:', error)
+    logger.error('Error fetching ticket:', error)
     res.status(500).json({ success: false, message: 'Failed to fetch ticket' })
   }
 })
@@ -181,7 +182,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: ticket })
   } catch (error) {
-    console.error('Error creating ticket:', error)
+    logger.error('Error creating ticket:', error)
     res.status(500).json({ success: false, message: 'Failed to create ticket' })
   }
 })
@@ -235,7 +236,7 @@ router.post('/:id/messages', async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: message })
   } catch (error) {
-    console.error('Error adding message:', error)
+    logger.error('Error adding message:', error)
     res.status(500).json({ success: false, message: 'Failed to add message' })
   }
 })
@@ -284,7 +285,7 @@ router.patch('/:id/status', requireAdmin, async (req: Request, res: Response) =>
 
     res.json({ success: true, data: updated })
   } catch (error) {
-    console.error('Error updating ticket status:', error)
+    logger.error('Error updating ticket status:', error)
     res.status(500).json({ success: false, message: 'Failed to update status' })
   }
 })
@@ -316,7 +317,7 @@ router.patch('/:id/assign', requireAdmin, async (req: Request, res: Response) =>
 
     res.json({ success: true, data: updated })
   } catch (error) {
-    console.error('Error assigning ticket:', error)
+    logger.error('Error assigning ticket:', error)
     res.status(500).json({ success: false, message: 'Failed to assign ticket' })
   }
 })

@@ -27,7 +27,7 @@ export const getTasks = async (req: Request, res: Response) => {
 
   // Build where clause with role-based filtering
   const roleFilter = getRoleFilterFromRequest(req);
-  const additionalWhere: any = {};
+  const additionalWhere: Record<string, any> = {};
 
   if (status) additionalWhere.status = status as TaskStatus;
   if (priority) additionalWhere.priority = priority as TaskPriority;
@@ -48,7 +48,7 @@ export const getTasks = async (req: Request, res: Response) => {
     ];
   }
 
-  const where: any = getTasksFilter(roleFilter, additionalWhere);
+  const where: Record<string, any> = getTasksFilter(roleFilter, additionalWhere);
   // Ensure org-scoping even if roleFilter misses it
   where.organizationId = req.user!.organizationId;
 
@@ -245,7 +245,7 @@ export const updateTask = async (req: Request, res: Response) => {
   }
 
   // Process date field
-  const processedData: any = { ...updateData };
+  const processedData: Record<string, any> = { ...updateData };
   if (updateData.dueDate !== undefined) {
     processedData.dueDate = new Date(updateData.dueDate);
   }
@@ -371,7 +371,7 @@ export const getTaskStats = async (req: Request, res: Response) => {
   const { assignedToId } = req.query;
   const organizationId = req.user!.organizationId;
 
-  const where: any = { organizationId };
+  const where: Record<string, any> = { organizationId };
   if (assignedToId) where.assignedToId = assignedToId as string;
 
   // Get task counts by status
@@ -458,25 +458,36 @@ export const getTasksForLead = async (req: Request, res: Response) => {
     throw new NotFoundError('Lead not found');
   }
 
-  // Get all tasks for the lead within org
-  const tasks = await prisma.task.findMany({
-    where: { leadId, organizationId },
-    include: {
-      assignedTo: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
+  // Get tasks for the lead within org (paginated)
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+  const skip = (page - 1) * limit;
+
+  const taskWhere = { leadId, organizationId };
+
+  const [tasks, total] = await Promise.all([
+    prisma.task.findMany({
+      where: taskWhere,
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: { dueDate: 'asc' },
-  });
+      orderBy: { dueDate: 'asc' },
+      skip,
+      take: limit,
+    }),
+    prisma.task.count({ where: taskWhere }),
+  ]);
 
   res.json({
     success: true,
-    data: { tasks },
+    data: { tasks, pagination: { page, limit, total, pages: Math.ceil(total / limit) } },
   });
 };
 

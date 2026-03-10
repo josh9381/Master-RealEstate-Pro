@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import { Request } from 'express';
 import { prisma } from '../config/database';
 
@@ -27,10 +28,10 @@ export async function logAPIKeyAccess(
       }
     });
     
-    console.log(`✅ Audit log: User ${userId} ${action} ${provider} credentials`);
+    logger.info(`✅ Audit log: User ${userId} ${action} ${provider} credentials`);
   } catch (error) {
     // Don't throw - audit logging should never break the main flow
-    console.error('❌ Failed to create audit log:', error);
+    logger.error('❌ Failed to create audit log:', error);
   }
 }
 

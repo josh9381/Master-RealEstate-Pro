@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useToast } from '@/hooks/useToast'
@@ -43,7 +44,7 @@ import {
   Legend
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
-import { analyticsApi, campaignsApi, tasksApi } from '@/lib/api'
+import { analyticsApi, campaignsApi, tasksApi, appointmentsApi } from '@/lib/api'
 import { GettingStarted } from '@/components/onboarding/GettingStarted'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import type { Campaign, ConversionStage, RevenueMonth, ActivityRecord, DashboardActivity, DashboardTask, DashboardCampaign, DashboardAlert } from '@/types'
@@ -182,6 +183,16 @@ function Dashboard() {
     queryFn: async () => {
       const response = await analyticsApi.getDashboardAlerts()
       return response.data
+    },
+    retry: false,
+  })
+
+  // Upcoming appointments for calendar widget
+  const { data: appointmentsData, isLoading: appointmentsLoading, isError: appointmentsError, refetch: refetchAppointments } = useQuery({
+    queryKey: ['dashboard-upcoming-appointments'],
+    queryFn: async () => {
+      const response = await appointmentsApi.getUpcoming({ days: 7, limit: 5 })
+      return response.data || response
     },
     retry: false,
   })
@@ -370,7 +381,7 @@ function Dashboard() {
         refetchAlerts(),
       ])
     } catch (error) {
-      console.error('Error refreshing dashboard:', error)
+      logger.error('Error refreshing dashboard:', error)
     } finally {
       setRefreshing(false)
     }
@@ -390,7 +401,7 @@ function Dashboard() {
       refetchTasks()
       refetchStats()
     } catch (error) {
-      console.error('Error updating task:', error)
+      logger.error('Error updating task:', error)
       toast.error('Failed to update task. Please try again.')
     }
   }, [refetchTasks, refetchStats, toast])
@@ -626,7 +637,7 @@ function Dashboard() {
       doc.save(`dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('Dashboard exported as PDF')
     } catch (error) {
-      console.error('PDF export failed:', error)
+      logger.error('PDF export failed:', error)
       toast.error('Failed to generate PDF. Please try CSV export.')
     }
   }, [stats, conversionData, topCampaigns, revenueData, upcomingTasks, recentActivities, dateRange, toast])
@@ -1037,8 +1048,8 @@ function Dashboard() {
         </Card>
       </div>
 
-      {/* Activity & Tasks Row */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Activity, Tasks & Calendar Row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Recent Activity Feed */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -1137,6 +1148,69 @@ function Dashboard() {
                       <Badge variant="outline" className="text-xs ml-2">{task.status}</Badge>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Upcoming Appointments / Calendar Widget */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Upcoming Appointments</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
+              View All
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {appointmentsLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg border animate-pulse">
+                    <div className="h-8 w-8 bg-muted rounded" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : appointmentsError ? (
+              <div className="flex items-center justify-center py-6 text-muted-foreground">
+                <p>Failed to load appointments. <Button variant="link" size="sm" onClick={() => refetchAppointments()}>Retry</Button></p>
+              </div>
+            ) : (appointmentsData?.appointments || appointmentsData || []).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <Calendar className="h-8 w-8 mb-2 opacity-50" />
+                <p className="text-sm">No upcoming appointments</p>
+                <Button variant="link" size="sm" onClick={() => navigate('/calendar')} className="mt-1">
+                  Schedule one
+                </Button>
+              </div>
+            ) : (
+            <div className="space-y-3">
+              {(appointmentsData?.appointments || appointmentsData || []).slice(0, 5).map((apt: { id: string; title: string; scheduledAt?: string; type?: string; lead?: { name?: string }; leadName?: string; status?: string }) => (
+                <div key={apt.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate('/calendar')}>
+                  <div className="mt-0.5 p-2 rounded-lg bg-primary/10">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{apt.title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {apt.scheduledAt ? new Date(apt.scheduledAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD'}
+                      </span>
+                    </div>
+                    {(apt.lead?.name || apt.leadName) && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{apt.lead?.name || apt.leadName}</p>
+                    )}
+                  </div>
+                  {apt.type && (
+                    <Badge variant="outline" className="text-xs shrink-0">{apt.type}</Badge>
+                  )}
                 </div>
               ))}
             </div>

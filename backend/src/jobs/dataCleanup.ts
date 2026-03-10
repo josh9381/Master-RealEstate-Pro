@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger'
 import prisma from '../config/database';
 import { acquireLock, releaseLock } from '../utils/distributedLock';
 
@@ -120,12 +121,12 @@ async function cleanupAIInsights(): Promise<number> {
 async function runCleanup(): Promise<void> {
   const acquired = await acquireLock(LOCK_KEY, LOCK_TTL);
   if (!acquired) {
-    console.log('[DataCleanup] Another instance is running cleanup — skipping');
+    logger.info('[DataCleanup] Another instance is running cleanup — skipping');
     return;
   }
 
   try {
-    console.log('[DataCleanup] Starting stale data cleanup...');
+    logger.info('[DataCleanup] Starting stale data cleanup...');
     const start = Date.now();
 
     const [refreshTokens, resetTokens, loginHistory, insights] = await Promise.all([
@@ -139,7 +140,7 @@ async function runCleanup(): Promise<void> {
     const duration = Date.now() - start;
 
     if (total > 0) {
-      console.log(
+      logger.info(
         `[DataCleanup] Cleaned up ${total} records in ${duration}ms:`,
         `RefreshTokens=${refreshTokens}`,
         `PasswordResetTokens=${resetTokens}`,
@@ -147,10 +148,10 @@ async function runCleanup(): Promise<void> {
         `AIInsights=${insights}`
       );
     } else {
-      console.log(`[DataCleanup] No stale records found (${duration}ms)`);
+      logger.info(`[DataCleanup] No stale records found (${duration}ms)`);
     }
   } catch (error) {
-    console.error('[DataCleanup] Error during cleanup:', error);
+    logger.error('[DataCleanup] Error during cleanup:', error);
   } finally {
     await releaseLock(LOCK_KEY);
   }
@@ -166,16 +167,16 @@ let cleanupInterval: ReturnType<typeof setInterval> | null = null;
  * Start the periodic cleanup job
  */
 export function startDataCleanup(): void {
-  console.log('[DataCleanup] Starting data cleanup scheduler (interval: 1h)');
+  logger.info('[DataCleanup] Starting data cleanup scheduler (interval: 1h)');
 
   // Run once on startup (after a short delay to let DB connections settle)
   setTimeout(() => {
-    runCleanup().catch(err => console.error('[DataCleanup] Initial run failed:', err));
+    runCleanup().catch(err => logger.error('[DataCleanup] Initial run failed:', err));
   }, 30_000); // 30 second delay
 
   // Then run periodically
   cleanupInterval = setInterval(() => {
-    runCleanup().catch(err => console.error('[DataCleanup] Scheduled run failed:', err));
+    runCleanup().catch(err => logger.error('[DataCleanup] Scheduled run failed:', err));
   }, CLEANUP_INTERVAL);
 }
 
@@ -186,6 +187,6 @@ export function stopDataCleanup(): void {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
-    console.log('[DataCleanup] Cleanup scheduler stopped');
+    logger.info('[DataCleanup] Cleanup scheduler stopped');
   }
 }
