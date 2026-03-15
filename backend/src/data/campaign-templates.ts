@@ -35,15 +35,15 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
 Here's your weekly real estate market update for our area:
 
 📊 Market Highlights:
-• Average home price: [INSERT CURRENT PRICE]
-• Days on market: [INSERT DOM]
-• Homes sold this week: [INSERT NUMBER]
+• Average home price: {{market.averagePrice}}
+• Days on market: {{market.daysOnMarket}}
+• Homes sold this week: {{market.homesSold}}
 
 🏠 Featured Listings:
-[INSERT TOP 3 NEW LISTINGS]
+{{market.featuredListings}}
 
 💡 Market Insight:
-[INSERT BRIEF MARKET COMMENTARY]
+{{market.commentary}}
 
 Ready to make a move? Let's talk about your real estate goals.
 
@@ -78,16 +78,16 @@ Welcome to your monthly real estate update!
 • Local community news
 
 📈 Market Overview:
-[INSERT MARKET ANALYSIS]
+{{market.analysis}}
 
 🏡 Featured Properties:
-[INSERT FEATURED LISTINGS]
+{{market.featuredListings}}
 
 💼 Real Estate Tips:
-[INSERT HELPFUL TIPS]
+{{market.tips}}
 
 📅 Upcoming Open Houses:
-[INSERT SCHEDULE]
+{{market.openHouseSchedule}}
 
 Questions? I'm here to help!
 
@@ -115,17 +115,17 @@ Cheers,
 Great news! A new property just hit the market that matches your search criteria:
 
 🏡 Property Details:
-• Address: [INSERT ADDRESS]
-• Price: [INSERT PRICE]
-• Beds/Baths: [INSERT DETAILS]
-• Square Feet: [INSERT SQ FT]
-• Key Features: [INSERT FEATURES]
+• Address: {{property.address}}
+• Price: {{property.price}}
+• Beds/Baths: {{property.bedsBaths}}
+• Square Feet: {{property.sqft}}
+• Key Features: {{property.features}}
 
-📸 [INSERT PROPERTY PHOTOS]
+📸 {{property.photos}}
 
 This one won't last long! Want to schedule a viewing?
 
-Click here to see more details: [INSERT LINK]
+Click here to see more details: {{property.link}}
 
 Best,
 {{user.firstName}} {{user.lastName}}
@@ -147,20 +147,17 @@ Best,
 You're invited to an exclusive open house this weekend!
 
 🏡 Property Address:
-[INSERT ADDRESS]
+{{property.address}}
 
 📅 Open House Details:
-• Date: [INSERT DATE]
-• Time: [INSERT TIME]
-• Duration: [INSERT DURATION]
+• Date: {{event.date}}
+• Time: {{event.time}}
+• Duration: {{event.duration}}
 
 🌟 Property Highlights:
-• [INSERT FEATURE 1]
-• [INSERT FEATURE 2]
-• [INSERT FEATURE 3]
-• [INSERT FEATURE 4]
+{{property.highlights}}
 
-💰 Listed at: [INSERT PRICE]
+💰 Listed at: {{property.price}}
 
 Refreshments will be served! RSVP to secure your spot.
 
@@ -186,18 +183,16 @@ Looking forward to seeing you!
 
 Exciting news! The property you expressed interest in has just had a price reduction:
 
-🏠 Property: [INSERT ADDRESS]
+🏠 Property: {{property.address}}
 
-💵 Original Price: [INSERT ORIGINAL PRICE]
-💰 New Price: [INSERT NEW PRICE]
-📉 Savings: [INSERT SAVINGS AMOUNT]
+💵 Original Price: {{property.originalPrice}}
+💰 New Price: {{property.newPrice}}
+📉 Savings: {{property.savings}}
 
 This is a great opportunity to make an offer! Properties with price reductions often attract multiple buyers quickly.
 
 Key Features You Loved:
-• [INSERT FEATURE 1]
-• [INSERT FEATURE 2]
-• [INSERT FEATURE 3]
+{{property.features}}
 
 Want to take another look or make an offer?
 
@@ -222,7 +217,7 @@ Best,
 
 Congratulations! 🎉
 
-It was an absolute pleasure helping you find and close on your new home at [INSERT ADDRESS].
+It was an absolute pleasure helping you find and close on your new home at {{property.address}}.
 
 🏡 What's Next?
 • Enjoy settling into your new space
@@ -231,9 +226,9 @@ It was an absolute pleasure helping you find and close on your new home at [INSE
 
 📝 Quick Favor:
 If you enjoyed working with me, I'd be grateful if you could:
-• Leave a review: [INSERT REVIEW LINK]
+• Leave a review: {{user.reviewLink}}
 • Refer friends who might need help buying or selling
-• Connect on social media: [INSERT LINKS]
+• Connect on social media: {{user.socialLinks}}
 
 🎁 Housewarming Gift:
 I'm sending you a small housewarming gift - keep an eye out!
@@ -254,26 +249,26 @@ Warmest congratulations,
     description: 'Quarterly market insights and trends for each season',
     category: 'Newsletter',
     type: 'EMAIL',
-    subject: '🍂 Fall Market Update: What You Need to Know',
+    subject: '📊 Seasonal Market Update: What You Need to Know',
     body: `Hi {{lead.firstName}},
 
-As we move into [INSERT SEASON], the real estate market is showing interesting trends!
+As we move into {{market.season}}, the real estate market is showing interesting trends!
 
 🌟 Seasonal Highlights:
-• Market conditions: [INSERT CONDITIONS]
-• Best time to: [INSERT RECOMMENDATION]
-• Average prices: [INSERT PRICING TRENDS]
+• Market conditions: {{market.conditions}}
+• Best time to: {{market.recommendation}}
+• Average prices: {{market.pricingTrends}}
 
 📊 Market Statistics:
-• Homes sold this quarter: [INSERT NUMBER]
-• Average days on market: [INSERT DOM]
-• Price trends: [INSERT TREND]
+• Homes sold this quarter: {{market.homesSold}}
+• Average days on market: {{market.daysOnMarket}}
+• Price trends: {{market.priceTrend}}
 
 💡 Seasonal Tips:
-[INSERT SEASON-SPECIFIC ADVICE]
+{{market.seasonalAdvice}}
 
 🏠 Featured Properties:
-[INSERT SEASONAL LISTINGS]
+{{market.featuredListings}}
 
 Thinking about making a move? Now might be the perfect time!
 
@@ -289,7 +284,44 @@ Best regards,
       time: '10:00',
     },
     tags: ['newsletter', 'seasonal', 'market-update'],
-    icon: '🍂',
+    icon: '📊',
+  },
+
+  // SMS Templates
+  {
+    id: 'sms-new-listing-alert',
+    name: 'SMS: New Listing Alert',
+    description: 'Quick text notification when a matching listing hits the market',
+    category: 'Alert',
+    type: 'SMS',
+    body: `Hi {{lead.firstName}}! A new listing just dropped that matches what you're looking for: {{property.address}} at {{property.price}}. Want to schedule a tour? Reply YES or call me! - {{user.firstName}}`,
+    isRecurring: false,
+    tags: ['sms', 'alert', 'listing'],
+    icon: '📱',
+  },
+
+  {
+    id: 'sms-open-house-reminder',
+    name: 'SMS: Open House Reminder',
+    description: 'Day-of reminder for open house attendees',
+    category: 'Event',
+    type: 'SMS',
+    body: `Reminder: Open house TODAY at {{property.address}} from {{event.time}}. Can't wait to see you there! - {{user.firstName}} {{user.lastName}}`,
+    isRecurring: false,
+    tags: ['sms', 'event', 'reminder'],
+    icon: '🔔',
+  },
+
+  {
+    id: 'sms-showing-followup',
+    name: 'SMS: Showing Follow-up',
+    description: 'Quick follow-up text after a property showing',
+    category: 'Follow-up',
+    type: 'SMS',
+    body: `Hi {{lead.firstName}}, thanks for viewing {{property.address}} today! What did you think? Let me know if you have any questions or want to make an offer. - {{user.firstName}}`,
+    isRecurring: false,
+    tags: ['sms', 'follow-up', 'showing'],
+    icon: '💬',
   },
 ];
 

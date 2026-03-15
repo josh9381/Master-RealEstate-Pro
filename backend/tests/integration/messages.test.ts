@@ -11,9 +11,14 @@ describe('Message System Integration Tests', () => {
   let testLeadId: string
 
   beforeAll(async () => {
+    // Create test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    })
+
     // Create test user first
     await prisma.user.upsert({
-      where: { email: 'admin@realestate.com' },
+      where: { organizationId_email: { organizationId: testOrg.id, email: 'admin@realestate.com' } },
       update: {},
       create: {
         email: 'admin@realestate.com',
@@ -21,6 +26,7 @@ describe('Message System Integration Tests', () => {
         firstName: 'Admin',
         lastName: 'User',
         role: 'ADMIN',
+        organizationId: testOrg.id,
       }
     })
 

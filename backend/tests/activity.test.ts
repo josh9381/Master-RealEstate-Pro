@@ -17,8 +17,15 @@ describe('Activity Management', () => {
   let userId: string
   let leadId: string
   let campaignId: string
+  let testOrgId: string
 
   beforeEach(async () => {
+    // Create test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` }
+    })
+    testOrgId = testOrg.id
+
     // Create test user
     const hashedPassword = await bcrypt.hash('password123', 10)
     const user = await prisma.user.create({
@@ -27,14 +34,15 @@ describe('Activity Management', () => {
         password: hashedPassword,
         firstName: 'Test',
         lastName: 'User',
-        role: 'USER'
+        role: 'USER',
+        organizationId: testOrgId
       }
     })
     userId = user.id
 
     // Generate auth token (must match backend JWT format with issuer/audience)
     authToken = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: user.role, organizationId: testOrgId },
       process.env.JWT_ACCESS_SECRET || 'test-access-secret-123',
       { 
         expiresIn: '24h',
@@ -46,11 +54,13 @@ describe('Activity Management', () => {
     // Create test lead
     const lead = await prisma.lead.create({
       data: {
-        name: 'Test Lead',
+        firstName: 'Test',
+        lastName: 'Lead',
         email: 'lead@example.com',
         phone: '555-0100',
         status: 'NEW',
-        assignedToId: userId
+        assignedToId: userId,
+        organizationId: testOrgId
       }
     })
     leadId = lead.id
@@ -61,7 +71,8 @@ describe('Activity Management', () => {
         name: 'Test Campaign',
         type: 'EMAIL',
         status: 'DRAFT',
-        createdById: userId
+        createdById: userId,
+        organizationId: testOrgId
       }
     })
     campaignId = campaign.id
@@ -139,19 +150,22 @@ describe('Activity Management', () => {
             type: 'EMAIL_SENT',
             title: 'Email 1',
             userId,
-            leadId
+            leadId,
+            organizationId: testOrgId
           },
           {
             type: 'SMS_SENT',
             title: 'SMS 1',
             userId,
-            leadId
+            leadId,
+            organizationId: testOrgId
           },
           {
             type: 'CALL_MADE',
             title: 'Call 1',
             userId,
-            campaignId
+            campaignId,
+            organizationId: testOrgId
           }
         ]
       })
@@ -216,10 +230,10 @@ describe('Activity Management', () => {
     beforeEach(async () => {
       await prisma.activity.createMany({
         data: [
-          { type: 'EMAIL_SENT', title: 'Email 1', userId },
-          { type: 'EMAIL_SENT', title: 'Email 2', userId },
-          { type: 'SMS_SENT', title: 'SMS 1', userId },
-          { type: 'CALL_MADE', title: 'Call 1', userId }
+          { type: 'EMAIL_SENT', title: 'Email 1', userId, organizationId: testOrgId },
+          { type: 'EMAIL_SENT', title: 'Email 2', userId, organizationId: testOrgId },
+          { type: 'SMS_SENT', title: 'SMS 1', userId, organizationId: testOrgId },
+          { type: 'CALL_MADE', title: 'Call 1', userId, organizationId: testOrgId }
         ]
       })
     })
@@ -250,6 +264,7 @@ describe('Activity Management', () => {
           description: 'Test description',
           userId,
           leadId,
+          organizationId: testOrgId,
           metadata: { test: 'data' }
         }
       })
@@ -281,7 +296,8 @@ describe('Activity Management', () => {
         data: {
           type: 'EMAIL_SENT',
           title: 'Original Title',
-          userId
+          userId,
+          organizationId: testOrgId
         }
       })
 
@@ -317,7 +333,8 @@ describe('Activity Management', () => {
         data: {
           type: 'EMAIL_SENT',
           title: 'To Delete',
-          userId
+          userId,
+          organizationId: testOrgId
         }
       })
 
@@ -349,19 +366,21 @@ describe('Activity Management', () => {
       // Create another lead
       const lead2 = await prisma.lead.create({
         data: {
-          name: 'Lead 2',
+          firstName: 'Lead',
+          lastName: '2',
           email: 'lead2@example.com',
           status: 'NEW',
-          assignedToId: userId
+          assignedToId: userId,
+          organizationId: testOrgId
         }
       })
 
       // Create activities for both leads
       await prisma.activity.createMany({
         data: [
-          { type: 'EMAIL_SENT', title: 'Email to lead 1', userId, leadId },
-          { type: 'CALL_MADE', title: 'Call to lead 1', userId, leadId },
-          { type: 'EMAIL_SENT', title: 'Email to lead 2', userId, leadId: lead2.id }
+          { type: 'EMAIL_SENT', title: 'Email to lead 1', userId, leadId, organizationId: testOrgId },
+          { type: 'CALL_MADE', title: 'Call to lead 1', userId, leadId, organizationId: testOrgId },
+          { type: 'EMAIL_SENT', title: 'Email to lead 2', userId, leadId: lead2.id, organizationId: testOrgId }
         ]
       })
 
@@ -392,16 +411,17 @@ describe('Activity Management', () => {
           name: 'Campaign 2',
           type: 'SMS',
           status: 'DRAFT',
-          createdById: userId
+          createdById: userId,
+          organizationId: testOrgId
         }
       })
 
       // Create activities for both campaigns
       await prisma.activity.createMany({
         data: [
-          { type: 'CAMPAIGN_LAUNCHED', title: 'Launched campaign 1', userId, campaignId },
-          { type: 'EMAIL_SENT', title: 'Email from campaign 1', userId, campaignId },
-          { type: 'CAMPAIGN_LAUNCHED', title: 'Launched campaign 2', userId, campaignId: campaign2.id }
+          { type: 'CAMPAIGN_LAUNCHED', title: 'Launched campaign 1', userId, campaignId, organizationId: testOrgId },
+          { type: 'EMAIL_SENT', title: 'Email from campaign 1', userId, campaignId, organizationId: testOrgId },
+          { type: 'CAMPAIGN_LAUNCHED', title: 'Launched campaign 2', userId, campaignId: campaign2.id, organizationId: testOrgId }
         ]
       })
 

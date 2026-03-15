@@ -171,7 +171,7 @@ function Dashboard() {
   const { data: revenueTimelineData, isLoading: revenueLoading, isError: revenueError, refetch: refetchRevenue } = useQuery({
     queryKey: ['revenue-timeline'],
     queryFn: async () => {
-      const response = await analyticsApi.getRevenueTimeline({ months: 12 })
+      const response = await analyticsApi.getRevenueTimeline({ months: 6 })
       return response.data
     },
     retry: false,
@@ -200,14 +200,23 @@ function Dashboard() {
   const isLoading = statsLoading
 
   // Transform API data for charts
-  // Lead source data for pie chart
-  const leadSourceData = leadAnalyticsData?.bySource 
-    ? Object.entries(leadAnalyticsData.bySource).map(([name, value], index) => ({
-        name,
-        value: typeof value === 'number' ? value : 0,
-        color: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280'][index] || '#6b7280'
-      }))
-    : []
+  // Lead source data for pie chart — aggregate to top 5 + "Other" for readability
+  const LEAD_SOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#6b7280']
+  const leadSourceData = (() => {
+    if (!leadAnalyticsData?.bySource) return []
+    const all = Object.entries(leadAnalyticsData.bySource)
+      .map(([name, value]) => ({ name, value: typeof value === 'number' ? value : 0 }))
+      .sort((a, b) => b.value - a.value)
+    if (all.length <= 6) {
+      return all.map((s, i) => ({ ...s, color: LEAD_SOURCE_COLORS[i] || '#6b7280' }))
+    }
+    const top5 = all.slice(0, 5)
+    const otherValue = all.slice(5).reduce((sum, s) => sum + s.value, 0)
+    return [
+      ...top5.map((s, i) => ({ ...s, color: LEAD_SOURCE_COLORS[i] })),
+      { name: 'Other', value: otherValue, color: LEAD_SOURCE_COLORS[5] }
+    ]
+  })()
 
   // Conversion funnel data
   const conversionData = conversionFunnelData?.stages 
@@ -218,12 +227,10 @@ function Dashboard() {
       }))
     : []
 
-  // Campaign performance by type
+  // Campaign performance by type — only show conversions (opens/clicks not available in API)
   const campaignPerformance = campaignAnalyticsData?.byType
     ? Object.entries(campaignAnalyticsData.byType).map(([name, count]) => ({
         name: name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(),
-        opens: 0, // Not available in current API
-        clicks: 0,
         conversions: typeof count === 'number' ? count : 0
       }))
     : []
@@ -233,7 +240,8 @@ function Dashboard() {
     id: activity.id,
     type: (activity.type || 'note').toLowerCase(),
     action: activity.title || '',
-    lead: activity.lead?.name || activity.description || '',
+    lead: activity.lead?.name || [activity.lead?.firstName, activity.lead?.lastName].filter(Boolean).join(' ') || activity.description || '',
+    leadId: activity.leadId ? String(activity.leadId) : undefined,
     time: new Date(activity.createdAt).toLocaleString(),
     icon: Users // Default icon
   })) || []
@@ -258,20 +266,20 @@ function Dashboard() {
     roi: campaign.roi ? (String(campaign.roi).endsWith('%') ? String(campaign.roi) : `${campaign.roi}%`) : '0%'
   })) || []
 
-  // Revenue data from API
+  // Revenue data from API — limit to last 6 months to match subtitle
   const revenueData = revenueTimelineData?.monthly
-    ? revenueTimelineData.monthly.map((m: RevenueMonth) => ({
+    ? revenueTimelineData.monthly.slice(-6).map((m: RevenueMonth) => ({
         month: m.month,
         revenue: m.totalRevenue || 0,
-        leads: m.deals || 0,
+        deals: m.deals || 0,
       }))
     : []
 
   // Quick stats from API
   const quickStats = [
-    { label: 'Total Activities', value: dashboardData?.activities?.total?.toString() || '0', change: '+0%' },
-    { label: 'Tasks Due Today', value: dashboardData?.tasks?.dueToday?.toString() || '0', change: '+0' },
-    { label: 'Active Campaigns', value: dashboardData?.campaigns?.active?.toString() || '0', change: '+0' },
+    { label: 'Total Activities', value: dashboardData?.activities?.total?.toString() || '0', change: '' },
+    { label: 'Tasks Due Today', value: dashboardData?.tasks?.dueToday?.toString() || '0', change: '' },
+    { label: 'Active Campaigns', value: dashboardData?.campaigns?.active?.toString() || '0', change: '' },
     { label: 'Tasks Completed', value: `${dashboardData?.tasks?.completed || 0}/${dashboardData?.tasks?.total || 0}`, change: `${dashboardData?.tasks?.completionRate || 0}%` },
   ]
 
@@ -392,7 +400,7 @@ function Dashboard() {
     try {
       if (currentStatus === 'completed') {
         // Mark as incomplete by updating status back to pending
-        await tasksApi.updateTask(taskId, { status: 'pending' })
+        await tasksApi.updateTask(taskId, { status: 'PENDING' })
       } else {
         // Mark as complete
         await tasksApi.completeTask(taskId)
@@ -455,7 +463,7 @@ function Dashboard() {
     if (revenueData.length > 0) {
       rows.push({ Section: 'Revenue', Metric: '', Value: '', Details: '' })
       for (const r of revenueData) {
-        rows.push({ Section: 'Revenue', Metric: r.month, Value: r.revenue, Details: `Leads: ${r.leads}` })
+        rows.push({ Section: 'Revenue', Metric: r.month, Value: r.revenue, Details: `Deals: ${r.deals}` })
       }
     }
 
@@ -587,7 +595,7 @@ function Dashboard() {
         doc.setFontSize(10)
         for (const r of revenueData) {
           doc.setTextColor(60, 60, 60)
-          doc.text(`${r.month}: $${Number(r.revenue).toLocaleString()} (${r.leads} deals)`, 18, y)
+          doc.text(`${r.month}: $${Number(r.revenue).toLocaleString()} (${r.deals} deals)`, 18, y)
           y += 6
         }
         y += 4
@@ -688,22 +696,27 @@ function Dashboard() {
             Filter
           </Button>
           <div className="relative" ref={exportMenuRef}>
-            <Button variant="outline" size="sm" onClick={() => setShowExportMenu(!showExportMenu)}>
+            <Button variant="outline" size="sm" onClick={() => setShowExportMenu(!showExportMenu)} aria-haspopup="true" aria-expanded={showExportMenu}>
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
             {showExportMenu && (
-              <div className="absolute right-0 mt-1 w-40 bg-card border rounded-md shadow-lg z-10">
+              <div className="absolute right-0 mt-1 w-40 bg-card border rounded-md shadow-lg z-10" role="menu" aria-label="Export options" onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Escape') { setShowExportMenu(false) } }}>
                 <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-t-md"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-t-md focus:bg-accent focus:outline-none"
                   onClick={handleExportCSV}
+                  role="menuitem"
+                  tabIndex={0}
+                  autoFocus
                 >
                   <FileSpreadsheet className="h-4 w-4" />
                   Export CSV
                 </button>
                 <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-b-md"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-b-md focus:bg-accent focus:outline-none"
                   onClick={handleExportPDF}
+                  role="menuitem"
+                  tabIndex={0}
                 >
                   <FileText className="h-4 w-4" />
                   Export PDF
@@ -795,7 +808,7 @@ function Dashboard() {
       <GettingStarted
         totalLeads={dashboardData?.overview?.totalLeads || 0}
         totalCampaigns={dashboardData?.overview?.totalCampaigns || dashboardData?.campaigns?.total || 0}
-        hasCampaignResults={!!(dashboardData?.campaigns?.totalSent > 0)}
+        hasCampaignResults={!!(dashboardData?.campaigns?.performance?.totalSent > 0)}
       />
 
       {/* Quick Actions */}
@@ -873,7 +886,7 @@ function Dashboard() {
               <div className="text-2xl font-bold">{item.value}</div>
               <div className="flex items-center justify-between mt-1">
                 <p className="text-sm text-muted-foreground">{item.label}</p>
-                <Badge variant="secondary" className="text-xs">{item.change}</Badge>
+{item.change && <Badge variant="secondary" className="text-xs">{item.change}</Badge>}
               </div>
             </CardContent>
           </Card>
@@ -902,7 +915,7 @@ function Dashboard() {
               </div>
             ) : (
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={revenueData}>
+              <AreaChart data={revenueData} aria-label="Revenue and deals trend chart">
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
@@ -915,11 +928,11 @@ function Dashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
+                <YAxis tickFormatter={(v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `$${(v / 1_000).toFixed(0)}K` : `$${v}`} />
+                <Tooltip formatter={(value: number, name: string) => [name === 'revenue' ? `$${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : 'Deals']} />
                 <Legend />
                 <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRevenue)" />
-                <Area type="monotone" dataKey="leads" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" />
+                <Area type="monotone" dataKey="deals" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" />
               </AreaChart>
             </ResponsiveContainer>
             )}
@@ -932,9 +945,9 @@ function Dashboard() {
             <div>
               <CardTitle className="flex items-center gap-1.5">
                 Conversion Funnel
-                <HelpTooltip text="Shows how leads progress through your sales stages: New → Contacted → Qualified → Proposal → Won. Each bar represents the number of leads at that stage. The overall rate shows what percentage of all leads eventually convert to 'Won'." />
+                <HelpTooltip text="Shows how leads progress through your sales stages: New → Contacted → Qualified → Proposal → Won. Each bar represents the number of leads at that stage. Percentages are stage-to-stage conversion rates (not cumulative). The overall rate shows what percentage of all leads eventually convert to 'Won'." />
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Lead progression</p>
+              <p className="text-sm text-muted-foreground mt-1">Lead progression (stage-to-stage rates)</p>
             </div>
             <Badge>{conversionFunnelData?.overallConversionRate ? `${conversionFunnelData.overallConversionRate}%` : '—'} Overall</Badge>
           </CardHeader>
@@ -947,7 +960,7 @@ function Dashboard() {
               </div>
             ) : (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={conversionData} layout="vertical">
+              <BarChart data={conversionData} layout="vertical" aria-label="Conversion funnel chart">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis type="category" dataKey="stage" width={100} />
@@ -982,7 +995,7 @@ function Dashboard() {
             ) : (
             <div className="flex items-center gap-6">
               <ResponsiveContainer width="50%" height={250}>
-                <PieChart>
+                <PieChart aria-label="Lead sources distribution chart">
                   <Pie
                     data={leadSourceData}
                     cx="50%"
@@ -1032,14 +1045,12 @@ function Dashboard() {
               </div>
             ) : (
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={campaignPerformance}>
+              <BarChart data={campaignPerformance} aria-label="Campaign performance by channel chart">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="opens" fill="#3b82f6" />
-                <Bar dataKey="clicks" fill="#10b981" />
                 <Bar dataKey="conversions" fill="#f59e0b" />
               </BarChart>
             </ResponsiveContainer>
@@ -1079,7 +1090,7 @@ function Dashboard() {
             ) : (
             <div className="space-y-4">
               {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0">
+                <div key={activity.id} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-accent/50 rounded-md -mx-1 px-1" onClick={() => activity.leadId ? navigate(`/leads/${activity.leadId}`) : undefined}>
                   <div className="mt-1 p-2 rounded-full bg-primary/10">
                     <activity.icon className="h-4 w-4 text-primary" />
                   </div>
@@ -1191,7 +1202,10 @@ function Dashboard() {
               </div>
             ) : (
             <div className="space-y-3">
-              {(appointmentsData?.appointments || appointmentsData || []).slice(0, 5).map((apt: { id: string; title: string; scheduledAt?: string; type?: string; lead?: { name?: string }; leadName?: string; status?: string }) => (
+              {(appointmentsData?.appointments || appointmentsData || []).slice(0, 5).map((apt: { id: string; title: string; startTime?: string; scheduledAt?: string; type?: string; lead?: { name?: string; firstName?: string; lastName?: string }; leadName?: string; status?: string }) => {
+                const aptTime = apt.startTime || apt.scheduledAt
+                const leadName = apt.lead?.name || [apt.lead?.firstName, apt.lead?.lastName].filter(Boolean).join(' ') || apt.leadName
+                return (
                 <div key={apt.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate('/calendar')}>
                   <div className="mt-0.5 p-2 rounded-lg bg-primary/10">
                     <Calendar className="h-4 w-4 text-primary" />
@@ -1201,18 +1215,19 @@ function Dashboard() {
                     <div className="flex items-center gap-2 mt-1">
                       <Clock className="h-3 w-3 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
-                        {apt.scheduledAt ? new Date(apt.scheduledAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD'}
+                        {aptTime ? new Date(aptTime).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD'}
                       </span>
                     </div>
-                    {(apt.lead?.name || apt.leadName) && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{apt.lead?.name || apt.leadName}</p>
+                    {leadName && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{leadName}</p>
                     )}
                   </div>
                   {apt.type && (
                     <Badge variant="outline" className="text-xs shrink-0">{apt.type}</Badge>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
             )}
           </CardContent>
@@ -1284,7 +1299,7 @@ function Dashboard() {
       </Card>
 
       {/* Alerts & Notifications */}
-      <Card className="border-l-4 border-l-yellow-500">
+      <Card className="border-l-4 border-l-yellow-500" role="region" aria-label="Alerts and notifications">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-yellow-500" />

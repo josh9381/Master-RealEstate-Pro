@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
-import React, { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -14,11 +14,11 @@ import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { ActiveFilterChips } from '@/components/filters/ActiveFilterChips'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi, usersApi, notesApi, messagesApi, activitiesApi, CreateLeadData, UpdateLeadData, BulkUpdateData } from '@/lib/api'
+import { leadsApi, usersApi, notesApi, messagesApi, activitiesApi, pipelinesApi, CreateLeadData, UpdateLeadData, BulkUpdateData, PipelineData } from '@/lib/api'
 import { exportToCSV, leadExportColumns } from '@/lib/exportService'
 import { Lead } from '@/types'
 import type { AssignedUser } from '@/types'
-import { getScoreCategory } from '@/utils/scoringUtils'
+import { useAuthStore } from '@/store/authStore'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import { SavedFilterViews } from '@/components/leads/SavedFilterViews'
 import type { SavedFilterView } from '@/lib/api'
@@ -32,24 +32,55 @@ import { LeadsTable } from './list/LeadsTable'
 import { LeadsGrid } from './list/LeadsGrid'
 
 function LeadsList() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Initialize state from URL params
+  const initFromUrl = useCallback(() => {
+    const sp = searchParams
+    return {
+      search: sp.get('search') || '',
+      status: sp.get('status')?.split(',').filter(Boolean) || [],
+      source: sp.get('source')?.split(',').filter(Boolean) || [],
+      scoreMin: parseInt(sp.get('scoreMin') || '0') || 0,
+      scoreMax: parseInt(sp.get('scoreMax') || '100') || 100,
+      dateFrom: sp.get('dateFrom') || '',
+      dateTo: sp.get('dateTo') || '',
+      tags: sp.get('tags')?.split(',').filter(Boolean) || [],
+      assignedTo: sp.get('assignedTo')?.split(',').filter(Boolean) || [],
+      page: parseInt(sp.get('page') || '1') || 1,
+      pageSize: parseInt(sp.get('pageSize') || '25') || 25,
+      sortBy: (sp.get('sortBy') || 'createdAt') as SortField,
+      sortDir: (sp.get('sortDir') || 'desc') as SortDirection,
+      scoreFilter: (sp.get('scoreFilter') || 'ALL') as ScoreFilterValue,
+    }
+  }, [searchParams])
+
+  const urlState = initFromUrl()
+
+  const [searchQuery, setSearchQuery] = useState(urlState.search)
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(urlState.search)
   const [selectedLeads, setSelectedLeads] = useState<number[]>([])
   const [showFilters, setShowFilters] = useState(false)
   const [showMassEmail, setShowMassEmail] = useState(false)
   const [showTagsModal, setShowTagsModal] = useState(false)
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
   const [quickNote, setQuickNote] = useState<{ leadId: number; text: string } | null>(null)
-  const [sortField, setSortField] = useState<SortField>('createdAt')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(25)
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
-  const [scoreFilter, setScoreFilter] = useState<ScoreFilterValue>('ALL')
+  const [sortField, setSortField] = useState<SortField>(urlState.sortBy)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(urlState.sortDir)
+  const [currentPage, setCurrentPage] = useState(urlState.page)
+  const [pageSize, setPageSize] = useState(urlState.pageSize)
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    return (localStorage.getItem('leadsViewMode') as 'table' | 'grid') || 'table'
+  })
+  const [scoreFilter, setScoreFilter] = useState<ScoreFilterValue>(urlState.scoreFilter)
   const { toast } = useToast()
 
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showPipelineModal, setShowPipelineModal] = useState(false)
+  const [selectedPipelineId, setSelectedPipelineId] = useState('')
+  const [selectedStageId, setSelectedStageId] = useState('')
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [isSending, setIsSending] = useState(false)
@@ -59,30 +90,51 @@ function LeadsList() {
 
   const queryClient = useQueryClient()
 
+  // Debounce search query (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearchQuery, scoreFilter])
+
   const [filters, setFilters] = useState<FilterConfig>({
-    status: [],
-    source: [],
-    scoreRange: [0, 100],
-    dateRange: { from: '', to: '' },
-    tags: [],
-    assignedTo: [],
+    status: urlState.status,
+    source: urlState.source,
+    scoreRange: [urlState.scoreMin, urlState.scoreMax] as [number, number],
+    dateRange: { from: urlState.dateFrom, to: urlState.dateTo },
+    tags: urlState.tags,
+    assignedTo: urlState.assignedTo,
   })
 
   const [activeFilterChips, setActiveFilterChips] = useState<Array<{ id: string; label: string; value: string }>>([])
 
-  // Mass Email state
-  const [emailSubject, setEmailSubject] = useState('')
-  const [emailBody, setEmailBody] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState('')
-  const [emailErrors, setEmailErrors] = useState<{subject?: string; body?: string}>({})
+  // Sync state to URL params
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (debouncedSearchQuery) params.set('search', debouncedSearchQuery)
+    if (filters.status.length > 0) params.set('status', filters.status.join(','))
+    if (filters.source.length > 0) params.set('source', filters.source.join(','))
+    if (filters.scoreRange[0] > 0) params.set('scoreMin', String(filters.scoreRange[0]))
+    if (filters.scoreRange[1] < 100) params.set('scoreMax', String(filters.scoreRange[1]))
+    if (filters.dateRange.from) params.set('dateFrom', filters.dateRange.from)
+    if (filters.dateRange.to) params.set('dateTo', filters.dateRange.to)
+    if (filters.tags.length > 0) params.set('tags', filters.tags.join(','))
+    if (filters.assignedTo.length > 0) params.set('assignedTo', filters.assignedTo.join(','))
+    if (currentPage > 1) params.set('page', String(currentPage))
+    if (pageSize !== 25) params.set('pageSize', String(pageSize))
+    if (sortField !== 'createdAt') params.set('sortBy', sortField)
+    if (sortDirection !== 'desc') params.set('sortDir', sortDirection || '')
+    if (scoreFilter !== 'ALL') params.set('scoreFilter', scoreFilter)
+    setSearchParams(params, { replace: true })
+  }, [debouncedSearchQuery, filters, currentPage, pageSize, sortField, sortDirection, scoreFilter, setSearchParams])
 
-  // Tags state
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [newTag, setNewTag] = useState('')
-
-  // Bulk action state
-  const [newStatus, setNewStatus] = useState('')
-  const [assignToUser, setAssignToUser] = useState('')
+  // Tags state (no longer needed, owned by modal)
 
   // ── QUERIES ──
 
@@ -100,23 +152,34 @@ function LeadsList() {
     },
   })
 
-  const { data: leadsResponse, isLoading } = useQuery({
-    queryKey: ['leads', currentPage, pageSize, searchQuery, sortField, sortDirection, filters],
+  const { data: leadsResponse, isLoading, isFetching } = useQuery({
+    queryKey: ['leads', currentPage, pageSize, debouncedSearchQuery, sortField, sortDirection, filters, scoreFilter],
     queryFn: async () => {
       const sortFieldMap: Record<string, string> = {
-        name: 'firstName', company: 'createdAt', score: 'score',
-        status: 'createdAt', source: 'createdAt', createdAt: 'createdAt', value: 'value',
+        name: 'firstName', company: 'company', score: 'score',
+        status: 'status', source: 'source', createdAt: 'createdAt', value: 'value',
       }
       const params: Record<string, string | number> = {
         page: currentPage, limit: pageSize,
         sortBy: sortFieldMap[sortField] || 'createdAt',
         sortOrder: sortDirection || 'desc',
       }
-      if (searchQuery) params.search = searchQuery
-      if (filters.status.length > 0) params.status = filters.status[0]
-      if (filters.source.length > 0) params.source = filters.source[0]
-      if (filters.scoreRange[0] > 0) params.minScore = filters.scoreRange[0]
-      if (filters.scoreRange[1] < 100) params.maxScore = filters.scoreRange[1]
+      if (debouncedSearchQuery) params.search = debouncedSearchQuery
+      if (filters.status.length > 0) params.status = filters.status.join(',')
+      if (filters.source.length > 0) params.source = filters.source.join(',')
+
+      // Apply score filter as server-side params (1.2)
+      const scoreRanges: Record<string, [number, number]> = {
+        HOT: [80, 100], WARM: [50, 79], COOL: [25, 49], COLD: [0, 24],
+      }
+      if (scoreFilter !== 'ALL' && scoreRanges[scoreFilter]) {
+        const [min, max] = scoreRanges[scoreFilter]
+        params.minScore = min
+        params.maxScore = max
+      } else {
+        if (filters.scoreRange[0] > 0) params.minScore = filters.scoreRange[0]
+        if (filters.scoreRange[1] < 100) params.maxScore = filters.scoreRange[1]
+      }
       if (filters.dateRange.from) params.startDate = filters.dateRange.from
       if (filters.dateRange.to) params.endDate = filters.dateRange.to
       if (filters.tags.length > 0) params.tags = filters.tags.join(',')
@@ -134,6 +197,23 @@ function LeadsList() {
     queryFn: () => activitiesApi.getLeadActivities(String(expandedRow), { limit: 10 }),
     enabled: !!expandedRow,
     staleTime: 30_000,
+  })
+
+  // Global stats (unfiltered) for "X of Y" display
+  const { data: globalStatsData } = useQuery({
+    queryKey: ['leads-global-stats'],
+    queryFn: async () => {
+      try {
+        const response = await leadsApi.getStats()
+        return response.data?.stats || null
+      } catch {
+        // Fallback to basic count
+        const response = await leadsApi.getLeads({ page: 1, limit: 1 })
+        const data = response.data
+        return { total: data?.pagination?.total || 0 }
+      }
+    },
+    staleTime: 60_000,
   })
 
   // ── MUTATIONS ──
@@ -168,6 +248,19 @@ function LeadsList() {
     onError: () => { toast.error('Failed to update leads') },
   })
 
+  // Pipelines query for bulk pipeline assignment
+  const { data: pipelinesData } = useQuery({
+    queryKey: ['pipelines'],
+    queryFn: async () => {
+      const res = await pipelinesApi.getPipelines()
+      return res.data || []
+    },
+    enabled: showPipelineModal,
+  })
+
+  const pipelines: PipelineData[] = pipelinesData || []
+  const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId)
+
   // ── DERIVED DATA ──
 
   const leads = useMemo(() => {
@@ -177,53 +270,42 @@ function LeadsList() {
 
   const [leadNotes, setLeadNotes] = useState<Record<number, string[]>>({})
 
-  const leadStats = useMemo(() => {
-    const total = leads.length || 0
-    const qualified = leads.filter((l: Lead) => l.status === 'qualified').length || 0
-    const avgScore = total > 0 ? Math.round(leads.reduce((sum: number, l: Lead) => sum + l.score, 0) / total) : 0
-    const converted = leads.filter((l: Lead) => l.status === 'proposal' || l.status === 'negotiation').length || 0
-    return {
-      total, qualified,
-      qualifiedRate: total > 0 ? Math.round((qualified / total) * 100) : 0,
-      avgScore, converted,
-      conversionRate: total > 0 ? Math.round((converted / total) * 100) : 0,
-    }
-  }, [leads])
-
+  // Use global stats for charts when available (all leads, not just current page)
   const sourceData = useMemo(() => {
+    if (globalStatsData?.bySource) {
+      return Object.entries(globalStatsData.bySource as Record<string, number>).map(([name, value]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1), value,
+      }))
+    }
     const sources: Record<string, number> = {}
     leads.forEach((lead: Lead) => { sources[lead.source] = (sources[lead.source] || 0) + 1 })
     return Object.entries(sources).map(([name, value]) => ({
       name: name.charAt(0).toUpperCase() + name.slice(1), value,
     }))
-  }, [leads])
+  }, [leads, globalStatsData])
 
   const scoreData = useMemo(() => {
-    const ranges = { '60-70': 0, '71-80': 0, '81-90': 0, '91-100': 0 }
+    if (globalStatsData?.scoreDistribution) {
+      return globalStatsData.scoreDistribution as Array<{ range: string; count: number }>
+    }
+    const ranges = { '0-59': 0, '60-70': 0, '71-80': 0, '81-90': 0, '91-100': 0 }
     leads.forEach((lead: Lead) => {
       if (lead.score >= 91) ranges['91-100']++
       else if (lead.score >= 81) ranges['81-90']++
       else if (lead.score >= 71) ranges['71-80']++
-      else ranges['60-70']++
+      else if (lead.score >= 60) ranges['60-70']++
+      else ranges['0-59']++
     })
     return Object.entries(ranges).map(([range, count]) => ({ range, count }))
-  }, [leads])
+  }, [leads, globalStatsData])
 
   const filteredAndSortedLeads = useMemo(() => {
-    if (leadsResponse?.pagination) return leads
+    // Score filter is now server-side; only apply client-side sort fallback when no server pagination
+    if (leadsResponse?.pagination) {
+      return leads
+    }
 
-    let filtered = leads.filter((lead: Lead) => {
-      if (searchQuery && !`${lead.firstName} ${lead.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !lead.email.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !(lead.company || '').toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false
-      }
-      if (scoreFilter !== 'ALL') {
-        const leadCategory = getScoreCategory(lead.score || 0)
-        if (leadCategory !== scoreFilter) return false
-      }
-      return true
-    })
+    let filtered = [...leads]
 
     if (sortField && sortDirection) {
       filtered = [...filtered].sort((a, b) => {
@@ -242,7 +324,7 @@ function LeadsList() {
       })
     }
     return filtered
-  }, [leads, searchQuery, sortField, sortDirection, scoreFilter, leadsResponse])
+  }, [leads, sortField, sortDirection, leadsResponse])
 
   const paginatedLeads = useMemo(() => {
     if (leadsResponse?.pagination) return leads
@@ -294,6 +376,28 @@ function LeadsList() {
 
   const handleRemoveChip = (chipId: string) => {
     setActiveFilterChips((prev) => prev.filter((c) => c.id !== chipId))
+    // Also update the underlying filters state
+    setFilters(prev => {
+      const updated = { ...prev }
+      if (chipId.startsWith('status-')) {
+        const idx = parseInt(chipId.replace('status-', ''))
+        updated.status = prev.status.filter((_, i) => i !== idx)
+      } else if (chipId.startsWith('source-')) {
+        const idx = parseInt(chipId.replace('source-', ''))
+        updated.source = prev.source.filter((_, i) => i !== idx)
+      } else if (chipId.startsWith('tag-')) {
+        const idx = parseInt(chipId.replace('tag-', ''))
+        updated.tags = prev.tags.filter((_, i) => i !== idx)
+      } else if (chipId.startsWith('assigned-')) {
+        const idx = parseInt(chipId.replace('assigned-', ''))
+        updated.assignedTo = prev.assignedTo.filter((_, i) => i !== idx)
+      } else if (chipId === 'score') {
+        updated.scoreRange = [0, 100]
+      } else if (chipId === 'date') {
+        updated.dateRange = { from: '', to: '' }
+      }
+      return updated
+    })
   }
 
   const handleClearAllFilters = () => {
@@ -328,72 +432,79 @@ function LeadsList() {
     else if (action.startsWith('Status change')) setShowStatusModal(true)
     else if (action.startsWith('Assignment')) setShowAssignModal(true)
     else if (action === 'Delete') setShowDeleteModal(true)
+    else if (action === 'Pipeline') setShowPipelineModal(true)
     else if (action === 'Export') handleExportCSV()
     else { toast.success(`${action} applied to ${selectedLeads.length} leads`); setSelectedLeads([]) }
   }
 
-  const handleSendMassEmail = async () => {
-    const errors: {subject?: string; body?: string} = {}
-    if (!emailSubject.trim()) errors.subject = 'Subject is required'
-    if (!emailBody.trim()) errors.body = 'Message is required'
-    if (Object.keys(errors).length > 0) { setEmailErrors(errors); return }
-
+  const handleSendMassEmail = async (data: { subject: string; body: string; template: string }) => {
     setIsSending(true)
     try {
       const selectedLeadsData = leads.filter((l: Lead) => selectedLeads.includes(l.id))
       const sendPromises = selectedLeadsData.map((lead: Lead) =>
         messagesApi.sendEmail({
           to: lead.email,
-          subject: emailSubject.replace('{{name}}', `${lead.firstName}`).replace('{{company}}', lead.company || ''),
-          body: emailBody.replace('{{name}}', `${lead.firstName}`).replace('{{company}}', lead.company || ''),
+          subject: data.subject.replace('{{name}}', `${lead.firstName}`).replace('{{company}}', lead.company || ''),
+          body: data.body.replace('{{name}}', `${lead.firstName}`).replace('{{company}}', lead.company || ''),
           leadId: String(lead.id),
         })
       )
-      await Promise.allSettled(sendPromises)
-      toast.success(`Email sent to ${selectedLeads.length} leads!`)
-      setShowMassEmail(false); setEmailSubject(''); setEmailBody(''); setSelectedTemplate(''); setEmailErrors({}); setSelectedLeads([])
+      const results = await Promise.allSettled(sendPromises)
+      const succeeded = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+      if (failed === 0) {
+        toast.success(`Email sent to ${succeeded} leads!`)
+      } else if (succeeded > 0) {
+        toast.warning(`Sent to ${succeeded} leads, failed for ${failed}`)
+      } else {
+        toast.error('Failed to send emails. Please try again.')
+      }
+      setShowMassEmail(false); setSelectedLeads([])
     } catch (error) {
       logger.error('Failed to send mass email:', error)
       toast.error('Failed to send some emails. Please try again.')
     } finally { setIsSending(false) }
   }
 
-  const handleTemplateSelect = (template: string) => {
-    setSelectedTemplate(template)
-    if (template === 'welcome') {
-      setEmailSubject('Welcome to Our Platform!')
-      setEmailBody('Hi {{name}},\n\nWe\'re excited to have you on board!\n\nBest regards,\nThe Team')
-    } else if (template === 'followup') {
-      setEmailSubject('Following up on our conversation')
-      setEmailBody('Hi {{name}},\n\nI wanted to follow up on our recent discussion about {{company}}.\n\nLooking forward to hearing from you!\n\nBest,')
-    } else if (template === 'proposal') {
-      setEmailSubject('Custom Proposal for {{company}}')
-      setEmailBody('Hi {{name}},\n\nAttached is a custom proposal tailored for {{company}}.\n\nPlease let me know if you have any questions.\n\nBest regards,')
-    }
-    setEmailErrors({})
+  const handleApplyTags = (tags: string[]) => {
+    if (tags.length === 0) { toast.error('Please select at least one tag'); return }
+    bulkUpdateMutation.mutate({ leadIds: selectedLeads.map(String), updates: { tags } })
+    setShowTagsModal(false)
   }
 
-  const handleApplyTags = () => {
-    if (selectedTags.length === 0) { toast.error('Please select at least one tag'); return }
-    bulkUpdateMutation.mutate({ leadIds: selectedLeads.map(String), updates: { tags: selectedTags } })
-    setShowTagsModal(false); setSelectedTags([])
+  const handleStatusChange = (status: string) => {
+    if (!status) { toast.error('Please select a status'); return }
+    bulkUpdateMutation.mutate({ leadIds: selectedLeads.map(String), updates: { status: status.toUpperCase() as Lead['status'] } })
+    setShowStatusModal(false)
   }
 
-  const handleStatusChange = () => {
-    if (!newStatus) { toast.error('Please select a status'); return }
-    bulkUpdateMutation.mutate({ leadIds: selectedLeads.map(String), updates: { status: newStatus.toUpperCase() as Lead['status'] } })
-    setShowStatusModal(false); setNewStatus('')
-  }
-
-  const handleAssignTo = () => {
-    if (!assignToUser) { toast.error('Please select a user'); return }
-    bulkUpdateMutation.mutate({ leadIds: selectedLeads.map(String), updates: { assignedToId: assignToUser } })
-    setShowAssignModal(false); setAssignToUser('')
+  const handleAssignTo = (userId: string) => {
+    if (!userId) { toast.error('Please select a user'); return }
+    bulkUpdateMutation.mutate({ leadIds: selectedLeads.map(String), updates: { assignedToId: userId } })
+    setShowAssignModal(false)
   }
 
   const handleBulkDelete = () => {
     bulkDeleteMutation.mutate(selectedLeads.map(String))
     setShowDeleteModal(false)
+  }
+
+  const handleAddToPipeline = async () => {
+    if (!selectedPipelineId || !selectedStageId) { toast.error('Please select a pipeline and stage'); return }
+    try {
+      await Promise.all(selectedLeads.map(id =>
+        pipelinesApi.moveLeadToStage(String(id), { pipelineId: selectedPipelineId, pipelineStageId: selectedStageId })
+      ))
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      queryClient.invalidateQueries({ queryKey: ['pipeline'] })
+      toast.success(`${selectedLeads.length} leads added to pipeline`)
+      setShowPipelineModal(false)
+      setSelectedPipelineId('')
+      setSelectedStageId('')
+      setSelectedLeads([])
+    } catch {
+      toast.error('Failed to add leads to pipeline')
+    }
   }
 
   const handleEditLead = (lead: Lead) => {
@@ -441,7 +552,13 @@ function LeadsList() {
     setDeletingLeadId(leadId); setShowDeleteConfirm(true)
   }
 
+  const canExport = useAuthStore((s) => s.hasPermission('canExportData'));
+
   const handleExportCSV = () => {
+    if (!canExport) {
+      toast.error('You don\'t have permission to export data')
+      return
+    }
     const selectedLeadsData = leads.filter((l: Lead) => selectedLeads.includes(l.id))
     const data = selectedLeadsData.length > 0 ? selectedLeadsData : filteredAndSortedLeads
     exportToCSV(data, leadExportColumns, { filename: `leads-export-${new Date().toISOString().split('T')[0]}` })
@@ -493,22 +610,26 @@ function LeadsList() {
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      <LeadStatsCards stats={leadStats} totalLeads={totalLeads} currentPage={currentPage} totalPages={totalPages} />
+      <LeadStatsCards backendStats={globalStatsData} totalLeads={totalLeads} globalTotal={globalStatsData?.total || totalLeads} currentPage={currentPage} totalPages={totalPages} hasActiveFilters={hasActiveFilters} />
 
       {/* Charts */}
-      <LeadCharts sourceData={sourceData} scoreData={scoreData} />
+      <LeadCharts sourceData={sourceData} scoreData={scoreData} pageCount={leads.length} totalCount={totalLeads} isGlobalData={!!globalStatsData?.bySource} />
 
       {/* Bulk Actions Bar */}
-      <BulkActionsBar
+      {selectedLeads.length > 0 && (
+        <BulkActionsBar
         selectedCount={selectedLeads.length}
+        totalOnPage={paginatedLeads.length}
         onClearSelection={() => setSelectedLeads([])}
         onChangeStatus={(status) => handleBulkAction(`Status change:${status}`)}
         onAddTags={() => handleBulkAction('Tags added')}
         onAssignTo={(person) => handleBulkAction(`Assignment:${person}`)}
+        onAddToPipeline={() => handleBulkAction('Pipeline')}
         onExport={() => handleBulkAction('Export')}
         onDelete={() => handleBulkAction('Delete')}
         onBulkEmail={() => handleBulkAction('Bulk email')}
       />
+      )}
 
       {/* Advanced Filters Panel */}
       <AdvancedFilters isOpen={showFilters} onClose={() => setShowFilters(false)} onApply={handleApplyFilters} currentFilters={filters} />
@@ -517,33 +638,71 @@ function LeadsList() {
       {showMassEmail && (
         <MassEmailModal
           selectedCount={selectedLeads.length}
-          emailSubject={emailSubject} emailBody={emailBody}
-          selectedTemplate={selectedTemplate} emailErrors={emailErrors}
           isSending={isSending}
-          onClose={() => { setShowMassEmail(false); setEmailErrors({}) }}
-          onSubjectChange={setEmailSubject} onBodyChange={setEmailBody}
-          onTemplateSelect={handleTemplateSelect} onSend={handleSendMassEmail}
-          onClearErrors={(field) => setEmailErrors(prev => ({ ...prev, [field]: undefined }))}
+          onClose={() => { setShowMassEmail(false) }}
+          onSend={handleSendMassEmail}
         />
       )}
       {showTagsModal && (
         <TagsModal
-          selectedTags={selectedTags} newTag={newTag}
           onClose={() => setShowTagsModal(false)}
-          onToggleTag={(tag) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
-          onNewTagChange={setNewTag}
-          onAddNewTag={() => { if (newTag.trim()) { setSelectedTags(prev => [...prev, newTag.trim()]); setNewTag('') } }}
           onApply={handleApplyTags}
         />
       )}
       {showStatusModal && (
-        <StatusModal newStatus={newStatus} onClose={() => setShowStatusModal(false)} onStatusChange={setNewStatus} onApply={handleStatusChange} />
+        <StatusModal onClose={() => setShowStatusModal(false)} onApply={handleStatusChange} />
       )}
       {showAssignModal && (
-        <AssignModal assignToUser={assignToUser} teamMembers={teamMembers} onClose={() => setShowAssignModal(false)} onAssignChange={setAssignToUser} onApply={handleAssignTo} />
+        <AssignModal teamMembers={teamMembers} onClose={() => setShowAssignModal(false)} onApply={handleAssignTo} />
       )}
       {showDeleteModal && (
         <BulkDeleteModal selectedCount={selectedLeads.length} onClose={() => setShowDeleteModal(false)} onDelete={handleBulkDelete} />
+      )}
+      {showPipelineModal && (
+        <AlertDialog open={showPipelineModal} onOpenChange={setShowPipelineModal}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Add to Pipeline</AlertDialogTitle>
+              <AlertDialogDescription>
+                Move {selectedLeads.length} selected lead{selectedLeads.length > 1 ? 's' : ''} to a pipeline stage.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium">Pipeline</label>
+                <select
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={selectedPipelineId}
+                  onChange={(e) => { setSelectedPipelineId(e.target.value); setSelectedStageId('') }}
+                >
+                  <option value="">Select pipeline...</option>
+                  {pipelines.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedPipeline && (
+                <div>
+                  <label className="text-sm font-medium">Stage</label>
+                  <select
+                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={selectedStageId}
+                    onChange={(e) => setSelectedStageId(e.target.value)}
+                  >
+                    <option value="">Select stage...</option>
+                    {selectedPipeline.stages.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => { setShowPipelineModal(false); setSelectedPipelineId(''); setSelectedStageId('') }}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleAddToPipeline} disabled={!selectedPipelineId || !selectedStageId}>Add to Pipeline</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
       {showEditModal && editingLead && (
         <EditLeadModal
@@ -573,8 +732,13 @@ function LeadsList() {
               placeholder="Search leads..."
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 pr-9"
             />
+            {isFetching && searchQuery !== debouncedSearchQuery && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <select
@@ -599,10 +763,10 @@ function LeadsList() {
               </Button>
             </Link>
             <div className="flex rounded-lg border">
-              <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="sm" className="rounded-r-none border-r-0" title="Table View" onClick={() => setViewMode('table')}>
+              <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="sm" className="rounded-r-none border-r-0" title="Table View" onClick={() => { setViewMode('table'); localStorage.setItem('leadsViewMode', 'table') }}>
                 <LayoutList className="h-4 w-4" />
               </Button>
-              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" className="rounded-none border-r-0" title="Grid View" onClick={() => setViewMode('grid')}>
+              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" className="rounded-none border-r-0" title="Grid View" onClick={() => { setViewMode('grid'); localStorage.setItem('leadsViewMode', 'grid') }}>
                 <LayoutGrid className="h-4 w-4" />
               </Button>
               <Link to="/leads/pipeline">
@@ -704,7 +868,7 @@ function LeadsList() {
                   <option value={100}>100</option>
                 </select>
                 <span className="text-sm text-muted-foreground">
-                  per page • Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredAndSortedLeads.length)} of {filteredAndSortedLeads.length} results
+                  per page • Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalLeads)} of {totalLeads} results
                 </span>
               </div>
 

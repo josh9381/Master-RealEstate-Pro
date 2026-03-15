@@ -238,8 +238,14 @@ export async function duplicateEmailTemplate(req: Request, res: Response): Promi
     throw new NotFoundError('Email template not found');
   }
 
-  // Create copy with "(Copy)" suffix
-  const copyName = `${originalTemplate.name} (Copy)`;
+  // Create copy with "(Copy)" suffix, ensuring unique name
+  let copyName = `${originalTemplate.name} (Copy)`;
+  const existingCopy = await prisma.emailTemplate.findFirst({
+    where: { name: copyName, organizationId: req.user!.organizationId },
+  });
+  if (existingCopy) {
+    copyName = `${originalTemplate.name} (Copy ${Date.now()})`;
+  }
   
   const duplicatedTemplate = await prisma.emailTemplate.create({
     data: {

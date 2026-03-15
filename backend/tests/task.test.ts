@@ -24,8 +24,15 @@ describe('Task Management Endpoints', () => {
   let testUser: User;
   let testAccessToken: string;
   let testLead: Lead;
+  let testOrgId: string;
 
   beforeEach(async () => {
+    // Create test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    });
+    testOrgId = testOrg.id;
+
     // Create test users
     const hashedPassword = await bcrypt.hash('TestPassword123!', 10);
     testUser = await prisma.user.create({
@@ -35,16 +42,19 @@ describe('Task Management Endpoints', () => {
         email: `test${Date.now()}@example.com`,
         password: hashedPassword,
         role: 'USER',
+        organizationId: testOrgId,
       },
     });
 
-    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role);
+    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role, testOrgId);
 
     // Create a test lead
     testLead = await prisma.lead.create({
       data: {
-        name: 'Test Lead',
+        firstName: 'Test',
+        lastName: 'Lead',
         email: `lead${Date.now()}@example.com`,
+        organizationId: testOrgId,
       },
     });
   });
@@ -130,6 +140,7 @@ describe('Task Management Endpoints', () => {
             priority: 'HIGH',
             dueDate: tomorrow,
             assignedToId: testUser.id,
+            organizationId: testOrgId,
           },
           {
             title: 'Task 2',
@@ -137,6 +148,7 @@ describe('Task Management Endpoints', () => {
             priority: 'MEDIUM',
             dueDate: tomorrow,
             assignedToId: testUser.id,
+            organizationId: testOrgId,
           },
           {
             title: 'Overdue Task',
@@ -144,6 +156,7 @@ describe('Task Management Endpoints', () => {
             priority: 'HIGH',
             dueDate: yesterday,
             assignedToId: testUser.id,
+            organizationId: testOrgId,
           },
         ],
       });
@@ -212,6 +225,7 @@ describe('Task Management Endpoints', () => {
           dueDate: new Date(Date.now() + 86400000),
           assignedToId: testUser.id,
           leadId: testLead.id,
+          organizationId: testOrgId,
         },
       });
       taskId = task.id;
@@ -250,6 +264,7 @@ describe('Task Management Endpoints', () => {
           priority: 'MEDIUM',
           dueDate: new Date(Date.now() + 86400000),
           assignedToId: testUser.id,
+          organizationId: testOrgId,
         },
       });
       taskId = task.id;
@@ -306,6 +321,7 @@ describe('Task Management Endpoints', () => {
           title: 'Task to Delete',
           dueDate: new Date(Date.now() + 86400000),
           assignedToId: testUser.id,
+          organizationId: testOrgId,
         },
       });
       taskId = task.id;
@@ -341,10 +357,10 @@ describe('Task Management Endpoints', () => {
       // Create tasks with various statuses
       await prisma.task.createMany({
         data: [
-          { title: 'Task 1', status: 'PENDING', priority: 'HIGH', dueDate: tomorrow, assignedToId: testUser.id },
-          { title: 'Task 2', status: 'IN_PROGRESS', priority: 'MEDIUM', dueDate: tomorrow, assignedToId: testUser.id },
-          { title: 'Task 3', status: 'COMPLETED', priority: 'LOW', dueDate: tomorrow, assignedToId: testUser.id },
-          { title: 'Task 4', status: 'PENDING', priority: 'HIGH', dueDate: tomorrow, assignedToId: testUser.id },
+          { title: 'Task 1', status: 'PENDING', priority: 'HIGH', dueDate: tomorrow, assignedToId: testUser.id, organizationId: testOrgId },
+          { title: 'Task 2', status: 'IN_PROGRESS', priority: 'MEDIUM', dueDate: tomorrow, assignedToId: testUser.id, organizationId: testOrgId },
+          { title: 'Task 3', status: 'COMPLETED', priority: 'LOW', dueDate: tomorrow, assignedToId: testUser.id, organizationId: testOrgId },
+          { title: 'Task 4', status: 'PENDING', priority: 'HIGH', dueDate: tomorrow, assignedToId: testUser.id, organizationId: testOrgId },
         ],
       });
     });
@@ -370,8 +386,8 @@ describe('Task Management Endpoints', () => {
       // Create tasks for the lead
       await prisma.task.createMany({
         data: [
-          { title: 'Lead Task 1', dueDate: tomorrow, assignedToId: testUser.id, leadId: testLead.id },
-          { title: 'Lead Task 2', dueDate: tomorrow, assignedToId: testUser.id, leadId: testLead.id },
+          { title: 'Lead Task 1', dueDate: tomorrow, assignedToId: testUser.id, leadId: testLead.id, organizationId: testOrgId },
+          { title: 'Lead Task 2', dueDate: tomorrow, assignedToId: testUser.id, leadId: testLead.id, organizationId: testOrgId },
         ],
       });
     });

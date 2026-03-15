@@ -4,11 +4,11 @@ import { Badge } from '@/components/ui/Badge'
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ArrowRight,
   ArrowLeft, Columns3, Eye, Loader2, FileText, Download, AlertTriangle,
-  X
+  X, Layers
 } from 'lucide-react'
 import { useState, useRef, useCallback } from 'react'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi } from '@/lib/api'
+import { leadsApi, pipelinesApi, type PipelineData } from '@/lib/api'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 // ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ interface ImportResult {
   errors: string[]
 }
 
-type Step = 'upload' | 'mapping' | 'preview' | 'results'
+type Step = 'upload' | 'mapping' | 'preview' | 'pipeline' | 'results'
 type DuplicateAction = 'skip' | 'overwrite' | 'create'
 
 // ---------------------------------------------------------------------------
@@ -86,6 +86,11 @@ function LeadsImport() {
 
   // Import results
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
+
+  // Pipeline assignment
+  const [importPipelineId, setImportPipelineId] = useState('')
+  const [importStageId, setImportStageId] = useState('')
+  const [pipelinesList, setPipelinesList] = useState<PipelineData[]>([])
 
   // ---------------------------------------------------------------------------
   // File upload & validation
@@ -210,6 +215,8 @@ function LeadsImport() {
       formData.append('file', selectedFile)
       formData.append('columnMappings', JSON.stringify(mappings.filter(m => m.target)))
       formData.append('duplicateAction', duplicateAction)
+      if (importPipelineId) formData.append('pipelineId', importPipelineId)
+      if (importStageId) formData.append('pipelineStageId', importStageId)
 
       const response = await leadsApi.importLeads(formData)
       const data = response.data || response
@@ -281,6 +288,7 @@ function LeadsImport() {
     { key: 'upload', label: 'Upload', icon: <Upload className="h-4 w-4" /> },
     { key: 'mapping', label: 'Map Columns', icon: <Columns3 className="h-4 w-4" /> },
     { key: 'preview', label: 'Preview', icon: <Eye className="h-4 w-4" /> },
+    { key: 'pipeline', label: 'Pipeline', icon: <Layers className="h-4 w-4" /> },
     { key: 'results', label: 'Results', icon: <CheckCircle2 className="h-4 w-4" /> },
   ]
 
@@ -647,6 +655,80 @@ function LeadsImport() {
             <Button variant="outline" onClick={() => setStep('mapping')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Mapping
+            </Button>
+            <Button onClick={async () => {
+              try {
+                const res = await pipelinesApi.getPipelines()
+                setPipelinesList(res.data || [])
+              } catch { /* pipelines fetch failed, continue anyway */ }
+              setStep('pipeline')
+            }}>
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Next: Pipeline Assignment
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3.5: Pipeline Assignment (optional) */}
+      {step === 'pipeline' && preview && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pipeline Assignment</CardTitle>
+              <CardDescription>
+                Optionally assign all {preview.totalRows} imported leads to a pipeline stage. You can skip this step.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Pipeline</label>
+                <select
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={importPipelineId}
+                  onChange={(e) => {
+                    setImportPipelineId(e.target.value)
+                    setImportStageId('')
+                    // Auto-select first stage
+                    const pipeline = pipelinesList.find(p => p.id === e.target.value)
+                    if (pipeline && pipeline.stages.length > 0) {
+                      const sorted = [...pipeline.stages].sort((a, b) => a.order - b.order)
+                      setImportStageId(sorted[0].id)
+                    }
+                  }}
+                >
+                  <option value="">None (Skip pipeline assignment)</option>
+                  {pipelinesList.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              {importPipelineId && (() => {
+                const pipeline = pipelinesList.find(p => p.id === importPipelineId)
+                if (!pipeline) return null
+                const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order)
+                return (
+                  <div>
+                    <label className="text-sm font-medium">Starting Stage</label>
+                    <select
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={importStageId}
+                      onChange={(e) => setImportStageId(e.target.value)}
+                    >
+                      {sortedStages.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep('preview')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Preview
             </Button>
             <Button onClick={handleImport} disabled={loading}>
               {loading ? (

@@ -52,17 +52,30 @@ function OverviewTab() {
   const { data: campaignData = null, isLoading: loading, isError: campaignError, error: campaignErrorObj, refetch } = useQuery({
     queryKey: ['campaign-analytics'],
     queryFn: async () => {
-      const [campaignResponse, monthlyResponse, hourlyResponse] = await Promise.all([
+      const [campaignResult, monthlyResult, hourlyResult] = await Promise.allSettled([
         analyticsApi.getCampaignAnalytics(dateRangeRef.current),
         analyticsApi.getMonthlyPerformance({ months: 12 }),
         analyticsApi.getHourlyEngagement({ days: 90 }),
       ]);
+      const campaignResponse = campaignResult.status === 'fulfilled' ? campaignResult.value : null;
+      const monthlyResponse = monthlyResult.status === 'fulfilled' ? monthlyResult.value : null;
+      const hourlyResponse = hourlyResult.status === 'fulfilled' ? hourlyResult.value : null;
       return {
-        ...(campaignResponse.data || {}),
-        dailyStats: monthlyResponse.data || [],
-        hourlyStats: hourlyResponse.data?.hourly || [],
+        ...(campaignResponse?.data || {}),
+        dailyStats: monthlyResponse?.data || [],
+        hourlyStats: hourlyResponse?.data?.hourly || [],
       };
     },
+  });
+
+  // Fetch all campaigns only as fallback when analytics has no topCampaigns
+  const { data: allCampaignsData } = useQuery({
+    queryKey: ['campaigns-for-reports'],
+    queryFn: async () => {
+      const response = await campaignsApi.getCampaigns({});
+      return response.data?.campaigns || [];
+    },
+    enabled: !loading && (!campaignData?.topCampaigns || campaignData.topCampaigns.length === 0),
   });
 
   const handleDateChange = (range: DateRange) => {
@@ -84,23 +97,26 @@ function OverviewTab() {
   }
 
   const performance = campaignData?.performance || {};
-  const totalCampaigns = campaignData?.total || 0;
+  const totalCampaigns = campaignData?.total ?? 0;
   const topCampaigns = campaignData?.topCampaigns || [];
-  const campaigns = topCampaigns.length > 0 ? topCampaigns : [];
+  const campaigns = topCampaigns.length > 0 ? topCampaigns : (allCampaignsData || topCampaigns);
 
-  const campaignPerformance = (campaignData?.dailyStats || []).map((d: any) => ({
-    date: d.month || d.date,
-    sent: d.sent || 0,
-    opened: d.opened || 0,
-    clicked: d.clicked || 0,
-    converted: d.converted || 0,
+  const campaignPerformance = (campaignData?.dailyStats || []).map((d: Record<string, unknown>) => ({
+    date: (d.month as string) || (d.date as string),
+    sent: (d.sent as number) ?? 0,
+    opened: (d.opened as number) ?? 0,
+    clicked: (d.clicked as number) ?? 0,
+    converted: (d.converted as number) ?? 0,
   }));
 
-  const hourlyPerformance = (campaignData?.hourlyStats || []).map((h: any) => ({
-    hour: h.label || h.hour,
-    openRate: h.opens || h.openRate || 0,
-    clicks: h.clicks || 0,
-  }));
+  const hourlyPerformance = (campaignData?.hourlyStats || []).map((h: Record<string, unknown>) => {
+    const rawRate = (h.opens as number) ?? (h.openRate as number) ?? 0;
+    return {
+      hour: (h.label as string) || (h.hour as string),
+      openRate: rawRate < 1 ? rawRate * 100 : rawRate,
+      clicks: (h.clicks as number) ?? 0,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -118,18 +134,18 @@ function OverviewTab() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(performance.totalSent || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(performance.totalSent ?? 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{totalCampaigns} campaigns</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-1.5">
               Open Rate
@@ -138,11 +154,11 @@ function OverviewTab() {
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{performance.openRate || 0}%</div>
-            <p className="text-xs text-muted-foreground">{(performance.totalOpened || 0).toLocaleString()} opened</p>
+            <div className="text-2xl font-bold">{performance.openRate ?? 0}%</div>
+            <p className="text-xs text-muted-foreground">{(performance.totalOpened ?? 0).toLocaleString()} opened</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-1.5">
               Click Rate
@@ -151,16 +167,16 @@ function OverviewTab() {
             <MousePointer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{performance.clickRate || 0}%</div>
+            <div className="text-2xl font-bold">{performance.clickRate ?? 0}%</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{performance.conversionRate || 0}%</div>
+            <div className="text-2xl font-bold">{performance.conversionRate ?? 0}%</div>
             <p className="text-xs text-muted-foreground">From campaign data</p>
           </CardContent>
         </Card>
@@ -178,7 +194,7 @@ function OverviewTab() {
           {campaignPerformance.length > 0 ? (
             <ResponsiveContainer width="100%" height={350}>
               <LineChart data={campaignPerformance}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
@@ -219,20 +235,24 @@ function OverviewTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.map((campaign: any) => {
-                  const openRate = campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : '0.0';
-                  const clickRate = campaign.sent > 0 ? ((campaign.clicked / campaign.sent) * 100).toFixed(1) : '0.0';
-                  const convRate = campaign.sent > 0 ? ((campaign.converted / campaign.sent) * 100).toFixed(1) : '0.0';
+                {campaigns.map((campaign: Record<string, unknown>) => {
+                  const sent = (campaign.sent as number) ?? 0;
+                  const opened = (campaign.opened as number) ?? 0;
+                  const clicked = (campaign.clicked as number) ?? 0;
+                  const converted = (campaign.converted as number) ?? 0;
+                  const openRate = sent > 0 ? ((opened / sent) * 100).toFixed(1) : '0.0';
+                  const clickRate = sent > 0 ? ((clicked / sent) * 100).toFixed(1) : '0.0';
+                  const convRate = sent > 0 ? ((converted / sent) * 100).toFixed(1) : '0.0';
                   return (
-                    <TableRow key={campaign.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
-                      <TableCell className="font-medium">{campaign.name}</TableCell>
-                      <TableCell><Badge variant="outline">{campaign.type}</Badge></TableCell>
-                      <TableCell>{(campaign.sent || 0).toLocaleString()}</TableCell>
+                    <TableRow key={campaign.id as string} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
+                      <TableCell className="font-medium">{campaign.name as string}</TableCell>
+                      <TableCell><Badge variant="outline">{campaign.type as string}</Badge></TableCell>
+                      <TableCell>{sent.toLocaleString()}</TableCell>
                       <TableCell>{openRate}%</TableCell>
                       <TableCell>{clickRate}%</TableCell>
                       <TableCell>{convRate}%</TableCell>
-                      <TableCell>${(campaign.revenue || 0).toLocaleString()}</TableCell>
-                      <TableCell><Badge variant="success">{campaign.roi || 0}%</Badge></TableCell>
+                      <TableCell>${((campaign.revenue as number) ?? 0).toLocaleString()}</TableCell>
+                      <TableCell><Badge variant="success">{(campaign.roi as number) ?? 0}%</Badge></TableCell>
                     </TableRow>
                   );
                 })}
@@ -257,7 +277,7 @@ function OverviewTab() {
             {hourlyPerformance.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={hourlyPerformance}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                   <XAxis dataKey="hour" />
                   <YAxis />
                   <Tooltip />
@@ -280,18 +300,23 @@ function OverviewTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topCampaigns.length > 0 ? topCampaigns.slice(0, 4).map((campaign: any, index: number) => (
+              {topCampaigns.length > 0 ? topCampaigns.slice(0, 4).map((campaign: Record<string, unknown>, index: number) => {
+                const sent = (campaign.sent as number) ?? 0;
+                const opened = (campaign.opened as number) ?? 0;
+                const clicked = (campaign.clicked as number) ?? 0;
+                return (
                 <div key={index} className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium truncate">{campaign.name || campaign.subject || 'Campaign'}</p>
-                    <Badge variant="outline">{campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : 0}%</Badge>
+                    <p className="text-sm font-medium truncate">{(campaign.name as string) || (campaign.subject as string) || 'Campaign'}</p>
+                    <Badge variant="outline">{sent > 0 ? ((opened / sent) * 100).toFixed(1) : 0}%</Badge>
                   </div>
                   <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                    <span>Open: {campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : 0}%</span>
-                    <span>Click: {campaign.sent > 0 ? ((campaign.clicked / campaign.sent) * 100).toFixed(1) : 0}%</span>
+                    <span>Open: {sent > 0 ? ((opened / sent) * 100).toFixed(1) : 0}%</span>
+                    <span>Click: {sent > 0 ? ((clicked / sent) * 100).toFixed(1) : 0}%</span>
                   </div>
                 </div>
-              )) : (
+              );
+              }) : (
                 <div className="flex items-center justify-center h-24 text-muted-foreground">
                   No campaign content data yet
                 </div>
@@ -309,6 +334,7 @@ function OverviewTab() {
 function DetailedReportsTab() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [showAllCampaigns, setShowAllCampaigns] = useState(false);
 
   const { data: reportData, isFetching: isLoading, refetch: loadReports } = useQuery({
     queryKey: ['campaignReports'],
@@ -317,13 +343,13 @@ function DetailedReportsTab() {
       const allCampaigns = response.data?.campaigns || response.campaigns || [];
 
       const enrichedCampaigns: EnrichedCampaign[] = allCampaigns.map((c: Record<string, unknown>) => {
-        const sent = (c.recipientCount as number) || (c.sent as number) || 0;
-        const delivered = (c.delivered as number) || 0;
-        const opened = (c.opens as number) || (c.opened as number) || 0;
-        const clicked = (c.clicks as number) || (c.clicked as number) || 0;
-        const bounced = (c.bounced as number) || 0;
-        const unsubscribed = (c.unsubscribed as number) || 0;
-        const revenue = (c.revenue as number) || 0;
+        const sent = (c.recipientCount as number) ?? (c.sent as number) ?? 0;
+        const delivered = (c.delivered as number) ?? 0;
+        const opened = (c.opens as number) ?? (c.opened as number) ?? 0;
+        const clicked = (c.clicks as number) ?? (c.clicked as number) ?? 0;
+        const bounced = (c.bounced as number) ?? 0;
+        const unsubscribed = (c.unsubscribed as number) ?? 0;
+        const revenue = (c.revenue as number) ?? 0;
         return {
           ...c,
           id: c.id as string,
@@ -377,14 +403,9 @@ function DetailedReportsTab() {
         </Button>
         <Button variant="outline" size="sm" onClick={() => {
           if (campaigns.length === 0) { toast.error('No data to export'); return; }
-          const headers = ['Name','Type','Sent','Delivered','Opened','Clicked','Bounced','Unsubscribed','Revenue'];
-          const rows = campaigns.map(c => [c.name, c.type, c.sent, c.delivered, c.opened, c.clicked, c.bounced, c.unsubscribed, c.revenue].join(','));
-          const csv = [headers.join(','), ...rows].join('\n');
-          const blob = new Blob([csv], { type: 'text/csv' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = `campaign-reports-${new Date().toISOString().split('T')[0]}.csv`;
-          a.click(); URL.revokeObjectURL(url);
+          exportToCSV(campaigns, campaignExportColumns, {
+            filename: `campaign-reports-${new Date().toISOString().split('T')[0]}`,
+          });
           toast.success('Report exported successfully');
         }}>
           <Download className="h-4 w-4 mr-2" />
@@ -393,8 +414,8 @@ function DetailedReportsTab() {
       </div>
 
       {/* Overall Stats */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
@@ -404,7 +425,7 @@ function DetailedReportsTab() {
             <p className="text-xs text-muted-foreground">Across all campaigns</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -414,7 +435,7 @@ function DetailedReportsTab() {
             <p className="text-xs text-muted-foreground">Successfully delivered</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -424,7 +445,7 @@ function DetailedReportsTab() {
             <p className="text-xs text-muted-foreground">Campaign opens</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
             <MousePointer className="h-4 w-4 text-muted-foreground" />
@@ -434,7 +455,7 @@ function DetailedReportsTab() {
             <p className="text-xs text-muted-foreground">Click-through rate</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Revenue</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -467,7 +488,7 @@ function DetailedReportsTab() {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={performanceData}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip />
@@ -485,12 +506,12 @@ function DetailedReportsTab() {
       <Card>
         <CardHeader>
           <CardTitle>Campaign Performance Details</CardTitle>
-          <CardDescription>Individual campaign metrics and results</CardDescription>
+          <CardDescription>Individual campaign metrics and results ({campaigns.length} campaigns)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {campaigns.map((campaign) => (
-              <div key={campaign.id} className="p-4 border rounded-lg">
+            {(showAllCampaigns ? campaigns : campaigns.slice(0, 5)).map((campaign) => (
+              <div key={campaign.id} className="p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10">
@@ -508,52 +529,61 @@ function DetailedReportsTab() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Sent</p>
-                    <p className="text-2xl font-bold">{campaign.sent.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{(campaign.sent ?? 0).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Delivered</p>
-                    <p className="text-2xl font-bold">{campaign.delivered.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{(campaign.delivered ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-green-600">
-                      {campaign.sent > 0 ? ((campaign.delivered / campaign.sent) * 100).toFixed(1) : '0.0'}%
+                      {campaign.sent > 0 ? (((campaign.delivered ?? 0) / campaign.sent) * 100).toFixed(1) : '0.0'}%
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Opened</p>
-                    <p className="text-2xl font-bold">{campaign.opened.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{(campaign.opened ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-blue-600">
-                      {campaign.delivered > 0 ? ((campaign.opened / campaign.delivered) * 100).toFixed(1) : '0.0'}%
+                      {(campaign.delivered ?? 0) > 0 ? (((campaign.opened ?? 0) / campaign.delivered) * 100).toFixed(1) : '0.0'}%
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Clicked</p>
-                    <p className="text-2xl font-bold">{campaign.clicked.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{(campaign.clicked ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-purple-600">
-                      {campaign.opened > 0 ? ((campaign.clicked / campaign.opened) * 100).toFixed(1) : '0.0'}%
+                      {(campaign.opened ?? 0) > 0 ? (((campaign.clicked ?? 0) / campaign.opened) * 100).toFixed(1) : '0.0'}%
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Bounced</p>
-                    <p className="text-lg font-semibold">{campaign.bounced}</p>
+                    <p className="text-lg font-semibold">{campaign.bounced ?? 0}</p>
                     <p className="text-xs text-red-600">
-                      {campaign.sent > 0 ? ((campaign.bounced / campaign.sent) * 100).toFixed(1) : '0.0'}%
+                      {campaign.sent > 0 ? (((campaign.bounced ?? 0) / campaign.sent) * 100).toFixed(1) : '0.0'}%
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Unsubscribed</p>
-                    <p className="text-lg font-semibold">{campaign.unsubscribed}</p>
+                    <p className="text-lg font-semibold">{campaign.unsubscribed ?? 0}</p>
                     <p className="text-xs text-muted-foreground">
-                      {campaign.sent > 0 ? ((campaign.unsubscribed / campaign.sent) * 100).toFixed(2) : '0.00'}%
+                      {campaign.sent > 0 ? (((campaign.unsubscribed ?? 0) / campaign.sent) * 100).toFixed(2) : '0.00'}%
                     </p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground mb-1">Revenue Generated</p>
-                    <p className="text-lg font-semibold">${campaign.revenue.toLocaleString()}</p>
+                    <p className="text-lg font-semibold">${(campaign.revenue ?? 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
             ))}
+            {campaigns.length > 5 && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowAllCampaigns(!showAllCampaigns)}
+              >
+                {showAllCampaigns ? `Show less` : `Show all ${campaigns.length} campaigns`}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -567,11 +597,11 @@ function DetailedReportsTab() {
         <CardContent>
           <div className="space-y-4">
             {(() => {
-              const totalSent = campaigns.reduce((sum, c) => sum + c.sent, 0);
-              const totalDelivered = campaigns.reduce((sum, c) => sum + c.delivered, 0);
-              const totalOpened = campaigns.reduce((sum, c) => sum + c.opened, 0);
-              const totalClicked = campaigns.reduce((sum, c) => sum + c.clicked, 0);
-              const totalConverted = campaigns.reduce((sum, c) => sum + (c.converted || c.conversions || 0), 0);
+              const totalSent = campaigns.reduce((sum, c) => sum + (c.sent ?? 0), 0);
+              const totalDelivered = campaigns.reduce((sum, c) => sum + (c.delivered ?? 0), 0);
+              const totalOpened = campaigns.reduce((sum, c) => sum + (c.opened ?? 0), 0);
+              const totalClicked = campaigns.reduce((sum, c) => sum + (c.clicked ?? 0), 0);
+              const totalConverted = campaigns.reduce((sum, c) => sum + ((c.converted ?? c.conversions ?? 0) as number), 0);
               return [
                 { stage: 'Sent', count: totalSent, percentage: 100, color: 'bg-blue-500' },
                 { stage: 'Delivered', count: totalDelivered, percentage: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0, color: 'bg-green-500' },
@@ -590,7 +620,7 @@ function DetailedReportsTab() {
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-4">
-                    <div className={`h-4 rounded-full ${stage.color}`} style={{ width: `${Math.min(stage.percentage, 100)}%` }} />
+                    <div className={`h-4 rounded-full ${stage.color}`} style={{ width: `${Math.max(stage.count > 0 ? Math.min(stage.percentage, 100) : 0, stage.count > 0 ? 2 : 0)}%` }} />
                   </div>
                 </div>
               ));
@@ -603,7 +633,10 @@ function DetailedReportsTab() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Best Open Rate</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Best Open Rate
+              <span className="inline-block h-3 w-3 rounded-full bg-green-600" title="Open rate indicator" />
+            </CardTitle>
             <CardDescription>Campaigns with highest engagement</CardDescription>
           </CardHeader>
           <CardContent>
@@ -628,7 +661,10 @@ function DetailedReportsTab() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Best Click Rate</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Best Click Rate
+              <span className="inline-block h-3 w-3 rounded-full bg-purple-600" title="Click rate indicator" />
+            </CardTitle>
             <CardDescription>Campaigns driving most clicks</CardDescription>
           </CardHeader>
           <CardContent>
@@ -679,7 +715,7 @@ const CampaignReports = () => {
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'overview'
               ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           Overview
@@ -689,7 +725,7 @@ const CampaignReports = () => {
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'detailed'
               ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           Detailed Reports

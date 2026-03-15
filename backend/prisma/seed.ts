@@ -342,6 +342,7 @@ async function main() {
   await prisma.businessSettings.create({
     data: {
       userId: adminUser.id,
+      organizationId: org.id,
       companyName: 'Pinnacle Real Estate Group',
       address: '1250 Ocean Drive, Suite 400, Miami, FL 33139',
       phone: '(305) 555-0100',
@@ -366,6 +367,7 @@ async function main() {
     await prisma.notificationSettings.create({
       data: {
         userId: user.id,
+        organizationId: org.id,
         emailNotifications: true,
         pushNotifications: true,
         smsNotifications: user.role === 'ADMIN',
@@ -470,7 +472,7 @@ async function main() {
           propertyType: randomPick(['Single Family', 'Condo', 'Townhouse', 'Multi-Family', 'Commercial']),
           preApproved: Math.random() > 0.5,
           timeline: randomPick(['ASAP', '1-3 months', '3-6 months', '6-12 months', 'Just browsing']),
-        } : null,
+        } : undefined,
       },
     });
     leads.push(lead);
@@ -498,6 +500,7 @@ async function main() {
           content: randomPick(noteContents),
           leadId: lead.id,
           authorId: randomPick(users).id,
+          organizationId: org.id,
           createdAt: randomDate(lead.createdAt, new Date()),
         },
       });
@@ -899,7 +902,7 @@ async function main() {
         description: w.description,
         isActive: w.isActive,
         triggerType: w.triggerType as any,
-        triggerData: w.triggerData || null,
+        triggerData: (w.triggerData || undefined) as any,
         actions: w.actions,
         executions: w.isActive ? randomInt(10, 200) : 0,
         successRate: w.isActive ? randomFloat(85, 99) : null,
@@ -956,7 +959,7 @@ async function main() {
         data: {
           userId: user.id,
           organizationId: org.id,
-          type: notif.type,
+          type: notif.type as any,
           title: notif.title,
           message: notif.message
             .replace('{{name}}', `${lead.firstName} ${lead.lastName}`)
@@ -1016,9 +1019,9 @@ async function main() {
         leadId: lead.id,
         assistantId: Math.random() > 0.6 ? assistant.id : null,
         vapiCallId: 'call_' + crypto.randomUUID().replace(/-/g, ''),
-        direction,
+        direction: direction.toUpperCase() as any,
         phoneNumber: lead.phone || '(305) 555-0000',
-        status,
+        status: status.toUpperCase().replace('-', '_') as any,
         duration,
         cost: duration > 0 ? randomFloat(0.01, 0.15) * duration / 60 : 0,
         transcript: status === 'completed' ? `Agent: Hello ${lead.firstName}, this is ${randomPick(users).firstName} from Pinnacle Real Estate. How are you today?\n${lead.firstName}: Hi! I'm doing well, thanks for calling back.\nAgent: Of course! I wanted to follow up on some properties we discussed...\n${lead.firstName}: Yes, I'm particularly interested in the one on Oak Street.\nAgent: Great choice! Let me tell you more about it...` : null,
@@ -1147,6 +1150,7 @@ async function main() {
             variant: Math.random() > 0.5 ? 'A' : 'B',
             leadId: randomPick(leads).id,
             campaignId: randomPick(campaigns).id,
+            organizationId: org.id,
             converted: Math.random() > 0.7,
             openedAt: Math.random() > 0.3 ? randomDate(startDate, new Date()) : null,
             clickedAt: Math.random() > 0.6 ? randomDate(startDate, new Date()) : null,

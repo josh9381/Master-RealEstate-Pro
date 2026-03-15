@@ -20,9 +20,9 @@ import {
   X
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi, activitiesApi } from '@/lib/api'
+import { leadsApi, tasksApi } from '@/lib/api'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
-import type { Lead, ActivityRecord } from '@/types'
+import type { Lead } from '@/types'
 
 interface FollowUp {
   id: number
@@ -58,35 +58,40 @@ function LeadsFollowups() {
   const { data: followupsData, isLoading, refetch: loadFollowups } = useQuery({
     queryKey: ['followups'],
     queryFn: async () => {
-      // Get recent activities that are pending
-      const activitiesResponse = await activitiesApi.getActivities({ limit: 50 })
-      const activities = activitiesResponse.data?.activities || []
+      // Get tasks that are linked to leads (follow-ups)
+      const tasksResponse = await tasksApi.getTasks({ limit: 100 })
+      const tasks = tasksResponse.data?.tasks || tasksResponse.data || []
       
       // Get leads to map names
-      const leadsResponse = await leadsApi.getLeads({ limit: 100 })
+      const leadsResponse = await leadsApi.getLeads({ limit: 200 })
       const leads = leadsResponse.data?.leads || []
       
-      const leadMap = new Map<number, Lead>(leads.map((l: Lead) => [l.id, l]))
+      const leadMap = new Map<string, Lead>(leads.map((l: Lead) => [String(l.id), l]))
       
-      // Transform activities to follow-ups
-      const followupList: FollowUp[] = activities.map((activity: ActivityRecord, index: number) => {
-        const lead: Lead | undefined = leadMap.get(Number(activity.leadId))
-        const createdDate = activity.createdAt ? new Date(activity.createdAt) : new Date()
-        const isPast = createdDate < new Date()
+      const now = new Date()
+      
+      // Transform tasks to follow-ups, only include tasks linked to leads
+      const followupList: FollowUp[] = tasks
+        .filter((task: Record<string, unknown>) => task.leadId)
+        .map((task: Record<string, unknown>) => {
+          const lead: Lead | undefined = leadMap.get(String(task.leadId))
+          const dueDate = task.dueDate ? new Date(task.dueDate as string) : new Date(task.createdAt as string)
+          const isCompleted = task.status === 'COMPLETED' || task.status === 'completed'
+          const isOverdue = !isCompleted && dueDate < now
         
-        return {
-          id: activity.id || index,
-          lead: lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead',
-          company: lead?.company || 'No Company',
-          type: activity.type === 'call' ? 'call' : activity.type === 'email' ? 'email' : activity.type === 'meeting' ? 'meeting' : 'task',
-          date: createdDate.toISOString().split('T')[0],
-          time: createdDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          priority: activity.priority || 'medium',
-          status: isPast ? 'overdue' : 'pending',
-          notes: activity.description || undefined,
-          leadId: activity.leadId
-        }
-      })
+          return {
+            id: task.id,
+            lead: lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead',
+            company: lead?.company || 'No Company',
+            type: task.type === 'call' ? 'call' : task.type === 'email' ? 'email' : task.type === 'meeting' ? 'meeting' : 'task',
+            date: dueDate.toISOString().split('T')[0],
+            time: dueDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+            priority: task.priority || 'medium',
+            status: isCompleted ? 'completed' : isOverdue ? 'overdue' : 'pending',
+            notes: task.description || task.title || undefined,
+            leadId: String(task.leadId),
+          }
+        })
       
       // Build available leads for Add Follow-up dropdown
       const availableLeadsList = leads.map((l: Lead) => ({
@@ -108,7 +113,11 @@ function LeadsFollowups() {
       newErrors.leadId = 'Please select a lead'
     }
     const scheduledDate = new Date(`${newFollowup.date}T${newFollowup.time}:00`)
-    if (scheduledDate <= new Date()) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const scheduledDay = new Date(scheduledDate)
+    scheduledDay.setHours(0, 0, 0, 0)
+    if (scheduledDay < today) {
       newErrors.date = 'Please select a future date and time'
     }
     setFollowupErrors(newErrors)
@@ -118,11 +127,13 @@ function LeadsFollowups() {
     }
     setIsCreating(true)
     try {
-      await activitiesApi.createActivity({
+      await tasksApi.createTask({
+        title: `${newFollowup.type.charAt(0).toUpperCase() + newFollowup.type.slice(1)} follow-up`,
         leadId: newFollowup.leadId,
-        type: newFollowup.type,
         description: newFollowup.notes || `Scheduled ${newFollowup.type} follow-up`,
-        scheduledAt: scheduledDate.toISOString(),
+        dueDate: scheduledDate.toISOString(),
+        priority: newFollowup.priority as 'low' | 'medium' | 'high',
+        status: 'PENDING',
       })
       toast.success('Follow-up created successfully')
       setShowAddModal(false)
@@ -185,7 +196,7 @@ function LeadsFollowups() {
 
     // Persist to backend
     try {
-      await activitiesApi.updateActivity(String(id), { description: `Completed follow-up`, status: 'completed' })
+      await tasksApi.completeTask(String(id))
     } catch (error) {
       logger.error('Failed to update activity status:', error)
       // Revert on failure
@@ -221,6 +232,10 @@ function LeadsFollowups() {
   const overdueCount = followups.filter((f: FollowUp) => f.status === 'overdue').length
   const todayStr = new Date().toISOString().split('T')[0]
   const todayCount = followups.filter((f: FollowUp) => f.date === todayStr).length
+  const weekEnd = new Date()
+  weekEnd.setDate(weekEnd.getDate() + 7)
+  const weekEndStr = weekEnd.toISOString().split('T')[0]
+  const weekCount = followups.filter((f: FollowUp) => f.date >= todayStr && f.date <= weekEndStr).length
 
   return (
     <div className="space-y-6">
@@ -284,8 +299,12 @@ function LeadsFollowups() {
           size="sm"
           variant={filter === 'week' ? 'default' : 'outline'}
           onClick={() => setFilter('week')}
+          className="gap-2"
         >
           This Week
+          {weekCount > 0 && (
+            <Badge variant="secondary" className="ml-1">{weekCount}</Badge>
+          )}
         </Button>
       </div>
 
@@ -319,7 +338,7 @@ function LeadsFollowups() {
           ))}
         </div>
       ) : (
-      <div className="grid gap-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filteredFollowups.map((followup) => {
           const statusConfig = getStatusConfig(followup.status)
           const StatusIcon = statusConfig.icon
@@ -334,69 +353,58 @@ function LeadsFollowups() {
                 followup.status === 'completed' ? 'opacity-60' : ''
               }`}
             >
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between gap-4">
-                  {/* Left Section */}
-                  <div className="flex items-start gap-4 flex-1">
-                    {/* Type Icon */}
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${statusConfig.bg}`}>
-                      <TypeIcon className={`h-6 w-6 ${statusConfig.color}`} />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium">{followup.lead}</p>
-                        <span className="text-sm text-muted-foreground">•</span>
-                        <p className="text-sm text-muted-foreground">{followup.company}</p>
-                        <Badge variant={getPriorityColor(followup.priority)} className="text-xs">
-                          {followup.priority}
-                        </Badge>
-                      </div>
-
-                      {followup.notes && (
-                        <p className="text-sm text-muted-foreground">{followup.notes}</p>
-                      )}
-
-                      {/* Date & Time */}
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span>{new Date(followup.date).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{followup.time}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <StatusIcon className={`h-4 w-4 ${statusConfig.color}`} />
-                          <span className={statusConfig.color}>{followup.status}</span>
-                        </div>
-                      </div>
-                    </div>
+              <CardContent className="p-4">
+                {/* Header: icon + lead name + priority */}
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${statusConfig.bg}`}>
+                    <TypeIcon className={`h-4 w-4 ${statusConfig.color}`} />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{followup.lead}</p>
+                    <p className="text-xs text-muted-foreground truncate">{followup.company}</p>
+                  </div>
+                  <Badge variant={getPriorityColor(followup.priority)} className="text-xs shrink-0">
+                    {followup.priority}
+                  </Badge>
+                </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    {followup.status !== 'completed' && (
-                      <Button 
-                        size="sm"
-                        onClick={() => handleComplete(followup.id)}
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Complete
-                      </Button>
-                    )}
-                    <Button size="sm" variant="outline" asChild>
-                      <Link to={followup.leadId ? `/leads/${followup.leadId}` : '/leads'}>
-                        View Lead
-                      </Link>
+                {followup.notes && (
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{followup.notes}</p>
+                )}
+
+                {/* Date, time, status row */}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    <span>{new Date(followup.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>{followup.time}</span>
+                  </div>
+                  <div className="flex items-center gap-1 ml-auto">
+                    <StatusIcon className={`h-3 w-3 ${statusConfig.color}`} />
+                    <span className={statusConfig.color}>{followup.status}</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  {followup.status !== 'completed' && (
+                    <Button 
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleComplete(followup.id)}
+                    >
+                      <CheckCircle className="mr-1 h-3 w-3" />
+                      Complete
                     </Button>
-                  </div>
+                  )}
+                  <Button size="sm" variant="outline" className={followup.status === 'completed' ? 'flex-1' : ''} asChild>
+                    <Link to={followup.leadId ? `/leads/${followup.leadId}` : '/leads'}>
+                      View Lead
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

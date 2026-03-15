@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { AIComposer } from '@/components/ai/AIComposer'
+import { ModalErrorBoundary } from '@/components/ModalErrorBoundary'
 import type { Thread, Message } from './types'
 
 interface ConversationViewProps {
@@ -377,13 +378,15 @@ export const ConversationView = ({
 
           {/* AI Composer - Inline */}
           {showAIComposer && selectedThread ? (
-            <AIComposer
-              leadId={selectedThread.lead?.id?.toString() || selectedThread.id.toString()}
-              conversationId={selectedThread.id.toString()}
-              messageType={selectedChannel === 'sms' ? 'sms' : selectedChannel === 'call' ? 'call' : 'email'}
-              onMessageGenerated={onMessageGenerated}
-              onClose={() => onShowAIComposer(false)}
-            />
+            <ModalErrorBoundary name="AI Composer" onClose={() => onShowAIComposer(false)}>
+              <AIComposer
+                leadId={selectedThread.lead?.id?.toString() || selectedThread.id.toString()}
+                conversationId={selectedThread.id.toString()}
+                messageType={selectedChannel === 'sms' ? 'sms' : selectedChannel === 'call' ? 'call' : 'email'}
+                onMessageGenerated={onMessageGenerated}
+                onClose={() => onShowAIComposer(false)}
+              />
+            </ModalErrorBoundary>
           ) : null}
           
           <div className="flex gap-2">

@@ -236,6 +236,16 @@ export async function executeCampaign(
     };
   } catch (error) {
     logger.error('[CAMPAIGN] Execution failed:', error);
+    // Rollback status from SENDING to prevent stuck campaigns
+    try {
+      await prisma.campaign.update({
+        where: { id: campaignId },
+        data: { status: 'DRAFT' },
+      });
+      logger.info(`[CAMPAIGN] Rolled back campaign ${campaignId} status from SENDING to DRAFT`);
+    } catch (rollbackErr) {
+      logger.error('[CAMPAIGN] Status rollback failed:', rollbackErr);
+    }
     return {
       success: false,
       totalLeads: 0,
@@ -277,11 +287,18 @@ async function getTargetLeads(
   // Build filter query
   const where: any = { organizationId };
 
-  // Filter by campaign tag if set
+  // Collect tag IDs from campaign tag and filter tags
+  const tagIds: string[] = [];
   if (tagId) {
+    tagIds.push(tagId);
+  }
+  if (filters?.tags && filters.tags.length > 0) {
+    tagIds.push(...filters.tags);
+  }
+  if (tagIds.length > 0) {
     where.tags = {
       some: {
-        id: tagId,
+        id: { in: tagIds },
       },
     };
   }
@@ -294,14 +311,6 @@ async function getTargetLeads(
 
     if (filters.minScore !== undefined) {
       where.score = { gte: filters.minScore };
-    }
-
-    if (filters.tags && filters.tags.length > 0) {
-      where.tags = {
-        some: {
-          id: { in: filters.tags },
-        },
-      };
     }
   }
 
@@ -348,8 +357,8 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
   // CAN-SPAM options — use Handlebars variables as placeholders
   // (the actual unsubscribe URL is per-lead, injected via template vars below)
   const canSpam: CanSpamOptions = {
-    companyName: businessSettings?.companyName || campaign.organization?.name || '{{company.name}}',
-    physicalAddress: businessSettings?.address || '{{company.address}}',
+    companyName: businessSettings?.companyName || campaign.organization?.name || 'Our Company',
+    physicalAddress: businessSettings?.address || 'Address on file',
   };
 
   // Detect block-based vs legacy content
@@ -401,25 +410,30 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
         unsubscribeToken = await ensureUnsubscribeToken(lead.id);
       } catch (error) {
         logger.error('[CAMPAIGN] Failed to generate unsubscribe token:', error)
-        // If token generation fails, use a fallback URL with leadId
-        unsubscribeToken = lead.id;
+        // Generate a random opaque token as fallback instead of exposing leadId
+        const { randomBytes } = await import('crypto');
+        unsubscribeToken = randomBytes(32).toString('hex');
       }
       const unsubscribeUrl = `${APP_URL}/api/unsubscribe/${unsubscribeToken}`;
 
-      // Prepare template data
-      const nameParts = `${lead.firstName} ${lead.lastName}`.split(' ')
-      const firstName = nameParts[0] || `${lead.firstName} ${lead.lastName}`
-      const lastName = nameParts.slice(1).join(' ') || ''
-      
+      // Prepare template data — escape Handlebars syntax in lead fields to prevent injection
+      const safeFirst = lead.firstName || '';
+      const safeLast = lead.lastName || '';
+      const fullName = `${safeFirst} ${safeLast}`.trim() || 'Valued Customer';
+      const esc = (val: unknown): string => {
+        if (val == null) return '';
+        // Escape triple-stash first (bypasses Handlebars HTML escaping), then double-stash
+        return String(val).replace(/\{\{\{/g, '\\{{{').replace(/\}\}\}/g, '\\}}}').replace(/\{\{/g, '\\{{').replace(/\}\}/g, '\\}}');
+      };
       const templateData = {
         lead: {
-          name: `${lead.firstName} ${lead.lastName}`,
-          firstName: firstName,
-          lastName: lastName,
-          email: lead.email,
-          phone: lead.phone,
-          company: lead.company,
-          status: lead.status,
+          name: esc(fullName),
+          firstName: esc(safeFirst || fullName),
+          lastName: esc(safeLast),
+          email: esc(lead.email),
+          phone: esc(lead.phone),
+          company: esc(lead.company),
+          status: esc(lead.status),
           score: lead.score,
         },
         user: lead.assignedTo
@@ -492,7 +506,10 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
         totalFailed += result.value.failed;
       } else {
         logger.error(`[CAMPAIGN] Batch failed:`, result.reason);
-        totalFailed += BATCH_SIZE; // Assume all failed in this batch
+        // Count actual batch size, not fixed constant
+        const failedBatchIndex = results.indexOf(result);
+        const actualBatch = batchGroup[failedBatchIndex];
+        totalFailed += actualBatch ? actualBatch.length : BATCH_SIZE;
       }
     });
 
@@ -524,20 +541,24 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
   const messages = leads
     .filter((lead) => lead.phone && lead.smsOptIn !== false) // Only leads with phone AND not opted out
     .map((lead) => {
-      // Prepare template data
-      const nameParts = `${lead.firstName} ${lead.lastName}`.split(' ')
-      const firstName = nameParts[0] || `${lead.firstName} ${lead.lastName}`
-      const lastName = nameParts.slice(1).join(' ') || ''
-      
+      // Prepare template data — escape Handlebars syntax in lead fields to prevent injection
+      const safeFirst = lead.firstName || '';
+      const safeLast = lead.lastName || '';
+      const fullName = `${safeFirst} ${safeLast}`.trim() || 'Valued Customer';
+      const esc = (val: unknown): string => {
+        if (val == null) return '';
+        // Escape triple-stash first (bypasses Handlebars HTML escaping), then double-stash
+        return String(val).replace(/\{\{\{/g, '\\{{{').replace(/\}\}\}/g, '\\}}}').replace(/\{\{/g, '\\{{').replace(/\}\}/g, '\\}}');
+      };
       const templateData = {
         lead: {
-          name: `${lead.firstName} ${lead.lastName}`,
-          firstName: firstName,
-          lastName: lastName,
-          email: lead.email,
-          phone: lead.phone,
-          company: lead.company,
-          status: lead.status,
+          name: esc(fullName),
+          firstName: esc(safeFirst || fullName),
+          lastName: esc(safeLast),
+          email: esc(lead.email),
+          phone: esc(lead.phone),
+          company: esc(lead.company),
+          status: esc(lead.status),
           score: lead.score,
         },
         user: lead.assignedTo
@@ -600,7 +621,10 @@ async function sendSMSCampaign(campaign: any, leads: any[]) {
         totalFailed += result.value.failed;
       } else {
         logger.error(`[CAMPAIGN] Batch failed:`, result.reason);
-        totalFailed += BATCH_SIZE; // Assume all failed in this batch
+        // Count actual batch size, not fixed constant
+        const failedBatchIndex = results.indexOf(result);
+        const actualBatch = batchGroup[failedBatchIndex];
+        totalFailed += actualBatch ? actualBatch.length : BATCH_SIZE;
       }
     });
 
@@ -758,15 +782,15 @@ export async function previewCampaign(
     const bodyTemplate = Handlebars.compile(compiledBody);
 
     return sampleLeads.map((lead) => {
-      const nameParts = `${lead.firstName} ${lead.lastName}`.split(' ')
-      const firstName = nameParts[0] || `${lead.firstName} ${lead.lastName}`
-      const lastName = nameParts.slice(1).join(' ') || ''
+      const safeFirst = lead.firstName || '';
+      const safeLast = lead.lastName || '';
+      const fullName = `${safeFirst} ${safeLast}`.trim() || 'Valued Customer';
       
       const templateData = {
         lead: {
-          name: `${lead.firstName} ${lead.lastName}`,
-          firstName: firstName,
-          lastName: lastName,
+          name: fullName,
+          firstName: safeFirst || fullName,
+          lastName: safeLast,
           email: lead.email,
         },
         currentDate: new Date().toLocaleDateString(),
@@ -782,13 +806,14 @@ export async function previewCampaign(
     const bodyTemplate = Handlebars.compile(campaign.body || '');
 
     return sampleLeads.map((lead) => {
-      const nameParts = `${lead.firstName} ${lead.lastName}`.split(' ')
-      const firstName = nameParts[0] || `${lead.firstName} ${lead.lastName}`
+      const safeFirst = lead.firstName || '';
+      const safeLast = lead.lastName || '';
+      const fullName = `${safeFirst} ${safeLast}`.trim() || 'Valued Customer';
       
       const templateData = {
         lead: {
-          name: `${lead.firstName} ${lead.lastName}`,
-          firstName: firstName,
+          name: fullName,
+          firstName: safeFirst || fullName,
           phone: lead.phone,
         },
         currentDate: new Date().toLocaleDateString(),

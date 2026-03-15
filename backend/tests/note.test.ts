@@ -26,8 +26,15 @@ describe('Note Management Endpoints', () => {
   let testAccessToken: string;
   let anotherUserToken: string;
   let testLead: Lead;
+  let testOrgId: string;
 
   beforeEach(async () => {
+    // Create test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    });
+    testOrgId = testOrg.id;
+
     // Create test users
     const hashedPassword = await bcrypt.hash('TestPassword123!', 10);
     testUser = await prisma.user.create({
@@ -37,6 +44,7 @@ describe('Note Management Endpoints', () => {
         email: `test${Date.now()}@example.com`,
         password: hashedPassword,
         role: 'USER',
+        organizationId: testOrgId,
       },
     });
 
@@ -47,17 +55,20 @@ describe('Note Management Endpoints', () => {
         email: `another${Date.now()}@example.com`,
         password: hashedPassword,
         role: 'USER',
+        organizationId: testOrgId,
       },
     });
 
-    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role);
-    anotherUserToken = generateAccessToken(anotherUser.id, anotherUser.email, anotherUser.role);
+    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role, testOrgId);
+    anotherUserToken = generateAccessToken(anotherUser.id, anotherUser.email, anotherUser.role, testOrgId);
 
     // Create a test lead
     testLead = await prisma.lead.create({
       data: {
-        name: 'Test Lead',
+        firstName: 'Test',
+        lastName: 'Lead',
         email: `lead${Date.now()}@example.com`,
+        organizationId: testOrgId,
       },
     });
   });
@@ -126,16 +137,19 @@ describe('Note Management Endpoints', () => {
             content: 'First note',
             leadId: testLead.id,
             authorId: testUser.id,
+            organizationId: testOrgId,
           },
           {
             content: 'Second note',
             leadId: testLead.id,
             authorId: testUser.id,
+            organizationId: testOrgId,
           },
           {
             content: 'Third note',
             leadId: testLead.id,
             authorId: anotherUser.id,
+            organizationId: testOrgId,
           },
         ],
       });
@@ -202,6 +216,7 @@ describe('Note Management Endpoints', () => {
           content: 'Test note for retrieval',
           leadId: testLead.id,
           authorId: testUser.id,
+          organizationId: testOrgId,
         },
       });
       noteId = note.id;
@@ -239,6 +254,7 @@ describe('Note Management Endpoints', () => {
           content: 'Original note content',
           leadId: testLead.id,
           authorId: testUser.id,
+          organizationId: testOrgId,
         },
       });
       noteId = note.id;
@@ -302,6 +318,7 @@ describe('Note Management Endpoints', () => {
           content: 'Note to delete',
           leadId: testLead.id,
           authorId: testUser.id,
+          organizationId: testOrgId,
         },
       });
       noteId = note.id;
@@ -342,9 +359,10 @@ describe('Note Management Endpoints', () => {
           email: `admin${Date.now()}@example.com`,
           password: hashedPassword,
           role: 'ADMIN',
+          organizationId: testOrgId,
         },
       });
-      const adminToken = generateAccessToken(adminUser.id, adminUser.email, adminUser.role);
+      const adminToken = generateAccessToken(adminUser.id, adminUser.email, adminUser.role, testOrgId);
 
       const response = await request(app)
         .delete(`/api/notes/${noteId}`)

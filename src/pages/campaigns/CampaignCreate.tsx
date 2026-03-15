@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
-import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles, RefreshCw, Save, ChevronRight } from 'lucide-react'
+import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles, RefreshCw, Save, ChevronRight, ChevronLeft, Eye, AtSign, Smartphone, AlertTriangle, FileText, Check } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, leadsApi, templatesApi, CreateCampaignData } from '@/lib/api'
 import { useQuery } from '@tanstack/react-query'
@@ -50,6 +50,44 @@ const campaignTypes = [
   },
 ]
 
+// Personalization tokens available for insertion
+const personalizationTokens = [
+  { token: '{{firstName}}', label: 'First Name' },
+  { token: '{{lastName}}', label: 'Last Name' },
+  { token: '{{email}}', label: 'Email' },
+  { token: '{{phone}}', label: 'Phone' },
+  { token: '{{propertyAddress}}', label: 'Property Address' },
+  { token: '{{propertyType}}', label: 'Property Type' },
+  { token: '{{agentName}}', label: 'Agent Name' },
+  { token: '{{companyName}}', label: 'Company' },
+]
+
+// Quick-start templates for Step 1
+const quickStartTemplates = {
+  email: [
+    { id: 'email-welcome', name: 'Welcome Series', description: 'Introduce yourself to new leads', subject: 'Welcome! Let\'s Find Your Dream Home', body: '' },
+    { id: 'email-listing', name: 'New Listing Alert', description: 'Notify leads about a new property', subject: 'Just Listed: {{propertyAddress}}', body: '' },
+    { id: 'email-followup', name: 'Follow-Up', description: 'Check in with contacted leads', subject: 'Still Looking? Here\'s What\'s New', body: '' },
+    { id: 'email-market', name: 'Market Update', description: 'Share local market insights', subject: 'Your Monthly Market Update', body: '' },
+  ],
+  sms: [
+    { id: 'sms-intro', name: 'Introduction', description: 'First contact text message', body: 'Hi {{firstName}}, this is {{agentName}}. I saw you were interested in properties in the area. Would you like to chat about what you\'re looking for?' },
+    { id: 'sms-listing', name: 'New Listing', description: 'Alert about a new property', body: 'Hi {{firstName}}! A new property just hit the market that matches your criteria. Want me to send you the details?' },
+    { id: 'sms-openhouse', name: 'Open House Invite', description: 'Invite to an open house event', body: 'Hi {{firstName}}, you\'re invited to an open house this weekend at {{propertyAddress}}. Would you like to attend?' },
+    { id: 'sms-checkin', name: 'Check-In', description: 'Follow up with existing leads', body: 'Hi {{firstName}}, just checking in! Are you still looking for a home? I have some great new options to share.' },
+  ],
+}
+
+// Step definitions for the wizard
+const wizardSteps = [
+  { num: 1, label: 'Type', icon: Mail },
+  { num: 2, label: 'Details', icon: FileText },
+  { num: 3, label: 'Content', icon: MessageSquare },
+  { num: 4, label: 'Audience', icon: Target },
+  { num: 5, label: 'Schedule', icon: Calendar },
+  { num: 6, label: 'Review', icon: Eye },
+]
+
 function CampaignCreate() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -61,16 +99,21 @@ function CampaignCreate() {
   
   // Auto-select type from URL query param (e.g., /campaigns/create?type=email)
   // Also pre-populate from template if templateId is provided
+  const typeParam = searchParams.get('type')
+  const templateId = searchParams.get('templateId')
+  const templateName = searchParams.get('templateName')
+  const templateSubject = searchParams.get('templateSubject')
+  
   useEffect(() => {
-    const typeParam = searchParams.get('type')
-    if (typeParam && campaignTypes.some(t => t.type === typeParam.toLowerCase())) {
-      setSelectedType(typeParam.toLowerCase())
-      setStep(2)
+    let cancelled = false
+    if (typeParam) {
+      const matchedType = campaignTypes.find(t => t.type === typeParam.toLowerCase())
+      if (matchedType && !matchedType.comingSoon) {
+        setSelectedType(typeParam.toLowerCase())
+        setStep(2)
+      }
     }
     // Pre-populate form from template params (from EmailTemplatesLibrary "Use" button)
-    const templateName = searchParams.get('templateName')
-    const templateSubject = searchParams.get('templateSubject')
-    const templateId = searchParams.get('templateId')
     if (templateId) {
       setFormData(prev => ({
         ...prev,
@@ -79,15 +122,19 @@ function CampaignCreate() {
       }))
       // Load template body from API
       templatesApi.getEmailTemplate(templateId).then((res: EmailTemplateResponse) => {
+        if (cancelled) return
         const body = res?.body || res?.data?.body || ''
         if (body) {
           setFormData(prev => ({ ...prev, content: body }))
         }
       }).catch(() => {
-        toast.warning('Could not load template content — you can type manually')
+        if (!cancelled) {
+          toast.warning('Could not load template content — you can type manually')
+        }
       })
     }
-  }, [searchParams.toString()])
+    return () => { cancelled = true }
+  }, [typeParam, templateId, templateName, templateSubject, toast])
   
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false)
@@ -98,6 +145,19 @@ function CampaignCreate() {
   // AI Message Enhancer state
   const [showEnhancer, setShowEnhancer] = useState(false)
   
+  // SMS phone preview state
+  const [showSmsPreview, setShowSmsPreview] = useState(false)
+  
+  // Token inserter for subject line field
+  const [showSubjectTokens, setShowSubjectTokens] = useState(false)
+  const [showSmsTokens, setShowSmsTokens] = useState(false)
+  
+  const insertTokenIntoField = (token: string, field: 'subject' | 'content') => {
+    updateFormData({ [field]: formData[field] + token })
+    if (field === 'subject') setShowSubjectTokens(false)
+    if (field === 'content') setShowSmsTokens(false)
+  }
+  
   // AI Content Generator state
   const [showContentGenerator, setShowContentGenerator] = useState(false)
   
@@ -105,17 +165,17 @@ function CampaignCreate() {
   const { data: leadsData } = useQuery({
     queryKey: ['leads-count'],
     queryFn: async () => {
-      const [allRes, newRes, contactedRes, qualifiedRes] = await Promise.all([
+      const [allRes, newRes, contactedRes, qualifiedRes] = await Promise.allSettled([
         leadsApi.getLeads({ page: 1, limit: 1 }),
         leadsApi.getLeads({ page: 1, limit: 1, status: 'new' }),
         leadsApi.getLeads({ page: 1, limit: 1, status: 'contacted' }),
         leadsApi.getLeads({ page: 1, limit: 1, status: 'qualified' }),
       ])
       return {
-        total: allRes.data?.pagination?.total || 0,
-        new: newRes.data?.pagination?.total || 0,
-        contacted: contactedRes.data?.pagination?.total || 0,
-        qualified: qualifiedRes.data?.pagination?.total || 0,
+        total: allRes.status === 'fulfilled' ? (allRes.value.data?.pagination?.total || 0) : 0,
+        new: newRes.status === 'fulfilled' ? (newRes.value.data?.pagination?.total || 0) : 0,
+        contacted: contactedRes.status === 'fulfilled' ? (contactedRes.value.data?.pagination?.total || 0) : 0,
+        qualified: qualifiedRes.status === 'fulfilled' ? (qualifiedRes.value.data?.pagination?.total || 0) : 0,
       }
     },
   })
@@ -130,6 +190,7 @@ function CampaignCreate() {
     name: '',
     description: '',
     subject: '',
+    previewText: '',
     content: '',
     audience: 'all' as 'all' | 'new' | 'warm' | 'hot' | 'custom',
     customAudience: [] as string[],
@@ -199,7 +260,22 @@ function CampaignCreate() {
   }, [formData.audience, formData.audienceFilters, totalLeads, newLeads, warmLeads, hotLeads])
 
   const handleTypeSelect = (type: string) => {
+    const typeConfig = campaignTypes.find(t => t.type === type)
+    if (typeConfig?.comingSoon) return
     setSelectedType(type)
+    setStep(2)
+  }
+
+  const handleQuickStart = (type: string, template: { id: string; name: string; description: string; subject?: string; body: string }) => {
+    const typeConfig = campaignTypes.find(t => t.type === type)
+    if (typeConfig?.comingSoon) return
+    setSelectedType(type)
+    setFormData(prev => ({
+      ...prev,
+      name: template.name,
+      subject: template.subject || '',
+      content: template.body || '',
+    }))
     setStep(2)
   }
 
@@ -215,7 +291,7 @@ function CampaignCreate() {
       status: (statusOverride || 'DRAFT') as 'DRAFT' | 'SCHEDULED' | 'ACTIVE',
       subject: formData.subject || undefined,
       body: formData.content || undefined,
-      previewText: formData.description || undefined,
+      previewText: formData.previewText || formData.description || undefined,
       startDate: formData.schedule === 'scheduled' && formData.scheduleDate 
         ? `${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00Z` 
         : undefined,
@@ -288,8 +364,18 @@ function CampaignCreate() {
   const validateCampaignForm = (): Record<string, string> => {
     const newErrors: Record<string, string> = {}
     if (!formData.name.trim()) newErrors.name = 'Campaign name is required'
+    const typeConfig = campaignTypes.find(t => t.type === selectedType)
+    if (typeConfig?.comingSoon) {
+      newErrors.type = `${typeConfig.title} is not yet available`
+    }
     if (selectedType === 'email' && !formData.subject?.trim()) {
       newErrors.subject = 'Email subject is required'
+    }
+    if ((selectedType === 'email' || selectedType === 'sms') && !formData.content?.trim()) {
+      newErrors.content = `${selectedType === 'email' ? 'Email body' : 'SMS message'} is required`
+    }
+    if (selectedType === 'sms' && formData.content.length > 294) {
+      newErrors.content = 'SMS message exceeds maximum length (294 characters + TCPA footer)'
     }
     if (formData.schedule === 'scheduled' && formData.scheduleDate) {
       const scheduleDateTime = new Date(`${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00`)
@@ -297,8 +383,22 @@ function CampaignCreate() {
         newErrors.scheduleDate = 'Schedule date must be in the future'
       }
     }
-    if (formData.budget && Number(formData.budget) <= 0) {
-      newErrors.budget = 'Budget must be greater than 0'
+    if (formData.budget && (isNaN(Number(formData.budget)) || Number(formData.budget) <= 0)) {
+      newErrors.budget = 'Budget must be a valid number greater than 0'
+    }
+    if (formData.budget && Number(formData.budget) > 1000000) {
+      newErrors.budget = 'Budget cannot exceed $1,000,000'
+    }
+    if (formData.isRecurring && formData.frequency === 'weekly' && formData.daysOfWeek.length === 0) {
+      newErrors.daysOfWeek = 'Select at least one day for weekly recurring campaigns'
+    }
+    if (formData.isRecurring && formData.recurringEndType === 'date' && formData.recurringEndDate && formData.scheduleDate) {
+      if (new Date(formData.recurringEndDate) <= new Date(formData.scheduleDate)) {
+        newErrors.recurringEndDate = 'End date must be after the start date'
+      }
+    }
+    if (formData.enableABTest && !formData.abTestVariant?.trim()) {
+      newErrors.abTestVariant = 'A/B test variant subject is required'
     }
     return newErrors
   }
@@ -311,8 +411,8 @@ function CampaignCreate() {
       return
     }
     
-    if (step < 3) {
-      setStep(3)
+    if (step < 6) {
+      setStep(6)
       return
     }
     
@@ -409,83 +509,139 @@ function CampaignCreate() {
         )}
       </div>
 
-      {/* Progress Steps — clickable */}
-      <div className="flex items-center space-x-4">
-        <button 
-          className="flex items-center space-x-2 cursor-pointer" 
-          onClick={() => setStep(1)}
-        >
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-            1
-          </div>
-          <span className={step >= 1 ? 'font-medium' : 'text-muted-foreground'}>
-            Choose Type
-          </span>
-        </button>
-        <div className={`h-0.5 w-16 transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
-        <button 
-          className={`flex items-center space-x-2 ${selectedType ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
-          onClick={() => selectedType && setStep(2)}
-          disabled={!selectedType}
-        >
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-            2
-          </div>
-          <span className={step >= 2 ? 'font-medium' : 'text-muted-foreground'}>
-            Basic Details
-          </span>
-        </button>
-        <div className={`h-0.5 w-16 transition-colors ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
-        <button 
-          className={`flex items-center space-x-2 ${selectedType && formData.name ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
-          onClick={() => selectedType && formData.name && setStep(3)}
-          disabled={!selectedType || !formData.name}
-        >
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-            3
-          </div>
-          <span className={step >= 3 ? 'font-medium' : 'text-muted-foreground'}>
-            Configure
-          </span>
-        </button>
+      {/* Progress Steps — clickable, responsive */}
+      <div className="flex items-center justify-between">
+        {wizardSteps.map((ws, idx) => {
+          const canNavigate = ws.num === 1 
+            || (ws.num === 2 && !!selectedType)
+            || (ws.num >= 3 && !!selectedType && !!formData.name && !(selectedType === 'email' && !formData.subject))
+          return (
+            <div key={ws.num} className="flex items-center flex-1 last:flex-none">
+              <button
+                className={`flex flex-col items-center gap-1 min-w-0 ${canNavigate ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
+                onClick={() => canNavigate && setStep(ws.num)}
+                disabled={!canNavigate}
+              >
+                <div className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors text-sm font-medium ${
+                  step > ws.num 
+                    ? 'bg-primary text-primary-foreground' 
+                    : step === ws.num 
+                    ? 'bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2' 
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  {step > ws.num ? <Check className="h-4 w-4" /> : ws.num}
+                </div>
+                <span className={`text-xs truncate max-w-[60px] ${step >= ws.num ? 'font-medium' : 'text-muted-foreground'}`}>
+                  {ws.label}
+                </span>
+              </button>
+              {idx < wizardSteps.length - 1 && (
+                <div className={`h-0.5 flex-1 mx-2 mt-[-18px] transition-colors ${step > ws.num ? 'bg-primary' : 'bg-muted'}`} />
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Step 1: Choose Type */}
       {step === 1 && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {campaignTypes.map((type) => (
-            <Card
-              key={type.type}
-              className={`transition-shadow ${
-                type.comingSoon 
-                  ? 'opacity-60 cursor-not-allowed' 
-                  : 'cursor-pointer hover:shadow-lg'
-              }`}
-              onClick={() => !type.comingSoon && handleTypeSelect(type.type)}
-              title={type.comingSoon ? `${type.title} is coming soon` : undefined}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${
-                    type.comingSoon ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'
-                  }`}>
-                    <type.icon className="h-6 w-6" />
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            {campaignTypes.map((type) => (
+              <Card
+                key={type.type}
+                className={`transition-shadow ${
+                  type.comingSoon 
+                    ? 'opacity-60 cursor-not-allowed' 
+                    : 'cursor-pointer hover:shadow-lg'
+                }`}
+                onClick={() => !type.comingSoon && handleTypeSelect(type.type)}
+                title={type.comingSoon ? `${type.title} is coming soon` : undefined}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${
+                      type.comingSoon ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'
+                    }`}>
+                      <type.icon className="h-6 w-6" />
+                    </div>
+                    {type.comingSoon && (
+                      <Badge variant="warning">Coming Soon</Badge>
+                    )}
                   </div>
-                  {type.comingSoon && (
-                    <Badge variant="warning">Coming Soon</Badge>
-                  )}
+                  <CardTitle className="mt-4">{type.title}</CardTitle>
+                  <CardDescription>{type.description}</CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+
+          {/* Quick-Start Templates */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Quick Start with a Template</CardTitle>
+              </div>
+              <CardDescription>
+                Choose a pre-built template to get started faster
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Email Templates */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Email Templates</span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {quickStartTemplates.email.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        onClick={() => handleQuickStart('email', tpl)}
+                        className="flex items-start gap-3 rounded-lg border p-3 text-left hover:bg-muted/50 hover:border-primary/50 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">{tpl.name}</div>
+                          <div className="text-xs text-muted-foreground">{tpl.description}</div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <CardTitle className="mt-4">{type.title}</CardTitle>
-                <CardDescription>{type.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
+                {/* SMS Templates */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">SMS Templates</span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {quickStartTemplates.sms.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        onClick={() => handleQuickStart('sms', tpl)}
+                        className="flex items-start gap-3 rounded-lg border p-3 text-left hover:bg-muted/50 hover:border-primary/50 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">{tpl.name}</div>
+                          <div className="text-xs text-muted-foreground">{tpl.description}</div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* Step 2: Basic Details */}
       {step === 2 && (
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle>Campaign Details</CardTitle>
             <CardDescription>
@@ -529,7 +685,7 @@ function CampaignCreate() {
                   value={formData.subject}
                   onChange={(e) => { updateFormData({ subject: e.target.value }); if (campaignErrors.subject) setCampaignErrors(prev => { const next = {...prev}; delete next.subject; return next }) }}
                 />
-                {campaignErrors.subject && <p className="text-sm text-red-500 mt-1">{campaignErrors.subject}</p>}
+                {campaignErrors.subject && <p className="text-sm text-red-500 mt-1" role="alert">⚠ {campaignErrors.subject}</p>}
               </div>
             )}
 
@@ -538,18 +694,18 @@ function CampaignCreate() {
                 Back
               </Button>
               <Button onClick={() => setStep(3)} disabled={!formData.name}>
-                Next: Configure
+                Next: Content
+                <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Step 3: Configure Campaign */}
+      {/* Step 3: Campaign Content */}
       {step === 3 && (
         <div className="space-y-6">
-          {/* Content */}
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-primary" />
@@ -564,14 +720,79 @@ function CampaignCreate() {
                 <>
                   {/* Subject line editable in step 3 too */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Email Subject *</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Email Subject *</label>
+                      <div className="relative">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowSubjectTokens(!showSubjectTokens)}
+                          className="gap-1 text-xs h-7"
+                        >
+                          <AtSign className="h-3 w-3" />
+                          Personalize
+                        </Button>
+                        {showSubjectTokens && (
+                          <div className="absolute right-0 top-full mt-1 z-10 w-52 rounded-md border bg-popover p-1 shadow-md">
+                            {personalizationTokens.map((t) => (
+                              <button
+                                key={t.token}
+                                onClick={() => insertTokenIntoField(t.token, 'subject')}
+                                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-muted transition-colors"
+                              >
+                                <code className="text-primary">{t.token}</code>
+                                <span className="text-muted-foreground">{t.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <Input
                       placeholder="e.g., Exclusive Summer Offer - 50% Off!"
                       value={formData.subject}
                       onChange={(e) => { updateFormData({ subject: e.target.value }); if (campaignErrors.subject) setCampaignErrors(prev => { const next = {...prev}; delete next.subject; return next }) }}
                     />
-                    {campaignErrors.subject && <p className="text-sm text-red-500 mt-1">{campaignErrors.subject}</p>}
+                    <div className="flex items-center justify-between">
+                      {campaignErrors.subject && <p className="text-sm text-red-500" role="alert">⚠ {campaignErrors.subject}</p>}
+                      <p className={`text-xs ml-auto ${formData.subject.length > 60 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                        {formData.subject.length}/60 chars {formData.subject.length > 60 && '— shorter subjects get higher open rates'}
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Preview Text — the snippet shown in inbox */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Preview Text <span className="text-muted-foreground font-normal">(the snippet shown next to the subject in inboxes)</span></label>
+                    <Input
+                      placeholder="e.g., Check out our latest properties in your area..."
+                      value={formData.previewText}
+                      onChange={(e) => updateFormData({ previewText: e.target.value })}
+                      maxLength={150}
+                    />
+                    <p className="text-xs text-muted-foreground">{formData.previewText.length}/150 — appears after the subject line in most email clients</p>
+                  </div>
+
+                  {/* Inbox Preview */}
+                  {(formData.subject || formData.previewText) && (
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <Eye className="h-3 w-3" />
+                        Inbox Preview
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                          {formData.name?.[0]?.toUpperCase() || 'A'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm truncate">{formData.subject || 'No subject'}</div>
+                          <div className="text-xs text-muted-foreground truncate">{formData.previewText || formData.description || 'No preview text'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">Email Body</label>
@@ -606,6 +827,7 @@ function CampaignCreate() {
                       minHeight="350px"
                       showTemplates={true}
                     />
+                    {campaignErrors.content && <p className="text-sm text-red-500" role="alert">⚠ {campaignErrors.content}</p>}
                   </div>
                   {/* Attachments */}
                   <div className="space-y-2">
@@ -652,52 +874,194 @@ function CampaignCreate() {
               )}
               
               {selectedType === 'sms' && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">SMS Message</label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowContentGenerator(true)}
-                        className="gap-2"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                        Generate with AI
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowEnhancer(true)}
-                        disabled={!formData.content.trim()}
-                        className="gap-2"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        Enhance
-                      </Button>
+                <div className="space-y-4">
+                  {/* SMS Message Editor + Phone Preview side by side */}
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {/* Left: Editor */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">SMS Message *</label>
+                        <div className="flex gap-2">
+                          <div className="relative">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowSmsTokens(!showSmsTokens)}
+                              className="gap-1 text-xs h-7"
+                            >
+                              <AtSign className="h-3 w-3" />
+                              Personalize
+                            </Button>
+                            {showSmsTokens && (
+                              <div className="absolute right-0 top-full mt-1 z-10 w-52 rounded-md border bg-popover p-1 shadow-md">
+                                {personalizationTokens.map((t) => (
+                                  <button
+                                    key={t.token}
+                                    onClick={() => insertTokenIntoField(t.token, 'content')}
+                                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-muted transition-colors"
+                                  >
+                                    <code className="text-primary">{t.token}</code>
+                                    <span className="text-muted-foreground">{t.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowContentGenerator(true)}
+                            className="gap-2"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                            Generate with AI
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowEnhancer(true)}
+                            disabled={!formData.content.trim()}
+                            className="gap-2"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Enhance
+                          </Button>
+                        </div>
+                      </div>
+                      <textarea
+                        className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        placeholder="Enter your SMS message... Use the Personalize button to add recipient names, property details, etc."
+                        maxLength={294}
+                        value={formData.content}
+                        onChange={(e) => { updateFormData({ content: e.target.value }); if (campaignErrors.content) setCampaignErrors(prev => { const next = {...prev}; delete next.content; return next }) }}
+                      />
+                      {campaignErrors.content && <p className="text-sm text-red-500" role="alert">⚠ {campaignErrors.content}</p>}
+                      
+                      {/* Character count + segment info */}
+                      <div className="flex justify-between text-xs" aria-live="polite">
+                        <span className={`${formData.content.length > 250 ? 'text-amber-500 font-medium' : 'text-muted-foreground'}`}>
+                          {formData.content.length}/294 characters (26 reserved for TCPA footer)
+                        </span>
+                        <span className="text-muted-foreground">
+                          {(() => { const totalLen = formData.content.length + 26; return totalLen <= 160 ? 1 : Math.ceil(totalLen / 153); })()} segment{(() => { const totalLen = formData.content.length + 26; return (totalLen <= 160 ? 1 : Math.ceil(totalLen / 153)) !== 1 ? 's' : ''; })()}
+                        </span>
+                      </div>
+
+                      {/* Estimated cost */}
+                      <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs font-medium">
+                          <DollarSign className="h-3 w-3" />
+                          Estimated Cost
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <div className="text-muted-foreground">Per message</div>
+                            <div className="font-medium">
+                              ~${(((() => { const totalLen = formData.content.length + 26; return totalLen <= 160 ? 1 : Math.ceil(totalLen / 153); })()) * (formData.mediaUrl ? 0.02 : 0.0079)).toFixed(3)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground">Recipients</div>
+                            <div className="font-medium">{filteredLeadCount.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground">Total est.</div>
+                            <div className="font-semibold text-primary">
+                              ~${(filteredLeadCount * ((() => { const totalLen = formData.content.length + 26; return totalLen <= 160 ? 1 : Math.ceil(totalLen / 153); })()) * (formData.mediaUrl ? 0.02 : 0.0079)).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">Carrier rates may vary. MMS messages cost more than SMS.</p>
+                      </div>
+                    </div>
+
+                    {/* Right: Phone Preview */}
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Smartphone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">Message Preview</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowSmsPreview(!showSmsPreview)}
+                          className="gap-1 text-xs h-6"
+                        >
+                          <Eye className="h-3 w-3" />
+                          {showSmsPreview ? 'Hide' : 'Show'}
+                        </Button>
+                      </div>
+                      {showSmsPreview && (
+                        <div className="w-[280px] rounded-[2rem] border-4 border-gray-800 dark:border-gray-300 bg-gray-100 dark:bg-gray-900 p-1 shadow-lg">
+                          {/* Phone status bar */}
+                          <div className="flex items-center justify-between px-4 py-1 text-[10px] font-medium text-gray-600 dark:text-gray-400">
+                            <span>9:41</span>
+                            <div className="w-20 h-5 bg-gray-800 dark:bg-gray-300 rounded-full" />
+                            <span>5G</span>
+                          </div>
+                          {/* Chat header */}
+                          <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 text-center">
+                            <div className="text-xs font-semibold">Your Business</div>
+                            <div className="text-[10px] text-muted-foreground">SMS</div>
+                          </div>
+                          {/* Message area */}
+                          <div className="bg-white dark:bg-gray-950 min-h-[260px] p-3 space-y-2">
+                            {formData.content ? (
+                              <>
+                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-gray-200 dark:bg-gray-800 px-3 py-2 text-xs leading-relaxed">
+                                  {formData.content.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+                                    const samples: Record<string, string> = { firstName: 'Sarah', lastName: 'Johnson', email: 'sarah@email.com', phone: '(555) 123-4567', propertyAddress: '123 Oak St', propertyType: 'Single Family', agentName: 'Mike', companyName: 'RE/MAX' }
+                                    return samples[key] || `{{${key}}}`
+                                  })}
+                                </div>
+                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-gray-200 dark:bg-gray-800 px-3 py-1.5 text-[10px] text-muted-foreground italic">
+                                  Reply STOP to opt out.
+                                </div>
+                                {formData.mediaUrl && /^https?:\/\/.+/.test(formData.mediaUrl) && (
+                                  <div className="max-w-[85%] rounded-2xl rounded-tl-sm overflow-hidden border">
+                                    <img
+                                      src={formData.mediaUrl}
+                                      alt="MMS attachment"
+                                      className="max-w-full h-auto"
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                    />
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="flex items-center justify-center h-full text-xs text-muted-foreground pt-20">
+                                Type a message to see the preview
+                              </div>
+                            )}
+                          </div>
+                          {/* Input bar */}
+                          <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-b-[1.5rem]">
+                            <div className="bg-white dark:bg-gray-700 rounded-full px-3 py-1.5 text-[10px] text-muted-foreground">
+                              iMessage
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <textarea
-                    className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    placeholder="Enter your SMS message..."
-                    maxLength={320}
-                    value={formData.content}
-                    onChange={(e) => updateFormData({ content: e.target.value })}
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{formData.content.length}/320 characters</span>
-                    <span>{formData.content.length > 160 ? `${Math.ceil(formData.content.length / 160)} segments` : '1 segment'}</span>
-                  </div>
+
+                  {/* TCPA Compliance */}
                   <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-200">
-                    <p className="font-medium mb-1">TCPA Compliance</p>
-                    <p>&quot;Reply STOP to opt out.&quot; will be automatically appended to every SMS sent. Recipients who reply STOP will be automatically unsubscribed.</p>
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium mb-1">TCPA Compliance</p>
+                        <p>&quot;Reply STOP to opt out.&quot; will be automatically appended to every SMS sent. Recipients who reply STOP will be automatically unsubscribed.</p>
+                      </div>
+                    </div>
                   </div>
                   
                   {/* MMS Media URL */}
                   <div className="space-y-1 pt-2">
-                    <label className="text-sm font-medium">MMS Media URL <span className="text-muted-foreground font-normal">(optional)</span></label>
+                    <label className="text-sm font-medium">MMS Media URL <span className="text-muted-foreground font-normal">(optional — converts to MMS)</span></label>
                     <input
                       type="url"
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -708,16 +1072,6 @@ function CampaignCreate() {
                     <p className="text-xs text-muted-foreground">
                       Add an image, GIF, or video URL to send as MMS. Supported: JPEG, PNG, GIF (up to 5MB). Must be publicly accessible.
                     </p>
-                    {formData.mediaUrl && (
-                      <div className="mt-2 border rounded-md p-2 max-w-[200px]">
-                        <img
-                          src={formData.mediaUrl}
-                          alt="MMS preview"
-                          className="max-w-full h-auto rounded"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -780,8 +1134,24 @@ function CampaignCreate() {
             </CardContent>
           </Card>
 
-          {/* Audience */}
-          <Card>
+          {/* Step 3 Navigation */}
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep(2)}>
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Back: Details
+            </Button>
+            <Button onClick={() => setStep(4)}>
+              Next: Audience
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Target Audience */}
+      {step === 4 && (
+        <div className="space-y-6">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Target className="h-5 w-5 text-primary" />
@@ -906,8 +1276,24 @@ function CampaignCreate() {
             </CardContent>
           </Card>
 
-          {/* Schedule & Budget */}
-          <Card>
+          {/* Step 4 Navigation */}
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep(3)}>
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Back: Content
+            </Button>
+            <Button onClick={() => setStep(5)}>
+              Next: Schedule
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: Schedule & Budget */}
+      {step === 5 && (
+        <div className="space-y-6">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
@@ -965,7 +1351,7 @@ function CampaignCreate() {
                         onChange={(e) => { updateFormData({ scheduleDate: e.target.value }); if (campaignErrors.scheduleDate) setCampaignErrors(prev => { const next = {...prev}; delete next.scheduleDate; return next }) }}
                         min={new Date().toISOString().split('T')[0]}
                       />
-                      {campaignErrors.scheduleDate && <p className="text-sm text-red-500 mt-1">{campaignErrors.scheduleDate}</p>}
+                      {campaignErrors.scheduleDate && <p className="text-sm text-red-500 mt-1" role="alert">⚠ {campaignErrors.scheduleDate}</p>}
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Time</label>
@@ -1179,7 +1565,7 @@ function CampaignCreate() {
                   value={formData.budget}
                   onChange={(e) => { updateFormData({ budget: e.target.value }); if (campaignErrors.budget) setCampaignErrors(prev => { const next = {...prev}; delete next.budget; return next }) }}
                 />
-                {campaignErrors.budget && <p className="text-sm text-red-500 mt-1">{campaignErrors.budget}</p>}
+                {campaignErrors.budget && <p className="text-sm text-red-500 mt-1" role="alert">⚠ {campaignErrors.budget}</p>}
                 <p className="text-xs text-muted-foreground">
                   Set a budget limit for this campaign
                 </p>
@@ -1187,9 +1573,80 @@ function CampaignCreate() {
             </CardContent>
           </Card>
 
+          {/* Step 5 Navigation */}
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep(4)}>
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Back: Audience
+            </Button>
+            <Button onClick={() => setStep(6)}>
+              Next: Review
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 6: Review & Send */}
+      {step === 6 && (
+        <div className="space-y-6">
+          {/* Campaign Summary */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-primary" />
+                <CardTitle>Campaign Summary</CardTitle>
+              </div>
+              <CardDescription>
+                Review your campaign settings before sending
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Campaign</div>
+                  <div className="font-medium">{formData.name || '—'}</div>
+                  <div className="text-sm text-muted-foreground">{campaignTypes.find(t => t.type === selectedType)?.title}</div>
+                </div>
+                {selectedType === 'email' && (
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Subject</div>
+                    <div className="font-medium">{formData.subject || '—'}</div>
+                    {formData.previewText && <div className="text-sm text-muted-foreground">{formData.previewText}</div>}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Content</div>
+                  <div className="text-sm">
+                    {formData.content 
+                      ? <span className="text-green-600 dark:text-green-400 flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Content ready ({selectedType === 'sms' ? `${formData.content.length} chars` : 'email body set'})</span>
+                      : <span className="text-amber-500 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> No content added</span>
+                    }
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Audience</div>
+                  <div className="font-medium capitalize">{formData.audience === 'custom' ? 'Custom Filters' : `${formData.audience} Leads`}</div>
+                  <div className="text-sm text-muted-foreground">{filteredLeadCount.toLocaleString()} recipients</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Schedule</div>
+                  <div className="font-medium">
+                    {formData.schedule === 'immediate' ? 'Send Immediately' : `Scheduled: ${formData.scheduleDate} at ${formData.scheduleTime || '00:00'}`}
+                  </div>
+                  {formData.isRecurring && <div className="text-sm text-muted-foreground">Recurring: {formData.frequency}</div>}
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Budget</div>
+                  <div className="font-medium">{formData.budget ? `$${Number(formData.budget).toLocaleString()}` : 'No budget set'}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* A/B Testing */}
           {selectedType === 'email' && (
-            <Card>
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -1289,8 +1746,9 @@ function CampaignCreate() {
 
           {/* Actions */}
           <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(2)}>
-              Back
+            <Button variant="outline" onClick={() => setStep(5)}>
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Back: Schedule
             </Button>
             <div className="flex gap-3">
               <Button 

@@ -34,7 +34,7 @@ import { aiApi } from '@/lib/api'
 import { Lead } from '@/types'
 import type { AssignedUser, TeamMember, LeadNote } from '@/types'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi, notesApi, usersApi, UpdateLeadData, documentsApi } from '@/lib/api'
+import { leadsApi, notesApi, usersApi, pipelinesApi, UpdateLeadData, documentsApi } from '@/lib/api'
 
 // ─── Lead Documents Tab ─────────────────────────────────────────────────────
 
@@ -139,7 +139,11 @@ function LeadDocumentsTab({ leadId }: { leadId: string }) {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading documents...</p>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />
+            ))}
+          </div>
         ) : docs.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <File className="h-10 w-10 mx-auto mb-2 opacity-40" />
@@ -205,7 +209,7 @@ function LeadDetail() {
   const [loadingAI, setLoadingAI] = useState(false)
 
   // Fetch notes from API
-  const { data: notes = [] } = useQuery({
+  const { data: notes = [], isLoading: notesLoading } = useQuery({
     queryKey: ['lead-notes', id],
     queryFn: async () => {
       const response = await notesApi.getLeadNotes(id!)
@@ -338,6 +342,7 @@ function LeadDetail() {
   
   // Load AI intelligence data when lead is available
   useEffect(() => {
+    let cancelled = false
     const loadAIInsights = async () => {
       if (!id) return
       
@@ -349,6 +354,7 @@ function LeadDetail() {
           intelligenceService.getNextAction(id),
         ])
         
+        if (cancelled) return
         if (results[0].status === 'fulfilled') setAiPrediction(results[0].value)
         if (results[1].status === 'fulfilled') setAiEngagement(results[1].value)
         if (results[2].status === 'fulfilled') setAiNextAction(results[2].value)
@@ -360,16 +366,19 @@ function LeadDetail() {
           logger.warn('Some AI insights failed to load:', failures)
         }
       } catch (error) {
+        if (cancelled) return
         logger.error('Error loading AI insights:', error)
         toast.error('Failed to load AI insights')
       } finally {
-        setLoadingAI(false)
+        if (!cancelled) setLoadingAI(false)
       }
     }
     
     if (lead) {
       loadAIInsights()
     }
+
+    return () => { cancelled = true }
   }, [id, lead])
 
   // Show loading state
@@ -455,7 +464,7 @@ function LeadDetail() {
     return newErrors
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingLead && id) {
       const newErrors = validateEditForm()
       setEditErrors(newErrors)
@@ -485,6 +494,40 @@ function LeadDetail() {
       })
       setShowEditModal(false)
       setEditingLead(null)
+
+      // Prompt to move pipeline stage when status changes to WON/LOST
+      const newStatus = editingLead.status?.toUpperCase()
+      const oldStatus = lead?.status?.toUpperCase()
+      if (newStatus !== oldStatus && (newStatus === 'WON' || newStatus === 'LOST')) {
+        const shouldMove = await showConfirm({
+          title: 'Update Pipeline Stage',
+          message: `Also move this lead to the ${newStatus === 'WON' ? 'Win' : 'Lost'} pipeline stage?`,
+          confirmLabel: 'Move',
+        })
+        if (shouldMove) {
+          try {
+            const res = await pipelinesApi.getPipelines()
+            const pipelines = res.data || []
+            for (const pipeline of pipelines) {
+              const targetStage = pipeline.stages.find(s =>
+                newStatus === 'WON' ? s.isWinStage : s.isLostStage
+              )
+              if (targetStage) {
+                await pipelinesApi.moveLeadToStage(id, {
+                  pipelineId: pipeline.id,
+                  pipelineStageId: targetStage.id,
+                })
+                queryClient.invalidateQueries({ queryKey: ['pipeline'] })
+                toast.success(`Lead moved to ${targetStage.name} stage`)
+                break
+              }
+            }
+          } catch (error) {
+            logger.error('Failed to move lead to pipeline stage:', error)
+            toast.error('Failed to move lead to pipeline stage')
+          }
+        }
+      }
     }
   }
 
@@ -848,7 +891,13 @@ function LeadDetail() {
                   </div>
                 )}
 
-                {notes.length === 0 && !showAddNote ? (
+                {notesLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+                    ))}
+                  </div>
+                ) : notes.length === 0 && !showAddNote ? (
                   <div className="text-center py-6">
                     <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
                     <p className="text-sm text-muted-foreground">No notes yet.</p>

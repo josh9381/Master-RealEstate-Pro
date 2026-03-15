@@ -1,4 +1,3 @@
-import { getErrorMessage } from '../utils/errors'
 import { Request, Response } from 'express'
 import { prisma } from '../config/database'
 import { NotFoundError, ValidationError } from '../middleware/errorHandler'
@@ -8,7 +7,7 @@ import type { WorkflowTrigger } from '@prisma/client'
 export const getWorkflows = async (req: Request, res: Response) => {
   const { isActive, triggerType, search } = req.query
 
-  const where: Record<string, any> = {
+  const where: Record<string, unknown> = {
     organizationId: req.user!.organizationId  // CRITICAL: Filter by organization
   }
 
@@ -262,7 +261,7 @@ export const testWorkflow = async (req: Request, res: Response) => {
       data: {
         workflowId: id,
         status: 'FAILED',
-        error: error instanceof Error ? getErrorMessage(error) : 'Unknown error during test execution',
+        error: error instanceof Error ? error.message : 'Unknown error during test execution',
         metadata: {
           test: true,
           dryRun: true,
@@ -279,7 +278,7 @@ export const testWorkflow = async (req: Request, res: Response) => {
       data: {
         execution,
         note: 'Workflow test failed — see error details',
-        error: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Unknown error',
         actions: workflow.actions,
       }
     })

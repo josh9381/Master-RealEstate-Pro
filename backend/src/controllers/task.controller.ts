@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from '../middleware/errorHandler';
 import type { TaskStatus, TaskPriority } from '@prisma/client';
 import { getTasksFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
 import { pushTaskUpdate } from '../config/socket';
+import { logActivity } from '../utils/activityLogger';
 
 /**
  * Get all tasks with filtering and pagination
@@ -197,6 +198,14 @@ export const createTask = async (req: Request, res: Response) => {
 
   pushTaskUpdate(req.user!.organizationId, { type: 'created', taskId: task.id, assignedToId: task.assignedToId ?? undefined });
 
+  logActivity({
+    type: 'TASK_CREATED',
+    title: `Task created: ${task.title}`,
+    leadId: task.leadId ?? undefined,
+    userId: req.user!.userId,
+    organizationId: req.user!.organizationId,
+  });
+
   res.status(201).json({
     success: true,
     data: { task },
@@ -355,6 +364,14 @@ export const completeTask = async (req: Request, res: Response) => {
   });
 
   pushTaskUpdate(organizationId, { type: 'completed', taskId: task.id, assignedToId: task.assignedToId ?? undefined });
+
+  logActivity({
+    type: 'TASK_COMPLETED',
+    title: `Task completed: ${task.title}`,
+    leadId: task.leadId ?? undefined,
+    userId: req.user!.userId,
+    organizationId,
+  });
 
   res.json({
     success: true,

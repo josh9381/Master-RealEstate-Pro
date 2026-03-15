@@ -271,8 +271,14 @@ export async function duplicateSMSTemplate(req: Request, res: Response): Promise
     throw new NotFoundError('SMS template not found');
   }
 
-  // Create copy with "(Copy)" suffix
-  const copyName = `${originalTemplate.name} (Copy)`;
+  // Create copy with "(Copy)" suffix, ensuring unique name
+  let copyName = `${originalTemplate.name} (Copy)`;
+  const existingCopy = await prisma.sMSTemplate.findFirst({
+    where: { name: copyName, organizationId: req.user!.organizationId },
+  });
+  if (existingCopy) {
+    copyName = `${originalTemplate.name} (Copy ${Date.now()})`;
+  }
   
   const duplicatedTemplate = await prisma.sMSTemplate.create({
     data: {
@@ -291,7 +297,11 @@ export async function duplicateSMSTemplate(req: Request, res: Response): Promise
     stats: calculateSMSLength(duplicatedTemplate.body),
   };
 
-  res.status(201).json(templateWithStats);
+  res.status(201).json({
+    success: true,
+    message: 'SMS template duplicated successfully',
+    data: { template: templateWithStats }
+  });
 }
 
 /**

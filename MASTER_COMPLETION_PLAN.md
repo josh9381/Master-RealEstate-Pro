@@ -940,7 +940,7 @@ Backend files (14 catches fixed):
 
 ---
 
-## PHASE 13: CODE QUALITY + TESTING (Days 40–44)
+## PHASE 13: CODE QUALITY + TESTING (Days 40–44) ✅ COMPLETE
 *Split mega-files, set up testing, enforce standards.*
 
 | # | Task | Time | Status |
@@ -950,21 +950,21 @@ Backend files (14 catches fixed):
 | 13.3 | Fix rampant `any` types in backend — replaced 169 `any` usages (catch blocks → `error: unknown` + `getErrorMessage()` helper, `req: any` → `Request`, `where: any` → `Record<string, any>`); 6 justified remainders (Prisma Json fields). TS errors 361→314. | 2 hr | ✅ |
 | 13.4 | Extract inline business logic from route files → 4 new controllers: `billing.controller.ts` (5 handlers), `webhook.controller.ts` (6 handlers + 2 helpers, 892→26 lines in routes), `export.controller.ts`, `segmentation.controller.ts`. All route files rewritten as thin wrappers. | 2.5 hr | ✅ |
 | 13.5 | Add pagination to unpaginated list endpoints: goals (`page/limit` + count), message templates (`page/limit` + count), tasks-by-lead (`page/limit` + count). All return `pagination: { page, limit, total, pages }`. | 1.5 hr | ✅ |
-| 13.6 | Set up ESLint for backend (frontend already has it configured; backend has zero linting) | 1 hr | ☐ |
-| 13.7 | Add pre-commit hooks with husky + lint-staged (lint + type-check on commit) | 1 hr | ☐ |
-| 13.8 | Set up Vitest for frontend (zero test tooling currently installed) | 1.5 hr | ☐ |
-| 13.9 | Write tests for critical paths: auth flow, lead CRUD, campaign CRUD | 4 hr | ☐ |
-| 13.10 | Add backend integration tests for untested route groups | 6 hr | ☐ |
-| 13.11 | Add error boundaries around modals/drawers (AI Composer, Workflow Builder canvas, Calendar sidebar) | 1.5 hr | ☐ |
+| 13.6 | Set up ESLint for backend (frontend already has it configured; backend has zero linting) | 1 hr | ✅ |
+| 13.7 | Add pre-commit hooks with husky + lint-staged (lint + type-check on commit) | 1 hr | ✅ |
+| 13.8 | Set up Vitest for frontend (zero test tooling currently installed) | 1.5 hr | ✅ |
+| 13.9 | Write tests for critical paths: auth flow, lead CRUD, campaign CRUD | 4 hr | ✅ |
+| 13.10 | Add backend integration tests for untested route groups | 6 hr | ✅ |
+| 13.11 | Add error boundaries around modals/drawers (AI Composer, Workflow Builder canvas, Calendar sidebar) | 1.5 hr | ✅ |
 | 13.12 | ~~⚠️~~ Consolidate Redis clients — **ALREADY DONE:** `redis` package was removed in Phase 12 (DS-13). Project is already `ioredis`-only with a single centralized client in `config/redis.ts`. No work needed. | 0 min | ✅ |
-| 13.13 | Upgrade vulnerable dependencies (axios, react-router-dom, vite/rollup, express/qs) | 2 hr | ☐ |
-| 13.14 | API documentation polish (verify Swagger) | 2 hr | ☐ |
-| 13.15 | Add `test`, `e2e`, `type-check`, `format` scripts to root `package.json` — no unified test/check commands exist | 30 min | ☐ |
-| 13.16 | Fix backend `tsconfig.json` — `exclude: ["tests"]` means test files get no TS type-checking; `rootDir: "./src"` excludes `prisma/seed.ts` from compilation | 30 min | ☐ |
-| 13.17 | Fix Playwright config — add `retries: 2`, enable `screenshot: 'only-on-failure'` and `trace: 'on-first-retry'`; add `npx playwright test` script to package.json | 20 min | ☐ |
-| 13.18 | Convert backend ad-hoc `.js` scripts in `backend/scripts/` to `.ts` run with `tsx` | 30 min | ☐ |
-| 13.19 | Audit existing 15 Playwright e2e specs — determine which are real functional tests vs. navigation smoke tests (screenshot-only), decide which to keep/expand/rewrite | 1 hr | ☐ |
-| 13.20 | Verify `cache.ts` middleware degrades gracefully when `REDIS_ENABLED=false` — if not, add fallback behavior | 15 min | ☐ |
+| 13.13 | Upgrade vulnerable dependencies (axios, react-router-dom, vite/rollup, express/qs) | 2 hr | ✅ |
+| 13.14 | API documentation polish (verify Swagger) | 2 hr | ✅ |
+| 13.15 | Add `test`, `e2e`, `type-check`, `format` scripts to root `package.json` — no unified test/check commands exist | 30 min | ✅ |
+| 13.16 | Fix backend `tsconfig.json` — `exclude: ["tests"]` means test files get no TS type-checking; `rootDir: "./src"` excludes `prisma/seed.ts` from compilation | 30 min | ✅ |
+| 13.17 | Fix Playwright config — add `retries: 2`, enable `screenshot: 'only-on-failure'` and `trace: 'on-first-retry'`; add `npx playwright test` script to package.json | 20 min | ✅ |
+| 13.18 | Convert backend ad-hoc `.js` scripts in `backend/scripts/` to `.ts` run with `tsx` | 30 min | ✅ |
+| 13.19 | Audit existing 15 Playwright e2e specs — determine which are real functional tests vs. navigation smoke tests (screenshot-only), decide which to keep/expand/rewrite | 1 hr | ✅ |
+| 13.20 | Verify `cache.ts` middleware degrades gracefully when `REDIS_ENABLED=false` — if not, add fallback behavior | 15 min | ✅ |
 
 **Phase Total: ~35.5 hours (4.5 days)**
 

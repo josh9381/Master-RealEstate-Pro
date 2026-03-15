@@ -42,7 +42,7 @@ export async function getMessageTemplates(req: Request, res: Response) {
     prisma.messageTemplate.count({ where }),
   ]);
 
-  res.json({ templates, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  res.json({ success: true, data: { templates, pagination: { page, limit, total, pages: Math.ceil(total / limit) } } });
 }
 
 // GET /api/message-templates/categories
@@ -56,7 +56,7 @@ export async function getCategories(req: Request, res: Response) {
     orderBy: { category: 'asc' },
   });
 
-  res.json({ categories: categories.map((c: { category: string | null }) => c.category).filter(Boolean) });
+  res.json({ success: true, data: { categories: categories.map((c: { category: string | null }) => c.category).filter(Boolean) } });
 }
 
 // POST /api/message-templates
@@ -68,7 +68,7 @@ export async function createMessageTemplate(req: Request, res: Response) {
   // Users can only create PERSONAL or (admin) ORGANIZATION/TEAM templates
   const allowedTier = tier || 'PERSONAL';
   if (allowedTier === 'SYSTEM') {
-    return res.status(403).json({ error: 'Cannot create system templates' });
+    return res.status(403).json({ success: false, error: 'Cannot create system templates' });
   }
 
   const template = await prisma.messageTemplate.create({
@@ -85,7 +85,7 @@ export async function createMessageTemplate(req: Request, res: Response) {
     },
   });
 
-  res.status(201).json({ template });
+  res.status(201).json({ success: true, data: { template } });
 }
 
 // PUT /api/message-templates/:id
@@ -100,15 +100,15 @@ export async function updateMessageTemplate(req: Request, res: Response) {
   });
 
   if (!existing) {
-    return res.status(404).json({ error: 'Template not found' });
+    return res.status(404).json({ success: false, error: 'Template not found' });
   }
 
   // Only owner can edit PERSONAL, only admin can edit ORG/TEAM, nobody can edit SYSTEM
   if (existing.tier === 'SYSTEM') {
-    return res.status(403).json({ error: 'Cannot edit system templates' });
+    return res.status(403).json({ success: false, error: 'Cannot edit system templates' });
   }
   if (existing.tier === 'PERSONAL' && existing.userId !== userId) {
-    return res.status(403).json({ error: 'Cannot edit another user\'s template' });
+    return res.status(403).json({ success: false, error: 'Cannot edit another user\'s template' });
   }
 
   const template = await prisma.messageTemplate.update({
@@ -122,7 +122,7 @@ export async function updateMessageTemplate(req: Request, res: Response) {
     },
   });
 
-  res.json({ template });
+  res.json({ success: true, data: { template } });
 }
 
 // DELETE /api/message-templates/:id
@@ -136,14 +136,14 @@ export async function deleteMessageTemplate(req: Request, res: Response) {
   });
 
   if (!existing) {
-    return res.status(404).json({ error: 'Template not found' });
+    return res.status(404).json({ success: false, error: 'Template not found' });
   }
 
   if (existing.tier === 'SYSTEM') {
-    return res.status(403).json({ error: 'Cannot delete system templates' });
+    return res.status(403).json({ success: false, error: 'Cannot delete system templates' });
   }
   if (existing.tier === 'PERSONAL' && existing.userId !== userId) {
-    return res.status(403).json({ error: 'Cannot delete another user\'s template' });
+    return res.status(403).json({ success: false, error: 'Cannot delete another user\'s template' });
   }
 
   await prisma.messageTemplate.delete({ where: { id } });
@@ -160,7 +160,7 @@ export async function seedDefaults(req: Request, res: Response) {
   });
 
   if (existingCount > 0) {
-    return res.json({ seeded: false, message: 'System templates already exist' });
+    return res.json({ success: true, data: { seeded: false, message: 'System templates already exist' } });
   }
 
   const defaults = [
@@ -190,5 +190,5 @@ export async function seedDefaults(req: Request, res: Response) {
     })),
   });
 
-  res.json({ seeded: true, count: defaults.length });
+  res.json({ success: true, data: { seeded: true, count: defaults.length } });
 }

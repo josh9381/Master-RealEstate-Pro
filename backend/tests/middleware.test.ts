@@ -23,8 +23,15 @@ describe('Middleware Tests', () => {
   const testUserPassword = 'TestPassword123!';
   let testUser: User;
   let testAccessToken: string;
+  let testOrgId: string;
 
   beforeEach(async () => {
+    // Create test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    });
+    testOrgId = testOrg.id;
+
     // Create a test user and generate token
     const hashedPassword = await bcrypt.hash(testUserPassword, 10);
     testUser = await prisma.user.create({
@@ -34,10 +41,11 @@ describe('Middleware Tests', () => {
         email: 'middleware@test.com',
         password: hashedPassword,
         role: 'USER',
+        organizationId: testOrgId,
       },
     });
 
-    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role);
+    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role, testOrgId);
   });
 
   describe('Error Handler Middleware', () => {

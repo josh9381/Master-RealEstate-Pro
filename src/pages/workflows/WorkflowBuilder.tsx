@@ -20,6 +20,7 @@ import { WorkflowCanvas } from '@/components/workflows/WorkflowCanvas';
 import { WorkflowNodeData } from '@/components/workflows/WorkflowNode';
 import { WorkflowComponentLibrary, WorkflowComponent } from '@/components/workflows/WorkflowComponentLibrary';
 import { NodeConfigPanel } from '@/components/workflows/NodeConfigPanel';
+import { ModalErrorBoundary } from '@/components/ModalErrorBoundary';
 import type { WorkflowAction, WorkflowExecution } from '@/types';
 
 interface ExecutionStep {
@@ -1037,14 +1038,19 @@ const WorkflowBuilder = () => {
           </Card>
           {/* Node Configuration Panel */}
           {showConfigPanel && selectedNode && (
-            <NodeConfigPanel
-              node={selectedNode}
-              onSave={handleConfigSave}
-              onClose={() => {
-                setShowConfigPanel(false);
-                setSelectedNode(null);
-              }}
-            />
+            <ModalErrorBoundary name="Node Configuration" onClose={() => {
+              setShowConfigPanel(false);
+              setSelectedNode(null);
+            }}>
+              <NodeConfigPanel
+                node={selectedNode}
+                onSave={handleConfigSave}
+                onClose={() => {
+                  setShowConfigPanel(false);
+                  setSelectedNode(null);
+                }}
+              />
+            </ModalErrorBoundary>
           )}
 
           {/* Component Library */}

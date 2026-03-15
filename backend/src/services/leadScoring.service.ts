@@ -34,6 +34,24 @@ interface ScoringFactors {
   daysSinceLastActivity: number
   activityFrequency: number
   emailOptedOut: boolean
+  // Profile completeness factors (Phase 1)
+  hasEmail: boolean
+  hasPhone: boolean
+  hasCompany: boolean
+  hasDealValue: boolean
+  dealValueAbove500k: boolean
+  hasPropertyType: boolean
+  hasBudget: boolean
+  hasBedsOrBaths: boolean
+  hasBeenContacted: boolean
+  contactedInLast7Days: boolean
+  contactedInLast30Days: boolean
+  hasNotes: boolean
+  activityCount: number
+  statusProgression: string
+  hasTags: boolean
+  emailOptIn: boolean
+  smsOptIn: boolean
 }
 
 const SCORE_WEIGHTS = {
@@ -47,6 +65,28 @@ const SCORE_WEIGHTS = {
   EMAIL_OPT_OUT: -50,
   RECENCY_BONUS_MAX: 20, // Max bonus for recent activity
   FREQUENCY_BONUS_MAX: 15, // Max bonus for consistent engagement
+  // Profile completeness factors (Phase 1)
+  HAS_EMAIL: 5,
+  HAS_PHONE: 5,
+  HAS_COMPANY: 5,
+  HAS_DEAL_VALUE: 10,
+  DEAL_VALUE_ABOVE_500K: 5,
+  HAS_PROPERTY_TYPE: 5,
+  HAS_BUDGET: 5,
+  HAS_BEDS_BATHS: 5,
+  HAS_BEEN_CONTACTED: 10,
+  CONTACTED_LAST_7_DAYS: 5,
+  CONTACTED_LAST_30_DAYS: 3,
+  HAS_NOTES: 5,
+  ACTIVITIES_ABOVE_5: 5,
+  ACTIVITIES_ABOVE_10: 10,
+  STATUS_CONTACTED: 5,
+  STATUS_QUALIFIED: 10,
+  STATUS_PROPOSAL: 15,
+  STATUS_NEGOTIATION: 20,
+  HAS_TAGS: 3,
+  EMAIL_OPT_IN: 2,
+  SMS_OPT_IN: 2,
 }
 
 /**
@@ -55,7 +95,34 @@ const SCORE_WEIGHTS = {
 export function calculateLeadScore(factors: ScoringFactors): number {
   let score = 0
 
-  // Base engagement scores
+  // Profile completeness factors (Phase 1 - available from existing data)
+  if (factors.hasEmail) score += SCORE_WEIGHTS.HAS_EMAIL
+  if (factors.hasPhone) score += SCORE_WEIGHTS.HAS_PHONE
+  if (factors.hasCompany) score += SCORE_WEIGHTS.HAS_COMPANY
+  if (factors.hasDealValue) score += SCORE_WEIGHTS.HAS_DEAL_VALUE
+  if (factors.dealValueAbove500k) score += SCORE_WEIGHTS.DEAL_VALUE_ABOVE_500K
+  if (factors.hasPropertyType) score += SCORE_WEIGHTS.HAS_PROPERTY_TYPE
+  if (factors.hasBudget) score += SCORE_WEIGHTS.HAS_BUDGET
+  if (factors.hasBedsOrBaths) score += SCORE_WEIGHTS.HAS_BEDS_BATHS
+  if (factors.hasBeenContacted) score += SCORE_WEIGHTS.HAS_BEEN_CONTACTED
+  if (factors.contactedInLast7Days) score += SCORE_WEIGHTS.CONTACTED_LAST_7_DAYS
+  else if (factors.contactedInLast30Days) score += SCORE_WEIGHTS.CONTACTED_LAST_30_DAYS
+  if (factors.hasNotes) score += SCORE_WEIGHTS.HAS_NOTES
+  if (factors.activityCount > 10) score += SCORE_WEIGHTS.ACTIVITIES_ABOVE_10
+  else if (factors.activityCount > 5) score += SCORE_WEIGHTS.ACTIVITIES_ABOVE_5
+
+  // Status progression
+  const status = factors.statusProgression?.toUpperCase()
+  if (status === 'CONTACTED') score += SCORE_WEIGHTS.STATUS_CONTACTED
+  else if (status === 'QUALIFIED') score += SCORE_WEIGHTS.STATUS_QUALIFIED
+  else if (status === 'PROPOSAL') score += SCORE_WEIGHTS.STATUS_PROPOSAL
+  else if (status === 'NEGOTIATION') score += SCORE_WEIGHTS.STATUS_NEGOTIATION
+
+  if (factors.hasTags) score += SCORE_WEIGHTS.HAS_TAGS
+  if (factors.emailOptIn) score += SCORE_WEIGHTS.EMAIL_OPT_IN
+  if (factors.smsOptIn) score += SCORE_WEIGHTS.SMS_OPT_IN
+
+  // Engagement-based scores
   score += factors.emailOpens * SCORE_WEIGHTS.EMAIL_OPEN
   score += factors.emailClicks * SCORE_WEIGHTS.EMAIL_CLICK
   score += factors.emailReplies * SCORE_WEIGHTS.EMAIL_REPLY
@@ -127,6 +194,8 @@ async function getLeadScoringFactors(leadId: string): Promise<ScoringFactors> {
           },
         },
       },
+      notes: { select: { id: true } },
+      tags: { select: { id: true } },
     },
   })
 
@@ -207,7 +276,13 @@ async function getLeadScoringFactors(leadId: string): Promise<ScoringFactors> {
   const activityFrequency = totalActivities / weeksSinceOldestActivity
 
   // Get emailOptIn status (cast to any to access the field that was just added in migration)
-  const emailOptIn = (lead as unknown as { emailOptIn: boolean }).emailOptIn ?? true
+  const emailOptInVal = (lead as unknown as { emailOptIn: boolean }).emailOptIn ?? true
+  const smsOptInVal = (lead as unknown as { smsOptIn: boolean }).smsOptIn ?? true
+
+  // Profile completeness factors
+  const now = Date.now()
+  const lastContact = lead.lastContactAt ? new Date(lead.lastContactAt).getTime() : 0
+  const daysSinceContact = lastContact > 0 ? Math.floor((now - lastContact) / (1000 * 60 * 60 * 24)) : Infinity
 
   return {
     emailOpens,
@@ -219,7 +294,25 @@ async function getLeadScoringFactors(leadId: string): Promise<ScoringFactors> {
     completedAppointments,
     daysSinceLastActivity,
     activityFrequency,
-    emailOptedOut: !emailOptIn,
+    emailOptedOut: !emailOptInVal,
+    // Profile completeness
+    hasEmail: !!lead.email,
+    hasPhone: !!lead.phone,
+    hasCompany: !!lead.company,
+    hasDealValue: lead.value != null && lead.value > 0,
+    dealValueAbove500k: lead.value != null && lead.value > 500000,
+    hasPropertyType: !!lead.propertyType,
+    hasBudget: lead.budgetMin != null || lead.budgetMax != null,
+    hasBedsOrBaths: lead.bedsMin != null || lead.bathsMin != null,
+    hasBeenContacted: !!lead.lastContactAt,
+    contactedInLast7Days: daysSinceContact <= 7,
+    contactedInLast30Days: daysSinceContact <= 30,
+    hasNotes: lead.notes.length > 0,
+    activityCount: totalActivities,
+    statusProgression: lead.status,
+    hasTags: lead.tags.length > 0,
+    emailOptIn: emailOptInVal,
+    smsOptIn: smsOptInVal,
   }
 }
 
@@ -239,6 +332,7 @@ export async function getLeadScoreBreakdown(leadId: string) {
     })
     if (orgConfig) {
       weights = {
+        ...SCORE_WEIGHTS,
         EMAIL_OPEN: orgConfig.emailOpenWeight,
         EMAIL_CLICK: orgConfig.emailClickWeight,
         EMAIL_REPLY: orgConfig.emailReplyWeight,
@@ -254,7 +348,36 @@ export async function getLeadScoreBreakdown(leadId: string) {
   }
 
   // Calculate each component
-  const components = [
+  // Profile completeness components
+  const components: Array<{ name: string; count: number; weight: number; points: number }> = []
+
+  if (factors.hasEmail) components.push({ name: 'Has Email', count: 1, weight: weights.HAS_EMAIL, points: weights.HAS_EMAIL })
+  if (factors.hasPhone) components.push({ name: 'Has Phone', count: 1, weight: weights.HAS_PHONE, points: weights.HAS_PHONE })
+  if (factors.hasCompany) components.push({ name: 'Has Company', count: 1, weight: weights.HAS_COMPANY, points: weights.HAS_COMPANY })
+  if (factors.hasDealValue) components.push({ name: 'Has Deal Value', count: 1, weight: weights.HAS_DEAL_VALUE, points: weights.HAS_DEAL_VALUE })
+  if (factors.dealValueAbove500k) components.push({ name: 'Deal Value > $500k', count: 1, weight: weights.DEAL_VALUE_ABOVE_500K, points: weights.DEAL_VALUE_ABOVE_500K })
+  if (factors.hasPropertyType) components.push({ name: 'Has Property Type', count: 1, weight: weights.HAS_PROPERTY_TYPE, points: weights.HAS_PROPERTY_TYPE })
+  if (factors.hasBudget) components.push({ name: 'Has Budget', count: 1, weight: weights.HAS_BUDGET, points: weights.HAS_BUDGET })
+  if (factors.hasBedsOrBaths) components.push({ name: 'Has Beds/Baths', count: 1, weight: weights.HAS_BEDS_BATHS, points: weights.HAS_BEDS_BATHS })
+  if (factors.hasBeenContacted) components.push({ name: 'Has Been Contacted', count: 1, weight: weights.HAS_BEEN_CONTACTED, points: weights.HAS_BEEN_CONTACTED })
+  if (factors.contactedInLast7Days) components.push({ name: 'Contacted Last 7 Days', count: 1, weight: weights.CONTACTED_LAST_7_DAYS, points: weights.CONTACTED_LAST_7_DAYS })
+  else if (factors.contactedInLast30Days) components.push({ name: 'Contacted Last 30 Days', count: 1, weight: weights.CONTACTED_LAST_30_DAYS, points: weights.CONTACTED_LAST_30_DAYS })
+  if (factors.hasNotes) components.push({ name: 'Has Notes', count: 1, weight: weights.HAS_NOTES, points: weights.HAS_NOTES })
+  if (factors.activityCount > 10) components.push({ name: 'Activities > 10', count: factors.activityCount, weight: weights.ACTIVITIES_ABOVE_10, points: weights.ACTIVITIES_ABOVE_10 })
+  else if (factors.activityCount > 5) components.push({ name: 'Activities > 5', count: factors.activityCount, weight: weights.ACTIVITIES_ABOVE_5, points: weights.ACTIVITIES_ABOVE_5 })
+
+  const status = factors.statusProgression?.toUpperCase()
+  if (status === 'CONTACTED') components.push({ name: 'Status: Contacted', count: 1, weight: weights.STATUS_CONTACTED, points: weights.STATUS_CONTACTED })
+  else if (status === 'QUALIFIED') components.push({ name: 'Status: Qualified', count: 1, weight: weights.STATUS_QUALIFIED, points: weights.STATUS_QUALIFIED })
+  else if (status === 'PROPOSAL') components.push({ name: 'Status: Proposal', count: 1, weight: weights.STATUS_PROPOSAL, points: weights.STATUS_PROPOSAL })
+  else if (status === 'NEGOTIATION') components.push({ name: 'Status: Negotiation', count: 1, weight: weights.STATUS_NEGOTIATION, points: weights.STATUS_NEGOTIATION })
+
+  if (factors.hasTags) components.push({ name: 'Has Tags', count: 1, weight: weights.HAS_TAGS, points: weights.HAS_TAGS })
+  if (factors.emailOptIn) components.push({ name: 'Email Opt-In', count: 1, weight: weights.EMAIL_OPT_IN, points: weights.EMAIL_OPT_IN })
+  if (factors.smsOptIn) components.push({ name: 'SMS Opt-In', count: 1, weight: weights.SMS_OPT_IN, points: weights.SMS_OPT_IN })
+
+  // Engagement components
+  components.push(
     { name: 'Email Opens', count: factors.emailOpens, weight: weights.EMAIL_OPEN, points: factors.emailOpens * weights.EMAIL_OPEN },
     { name: 'Email Clicks', count: factors.emailClicks, weight: weights.EMAIL_CLICK, points: factors.emailClicks * weights.EMAIL_CLICK },
     { name: 'Email Replies', count: factors.emailReplies, weight: weights.EMAIL_REPLY, points: factors.emailReplies * weights.EMAIL_REPLY },
@@ -262,7 +385,7 @@ export async function getLeadScoreBreakdown(leadId: string) {
     { name: 'Property Inquiries', count: factors.propertyInquiries, weight: weights.PROPERTY_INQUIRY, points: factors.propertyInquiries * weights.PROPERTY_INQUIRY },
     { name: 'Scheduled Appointments', count: factors.scheduledAppointments, weight: weights.SCHEDULED_APPOINTMENT, points: factors.scheduledAppointments * weights.SCHEDULED_APPOINTMENT },
     { name: 'Completed Appointments', count: factors.completedAppointments, weight: weights.COMPLETED_APPOINTMENT, points: factors.completedAppointments * weights.COMPLETED_APPOINTMENT },
-  ]
+  )
 
   // Recency bonus
   let recencyPoints = 0
@@ -314,6 +437,17 @@ export async function getLeadScoreBreakdown(leadId: string) {
       daysSinceLastActivity: factors.daysSinceLastActivity,
       activityFrequency: Math.round(factors.activityFrequency * 100) / 100,
       emailOptedOut: factors.emailOptedOut,
+      hasEmail: factors.hasEmail,
+      hasPhone: factors.hasPhone,
+      hasCompany: factors.hasCompany,
+      hasDealValue: factors.hasDealValue,
+      hasPropertyType: factors.hasPropertyType,
+      hasBudget: factors.hasBudget,
+      hasBeenContacted: factors.hasBeenContacted,
+      hasNotes: factors.hasNotes,
+      activityCount: factors.activityCount,
+      statusProgression: factors.statusProgression,
+      hasTags: factors.hasTags,
     },
     components: components.filter(c => c.points !== 0),
     recencyLabel,
@@ -338,6 +472,7 @@ export async function updateLeadScore(leadId: string, userId?: string): Promise<
     });
     if (orgConfig) {
       customWeights = {
+        ...SCORE_WEIGHTS,
         EMAIL_OPEN: orgConfig.emailOpenWeight,
         EMAIL_CLICK: orgConfig.emailClickWeight,
         EMAIL_REPLY: orgConfig.emailReplyWeight,
@@ -400,7 +535,33 @@ export async function updateLeadScore(leadId: string, userId?: string): Promise<
 function calculateLeadScoreWithWeights(factors: ScoringFactors, weights: typeof SCORE_WEIGHTS): number {
   let score = 0;
 
-  // Base engagement scores with custom weights
+  // Profile completeness factors
+  if (factors.hasEmail) score += weights.HAS_EMAIL;
+  if (factors.hasPhone) score += weights.HAS_PHONE;
+  if (factors.hasCompany) score += weights.HAS_COMPANY;
+  if (factors.hasDealValue) score += weights.HAS_DEAL_VALUE;
+  if (factors.dealValueAbove500k) score += weights.DEAL_VALUE_ABOVE_500K;
+  if (factors.hasPropertyType) score += weights.HAS_PROPERTY_TYPE;
+  if (factors.hasBudget) score += weights.HAS_BUDGET;
+  if (factors.hasBedsOrBaths) score += weights.HAS_BEDS_BATHS;
+  if (factors.hasBeenContacted) score += weights.HAS_BEEN_CONTACTED;
+  if (factors.contactedInLast7Days) score += weights.CONTACTED_LAST_7_DAYS;
+  else if (factors.contactedInLast30Days) score += weights.CONTACTED_LAST_30_DAYS;
+  if (factors.hasNotes) score += weights.HAS_NOTES;
+  if (factors.activityCount > 10) score += weights.ACTIVITIES_ABOVE_10;
+  else if (factors.activityCount > 5) score += weights.ACTIVITIES_ABOVE_5;
+
+  const status = factors.statusProgression?.toUpperCase();
+  if (status === 'CONTACTED') score += weights.STATUS_CONTACTED;
+  else if (status === 'QUALIFIED') score += weights.STATUS_QUALIFIED;
+  else if (status === 'PROPOSAL') score += weights.STATUS_PROPOSAL;
+  else if (status === 'NEGOTIATION') score += weights.STATUS_NEGOTIATION;
+
+  if (factors.hasTags) score += weights.HAS_TAGS;
+  if (factors.emailOptIn) score += weights.EMAIL_OPT_IN;
+  if (factors.smsOptIn) score += weights.SMS_OPT_IN;
+
+  // Engagement-based scores with custom weights
   score += factors.emailOpens * weights.EMAIL_OPEN;
   score += factors.emailClicks * weights.EMAIL_CLICK;
   score += factors.emailReplies * weights.EMAIL_REPLY;

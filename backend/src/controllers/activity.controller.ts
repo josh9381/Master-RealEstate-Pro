@@ -184,7 +184,7 @@ export const getActivity = async (req: Request, res: Response) => {
     }
   })
 
-  if (!activity) {
+  if (!activity || activity.organizationId !== req.user!.organizationId) {
     throw new NotFoundError('Activity not found')
   }
 
@@ -199,18 +199,18 @@ export const createActivity = async (req: Request, res: Response) => {
   const validated = createActivitySchema.parse(req.body)
   const userId = req.user!.userId
 
-  // Verify lead exists if leadId provided
+  // Verify lead exists and belongs to user's organization
   if (validated.leadId) {
-    const lead = await prisma.lead.findUnique({ where: { id: validated.leadId } })
-    if (!lead) {
+    const lead = await prisma.lead.findUnique({ where: { id: validated.leadId }, select: { id: true, organizationId: true } })
+    if (!lead || lead.organizationId !== req.user!.organizationId) {
       throw new NotFoundError('Lead not found')
     }
   }
 
-  // Verify campaign exists if campaignId provided
+  // Verify campaign exists and belongs to user's organization
   if (validated.campaignId) {
-    const campaign = await prisma.campaign.findUnique({ where: { id: validated.campaignId } })
-    if (!campaign) {
+    const campaign = await prisma.campaign.findUnique({ where: { id: validated.campaignId }, select: { id: true, organizationId: true } })
+    if (!campaign || campaign.organizationId !== req.user!.organizationId) {
       throw new NotFoundError('Campaign not found')
     }
   }
@@ -269,7 +269,7 @@ export const updateActivity = async (req: Request, res: Response) => {
   const validated = updateActivitySchema.parse(req.body)
 
   const activity = await prisma.activity.findUnique({ where: { id } })
-  if (!activity) {
+  if (!activity || activity.organizationId !== req.user!.organizationId) {
     throw new NotFoundError('Activity not found')
   }
 
@@ -323,7 +323,7 @@ export const deleteActivity = async (req: Request, res: Response) => {
   const { id } = req.params
 
   const activity = await prisma.activity.findUnique({ where: { id } })
-  if (!activity) {
+  if (!activity || activity.organizationId !== req.user!.organizationId) {
     throw new NotFoundError('Activity not found')
   }
 
@@ -385,7 +385,7 @@ export const getLeadActivities = async (req: Request, res: Response) => {
       skip,
       take: limitNum
     }),
-    prisma.activity.count({ where: { leadId } })
+    prisma.activity.count({ where: { leadId, organizationId: req.user!.organizationId } })
   ])
 
   res.json({
@@ -453,7 +453,7 @@ export const getCampaignActivities = async (req: Request, res: Response) => {
       skip,
       take: limitNum
     }),
-    prisma.activity.count({ where: { campaignId } })
+    prisma.activity.count({ where: { campaignId, organizationId: req.user!.organizationId } })
   ])
 
   res.json({

@@ -1924,3 +1924,280 @@ paths:
       responses:
         '200':
           description: Integration statuses
+
+  # ─── Pipelines ────────────────────────────────────────────────
+  /api/pipelines:
+    get:
+      tags: [Leads]
+      summary: List all pipelines for the organization
+      responses:
+        '200':
+          description: Array of pipelines with stages
+    post:
+      tags: [Leads]
+      summary: Create a new pipeline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name: { type: string }
+                type: { type: string, enum: [BUYER, SELLER, RENTAL, COMMERCIAL, GENERAL, CUSTOM] }
+      responses:
+        '201':
+          description: Pipeline created
+
+  /api/pipelines/{id}:
+    get:
+      tags: [Leads]
+      summary: Get a pipeline by ID
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Pipeline details
+    put:
+      tags: [Leads]
+      summary: Update a pipeline
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Pipeline updated
+    delete:
+      tags: [Leads]
+      summary: Delete a pipeline
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Pipeline deleted
+
+  /api/pipelines/{id}/stages:
+    post:
+      tags: [Leads]
+      summary: Add a stage to a pipeline
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                color: { type: string }
+      responses:
+        '201':
+          description: Stage created
+
+  /api/pipelines/{id}/leads:
+    get:
+      tags: [Leads]
+      summary: Get leads in a pipeline by stage
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Leads grouped by stage
+
+  # ─── Goals ────────────────────────────────────────────────────
+  /api/goals:
+    get:
+      tags: [Analytics]
+      summary: List all goals
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: limit, in: query, schema: { type: integer } }
+      responses:
+        '200':
+          description: Array of goals with pagination
+    post:
+      tags: [Analytics]
+      summary: Create a new goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type, target, period]
+              properties:
+                name: { type: string }
+                type: { type: string, enum: [LEADS, DEALS, REVENUE, CONVERSION, CALLS, APPOINTMENTS, RESPONSE_TIME] }
+                target: { type: number }
+                period: { type: string, enum: [DAILY, WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY] }
+      responses:
+        '201':
+          description: Goal created
+
+  /api/goals/{id}:
+    get:
+      tags: [Analytics]
+      summary: Get a goal by ID
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Goal details
+    patch:
+      tags: [Analytics]
+      summary: Update a goal
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Goal updated
+    delete:
+      tags: [Analytics]
+      summary: Delete a goal
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Goal deleted
+
+  # ─── Calls ────────────────────────────────────────────────────
+  /api/calls:
+    get:
+      tags: [Messages]
+      summary: List call logs
+      parameters:
+        - { name: leadId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Array of call records
+    post:
+      tags: [Messages]
+      summary: Log a call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [leadId]
+              properties:
+                leadId: { type: string, format: uuid }
+                direction: { type: string, enum: [INBOUND, OUTBOUND] }
+                outcome: { type: string }
+                notes: { type: string }
+                duration: { type: integer }
+      responses:
+        '201':
+          description: Call logged
+
+  # ─── Saved Reports ────────────────────────────────────────────
+  /api/saved-reports:
+    get:
+      tags: [Reports]
+      summary: List saved reports
+      responses:
+        '200':
+          description: Array of saved reports
+    post:
+      tags: [Reports]
+      summary: Create a saved report
+      responses:
+        '201':
+          description: Report saved
+
+  /api/saved-reports/{id}:
+    get:
+      tags: [Reports]
+      summary: Get a saved report by ID
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Saved report
+    put:
+      tags: [Reports]
+      summary: Update a saved report
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Report updated
+    delete:
+      tags: [Reports]
+      summary: Delete a saved report
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Report deleted
+
+  # ─── Message Templates ────────────────────────────────────────
+  /api/message-templates:
+    get:
+      tags: [Templates]
+      summary: List message templates
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: limit, in: query, schema: { type: integer } }
+        - { name: category, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Array of message templates with pagination
+    post:
+      tags: [Templates]
+      summary: Create a message template
+      responses:
+        '201':
+          description: Template created
+
+  /api/message-templates/{id}:
+    put:
+      tags: [Templates]
+      summary: Update a message template
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Template updated
+    delete:
+      tags: [Templates]
+      summary: Delete a message template
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Template deleted
+
+  # ─── Support ──────────────────────────────────────────────────
+  /api/support/tickets:
+    get:
+      tags: [System]
+      summary: List support tickets
+      responses:
+        '200':
+          description: Array of support tickets
+    post:
+      tags: [System]
+      summary: Create a support ticket
+      responses:
+        '201':
+          description: Ticket created
+
+  # ─── Follow-up Reminders ──────────────────────────────────────
+  /api/reminders:
+    get:
+      tags: [Leads]
+      summary: List follow-up reminders
+      parameters:
+        - { name: leadId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Array of reminders
+    post:
+      tags: [Leads]
+      summary: Create a follow-up reminder
+      responses:
+        '201':
+          description: Reminder created

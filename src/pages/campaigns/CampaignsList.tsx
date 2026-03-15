@@ -1,23 +1,28 @@
 import { logger } from '@/lib/logger'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog'
 import {
   Plus, Mail, MessageSquare, Phone, MoreHorizontal, Search,
   TrendingUp, DollarSign, Users, Target, Calendar as CalendarIcon,
-  LayoutGrid, Download, Share2, BarChart3, LayoutList, X, Pause,
-  PlayCircle, Copy, Trash2, Edit, Archive, ArchiveRestore
+  LayoutGrid, Download, Share2, BarChart3, LayoutList,
+  Copy, ClipboardList, Tag,
+  ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
+import { CampaignRowMenu } from '@/components/campaigns/CampaignRowMenu'
+import type { CampaignRowMenuActions } from '@/components/campaigns/CampaignRowMenu'
+import { getStatusVariant } from '@/lib/campaignUtils'
 import { Campaign } from '@/types'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useToast } from '@/hooks/useToast'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
-import { campaignsApi, CreateCampaignData } from '@/lib/api'
+import { campaignsApi } from '@/lib/api'
 import { exportToCSV, campaignExportColumns } from '@/lib/exportService'
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
 type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE'
@@ -27,6 +32,24 @@ function CampaignsList() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // P1 #5: Debounce search input
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => setDebouncedSearch(value), 300)
+  }, [])
+
+  // Cleanup search timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [])
+
   const typeFilter = (searchParams.get('type')?.toUpperCase() || 'all') as CampaignType
   const setTypeFilter = (type: CampaignType) => {
     if (type === 'all') {
@@ -36,25 +59,42 @@ function CampaignsList() {
     }
     setSearchParams(searchParams, { replace: true })
   }
-  const [activeTab, setActiveTab] = useState<'all' | 'ACTIVE' | 'SCHEDULED' | 'PAUSED' | 'COMPLETED'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'DRAFT' | 'ACTIVE' | 'SCHEDULED' | 'SENDING' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'>('all')
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'calendar'>('list')
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([])
   const [showComparison, setShowComparison] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 12
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), 1)
+  })
   
   // Modal states
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [showRowMenu, setShowRowMenu] = useState<string | null>(null)
   const [newStatus, setNewStatus] = useState<Campaign['status'] | undefined>(undefined)
   const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null)
   const [campaignToDuplicate, setCampaignToDuplicate] = useState<string | null>(null)
-  const [createForm, setCreateForm] = useState<{ name: string; type: 'EMAIL' | 'SMS' | 'PHONE' }>({ name: '', type: 'EMAIL' })
+
+  // P0 #1: Close row menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showRowMenu && menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowRowMenu(null)
+      }
+    }
+    if (showRowMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showRowMenu])
 
   // Fetch campaigns from API
   const { data: campaignsResponse, isLoading, isError } = useQuery({
-    queryKey: ['campaigns', searchQuery],
+    queryKey: ['campaigns', debouncedSearch],
     queryFn: async () => {
       try {
         const params: { 
@@ -62,7 +102,7 @@ function CampaignsList() {
           status?: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED';
           type?: 'EMAIL' | 'SMS' | 'PHONE';
         } = {}
-        if (searchQuery) params.search = searchQuery
+        if (debouncedSearch) params.search = debouncedSearch
         // Don't send status filter to API - we'll filter client-side for better UX
         // if (activeTab !== 'all') {
         //   params.status = activeTab.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED'
@@ -86,32 +126,7 @@ function CampaignsList() {
     return []
   }, [campaignsResponse])
 
-  // Create campaign mutation
-  const createCampaignMutation = useMutation({
-    mutationFn: (data: CreateCampaignData) => campaignsApi.createCampaign(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-      toast.success('Campaign created successfully')
-      setShowCreateModal(false)
-      setCreateForm({ name: '', type: 'EMAIL' })
-    },
-    onError: () => {
-      toast.error('Failed to create campaign')
-    },
-  })
 
-  // Update campaign mutation
-  const updateCampaignMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateCampaignData> }) =>
-      campaignsApi.updateCampaign(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-      toast.success('Campaign updated successfully')
-    },
-    onError: () => {
-      toast.error('Failed to update campaign')
-    },
-  })
 
   // Delete campaign mutation
   const deleteCampaignMutation = useMutation({
@@ -164,86 +179,69 @@ function CampaignsList() {
     },
   })
 
-  // Handle quick create campaign
-  const handleQuickCreate = () => {
-    if (!createForm.name.trim()) {
-      toast.error('Please enter a campaign name')
-      return
-    }
-    createCampaignMutation.mutate({
-      name: createForm.name.trim(),
-      type: createForm.type,
-      status: 'DRAFT',
-    })
-  }
+
 
   // Filter campaigns
   const filteredCampaigns = useMemo(() => {
     const filtered = campaigns.filter(campaign => {
-      const matchesSearch = campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSearch = campaign.name.toLowerCase().includes(debouncedSearch.toLowerCase())
       const matchesTab = activeTab === 'all' || campaign.status.toUpperCase() === activeTab.toUpperCase()
       const matchesType = typeFilter === 'all' || (campaign.type || '').toUpperCase() === typeFilter
       return matchesSearch && matchesTab && matchesType
     })
     return filtered
-  }, [campaigns, searchQuery, activeTab, typeFilter])
+  }, [campaigns, debouncedSearch, activeTab, typeFilter])
 
-  // Calculate statistics
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredCampaigns.length / pageSize))
+  const paginatedCampaigns = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredCampaigns.slice(start, start + pageSize)
+  }, [filteredCampaigns, currentPage, pageSize])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeTab, typeFilter])
+
+  // Calculate statistics — V2-V4: filter by typeFilter
   const stats = useMemo(() => {
-    const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE')
-    const totalSent = campaigns.reduce((sum, c) => sum + (c.sent || 0), 0)
-    const totalRevenue = campaigns.reduce((sum, c) => sum + (c.revenue || 0), 0)
-    const totalSpent = campaigns.reduce((sum, c) => sum + (c.spent || 0), 0)
-    const avgROI = totalSpent > 0 ? ((totalRevenue / totalSpent) * 100).toFixed(0) : '0'
+    const base = typeFilter === 'all' ? campaigns : campaigns.filter(c => (c.type || '').toUpperCase() === typeFilter)
+    const activeCampaigns = base.filter(c => c.status === 'ACTIVE')
+    const totalSent = base.reduce((sum, c) => sum + (c.sent ?? 0), 0)
+    const totalRevenue = base.reduce((sum, c) => sum + (c.revenue ?? 0), 0)
+    const totalSpent = base.reduce((sum, c) => sum + (c.spent ?? 0), 0)
+    const avgROI = totalSpent > 0 ? (((totalRevenue - totalSpent) / totalSpent) * 100).toFixed(1) : '0'
 
     return {
       active: activeCampaigns.length,
       totalSent,
       totalRevenue,
       avgROI,
-      totalBudget: campaigns.reduce((sum, c) => sum + (c.budget || 0), 0),
+      totalBudget: base.reduce((sum, c) => sum + (c.budget ?? 0), 0),
       totalSpent
     }
-  }, [campaigns])
+  }, [campaigns, typeFilter])
 
-  // Performance by type
+  // Performance by type — V4: filter by typeFilter
   const performanceByType = useMemo(() => {
-    const types = ['EMAIL', 'SMS', 'PHONE', 'SOCIAL']
+    const types = typeFilter === 'all' ? ['EMAIL', 'SMS', 'PHONE', 'SOCIAL'] : [typeFilter]
     return types.map(type => {
       const typeCampaigns = campaigns.filter(c => (c.type || '').toUpperCase() === type)
-      const revenue = typeCampaigns.reduce((sum, c) => sum + (c.revenue || 0), 0)
-      const spent = typeCampaigns.reduce((sum, c) => sum + (c.spent || 0), 0)
+      const revenue = typeCampaigns.reduce((sum, c) => sum + (c.revenue ?? 0), 0)
+      const spent = typeCampaigns.reduce((sum, c) => sum + (c.spent ?? 0), 0)
       return {
         type: type.charAt(0) + type.slice(1).toLowerCase(),
         campaigns: typeCampaigns.length,
         revenue,
         spent,
-        roi: spent > 0 ? ((revenue / spent) * 100).toFixed(0) : '0'
+        roi: spent > 0 ? Math.round((revenue / spent) * 100) : 0
       }
     })
-  }, [campaigns])
+  }, [campaigns, typeFilter])
 
   // Calendar data
-  const calendarData = useMemo(() => {
-    const grouped: Record<string, Campaign[]> = {}
-    filteredCampaigns.forEach(campaign => {
-      const date = campaign.startDate ? campaign.startDate.split('T')[0] : 'No Date'
-      if (!grouped[date]) grouped[date] = []
-      grouped[date].push(campaign)
-    })
-    return grouped
-  }, [filteredCampaigns])
-
-  const getStatusVariant = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE': return 'success'
-      case 'SCHEDULED': return 'warning'
-      case 'PAUSED': return 'secondary'
-      case 'COMPLETED': return 'outline'
-      case 'DRAFT': return 'secondary'
-      default: return 'secondary'
-    }
-  }
+  // getStatusVariant imported from @/lib/campaignUtils
 
   const getTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -262,34 +260,44 @@ function CampaignsList() {
   }
 
   // Handler functions
-  const handleStatusChange = () => {
+  const handleStatusChange = async () => {
     if (!newStatus) {
       toast.error('Please select a status')
       return
     }
 
-    // Use API if we have real campaigns, otherwise update local state
-    if (campaignsResponse?.campaigns) {
-      selectedCampaigns.forEach(campaignId => {
-        updateCampaignMutation.mutate({
-          id: String(campaignId),
-          data: { status: newStatus.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' }
-        })
-      })
+    // P1 #4: Batch status changes with Promise.allSettled using direct API calls
+    const results = await Promise.allSettled(
+      selectedCampaigns.map(campaignId =>
+        campaignsApi.updateCampaign(
+          String(campaignId),
+          { status: newStatus.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' }
+        )
+      )
+    )
+    const failed = results.filter(r => r.status === 'rejected').length
+    if (failed > 0) {
+      toast.error(`Failed to update ${failed} of ${selectedCampaigns.length} campaigns`)
     }
+    queryClient.invalidateQueries({ queryKey: ['campaigns'] })
 
     setShowStatusModal(false)
     setNewStatus(undefined)
     setSelectedCampaigns([])
   }
 
-  const handleBulkDelete = () => {
-    // Use API if we have real campaigns
-    if (campaignsResponse?.campaigns) {
-      selectedCampaigns.forEach(campaignId => {
-        deleteCampaignMutation.mutate(String(campaignId))
-      })
+  const handleBulkDelete = async () => {
+    // P1 #4: Batch delete with Promise.allSettled using direct API calls
+    const results = await Promise.allSettled(
+      selectedCampaigns.map(campaignId =>
+        campaignsApi.deleteCampaign(String(campaignId))
+      )
+    )
+    const failed = results.filter(r => r.status === 'rejected').length
+    if (failed > 0) {
+      toast.error(`Failed to delete ${failed} of ${selectedCampaigns.length} campaigns`)
     }
+    queryClient.invalidateQueries({ queryKey: ['campaigns'] })
 
     setShowDeleteModal(false)
     setSelectedCampaigns([])
@@ -375,6 +383,35 @@ function CampaignsList() {
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6']
 
+  // Shared row menu actions for CampaignRowMenu component
+  const rowMenuActions: CampaignRowMenuActions = {
+    onDuplicate: (id) => {
+      setCampaignToDuplicate(id)
+      setShowDuplicateModal(true)
+      setShowRowMenu(null)
+    },
+    onPause: (id) => pauseCampaignMutation.mutate(id),
+    onResume: (id) => resumeCampaignMutation.mutate(id),
+    onSend: (id) => sendCampaignMutation.mutate(id),
+    onArchive: (id) => archiveCampaignMutation.mutate(id),
+    onUnarchive: (id) => unarchiveCampaignMutation.mutate(id),
+    onChangeStatus: (id) => {
+      setSelectedCampaigns([id])
+      setShowStatusModal(true)
+      setShowRowMenu(null)
+    },
+    onDelete: (id) => {
+      setCampaignToDelete(id)
+      setShowDeleteModal(true)
+      setShowRowMenu(null)
+    },
+    isPausePending: pauseCampaignMutation.isPending,
+    isResumePending: resumeCampaignMutation.isPending,
+    isSendPending: sendCampaignMutation.isPending,
+    isArchivePending: archiveCampaignMutation.isPending,
+    isUnarchivePending: unarchiveCampaignMutation.isPending,
+  }
+
   // Show loading state
   if (isLoading) {
     return (
@@ -395,7 +432,7 @@ function CampaignsList() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <CampaignsSubNav />
+        <CampaignsSubNav campaigns={campaigns} typeFilter={typeFilter} onTypeFilterChange={setTypeFilter} />
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-destructive font-medium">Failed to load campaigns</p>
@@ -409,40 +446,13 @@ function CampaignsList() {
   return (
     <div className="space-y-6">
       {/* Sub Navigation */}
-      <CampaignsSubNav />
+      <CampaignsSubNav campaigns={campaigns} typeFilter={typeFilter} onTypeFilterChange={setTypeFilter} />
 
-      {/* Campaign Type Filter Tabs */}
-      <div className="flex gap-2">
-        {(['all', 'EMAIL', 'SMS', 'PHONE'] as const).map(type => {
-          const count = type === 'all'
-            ? campaigns.length
-            : campaigns.filter(c => (c.type || '').toUpperCase() === type).length
-          const labels: Record<string, string> = { all: 'All Types', EMAIL: 'Email', SMS: 'SMS', PHONE: 'Phone' }
-          const icons: Record<string, typeof Mail> = { EMAIL: Mail, SMS: MessageSquare, PHONE: Phone }
-          const Icon = type !== 'all' ? icons[type] : null
-          return (
-            <button
-              key={type}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                typeFilter === type
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
-              }`}
-              onClick={() => setTypeFilter(type)}
-            >
-              {Icon && <Icon className="h-4 w-4" />}
-              {labels[type]}
-              <span className={`ml-1 text-xs ${
-                typeFilter === type ? 'text-primary-foreground/70' : 'text-muted-foreground'
-              }`}>({count})</span>
-            </button>
-          )
-        })}
-      </div>
+
 
       {/* Phone Coming Soon Banner */}
       {typeFilter === 'PHONE' && (
-        <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-4 text-center">
+        <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-8 text-center">
           <span className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium mb-2">
             Coming Soon
           </span>
@@ -452,6 +462,7 @@ function CampaignsList() {
         </div>
       )}
 
+      {typeFilter !== 'PHONE' && (<>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -467,10 +478,6 @@ function CampaignsList() {
             Export
           </Button>
           <FeatureGate resource="campaigns">
-            <Button onClick={() => setShowCreateModal(true)} variant="outline">
-              <Plus className="mr-2 h-4 w-4" />
-              Quick Create
-            </Button>
             <Link to="/campaigns/create">
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -491,89 +498,85 @@ function CampaignsList() {
       />
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active Campaigns</p>
-                <p className="text-2xl font-bold">{stats.active}</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-                <Target className="h-6 w-6 text-blue-600" />
-              </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
+            <div className="rounded-full bg-blue-100 p-2.5">
+              <Target className="h-4 w-4 text-blue-600" />
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.active}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Messages Sent</p>
-                <p className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
-                <Users className="h-6 w-6 text-green-600" />
-              </div>
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Messages Sent</CardTitle>
+            <div className="rounded-full bg-green-100 p-2.5">
+              <Users className="h-4 w-4 text-green-600" />
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.totalSent.toLocaleString()}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Across all campaigns</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">${(stats.totalRevenue / 1000).toFixed(0)}K</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
-                <DollarSign className="h-6 w-6 text-purple-600" />
-              </div>
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <div className="rounded-full bg-purple-100 p-2.5">
+              <DollarSign className="h-4 w-4 text-purple-600" />
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">${stats.totalRevenue.toLocaleString()}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Total generated</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Average ROI</p>
-                <p className="text-2xl font-bold">{stats.avgROI}%</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
-              </div>
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average ROI</CardTitle>
+            <div className="rounded-full bg-orange-100 p-2.5">
+              <TrendingUp className="h-4 w-4 text-orange-600" />
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.avgROI}%</div>
+            <p className="mt-1 text-xs text-muted-foreground">Return on investment</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Budget vs Spent Tracker */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
-          <CardTitle>Budget Overview</CardTitle>
+          <CardTitle className="text-lg">Budget Overview</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Total Budget</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Budget</p>
                 <p className="text-2xl font-bold">${stats.totalBudget.toLocaleString()}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Spent</p>
+                <p className="text-sm font-medium text-muted-foreground">Spent</p>
                 <p className="text-2xl font-bold">${stats.totalSpent.toLocaleString()}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Remaining</p>
-                <p className="text-2xl font-bold">${(stats.totalBudget - stats.totalSpent).toLocaleString()}</p>
+              <div className="space-y-1 text-right">
+                <p className="text-sm font-medium text-muted-foreground">Remaining</p>
+                <p className="text-2xl font-bold text-green-600">${(stats.totalBudget - stats.totalSpent).toLocaleString()}</p>
               </div>
             </div>
             <div className="h-4 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                style={{ width: `${stats.totalBudget > 0 ? (stats.totalSpent / stats.totalBudget) * 100 : 0}%` }}
+                style={{ width: `${stats.totalBudget > 0 ? Math.min((stats.totalSpent / stats.totalBudget) * 100, 100) : 0}%` }}
               />
             </div>
             <p className="text-sm text-muted-foreground">
@@ -585,14 +588,14 @@ function CampaignsList() {
 
       {/* Performance by Type Charts */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>Performance by Campaign Type</CardTitle>
+            <CardTitle className="text-lg">Performance by Campaign Type</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={performanceByType}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                 <XAxis dataKey="type" />
                 <YAxis yAxisId="left" />
                 <YAxis yAxisId="right" orientation="right" />
@@ -605,9 +608,9 @@ function CampaignsList() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>ROI by Campaign Type</CardTitle>
+            <CardTitle className="text-lg">ROI by Campaign Type</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -620,7 +623,7 @@ function CampaignsList() {
                   label={({ type, roi }) => `${type}: ${roi}%`}
                   outerRadius={100}
                   fill="#8884d8"
-                  dataKey="revenue"
+                  dataKey="roi"
                 >
                   {performanceByType.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -634,15 +637,15 @@ function CampaignsList() {
       </div>
 
       {/* Filters and View Toggle */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 md:w-96">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 md:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search campaigns..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-9"
             />
           </div>
         </div>
@@ -655,23 +658,29 @@ function CampaignsList() {
           )}
           <div className="flex items-center rounded-lg border">
             <Button
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('list')}
+              title="List view"
+              aria-label="List view"
             >
               <LayoutList className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('grid')}
+              title="Grid view"
+              aria-label="Grid view"
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
+              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('calendar')}
+              title="Calendar view"
+              aria-label="Calendar view"
             >
               <CalendarIcon className="h-4 w-4" />
             </Button>
@@ -680,33 +689,33 @@ function CampaignsList() {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex gap-2 border-b">
-        {(['all', 'ACTIVE', 'SCHEDULED', 'PAUSED', 'COMPLETED'] as const).map(tab => {
+      <div className="flex gap-1 border-b">
+        {(['all', 'DRAFT', 'ACTIVE', 'SCHEDULED', 'SENDING', 'PAUSED', 'COMPLETED', 'CANCELLED'] as const).map(tab => {
+          const typeFiltered = typeFilter === 'all' ? campaigns : campaigns.filter(c => (c.type || '').toUpperCase() === typeFilter)
           const count = tab === 'all' 
-            ? campaigns.length 
-            : campaigns.filter(c => c.status.toUpperCase() === tab).length
-          
+            ? typeFiltered.length 
+            : typeFiltered.filter(c => c.status.toUpperCase() === tab).length
           return (
             <button
               key={tab}
-              className={`px-4 py-2 font-medium capitalize transition-colors ${
+              className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors ${
                 activeTab === tab
                   ? 'border-b-2 border-primary text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab.toLowerCase()}
-              <span className="ml-2 text-sm text-muted-foreground">
-                ({count})
-              </span>
+              {tab === 'all' ? 'All' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+              <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0">
+                {count}
+              </Badge>
             </button>
           )
         })}
       </div>
 
       {/* Empty State */}
-      {filteredCampaigns.length === 0 && !isLoading && (
+      {filteredCampaigns.length === 0 && !isLoading && viewMode !== 'calendar' && (
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
@@ -738,6 +747,23 @@ function CampaignsList() {
       )}
 
       {/* Multi-Campaign Comparison */}
+      {showComparison && selectedCampaigns.length <= 1 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Campaign Comparison</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => setShowComparison(false)}>
+                Close
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground py-8">
+              Select at least 2 campaigns to compare their performance.
+            </p>
+          </CardContent>
+        </Card>
+      )}
       {showComparison && selectedCampaigns.length > 1 && (
         <Card>
           <CardHeader>
@@ -771,12 +797,12 @@ function CampaignsList() {
                       <tr key={id} className="border-b">
                         <td className="py-2 text-sm">{campaign.name}</td>
                         <td className="py-2 text-right text-sm capitalize">{campaign.type}</td>
-                        <td className="py-2 text-right text-sm">{campaign.sent?.toLocaleString()}</td>
-                        <td className="py-2 text-right text-sm">{campaign.opened?.toLocaleString()}</td>
-                        <td className="py-2 text-right text-sm">{campaign.clicked?.toLocaleString()}</td>
-                        <td className="py-2 text-right text-sm">{campaign.converted?.toLocaleString()}</td>
-                        <td className="py-2 text-right text-sm">${campaign.revenue?.toLocaleString()}</td>
-                        <td className="py-2 text-right text-sm font-medium">{campaign.roi}</td>
+                        <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.sent).toLocaleString() : '—'}</td>
+                        <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.opened ?? 0).toLocaleString() : '—'}</td>
+                        <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.clicked ?? 0).toLocaleString() : '—'}</td>
+                        <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.converted ?? 0).toLocaleString() : '—'}</td>
+                        <td className="py-2 text-right text-sm">{campaign.sent ? `$${(campaign.revenue ?? 0).toLocaleString()}` : '—'}</td>
+                        <td className="py-2 text-right text-sm font-medium">{campaign.sent ? `${campaign.roi ?? 0}%` : 'N/A'}</td>
                       </tr>
                     )
                   })}
@@ -789,10 +815,25 @@ function CampaignsList() {
 
       {/* Campaign List View */}
       {viewMode === 'list' && filteredCampaigns.length > 0 && (
-        <div className="grid gap-4">
-          {filteredCampaigns.map((campaign) => (
-            <Card key={campaign.id}>
-              <CardHeader>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 px-4 py-2">
+            <input
+              type="checkbox"
+              checked={filteredCampaigns.length > 0 && filteredCampaigns.every(c => selectedCampaigns.includes(String(c.id)))}
+              onChange={() => {
+                const allIds = filteredCampaigns.map(c => String(c.id))
+                const allSelected = allIds.every(id => selectedCampaigns.includes(id))
+                setSelectedCampaigns(allSelected ? selectedCampaigns.filter(id => !allIds.includes(id)) : [...new Set([...selectedCampaigns, ...allIds])])
+              }}
+              className="rounded"
+            />
+            <span className="text-sm text-muted-foreground">
+              {selectedCampaigns.length > 0 ? `${selectedCampaigns.length} selected` : 'Select all'}
+            </span>
+          </div>
+          {paginatedCampaigns.map((campaign) => (
+            <Card key={campaign.id} className="hover:shadow-lg hover:border-primary/30 transition-all duration-200">
+              <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <input
@@ -815,115 +856,27 @@ function CampaignsList() {
                           {campaign.status}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          Started {campaign.startDate}
+                          Started {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                         </span>
                         {campaign.abTest && (
                           <Badge variant="outline" className="text-xs">
-                            A/B Test - Winner: {campaign.abTest.winner}
+                            {campaign.abTest.winner ? `A/B Test - Winner: ${campaign.abTest.winner}` : 'A/B Test'}
                           </Badge>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="relative">
+                  <div className="relative" ref={showRowMenu === String(campaign.id) ? menuRef : undefined}>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setShowRowMenu(showRowMenu === campaign.id ? null : String(campaign.id))}
+                      onClick={() => setShowRowMenu(showRowMenu === String(campaign.id) ? null : String(campaign.id))}
                       aria-label="Campaign actions"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
-                    {showRowMenu === campaign.id && (
-                      <div className="absolute right-0 top-10 z-10 w-48 rounded-md border bg-background shadow-lg">
-                        <Link to={`/campaigns/${campaign.id}`}>
-                          <button className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted">
-                            <Edit className="mr-2 h-4 w-4" />
-                            View Details
-                          </button>
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setCampaignToDuplicate(String(campaign.id))
-                            setShowDuplicateModal(true)
-                            setShowRowMenu(null)
-                          }}
-                          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          Duplicate
-                        </button>
-                        {campaign.status.toUpperCase() === 'ACTIVE' && (
-                          <button
-                            onClick={() => pauseCampaignMutation.mutate(String(campaign.id))}
-                            className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                          >
-                            <Pause className="mr-2 h-4 w-4" />
-                            Pause
-                          </button>
-                        )}
-                        {campaign.status.toUpperCase() === 'PAUSED' && (
-                          <button
-                            onClick={() => resumeCampaignMutation.mutate(String(campaign.id))}
-                            className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                          >
-                            <PlayCircle className="mr-2 h-4 w-4" />
-                            Resume
-                          </button>
-                        )}
-                        {(campaign.status.toUpperCase() === 'DRAFT' || campaign.status.toUpperCase() === 'SCHEDULED') && (
-                          <button
-                            onClick={() => sendCampaignMutation.mutate(String(campaign.id))}
-                            className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                          >
-                            <Mail className="mr-2 h-4 w-4" />
-                            Send Now
-                          </button>
-                        )}
-                        {campaign.isArchived ? (
-                          <button
-                            onClick={() => {
-                              unarchiveCampaignMutation.mutate(String(campaign.id))
-                            }}
-                            className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                          >
-                            <ArchiveRestore className="mr-2 h-4 w-4" />
-                            Unarchive
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              archiveCampaignMutation.mutate(String(campaign.id))
-                            }}
-                            className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                          >
-                            <Archive className="mr-2 h-4 w-4" />
-                            Archive
-                          </button>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedCampaigns([String(campaign.id)])
-                            setShowStatusModal(true)
-                            setShowRowMenu(null)
-                          }}
-                          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                        >
-                          <PlayCircle className="mr-2 h-4 w-4" />
-                          Change Status
-                        </button>
-                        <button
-                          onClick={() => {
-                            setCampaignToDelete(String(campaign.id))
-                            setShowDeleteModal(true)
-                            setShowRowMenu(null)
-                          }}
-                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </button>
-                      </div>
+                    {showRowMenu === String(campaign.id) && (
+                      <CampaignRowMenu campaign={campaign} actions={rowMenuActions} />
                     )}
                   </div>
                 </div>
@@ -932,11 +885,11 @@ function CampaignsList() {
                 <div className="grid grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Sent</p>
-                    <p className="text-2xl font-bold">{campaign.sent.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{(campaign.sent ?? 0).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Opened</p>
-                    <p className="text-2xl font-bold">{(campaign.opened || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{(campaign.opened ?? 0).toLocaleString()}</p>
                     {campaign.sent > 0 && campaign.opened && (
                       <p className="text-xs text-muted-foreground">
                         {((campaign.opened / campaign.sent) * 100).toFixed(1)}%
@@ -945,7 +898,7 @@ function CampaignsList() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Clicked</p>
-                    <p className="text-2xl font-bold">{(campaign.clicked || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{(campaign.clicked ?? 0).toLocaleString()}</p>
                     {campaign.sent > 0 && campaign.clicked && (
                       <p className="text-xs text-muted-foreground">
                         {((campaign.clicked / campaign.sent) * 100).toFixed(1)}%
@@ -954,9 +907,9 @@ function CampaignsList() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">ROI</p>
-                    <p className="text-2xl font-bold">{campaign.roi}</p>
+                    <p className="text-2xl font-bold">{campaign.sent ? `${campaign.roi ?? 0}%` : 'N/A'}</p>
                     <p className="text-xs text-muted-foreground">
-                      ${(campaign.revenue || 0).toLocaleString()} revenue
+                      ${(campaign.revenue ?? 0).toLocaleString()} revenue
                     </p>
                   </div>
                 </div>
@@ -964,12 +917,12 @@ function CampaignsList() {
                   <div className="mt-4">
                     <div className="flex justify-between text-sm text-muted-foreground mb-1">
                       <span>Budget: ${campaign.budget.toLocaleString()}</span>
-                      <span>Spent: ${(campaign.spent || 0).toLocaleString()}</span>
+                      <span>Spent: ${(campaign.spent ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-blue-500"
-                        style={{ width: `${((campaign.spent || 0) / campaign.budget) * 100}%` }}
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        style={{ width: `${Math.min(((campaign.spent ?? 0) / campaign.budget) * 100, 100)}%` }}
                       />
                     </div>
                   </div>
@@ -983,8 +936,15 @@ function CampaignsList() {
       {/* Campaign Grid View */}
       {viewMode === 'grid' && filteredCampaigns.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCampaigns.map((campaign) => (
-            <Card key={campaign.id} className="flex flex-col">
+          {paginatedCampaigns.map((campaign) => (
+            <Card
+              key={campaign.id}
+              className="flex flex-col hover:shadow-lg hover:border-primary/30 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/50"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter') window.location.href = `/campaigns/${campaign.id}`; }}
+              role="article"
+              aria-label={`Campaign: ${campaign.name}`}
+            >
               <CardHeader>
                 <div className="flex items-center justify-between mb-2">
                   <input
@@ -993,57 +953,17 @@ function CampaignsList() {
                     onChange={() => toggleCampaignSelection(String(campaign.id))}
                     className="rounded"
                   />
-                  <div className="relative">
+                  <div className="relative" ref={showRowMenu === String(campaign.id) ? menuRef : undefined}>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setShowRowMenu(showRowMenu === campaign.id ? null : String(campaign.id))}
+                      onClick={() => setShowRowMenu(showRowMenu === String(campaign.id) ? null : String(campaign.id))}
                       aria-label="Campaign actions"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
-                    {showRowMenu === campaign.id && (
-                      <div className="absolute right-0 top-10 z-10 w-48 rounded-md border bg-background shadow-lg">
-                        <Link to={`/campaigns/${campaign.id}`}>
-                          <button className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted">
-                            <Edit className="mr-2 h-4 w-4" />
-                            View Details
-                          </button>
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setCampaignToDuplicate(String(campaign.id))
-                            setShowDuplicateModal(true)
-                            setShowRowMenu(null)
-                          }}
-                          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          Duplicate
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedCampaigns([String(campaign.id)])
-                            setShowStatusModal(true)
-                            setShowRowMenu(null)
-                          }}
-                          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
-                        >
-                          <PlayCircle className="mr-2 h-4 w-4" />
-                          Change Status
-                        </button>
-                        <button
-                          onClick={() => {
-                            setCampaignToDelete(String(campaign.id))
-                            setShowDeleteModal(true)
-                            setShowRowMenu(null)
-                          }}
-                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </button>
-                      </div>
+                    {showRowMenu === String(campaign.id) && (
+                      <CampaignRowMenu campaign={campaign} actions={rowMenuActions} />
                     )}
                   </div>
                 </div>
@@ -1072,12 +992,12 @@ function CampaignsList() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Sent</span>
-                    <span className="font-bold">{campaign.sent.toLocaleString()}</span>
+                    <span className="font-bold">{(campaign.sent ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Opens</span>
                     <div className="text-right">
-                      <span className="font-bold">{(campaign.opened || 0).toLocaleString()}</span>
+                      <span className="font-bold">{(campaign.opened ?? 0).toLocaleString()}</span>
                       {campaign.sent > 0 && campaign.opened && (
                         <p className="text-xs text-muted-foreground">
                           {((campaign.opened / campaign.sent) * 100).toFixed(1)}%
@@ -1088,7 +1008,7 @@ function CampaignsList() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Clicks</span>
                     <div className="text-right">
-                      <span className="font-bold">{(campaign.clicked || 0).toLocaleString()}</span>
+                      <span className="font-bold">{(campaign.clicked ?? 0).toLocaleString()}</span>
                       {campaign.sent > 0 && campaign.clicked && (
                         <p className="text-xs text-muted-foreground">
                           {((campaign.clicked / campaign.sent) * 100).toFixed(1)}%
@@ -1099,22 +1019,22 @@ function CampaignsList() {
                   <div className="pt-2 border-t">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">ROI</span>
-                      <span className="text-lg font-bold text-green-600">{campaign.roi}</span>
+                      <span className="text-lg font-bold text-green-600">{campaign.sent ? `${campaign.roi ?? 0}%` : 'N/A'}</span>
                     </div>
                     <p className="text-xs text-muted-foreground text-right">
-                      ${(campaign.revenue || 0).toLocaleString()} revenue
+                      ${(campaign.revenue ?? 0).toLocaleString()} revenue
                     </p>
                   </div>
                   {campaign.budget && (
                     <div className="pt-2">
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>Budget</span>
-                        <span>${(campaign.spent || 0).toLocaleString()} / ${campaign.budget.toLocaleString()}</span>
+                        <span>${(campaign.spent ?? 0).toLocaleString()} / ${campaign.budget.toLocaleString()}</span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full bg-blue-500"
-                          style={{ width: `${((campaign.spent || 0) / campaign.budget) * 100}%` }}
+                          className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                          style={{ width: `${Math.min(((campaign.spent ?? 0) / campaign.budget) * 100, 100)}%` }}
                         />
                       </div>
                     </div>
@@ -1122,7 +1042,7 @@ function CampaignsList() {
                 </div>
                 <div className="mt-4 pt-3 border-t">
                   <p className="text-xs text-muted-foreground text-center">
-                    Started {campaign.startDate}
+                    Started {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                   </p>
                 </div>
               </CardContent>
@@ -1131,103 +1051,200 @@ function CampaignsList() {
         </div>
       )}
 
+      {/* Pagination Controls */}
+      {(viewMode === 'list' || viewMode === 'grid') && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredCampaigns.length)} of {filteredCampaigns.length} campaigns
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .reduce<(number | 'ellipsis')[]>((acc, p, i, arr) => {
+                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('ellipsis')
+                acc.push(p)
+                return acc
+              }, [])
+              .map((p, i) =>
+                p === 'ellipsis' ? (
+                  <span key={`e${i}`} className="px-1 text-muted-foreground">…</span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={currentPage === p ? 'default' : 'outline'}
+                    size="sm"
+                    className="min-w-[36px]"
+                    onClick={() => setCurrentPage(p)}
+                  >
+                    {p}
+                  </Button>
+                )
+              )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Calendar View */}
-      {viewMode === 'calendar' && filteredCampaigns.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Campaign Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {Object.entries(calendarData)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([date, campaigns]) => (
-                  <div key={date} className="border-l-4 border-primary pl-4">
-                    <p className="mb-2 font-medium text-sm text-muted-foreground">{date}</p>
-                    <div className="space-y-2">
-                      {campaigns.map(campaign => (
-                        <div key={campaign.id} className="flex items-center justify-between rounded-lg border p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary/10">
-                              {getTypeIcon(campaign.type)}
-                            </div>
-                            <div>
-                              <Link to={`/campaigns/${campaign.id}`} className="font-medium hover:text-primary">
-                                {campaign.name}
-                              </Link>
-                              <p className="text-xs text-muted-foreground capitalize">{campaign.type} • {campaign.status}</p>
-                            </div>
+      {viewMode === 'calendar' && (() => {
+        const year = calendarMonth.getFullYear()
+        const month = calendarMonth.getMonth()
+        const firstDay = new Date(year, month, 1).getDay()
+        const daysInMonth = new Date(year, month + 1, 0).getDate()
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        const campaignsByDay: Record<number, Campaign[]> = {}
+        filteredCampaigns.forEach(c => {
+          if (!c.startDate) return
+          const d = new Date(c.startDate)
+          if (d.getFullYear() === year && d.getMonth() === month) {
+            const day = d.getDate()
+            if (!campaignsByDay[day]) campaignsByDay[day] = []
+            campaignsByDay[day].push(c)
+          }
+        })
+        const today = new Date()
+        const isToday = (day: number) => today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
+        const hasCampaignsThisMonth = Object.keys(campaignsByDay).length > 0
+
+        return (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Campaign Calendar</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium min-w-[140px] text-center">
+                    {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1))}>
+                    Today
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-px bg-muted rounded-lg overflow-hidden">
+                {dayNames.map(d => (
+                  <div key={d} className="bg-background p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
+                ))}
+                {Array.from({ length: firstDay }).map((_, i) => (
+                  <div key={`e${i}`} className="bg-background p-2 min-h-[80px]" />
+                ))}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+                  <div
+                    key={day}
+                    className={`bg-background p-2 min-h-[80px] ${isToday(day) ? 'ring-2 ring-primary ring-inset' : ''}`}
+                  >
+                    <span className={`text-xs font-medium ${isToday(day) ? 'text-primary' : 'text-muted-foreground'}`}>{day}</span>
+                    <div className="mt-1 space-y-1">
+                      {(campaignsByDay[day] || []).slice(0, 3).map(c => (
+                        <Link key={c.id} to={`/campaigns/${c.id}`}>
+                          <div
+                            className="text-[10px] leading-tight truncate rounded px-1 py-0.5 cursor-pointer hover:opacity-80"
+                            style={{
+                              backgroundColor: c.status === 'ACTIVE' ? '#dcfce7' : c.status === 'SCHEDULED' ? '#fef3c7' : c.status === 'PAUSED' ? '#e5e7eb' : '#dbeafe',
+                              color: c.status === 'ACTIVE' ? '#166534' : c.status === 'SCHEDULED' ? '#92400e' : c.status === 'PAUSED' ? '#374151' : '#1e40af',
+                            }}
+                            title={`${c.name} (${c.status})`}
+                          >
+                            {c.name}
                           </div>
-                          <Badge variant={getStatusVariant(campaign.status)}>{campaign.status}</Badge>
-                        </div>
+                        </Link>
                       ))}
+                      {(campaignsByDay[day] || []).length > 3 && (
+                        <p className="text-[10px] text-muted-foreground text-center">+{(campaignsByDay[day] || []).length - 3} more</p>
+                      )}
                     </div>
                   </div>
                 ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </div>
+              {!hasCampaignsThisMonth && (
+                <p className="text-center text-sm text-muted-foreground py-6">
+                  No campaigns scheduled for {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Use the arrows to browse other months.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })()}
 
-      {/* Template Quick Start */}
+      {/* Quick Start Templates */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Start Templates</CardTitle>
+          <CardTitle className="text-lg">Quick Start Templates</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <Link to="/campaigns/create?type=EMAIL">
-              <div className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted">
-                <Mail className="h-8 w-8 text-blue-600 mb-2" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Link to="/campaigns/create?type=EMAIL&template=newsletter">
+              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
+                <div className="rounded-full bg-blue-100 p-2.5 w-fit mb-3">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                </div>
                 <p className="font-medium">Newsletter</p>
-                <p className="text-xs text-muted-foreground">Regular updates to your audience</p>
+                <p className="text-xs text-muted-foreground mt-1">Regular updates to your audience</p>
               </div>
             </Link>
-            <Link to="/campaigns/create?type=EMAIL">
-              <div className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted">
-                <Target className="h-8 w-8 text-green-600 mb-2" />
+            <Link to="/campaigns/create?type=EMAIL&template=promotional">
+              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
+                <div className="rounded-full bg-green-100 p-2.5 w-fit mb-3">
+                  <Tag className="h-5 w-5 text-green-600" />
+                </div>
                 <p className="font-medium">Promotional</p>
-                <p className="text-xs text-muted-foreground">Drive sales with special offers</p>
+                <p className="text-xs text-muted-foreground mt-1">Drive sales with special offers</p>
               </div>
             </Link>
-            <Link to="/campaigns/create?type=SMS">
-              <div className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted">
-                <CalendarIcon className="h-8 w-8 text-purple-600 mb-2" />
+            <Link to="/campaigns/create?type=SMS&template=event">
+              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
+                <div className="rounded-full bg-purple-100 p-2.5 w-fit mb-3">
+                  <CalendarIcon className="h-5 w-5 text-purple-600" />
+                </div>
                 <p className="font-medium">Event Invite</p>
-                <p className="text-xs text-muted-foreground">Invite to webinars & events</p>
+                <p className="text-xs text-muted-foreground mt-1">Invite to webinars & events</p>
               </div>
             </Link>
-            <Link to="/campaigns/create?type=EMAIL">
-              <div className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted">
-                <MessageSquare className="h-8 w-8 text-orange-600 mb-2" />
+            <Link to="/campaigns/create?type=EMAIL&template=survey">
+              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
+                <div className="rounded-full bg-orange-100 p-2.5 w-fit mb-3">
+                  <ClipboardList className="h-5 w-5 text-orange-600" />
+                </div>
                 <p className="font-medium">Survey</p>
-                <p className="text-xs text-muted-foreground">Gather customer feedback</p>
+                <p className="text-xs text-muted-foreground mt-1">Gather customer feedback</p>
               </div>
             </Link>
           </div>
         </CardContent>
       </Card>
 
+      </>)}
+
       {/* Status Change Modal */}
-      {showStatusModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Change Campaign Status</h3>
-              <button
-                onClick={() => {
-                  setShowStatusModal(false)
-                  setNewStatus(undefined)
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Change status for {selectedCampaigns.length} selected campaign(s)
-            </p>
-            <div className="mb-6">
+      <Dialog open={showStatusModal} onOpenChange={(open) => { setShowStatusModal(open); if (!open) setNewStatus(undefined); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Campaign Status</DialogTitle>
+            <DialogDescription>Change status for {selectedCampaigns.length} selected campaign(s)</DialogDescription>
+          </DialogHeader>
+            <div className="mb-2">
               <label className="block text-sm font-medium mb-2">New Status</label>
               <select
                 className="w-full rounded-md border border-input bg-background px-3 py-2"
@@ -1242,7 +1259,7 @@ function CampaignsList() {
                 <option value="SCHEDULED">Scheduled</option>
               </select>
             </div>
-            <div className="flex gap-3 justify-end">
+          <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => {
@@ -1258,34 +1275,23 @@ function CampaignsList() {
               >
                 Update Status
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-red-600">Delete Campaign</h3>
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false)
-                  setCampaignToDelete(null)
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-sm text-muted-foreground mb-6">
+      <Dialog open={showDeleteModal} onOpenChange={(open) => { setShowDeleteModal(open); if (!open) setCampaignToDelete(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle><span className="text-red-600">Delete Campaign</span></DialogTitle>
+            <DialogDescription>
               {campaignToDelete
                 ? `Are you sure you want to delete "${campaigns.find(c => c.id === campaignToDelete)?.name}"? This action cannot be undone.`
                 : `Are you sure you want to delete ${selectedCampaigns.length} selected campaign(s)? This action cannot be undone.`
               }
-            </p>
-            <div className="flex gap-3 justify-end">
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => {
@@ -1307,31 +1313,20 @@ function CampaignsList() {
               >
                 Delete
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Duplicate Confirmation Modal */}
-      {showDuplicateModal && campaignToDuplicate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Duplicate Campaign</h3>
-              <button
-                onClick={() => {
-                  setShowDuplicateModal(false)
-                  setCampaignToDuplicate(null)
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-sm text-muted-foreground mb-6">
-              Create a copy of "{campaigns.find(c => c.id === campaignToDuplicate)?.name}"? The duplicate will be created as a draft.
-            </p>
-            <div className="flex gap-3 justify-end">
+      <Dialog open={showDuplicateModal && !!campaignToDuplicate} onOpenChange={(open) => { setShowDuplicateModal(open); if (!open) setCampaignToDuplicate(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Duplicate Campaign</DialogTitle>
+            <DialogDescription>
+              Create a copy of &ldquo;{campaigns.find(c => c.id === campaignToDuplicate)?.name}&rdquo;? The duplicate will be created as a draft.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => {
@@ -1345,71 +1340,11 @@ function CampaignsList() {
                 <Copy className="h-4 w-4 mr-2" />
                 Duplicate
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Quick Create Campaign Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Quick Create Campaign</h3>
-              <button
-                onClick={() => {
-                  setShowCreateModal(false)
-                  setCreateForm({ name: '', type: 'EMAIL' })
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Campaign Name</label>
-                <Input
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  placeholder="Enter campaign name"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Type</label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  value={createForm.type}
-                  onChange={(e) => setCreateForm({ ...createForm, type: e.target.value as 'EMAIL' | 'SMS' | 'PHONE' })}
-                >
-                  <option value="EMAIL">Email</option>
-                  <option value="SMS">SMS</option>
-                  <option value="PHONE">Phone</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-3 justify-end mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCreateModal(false)
-                  setCreateForm({ name: '', type: 'EMAIL' })
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleQuickCreate}
-                disabled={createCampaignMutation.isPending || !createForm.name.trim()}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {createCampaignMutation.isPending ? 'Creating...' : 'Create Draft'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   )
 }

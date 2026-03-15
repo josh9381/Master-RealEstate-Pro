@@ -23,8 +23,15 @@ app.use(errorHandler);
 describe('Tag Management Endpoints', () => {
   let testUser: User;
   let testAccessToken: string;
+  let testOrgId: string;
 
   beforeEach(async () => {
+    // Create test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    });
+    testOrgId = testOrg.id;
+
     // Create a test user
     const hashedPassword = await bcrypt.hash('TestPassword123!', 10);
     testUser = await prisma.user.create({
@@ -34,10 +41,11 @@ describe('Tag Management Endpoints', () => {
         email: `test${Date.now()}@example.com`,
         password: hashedPassword,
         role: 'USER',
+        organizationId: testOrgId,
       },
     });
 
-    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role);
+    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role, testOrgId);
   });
 
   describe('POST /api/tags', () => {
@@ -118,9 +126,9 @@ describe('Tag Management Endpoints', () => {
       // Create some test tags
       await prisma.tag.createMany({
         data: [
-          { name: 'Priority', color: '#FF0000' },
-          { name: 'Urgent', color: '#FFA500' },
-          { name: 'Follow-up', color: '#0000FF' },
+          { name: 'Priority', color: '#FF0000', organizationId: testOrgId },
+          { name: 'Urgent', color: '#FFA500', organizationId: testOrgId },
+          { name: 'Follow-up', color: '#0000FF', organizationId: testOrgId },
         ],
       });
     });
@@ -171,6 +179,7 @@ describe('Tag Management Endpoints', () => {
         data: {
           name: 'Test Tag',
           color: '#00FF00',
+          organizationId: testOrgId,
         },
       });
       tagId = tag.id;
@@ -206,6 +215,7 @@ describe('Tag Management Endpoints', () => {
         data: {
           name: 'Original Tag',
           color: '#111111',
+          organizationId: testOrgId,
         },
       });
       tagId = tag.id;
@@ -251,7 +261,7 @@ describe('Tag Management Endpoints', () => {
     it('should return 409 for duplicate name', async () => {
       // Create another tag
       await prisma.tag.create({
-        data: { name: 'Existing Tag' },
+        data: { name: 'Existing Tag', organizationId: testOrgId },
       });
 
       // Try to update to existing name
@@ -271,6 +281,7 @@ describe('Tag Management Endpoints', () => {
       const tag = await prisma.tag.create({
         data: {
           name: 'Tag to Delete',
+          organizationId: testOrgId,
         },
       });
       tagId = tag.id;
@@ -308,16 +319,18 @@ describe('Tag Management Endpoints', () => {
       // Create a test lead
       const lead = await prisma.lead.create({
         data: {
-          name: 'Test Lead',
+          firstName: 'Test',
+          lastName: 'Lead',
           email: `lead${Date.now()}@example.com`,
+          organizationId: testOrgId,
         },
       });
       leadId = lead.id;
 
       // Create test tags
       const tags = await Promise.all([
-        prisma.tag.create({ data: { name: `Tag1-${Date.now()}` } }),
-        prisma.tag.create({ data: { name: `Tag2-${Date.now()}` } }),
+        prisma.tag.create({ data: { name: `Tag1-${Date.now()}`, organizationId: testOrgId } }),
+        prisma.tag.create({ data: { name: `Tag2-${Date.now()}`, organizationId: testOrgId } }),
       ]);
       tagIds = tags.map(t => t.id);
     });
@@ -359,15 +372,17 @@ describe('Tag Management Endpoints', () => {
     beforeEach(async () => {
       // Create tag
       const tag = await prisma.tag.create({
-        data: { name: `RemoveTag-${Date.now()}` },
+        data: { name: `RemoveTag-${Date.now()}`, organizationId: testOrgId },
       });
       tagId = tag.id;
 
       // Create lead with tag
       const lead = await prisma.lead.create({
         data: {
-          name: 'Test Lead',
+          firstName: 'Test',
+          lastName: 'Lead',
           email: `lead${Date.now()}@example.com`,
+          organizationId: testOrgId,
           tags: {
             connect: { id: tagId },
           },
@@ -403,7 +418,7 @@ describe('Tag Management Endpoints', () => {
     it('should return 400 if tag not assigned to lead', async () => {
       // Create another tag
       const anotherTag = await prisma.tag.create({
-        data: { name: `AnotherTag-${Date.now()}` },
+        data: { name: `AnotherTag-${Date.now()}`, organizationId: testOrgId },
       });
 
       const response = await request(app)

@@ -135,7 +135,7 @@ const CommunicationInbox = () => {
     queryKey: ['message-templates'],
     queryFn: async () => {
       const response = await messageTemplatesApi.getTemplates({ isQuickReply: 'false' })
-      return response?.templates || []
+      return response?.data?.templates || response?.templates || []
     },
     staleTime: 120_000,
   })
@@ -144,7 +144,7 @@ const CommunicationInbox = () => {
     queryKey: ['message-templates-quick-replies'],
     queryFn: async () => {
       const response = await messageTemplatesApi.getTemplates({ isQuickReply: 'true' })
-      return response?.templates || []
+      return response?.data?.templates || response?.templates || []
     },
     staleTime: 120_000,
   })
@@ -153,7 +153,7 @@ const CommunicationInbox = () => {
   useEffect(() => {
     if (templatesData && templatesData.length === 0 && quickRepliesData && quickRepliesData.length === 0) {
       messageTemplatesApi.seedDefaults().then((result) => {
-        if (result?.seeded) {
+        if (result?.data?.seeded || result?.seeded) {
           queryClient.invalidateQueries({ queryKey: ['message-templates'] })
           queryClient.invalidateQueries({ queryKey: ['message-templates-quick-replies'] })
         }

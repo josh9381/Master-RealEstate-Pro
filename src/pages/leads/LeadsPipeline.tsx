@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
@@ -19,9 +19,31 @@ import {
   Settings2,
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
 import { pipelinesApi, leadsApi, type PipelineData } from '@/lib/api'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import { PipelineManager } from '@/components/leads/PipelineManager'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+
+// Shared mapping: stage name variants → lead statuses they should contain
+const STAGE_TO_STATUSES: Record<string, string[]> = {
+  'new': ['new'], 'new lead': ['new'], 'new leads': ['new'], 'incoming': ['new'],
+  'discovery': ['new', 'contacted'],
+  'contacted': ['contacted'], 'contact made': ['contacted'], 'engaged': ['contacted'],
+  'nurturing': ['nurturing'], 'nurture': ['nurturing'], 'follow-up': ['nurturing'], 'follow up': ['nurturing'], 'warm': ['nurturing'],
+  'qualified': ['qualified'], 'qualification': ['qualified'], 'showing': ['qualified'],
+  'proposal': ['proposal'], 'offer': ['proposal'], 'under review': ['proposal'],
+  'negotiation': ['negotiation'], 'under contract': ['negotiation'], 'pending': ['negotiation'],
+  'won': ['won'], 'closed': ['won'], 'closed won': ['won'], 'closing': ['won'],
+  'lost': ['lost'], 'closed lost': ['lost'], 'withdrawn': ['lost'], 'declined': ['lost'], 'dead': ['lost'],
+}
+
+// Reverse mapping: stage name → single lead status for sync
+const STAGE_TO_STATUS: Record<string, string> = Object.fromEntries(
+  Object.entries(STAGE_TO_STATUSES)
+    .filter(([, statuses]) => statuses.length === 1)
+    .map(([stage, statuses]) => [stage, statuses[0].toUpperCase()])
+)
 
 interface Lead {
   id: string | number
@@ -54,7 +76,11 @@ function LeadsPipeline() {
   const [draggedLead, setDraggedLead] = useState<{ lead: Lead; fromStageId: string } | null>(null)
   const [keyboardMoveLead, setKeyboardMoveLead] = useState<{ lead: Lead; fromStageId: string } | null>(null)
   const [showPipelineManager, setShowPipelineManager] = useState(false)
+  const [showAddLeadModal, setShowAddLeadModal] = useState(false)
+  const [addToStageId, setAddToStageId] = useState<string | null>(null)
+  const [leadSearchQuery, setLeadSearchQuery] = useState('')
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const queryClient = useQueryClient()
 
   // Fetch all pipelines for this org
@@ -66,10 +92,12 @@ function LeadsPipeline() {
   const pipelines: PipelineData[] = pipelinesResponse?.data || []
   const activePipeline = pipelines.find(p => p.id === selectedPipelineId) || pipelines.find(p => p.isDefault) || pipelines[0]
 
-  // Auto-select first pipeline
-  if (activePipeline && !selectedPipelineId) {
-    setTimeout(() => setSelectedPipelineId(activePipeline.id), 0)
-  }
+  // Auto-select first pipeline via useEffect (not in render)
+  useEffect(() => {
+    if (activePipeline && !selectedPipelineId) {
+      setSelectedPipelineId(activePipeline.id)
+    }
+  }, [activePipeline, selectedPipelineId])
 
   // Fetch leads for the active pipeline
   const { data: pipelineLeadsResponse, isLoading: loadingLeads, refetch: refetchLeads } = useQuery({
@@ -111,23 +139,18 @@ function LeadsPipeline() {
     }
 
     // Fallback: group leads by status, matching to pipeline stages
+    // For the General/Default pipeline, auto-sync leads by mapping status → stage
     const leads: Lead[] = data?.leads || []
     const stages = activePipeline.stages || []
 
     return stages.map(stage => {
       const stageName = stage.name.toLowerCase()
+      const matchStatuses = STAGE_TO_STATUSES[stageName] || [stageName]
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const matchingLeads = leads.filter((lead: any) => {
         if (lead.pipelineStageId === stage.id) return true
         const status = (lead.status || '').toLowerCase()
-        return status === stageName ||
-          (stageName === 'new' && status === 'new') ||
-          (stageName === 'new lead' && status === 'new') ||
-          (stageName === 'won' && status === 'won') ||
-          (stageName === 'closed' && status === 'won') ||
-          (stageName === 'lost' && status === 'lost') ||
-          (stageName === 'withdrawn' && status === 'lost') ||
-          (stageName === 'declined' && status === 'lost')
+        return matchStatuses.includes(status)
       })
       return {
         id: stage.id,
@@ -143,6 +166,10 @@ function LeadsPipeline() {
 
   const stagesWithLeads = buildStagesWithLeads()
 
+  // Ref to store previous pipeline data for rollback on mutation error
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const previousPipelineDataRef = useRef<any>(null)
+
   // Move lead mutation
   const moveLeadMutation = useMutation({
     mutationFn: ({ leadId, stageId }: { leadId: string; stageId: string }) =>
@@ -151,10 +178,43 @@ function LeadsPipeline() {
         pipelineStageId: stageId,
       }),
     onError: () => {
-      toast.error('Failed to save stage change. Please try again.')
+      toast.error('Failed to save stage change. Reverting.')
+      // Rollback to the saved previous state
+      if (previousPipelineDataRef.current) {
+        queryClient.setQueryData(['pipeline-leads', activePipeline?.id], previousPipelineDataRef.current)
+        previousPipelineDataRef.current = null
+      }
       queryClient.invalidateQueries({ queryKey: ['pipeline-leads', activePipeline?.id] })
     },
+    onSettled: () => {
+      previousPipelineDataRef.current = null
+    },
   })
+
+  // Search leads for the add-to-stage modal
+  const { data: searchLeadsResponse } = useQuery({
+    queryKey: ['leads-search', leadSearchQuery],
+    queryFn: () => leadsApi.getLeads({ search: leadSearchQuery, limit: 20 }),
+    enabled: showAddLeadModal && leadSearchQuery.length >= 2,
+  })
+  const searchResults = searchLeadsResponse?.leads || []
+
+  const handleAddLeadToStage = async (leadId: string | number) => {
+    if (!addToStageId || !activePipeline) return
+    try {
+      await pipelinesApi.moveLeadToStage(String(leadId), {
+        pipelineId: activePipeline.id,
+        pipelineStageId: addToStageId,
+      })
+      queryClient.invalidateQueries({ queryKey: ['pipeline-leads', activePipeline.id] })
+      toast.success('Lead added to stage')
+      setShowAddLeadModal(false)
+      setLeadSearchQuery('')
+      setAddToStageId(null)
+    } catch {
+      toast.error('Failed to add lead to stage')
+    }
+  }
 
   const calculateTotalValue = (leads: Lead[]): string => {
     const total = leads.reduce((sum, lead) => {
@@ -190,6 +250,9 @@ function LeadsPipeline() {
   const moveLead = async (lead: Lead, fromStageId: string, toStageId: string) => {
     const targetStage = stagesWithLeads.find(s => s.id === toStageId)
 
+    // Save previous state for rollback on mutation error
+    previousPipelineDataRef.current = queryClient.getQueryData(['pipeline-leads', activePipeline?.id])
+
     // Optimistic update
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     queryClient.setQueryData(['pipeline-leads', activePipeline?.id], (prev: any) => {
@@ -215,6 +278,50 @@ function LeadsPipeline() {
 
     toast.success(`${lead.firstName} ${lead.lastName} moved to ${targetStage?.name}`)
     moveLeadMutation.mutate({ leadId: String(lead.id), stageId: toStageId })
+
+    // For the default/general pipeline, auto-sync lead status with stage
+    const isGeneralPipeline = activePipeline?.type === 'DEFAULT' || activePipeline?.isDefault
+    if (isGeneralPipeline && targetStage) {
+      const stageNameLower = targetStage.name.toLowerCase()
+      const newStatus = STAGE_TO_STATUS[stageNameLower]
+      if (newStatus && newStatus !== (lead.status || '').toUpperCase()) {
+        try {
+          await leadsApi.updateLead(String(lead.id), { status: newStatus })
+          queryClient.invalidateQueries({ queryKey: ['leads'] })
+        } catch (error) {
+          logger.error('Failed to sync lead status:', error)
+          toast.error('Failed to update lead status')
+        }
+      }
+      return
+    }
+
+    // For specialized pipelines, prompt to update lead status on win/lost stages
+    if (targetStage?.isWinStage && lead.status !== 'WON') {
+      const confirmed = await showConfirm({ title: 'Update Lead Status', message: 'Also update lead status to WON?', confirmLabel: 'Update' })
+      if (confirmed) {
+        try {
+          await leadsApi.updateLead(String(lead.id), { status: 'WON' })
+          queryClient.invalidateQueries({ queryKey: ['pipeline-leads'] })
+          toast.success('Lead status updated to WON')
+        } catch (error) {
+          logger.error('Failed to update lead status:', error)
+          toast.error('Failed to update lead status')
+        }
+      }
+    } else if (targetStage?.isLostStage && lead.status !== 'LOST') {
+      const confirmed = await showConfirm({ title: 'Update Lead Status', message: 'Also update lead status to LOST?', confirmLabel: 'Update' })
+      if (confirmed) {
+        try {
+          await leadsApi.updateLead(String(lead.id), { status: 'LOST' })
+          queryClient.invalidateQueries({ queryKey: ['pipeline-leads'] })
+          toast.success('Lead status updated to LOST')
+        } catch (error) {
+          logger.error('Failed to update lead status:', error)
+          toast.error('Failed to update lead status')
+        }
+      }
+    }
   }
 
   const handleQuickAction = (action: string, lead: Lead) => {
@@ -354,7 +461,18 @@ function LeadsPipeline() {
                       {stage.isWinStage && <Badge variant="default" className="text-xs bg-green-600">Win</Badge>}
                       {stage.isLostStage && <Badge variant="secondary" className="text-xs">Lost</Badge>}
                     </div>
-                    <Badge variant="secondary">{stage.leads.length}</Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="secondary">{stage.leads.length}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => { setAddToStageId(stage.id); setShowAddLeadModal(true) }}
+                        title="Add lead to this stage"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Stage Metrics */}
@@ -375,6 +493,16 @@ function LeadsPipeline() {
 
                 <CardContent>
                   <div className="space-y-2 min-h-[300px]">
+                    {stage.leads.length === 0 && (
+                      <div className="flex flex-col items-center justify-center text-center py-8 px-4">
+                        <div className="p-3 bg-muted/50 rounded-full mb-3">
+                          <Plus className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          No leads in this stage. Drag leads here or add from the Leads list.
+                        </p>
+                      </div>
+                    )}
                     {stage.leads.map((lead) => (
                       <div
                         key={lead.id}
@@ -545,6 +673,48 @@ function LeadsPipeline() {
           pipelines={pipelines}
           onClose={() => setShowPipelineManager(false)}
         />
+      )}
+
+      {/* Add Lead to Stage Modal */}
+      {showAddLeadModal && (
+        <Dialog open={showAddLeadModal} onOpenChange={(open) => { if (!open) { setShowAddLeadModal(false); setLeadSearchQuery(''); setAddToStageId(null) } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add Lead to Stage</DialogTitle>
+            </DialogHeader>
+              <input
+                type="text"
+                placeholder="Search leads by name..."
+                value={leadSearchQuery}
+                onChange={(e) => setLeadSearchQuery(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-3"
+                autoFocus
+              />
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {leadSearchQuery.length < 2 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">Type at least 2 characters to search</p>
+                ) : searchResults.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No leads found</p>
+                ) : (
+                  searchResults.map((lead: { id: string | number; firstName: string; lastName: string; company?: string; email?: string }) => (
+                    <button
+                      key={lead.id}
+                      onClick={() => handleAddLeadToStage(lead.id)}
+                      className="w-full text-left rounded-md px-3 py-2 hover:bg-muted transition-colors"
+                    >
+                      <div className="font-medium text-sm">{lead.firstName} {lead.lastName}</div>
+                      <div className="text-xs text-muted-foreground">{lead.company || lead.email || 'No company'}</div>
+                    </button>
+                  ))
+                )}
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button variant="outline" onClick={() => { setShowAddLeadModal(false); setLeadSearchQuery(''); setAddToStageId(null) }}>
+                  Cancel
+                </Button>
+              </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

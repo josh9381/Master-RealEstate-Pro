@@ -7,7 +7,19 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "lint:backend": "cd backend && npm run lint",
+    "lint:all": "npm run lint && npm run lint:backend",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:backend": "cd backend && npm test",
+    "type-check": "tsc --noEmit",
+    "type-check:backend": "cd backend && tsc --noEmit",
+    "type-check:all": "npm run type-check && npm run type-check:backend",
+    "e2e": "cd e2e && npx playwright test",
+    "e2e:ui": "cd e2e && npx playwright test --ui",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" --ignore-unknown 2>/dev/null || echo 'prettier not installed — skipping'",
+    "preview": "vite preview",
+    "prepare": "husky"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.56.2",
@@ -28,6 +40,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/dompurify": "^3.2.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
@@ -38,9 +53,21 @@
     "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.12",
+    "husky": "^9.1.7",
+    "jsdom": "^28.1.0",
+    "lint-staged": "^16.3.3",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.12",
     "typescript": "^5.5.4",
-    "vite": "^5.4.6"
+    "vite": "^5.4.6",
+    "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --max-warnings 0"
+    ],
+    "backend/src/**/*.ts": [
+      "eslint --max-warnings 0 --config backend/.eslintrc.cjs"
+    ]
   }
 }

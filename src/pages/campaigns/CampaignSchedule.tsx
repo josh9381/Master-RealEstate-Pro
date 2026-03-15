@@ -6,6 +6,7 @@ import { Calendar, Send, Users, TrendingUp, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
@@ -55,7 +56,9 @@ const CampaignSchedule = () => {
     queryKey: ['campaignSchedule'],
     queryFn: async () => {
       const response = await campaignsApi.getCampaigns();
-      const campaigns: CampaignRecord[] = response.data?.campaigns || [];
+      const campaigns: CampaignRecord[] = (response.data?.campaigns || []).filter(
+        (c: CampaignRecord) => c.type !== 'SOCIAL' && c.type !== 'PHONE'
+      );
 
       // Filter scheduled campaigns (status: SCHEDULED or PAUSED - uppercase from backend)
       const scheduled = campaigns.filter((c: CampaignRecord) => 
@@ -63,18 +66,18 @@ const CampaignSchedule = () => {
       ).map((c: CampaignRecord) => ({
         ...c,
         type: c.type, // Already uppercase from backend
-        scheduledDate: c.startDate ? new Date(c.startDate).toLocaleDateString() : new Date(c.createdAt).toLocaleDateString(),
+        scheduledDate: c.startDate ? new Date(c.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         scheduledTime: c.startDate ? new Date(c.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         recipients: c.audience || 0,
       }));
 
       // Filter completed campaigns
       const sent = campaigns.filter((c: CampaignRecord) => 
-        c.status === 'COMPLETED' || c.status === 'ACTIVE'
+        c.status === 'COMPLETED'
       ).map((c: CampaignRecord) => ({
         ...c,
         type: c.type,
-        sentDate: c.endDate ? new Date(c.endDate).toLocaleDateString() : new Date(c.updatedAt).toLocaleDateString(),
+        sentDate: c.endDate ? new Date(c.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date(c.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         sentTime: c.endDate ? new Date(c.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(c.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         recipients: c.sent || 0,
         opened: c.opened || 0,
@@ -83,9 +86,7 @@ const CampaignSchedule = () => {
 
       // Recurring campaigns (use isRecurring field from backend)
       const recurring = campaigns.filter((c: CampaignRecord) => 
-        c.isRecurring === true || 
-        ((c.name.toLowerCase().includes('weekly') || c.name.toLowerCase().includes('monthly')) && 
-        (c.status === 'SCHEDULED' || c.status === 'ACTIVE'))
+        c.isRecurring === true
       ).slice(0, 3);
 
       // Calculate stats
@@ -104,6 +105,7 @@ const CampaignSchedule = () => {
         },
       };
     },
+    staleTime: 30_000,
   });
   const scheduledCampaigns = campaignData?.scheduledCampaigns ?? [];
   const sentCampaigns = campaignData?.sentCampaigns ?? [];
@@ -111,21 +113,22 @@ const CampaignSchedule = () => {
   const stats = campaignData?.stats ?? { scheduled: 0, totalRecipients: 0, recurring: 0, nextCampaign: '' };
 
   const handleSendNow = async (campaignId: string, campaignName: string) => {
+    const onConfirm = async () => {
+      setConfirmAction(prev => ({ ...prev, isOpen: false }));
+      try {
+        const result = await campaignsApi.sendCampaignNow(campaignId);
+        toast.success(`Campaign "${campaignName}" sent successfully! Sent to ${result.data.sent} recipients.`);
+        await loadCampaigns();
+      } catch (error: unknown) {
+        logger.error('Error sending campaign:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to send campaign');
+      }
+    };
     setConfirmAction({
       isOpen: true,
       title: 'Send Now',
       message: `Send "${campaignName}" immediately to all recipients?`,
-      onConfirm: async () => {
-        setConfirmAction(prev => ({ ...prev, isOpen: false }));
-        try {
-          const result = await campaignsApi.sendCampaignNow(campaignId);
-          toast.success(`Campaign "${campaignName}" sent successfully! Sent to ${result.data.sent} recipients.`);
-          await loadCampaigns();
-        } catch (error: unknown) {
-          logger.error('Error sending campaign:', error);
-          toast.error(error instanceof Error ? error.message : 'Failed to send campaign');
-        }
-      }
+      onConfirm,
     });
   };
 
@@ -241,8 +244,8 @@ const CampaignSchedule = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Scheduled Campaigns</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -252,7 +255,7 @@ const CampaignSchedule = () => {
             <p className="text-xs text-muted-foreground">Ready to send</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -262,7 +265,7 @@ const CampaignSchedule = () => {
             <p className="text-xs text-muted-foreground">Across all scheduled</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recurring Campaigns</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -272,30 +275,50 @@ const CampaignSchedule = () => {
             <p className="text-xs text-muted-foreground">Active schedules</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Next Campaign</CardTitle>
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.nextCampaign ? 'Scheduled' : 'None'}</div>
-            <p className="text-xs text-muted-foreground">{stats.nextCampaign || 'No upcoming'}</p>
+            <div className="text-2xl font-bold">{stats.nextCampaign || 'None'}</div>
+            <p className="text-xs text-muted-foreground">{stats.nextCampaign ? 'Next scheduled send' : 'No upcoming'}</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Global empty state when nothing exists */}
+      {!isLoading && scheduledCampaigns.length === 0 && recurringCampaigns.length === 0 && sentCampaigns.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-semibold mb-2">No Campaigns Scheduled</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              You don't have any scheduled, recurring, or recently sent campaigns yet. Create your first campaign to get started.
+            </p>
+            <Button onClick={() => navigate('/campaigns/create')}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Create & Schedule Campaign
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Scheduled Campaigns */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <CardTitle>Upcoming Scheduled Campaigns</CardTitle>
           <CardDescription>Campaigns ready to send at scheduled times</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {scheduledCampaigns.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">No upcoming scheduled campaigns</p>
+            )}
             {scheduledCampaigns.map((campaign) => (
               <div
                 key={campaign.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
+                className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200"
               >
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10">
@@ -354,7 +377,7 @@ const CampaignSchedule = () => {
       </Card>
 
       {/* Recurring Schedules */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <CardTitle>Recurring Campaign Schedules</CardTitle>
           <CardDescription>Automatically scheduled campaigns</CardDescription>
@@ -367,7 +390,7 @@ const CampaignSchedule = () => {
               recurringCampaigns.map((schedule) => (
                 <div
                   key={schedule.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200"
                 >
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-green-100">
@@ -381,7 +404,7 @@ const CampaignSchedule = () => {
                         <span>{Number(schedule.recipients || 0)} recipients</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Next send: {new Date(schedule.scheduledDate || schedule.createdAt).toLocaleDateString()}
+                        Next send: {new Date(schedule.scheduledDate || schedule.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
                     </div>
                   </div>
@@ -411,7 +434,7 @@ const CampaignSchedule = () => {
       </Card>
 
       {/* Recently Sent */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <CardTitle>Recently Sent Campaigns</CardTitle>
           <CardDescription>Recently completed campaigns</CardDescription>
@@ -424,7 +447,7 @@ const CampaignSchedule = () => {
               sentCampaigns.map((campaign) => (
                 <div
                   key={campaign.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200"
                 >
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
@@ -459,12 +482,19 @@ const CampaignSchedule = () => {
                 </div>
               ))
             )}
+            {sentCampaigns.length >= 5 && (
+              <div className="text-center pt-2">
+                <Button variant="link" size="sm" onClick={() => navigate('/campaigns')}>
+                  View all campaigns →
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Schedule New Campaign */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <CardTitle>Schedule New Campaign</CardTitle>
           <CardDescription>Set up a new scheduled campaign</CardDescription>
@@ -478,75 +508,75 @@ const CampaignSchedule = () => {
       </Card>
 
       {/* Reschedule Modal */}
-      {rescheduleModal.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="reschedule-title" onKeyDown={(e) => { if (e.key === 'Escape') closeRescheduleModal() }} onClick={(e) => { if (e.target === e.currentTarget) closeRescheduleModal() }}>
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 id="reschedule-title" className="text-lg font-semibold mb-4">Reschedule Campaign</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  <strong>Campaign:</strong> {rescheduleModal.campaignName}
-                </p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  <strong>Current schedule:</strong> {rescheduleModal.currentDate}
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">New Date</label>
-                <input
-                  type="date"
-                  value={newScheduleDate}
-                  onChange={(e) => setNewScheduleDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">New Time</label>
-                <input
-                  type="time"
-                  value={newScheduleTime}
-                  onChange={(e) => setNewScheduleTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
+      <Dialog open={rescheduleModal.isOpen} onOpenChange={(open) => { if (!open) closeRescheduleModal() }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reschedule Campaign</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">
+                <strong>Campaign:</strong> {rescheduleModal.campaignName}
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                <strong>Current schedule:</strong> {rescheduleModal.currentDate}
+              </p>
             </div>
 
-            <div className="flex space-x-2 mt-6">
-              <Button 
-                onClick={handleReschedule}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Rescheduling...' : 'Confirm Reschedule'}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={closeRescheduleModal}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
+            <div>
+              <label className="text-sm font-medium mb-2 block">New Date</label>
+              <input
+                type="date"
+                value={newScheduleDate}
+                onChange={(e) => setNewScheduleDate(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">New Time</label>
+              <input
+                type="time"
+                value={newScheduleTime}
+                onChange={(e) => setNewScheduleTime(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+              />
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={closeRescheduleModal}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleReschedule}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Rescheduling...' : 'Confirm Reschedule'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm Action Dialog */}
-      {confirmAction.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onKeyDown={(e) => { if (e.key === 'Escape') setConfirmAction(prev => ({ ...prev, isOpen: false })) }}>
-          <div className="bg-background rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
-            <h3 id="confirm-title" className="text-lg font-semibold mb-2">{confirmAction.title}</h3>
-            <p className="text-sm text-muted-foreground mb-6">{confirmAction.message}</p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setConfirmAction(prev => ({ ...prev, isOpen: false }))}>Cancel</Button>
-              <Button onClick={confirmAction.onConfirm}>Confirm</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={confirmAction.isOpen} onOpenChange={(open) => { if (!open) setConfirmAction(prev => ({ ...prev, isOpen: false })) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{confirmAction.title}</DialogTitle>
+            <DialogDescription>{confirmAction.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmAction(prev => ({ ...prev, isOpen: false }))}>Cancel</Button>
+            <Button onClick={confirmAction.onConfirm}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

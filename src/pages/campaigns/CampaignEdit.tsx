@@ -8,6 +8,7 @@ import { ArrowLeft, Save } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
+import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 
 function CampaignEdit() {
   const { id } = useParams()
@@ -26,18 +27,23 @@ function CampaignEdit() {
     endDate: '',
     budget: 0,
     spent: 0,
+    isABTest: false,
+    abTestData: null as Record<string, unknown> | null,
+    abTestWinnerMetric: 'openRate' as string,
+    abTestEvalHours: 24,
+    isRecurring: false,
+    frequency: '' as string,
+    recurringPattern: '' as string,
+    maxOccurrences: 0,
+    sendTimeOptimization: 'none' as 'none' | 'timezone' | 'engagement' | 'both',
   })
 
   // Fetch campaign from API
   const { data: campaignResponse, isLoading } = useQuery({
     queryKey: ['campaign', id],
     queryFn: async () => {
-      try {
-        const response = await campaignsApi.getCampaign(id!)
-        return response.data?.campaign || response.data || null
-      } catch (err) {
-        throw err
-      }
+      const response = await campaignsApi.getCampaign(id!)
+      return response.data?.campaign || response.data || null
     },
     enabled: !!id,
     retry: false,
@@ -58,6 +64,15 @@ function CampaignEdit() {
         endDate: campaignResponse.endDate ? new Date(campaignResponse.endDate).toISOString().split('T')[0] : '',
         budget: campaignResponse.budget || 0,
         spent: campaignResponse.spent || 0,
+        isABTest: campaignResponse.isABTest || false,
+        abTestData: campaignResponse.abTestData || null,
+        abTestWinnerMetric: campaignResponse.abTestWinnerMetric || 'openRate',
+        abTestEvalHours: campaignResponse.abTestEvalHours || 24,
+        isRecurring: campaignResponse.isRecurring || false,
+        frequency: campaignResponse.frequency || '',
+        recurringPattern: typeof campaignResponse.recurringPattern === 'string' ? campaignResponse.recurringPattern : '',
+        maxOccurrences: campaignResponse.maxOccurrences || 0,
+        sendTimeOptimization: campaignResponse.sendTimeOptimization || 'none',
       })
     }
   }, [campaignResponse])
@@ -82,9 +97,13 @@ function CampaignEdit() {
       toast.error('Campaign name is required')
       return
     }
+    if (editForm.startDate && editForm.endDate && editForm.endDate < editForm.startDate) {
+      toast.error('End date must be on or after start date')
+      return
+    }
     updateCampaignMutation.mutate({
       name: editForm.name,
-      type: editForm.type as 'EMAIL' | 'SMS' | 'PHONE',
+      type: editForm.type as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL',
       status: editForm.status as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED',
       subject: editForm.subject || undefined,
       body: editForm.body || undefined,
@@ -92,7 +111,12 @@ function CampaignEdit() {
       startDate: editForm.startDate || undefined,
       endDate: editForm.endDate || undefined,
       budget: editForm.budget != null ? editForm.budget : undefined,
-    })
+      isABTest: editForm.isABTest,
+      abTestData: editForm.abTestData || undefined,
+      isRecurring: editForm.isRecurring,
+      frequency: editForm.frequency ? editForm.frequency as 'daily' | 'weekly' | 'monthly' : undefined,
+      sendTimeOptimization: editForm.sendTimeOptimization !== 'none' ? editForm.sendTimeOptimization : undefined,
+    } as Partial<CreateCampaignData>)
   }
 
   if (isLoading) {
@@ -125,6 +149,9 @@ function CampaignEdit() {
 
   return (
     <div className="space-y-6">
+      {/* Sub Navigation */}
+      <CampaignsSubNav />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -184,11 +211,25 @@ function CampaignEdit() {
                 value={editForm.status}
                 onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
               >
-                <option value="DRAFT">Draft</option>
-                <option value="SCHEDULED">Scheduled</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PAUSED">Paused</option>
-                <option value="COMPLETED">Completed</option>
+                {(() => {
+                  const validTransitions: Record<string, string[]> = {
+                    DRAFT: ['DRAFT', 'SCHEDULED', 'ACTIVE', 'CANCELLED'],
+                    SCHEDULED: ['SCHEDULED', 'ACTIVE', 'CANCELLED', 'DRAFT'],
+                    ACTIVE: ['ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED'],
+                    SENDING: ['SENDING', 'ACTIVE', 'PAUSED', 'CANCELLED', 'DRAFT'],
+                    PAUSED: ['PAUSED', 'ACTIVE', 'CANCELLED'],
+                    COMPLETED: ['COMPLETED'],
+                    CANCELLED: ['CANCELLED', 'DRAFT'],
+                  };
+                  const allowed = validTransitions[editForm.status] || [editForm.status];
+                  const labels: Record<string, string> = {
+                    DRAFT: 'Draft', SCHEDULED: 'Scheduled', ACTIVE: 'Active',
+                    SENDING: 'Sending', PAUSED: 'Paused', COMPLETED: 'Completed', CANCELLED: 'Cancelled',
+                  };
+                  return allowed.map(s => (
+                    <option key={s} value={s}>{labels[s] || s}</option>
+                  ));
+                })()}
               </select>
             </div>
           </div>
@@ -240,6 +281,120 @@ function CampaignEdit() {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* A/B Testing */}
+      <Card>
+        <CardHeader>
+          <CardTitle>A/B Testing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="isABTest"
+              checked={editForm.isABTest}
+              onChange={(e) => setEditForm({ ...editForm, isABTest: e.target.checked })}
+              className="rounded"
+            />
+            <label htmlFor="isABTest" className="text-sm font-medium">Enable A/B Testing</label>
+          </div>
+          {editForm.isABTest && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Winner Metric</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  value={editForm.abTestWinnerMetric}
+                  onChange={(e) => setEditForm({ ...editForm, abTestWinnerMetric: e.target.value })}
+                >
+                  <option value="openRate">Open Rate</option>
+                  <option value="clickRate">Click Rate</option>
+                  <option value="conversionRate">Conversion Rate</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Evaluation Period (hours)</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={168}
+                  value={editForm.abTestEvalHours}
+                  onChange={(e) => setEditForm({ ...editForm, abTestEvalHours: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recurring Campaign */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recurring Campaign</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="isRecurring"
+              checked={editForm.isRecurring}
+              onChange={(e) => setEditForm({ ...editForm, isRecurring: e.target.checked })}
+              className="rounded"
+            />
+            <label htmlFor="isRecurring" className="text-sm font-medium">Enable Recurring Schedule</label>
+          </div>
+          {editForm.isRecurring && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Frequency</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  value={editForm.frequency}
+                  onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value })}
+                >
+                  <option value="">Select frequency</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Max Occurrences (0 = unlimited)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editForm.maxOccurrences}
+                  onChange={(e) => setEditForm({ ...editForm, maxOccurrences: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="sendTimeOptimization"
+              checked={editForm.sendTimeOptimization !== 'none'}
+              onChange={(e) => setEditForm({ ...editForm, sendTimeOptimization: e.target.checked ? 'engagement' : 'none' })}
+              className="rounded"
+            />
+            <label htmlFor="sendTimeOptimization" className="text-sm font-medium">Send Time Optimization</label>
+          </div>
+          {editForm.sendTimeOptimization !== 'none' && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Optimization Type</label>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                value={editForm.sendTimeOptimization}
+                onChange={(e) => setEditForm({ ...editForm, sendTimeOptimization: e.target.value as 'timezone' | 'engagement' | 'both' })}
+              >
+                <option value="timezone">Timezone-based</option>
+                <option value="engagement">Engagement-based</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+          )}
         </CardContent>
       </Card>
 

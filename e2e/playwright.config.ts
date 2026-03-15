@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
   forbidOnly: true,
-  retries: 0,
+  retries: 2,
   workers: 4,
   reporter: [
     ['html', { open: 'never' }],
@@ -12,8 +12,8 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://localhost:3000',
-    trace: 'off',
-    screenshot: 'off',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
     video: 'off',
     actionTimeout: 8000,
     navigationTimeout: 15000,

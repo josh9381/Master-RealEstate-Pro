@@ -97,7 +97,6 @@ export interface Campaign {
   sent: number
   opened?: number
   clicked?: number
-  clicks?: number
   converted?: number
   revenue?: number
   roi?: string
@@ -178,6 +177,7 @@ export interface DashboardActivity {
   type: string
   action: string
   lead: string
+  leadId?: string
   time: string
   icon: React.ElementType
 }

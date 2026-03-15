@@ -4,7 +4,6 @@ import { logger } from '../lib/logger';
 
 // Augment Express Request with requestId for correlation (#108)
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       requestId?: string;

@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Campaign type enum
  */
-const campaignTypeSchema = z.enum(['EMAIL', 'SMS', 'PHONE', 'SOCIAL']);
+const campaignTypeSchema = z.enum(['EMAIL', 'SMS', 'PHONE']);
 
 /**
  * Campaign status enum
@@ -12,6 +12,7 @@ const campaignStatusSchema = z.enum([
   'DRAFT',
   'SCHEDULED',
   'ACTIVE',
+  'SENDING',
   'PAUSED',
   'COMPLETED',
   'CANCELLED',
@@ -54,7 +55,10 @@ export const createCampaignSchema = z.object({
     }),
   ]).optional(),
   maxOccurrences: z.number().min(1).optional(),
-});
+}).refine(
+  (data) => !data.frequency || data.isRecurring,
+  { message: 'frequency requires isRecurring to be true', path: ['frequency'] }
+);
 
 /**
  * Update campaign validation schema
@@ -102,6 +106,19 @@ export const updateCampaignSchema = z.object({
   ]).optional().nullable(),
   maxOccurrences: z.number().min(1).optional().nullable(),
 });
+
+/**
+ * Send campaign body validation
+ */
+export const sendCampaignSchema = z.object({
+  leadIds: z.array(z.string().min(1)).optional(),
+  filters: z.object({
+    status: z.array(z.string()).optional(),
+    source: z.array(z.string()).optional(),
+    tags: z.array(z.string()).optional(),
+    score: z.object({ min: z.number().min(0).max(100).optional(), max: z.number().min(0).max(100).optional() }).optional(),
+  }).strict().optional(),
+}).strict();
 
 /**
  * Campaign ID parameter validation

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { X, Tag, UserPlus, Trash2, Download, Mail, CheckCircle } from 'lucide-react'
+import { X, Tag, UserPlus, Trash2, Download, Mail, CheckCircle, GitBranchPlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 
 interface BulkActionsBarProps {
   selectedCount: number
+  totalOnPage?: number
   onClearSelection: () => void
   onChangeStatus?: (status: string) => void
   onAddTags?: () => void
@@ -12,11 +13,13 @@ interface BulkActionsBarProps {
   onExport?: () => void
   onDelete?: () => void
   onBulkEmail?: () => void
+  onAddToPipeline?: () => void
   className?: string
 }
 
 export function BulkActionsBar({
   selectedCount,
+  totalOnPage,
   onClearSelection,
   onChangeStatus,
   onAddTags,
@@ -24,6 +27,7 @@ export function BulkActionsBar({
   onExport,
   onDelete,
   onBulkEmail,
+  onAddToPipeline,
   className,
 }: BulkActionsBarProps) {
   const [showStatusMenu, setShowStatusMenu] = useState(false)
@@ -44,7 +48,7 @@ export function BulkActionsBar({
           {/* Selection Count */}
           <div className="flex items-center space-x-2">
             <CheckCircle className="h-5 w-5" />
-            <span className="font-medium">{selectedCount} selected</span>
+            <span className="font-medium">{selectedCount}{totalOnPage ? ` of ${totalOnPage}` : ''} selected</span>
           </div>
 
           {/* Divider */}
@@ -126,6 +130,19 @@ export function BulkActionsBar({
               >
                 <Mail className="mr-2 h-4 w-4" />
                 Send Email
+              </Button>
+            )}
+
+            {/* Add to Pipeline */}
+            {onAddToPipeline && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onAddToPipeline}
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <GitBranchPlus className="mr-2 h-4 w-4" />
+                Add to Pipeline
               </Button>
             )}
 

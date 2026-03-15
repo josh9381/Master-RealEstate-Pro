@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger'
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TestTube2, TrendingUp, Users, Mail, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -24,6 +24,7 @@ const ABTesting = () => {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+  const createFormRef = useRef<HTMLDivElement>(null);
 
   // Create form state
   const [createForm, setCreateForm] = useState({
@@ -53,11 +54,11 @@ const ABTesting = () => {
           }
         });
 
-      const resultsData = await Promise.all(resultsPromises);
+      const resultsData = await Promise.allSettled(resultsPromises);
       const resultsMap: Record<string, { results: { variantA: ABTestResult; variantB: ABTestResult }; analysis: StatisticalAnalysis }> = {};
-      resultsData.forEach((item) => {
-        if (item) {
-          resultsMap[item.testId] = item.data;
+      resultsData.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value) {
+          resultsMap[result.value.testId] = result.value.data;
         }
       });
 
@@ -69,8 +70,8 @@ const ABTesting = () => {
       // Calculate average improvement from completed tests
       const improvements = Object.values(resultsMap)
         .map(r => {
-          const aRate = r.results.variantA.conversionRate;
-          const bRate = r.results.variantB.conversionRate;
+          const aRate = r?.results?.variantA?.conversionRate ?? 0;
+          const bRate = r?.results?.variantB?.conversionRate ?? 0;
           return Math.abs(bRate - aRate);
         })
         .filter(imp => imp > 0);
@@ -89,6 +90,10 @@ const ABTesting = () => {
           totalTested: totalParticipants,
         },
       };
+    },
+    refetchInterval: (query) => {
+      const hasActive = (query.state.data?.stats?.activeTests ?? 0) > 0;
+      return hasActive ? 30_000 : false;
     },
   });
   const tests = abData?.tests ?? [];
@@ -141,7 +146,7 @@ const ABTesting = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={() => document.getElementById('create-ab-test-form')?.scrollIntoView({ behavior: 'smooth' })}>
+          <Button onClick={() => createFormRef.current?.scrollIntoView({ behavior: 'smooth' })}>
             <TestTube2 className="h-4 w-4 mr-2" />
             Create A/B Test
           </Button>
@@ -149,8 +154,8 @@ const ABTesting = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Tests</CardTitle>
             <TestTube2 className="h-4 w-4 text-muted-foreground" />
@@ -160,7 +165,7 @@ const ABTesting = () => {
             <p className="text-xs text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed Tests</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -170,7 +175,7 @@ const ABTesting = () => {
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Improvement</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -180,7 +185,7 @@ const ABTesting = () => {
             <p className="text-xs text-muted-foreground">Winner vs control</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tested</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
@@ -194,7 +199,7 @@ const ABTesting = () => {
 
       {/* Active Tests */}
       {activeTests.length === 0 ? (
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardContent className="py-12">
             <p className="text-center text-muted-foreground">No active A/B tests. Create one to get started!</p>
           </CardContent>
@@ -233,12 +238,12 @@ const ABTesting = () => {
             },
           ];
 
-          const winner = analysis.winner;
+          const winner = analysis?.winner;
           const variantASubject = test.variantA.subject || 'Variant A';
           const variantBSubject = test.variantB.subject || 'Variant B';
 
           return (
-            <Card key={test.id} id={`test-${test.id}`}>
+            <Card key={test.id} id={`test-${test.id}`} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -364,15 +369,15 @@ const ABTesting = () => {
             </div>
 
             {/* Statistical Significance */}
-            {analysis.isSignificant ? (
+            {analysis?.isSignificant && variantA.participantCount >= 100 && variantB.participantCount >= 100 ? (
               <div className="p-4 bg-green-100 border border-green-300 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-green-900">
-                      Variant {winner} is winning with {analysis.confidence.toFixed(1)}% confidence
+                      Variant {winner} is winning with {analysis.confidence?.toFixed(1) ?? '—'}% confidence
                     </p>
                     <p className="text-sm text-green-700 mt-1">
-                      The difference is statistically significant (p-value: {analysis.pValue.toFixed(4)})
+                      The difference is statistically significant (p-value: {analysis.pValue?.toFixed(4) ?? '—'})
                     </p>
                   </div>
                   <Button onClick={() => handleStopTest(test.id)}>Declare Winner</Button>
@@ -384,7 +389,7 @@ const ABTesting = () => {
                   Not enough data for statistical significance
                 </p>
                 <p className="text-sm text-yellow-700 mt-1">
-                  Need at least 30 participants per variant. Current: A={variantA.participantCount}, B={variantB.participantCount}
+                  Need at least 100 participants per variant for reliable results. Current: A={variantA.participantCount}, B={variantB.participantCount}
                 </p>
               </div>
             )}
@@ -395,7 +400,7 @@ const ABTesting = () => {
       )}
 
       {/* Completed Tests */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <CardTitle>Completed A/B Tests</CardTitle>
           <CardDescription>Recently finished tests and results</CardDescription>
@@ -449,7 +454,7 @@ const ABTesting = () => {
       </Card>
 
       {/* Create New Test */}
-      <Card id="create-ab-test-form">
+      <Card ref={createFormRef} id="create-ab-test-form" className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <CardTitle>Create New A/B Test</CardTitle>
           <CardDescription>Set up a new split test campaign</CardDescription>
@@ -460,7 +465,7 @@ const ABTesting = () => {
             <input
               type="text"
               placeholder="e.g., Subject Line Test - Spring Campaign"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full rounded-md border border-input bg-background px-3 py-2"
               value={createForm.name}
               onChange={(e) => { setCreateForm({ ...createForm, name: e.target.value }); if (createErrors.name) setCreateErrors(prev => { const next = {...prev}; delete next.name; return next }) }}
             />
@@ -469,7 +474,7 @@ const ABTesting = () => {
           <div>
             <label className="text-sm font-medium mb-2 block">What to Test</label>
             <select
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full rounded-md border border-input bg-background px-3 py-2"
               value={createForm.testType}
               onChange={(e) => setCreateForm({ ...createForm, testType: e.target.value as typeof createForm.testType })}
             >
@@ -486,7 +491,7 @@ const ABTesting = () => {
               <input
                 type="text"
                 placeholder="e.g., Original subject line"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
                 value={createForm.variantA}
                 onChange={(e) => { setCreateForm({ ...createForm, variantA: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = {...prev}; delete next.variants; return next }) }}
               />
@@ -496,7 +501,7 @@ const ABTesting = () => {
               <input
                 type="text"
                 placeholder="e.g., Alternative subject line"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
                 value={createForm.variantB}
                 onChange={(e) => { setCreateForm({ ...createForm, variantB: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = {...prev}; delete next.variants; return next }) }}
               />
@@ -507,7 +512,7 @@ const ABTesting = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Test Duration</label>
               <select
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
                 value={createForm.duration}
                 onChange={(e) => setCreateForm({ ...createForm, duration: e.target.value })}
               >
@@ -520,7 +525,7 @@ const ABTesting = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Confidence Level</label>
               <select
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
                 value={createForm.confidence}
                 onChange={(e) => setCreateForm({ ...createForm, confidence: e.target.value })}
               >
@@ -537,7 +542,9 @@ const ABTesting = () => {
               if (!createForm.name.trim()) {
                 newErrors.name = 'Test name is required';
               }
-              if (createForm.variantA.trim() && createForm.variantB.trim() && createForm.variantA.trim() === createForm.variantB.trim()) {
+              if (!createForm.variantA.trim() || !createForm.variantB.trim()) {
+                newErrors.variants = 'Both variants are required';
+              } else if (createForm.variantA.trim() === createForm.variantB.trim()) {
                 newErrors.variants = 'Variant A and Variant B must be different';
               }
               setCreateErrors(newErrors);

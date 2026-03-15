@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { NotFoundError, ForbiddenError } from '../middleware/errorHandler';
+import { logActivity } from '../utils/activityLogger';
 
 /**
  * Get all notes for a lead
@@ -132,6 +133,16 @@ export const createNote = async (req: Request, res: Response) => {
     },
   });
 
+  logActivity({
+    type: 'NOTE_ADDED',
+    title: 'Note created',
+    description: `Note added to lead`,
+    leadId,
+    userId,
+    organizationId,
+    metadata: { noteId: note.id },
+  });
+
   res.status(201).json({
     success: true,
     data: { note },
@@ -183,6 +194,16 @@ export const updateNote = async (req: Request, res: Response) => {
     },
   });
 
+  logActivity({
+    type: 'NOTE_EDITED',
+    title: 'Note edited',
+    description: `Note updated`,
+    leadId: existingNote.leadId || undefined,
+    userId,
+    organizationId: req.user!.organizationId,
+    metadata: { noteId: id },
+  });
+
   res.json({
     success: true,
     data: { note },
@@ -220,6 +241,16 @@ export const deleteNote = async (req: Request, res: Response) => {
   // Delete the note
   await prisma.note.delete({
     where: { id },
+  });
+
+  logActivity({
+    type: 'NOTE_DELETED',
+    title: 'Note deleted',
+    description: `Note removed from lead`,
+    leadId: note.leadId || undefined,
+    userId,
+    organizationId: req.user!.organizationId,
+    metadata: { noteId: id },
   });
 
   res.json({

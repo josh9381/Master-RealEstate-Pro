@@ -15,8 +15,15 @@ app.use(errorHandler)
 describe('Analytics Endpoints', () => {
   let authToken: string
   let userId: string
+  let testOrgId: string
 
   beforeEach(async () => {
+    // Create test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` }
+    })
+    testOrgId = testOrg.id
+
     // Create test user
     const hashedPassword = await bcrypt.hash('password123', 10)
     const user = await prisma.user.create({
@@ -25,14 +32,15 @@ describe('Analytics Endpoints', () => {
         password: hashedPassword,
         firstName: 'Analytics',
         lastName: 'User',
-        role: 'USER'
+        role: 'USER',
+        organizationId: testOrgId
       }
     })
     userId = user.id
 
     // Generate auth token (must match backend JWT format with issuer/audience)
     authToken = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: user.role, organizationId: testOrgId },
       process.env.JWT_ACCESS_SECRET || 'test-access-secret-123',
       { 
         expiresIn: '24h',
@@ -42,7 +50,7 @@ describe('Analytics Endpoints', () => {
     )
 
     // Create sample data for analytics
-    await createSampleData(userId)
+    await createSampleData(userId, testOrgId)
   })
 
   describe('GET /api/analytics/dashboard', () => {
@@ -252,40 +260,46 @@ describe('Analytics Endpoints', () => {
 })
 
 // Helper function to create sample data
-async function createSampleData(userId: string) {
+async function createSampleData(userId: string, orgId: string) {
   // Create leads with different statuses
   const leads = await Promise.all([
     prisma.lead.create({
       data: {
-        name: 'Lead 1',
+        firstName: 'Lead',
+        lastName: '1',
         email: 'lead1@example.com',
         status: 'NEW',
         score: 75,
         source: 'website',
         value: 5000,
-        assignedToId: userId
+        assignedToId: userId,
+        organizationId: orgId
       }
     }),
     prisma.lead.create({
       data: {
-        name: 'Lead 2',
+        firstName: 'Lead',
+        lastName: '2',
         email: 'lead2@example.com',
         status: 'CONTACTED',
         score: 85,
         source: 'referral',
         value: 10000,
-        assignedToId: userId
+        assignedToId: userId,
+        organizationId: orgId
       }
     }),
     prisma.lead.create({
       data: {
-        name: 'Lead 3',
+        firstName: 'Lead',
+        lastName: '3',
         email: 'lead3@example.com',
         status: 'WON',
         score: 95,
         source: 'social',
         value: 15000,
-        assignedToId: userId
+        assignedToId: userId,
+        organizationId: orgId
       }
     })
   ])
@@ -304,7 +318,8 @@ async function createSampleData(userId: string) {
         converted: 20,
         revenue: 50000,
         spent: 5000,
-        createdById: userId
+        createdById: userId,
+        organizationId: orgId
       }
     }),
     prisma.campaign.create({
@@ -319,7 +334,8 @@ async function createSampleData(userId: string) {
         converted: 10,
         revenue: 25000,
         spent: 2000,
-        createdById: userId
+        createdById: userId,
+        organizationId: orgId
       }
     })
   ])
@@ -337,6 +353,7 @@ async function createSampleData(userId: string) {
         status: 'COMPLETED',
         priority: 'HIGH',
         assignedToId: userId,
+        organizationId: orgId,
         completedAt: new Date()
       }
     }),
@@ -346,7 +363,8 @@ async function createSampleData(userId: string) {
         dueDate: yesterday,
         status: 'PENDING',
         priority: 'URGENT',
-        assignedToId: userId
+        assignedToId: userId,
+        organizationId: orgId
       }
     }),
     prisma.task.create({
@@ -355,7 +373,8 @@ async function createSampleData(userId: string) {
         dueDate: today,
         status: 'IN_PROGRESS',
         priority: 'MEDIUM',
-        assignedToId: userId
+        assignedToId: userId,
+        organizationId: orgId
       }
     }),
     prisma.task.create({
@@ -364,7 +383,8 @@ async function createSampleData(userId: string) {
         dueDate: tomorrow,
         status: 'PENDING',
         priority: 'LOW',
-        assignedToId: userId
+        assignedToId: userId,
+        organizationId: orgId
       }
     })
   ])
@@ -376,7 +396,8 @@ async function createSampleData(userId: string) {
         type: 'EMAIL_SENT',
         title: 'Welcome email sent',
         userId,
-        leadId: leads[0].id
+        leadId: leads[0].id,
+        organizationId: orgId
       }
     }),
     prisma.activity.create({
@@ -384,7 +405,8 @@ async function createSampleData(userId: string) {
         type: 'CALL_MADE',
         title: 'Follow-up call',
         userId,
-        leadId: leads[1].id
+        leadId: leads[1].id,
+        organizationId: orgId
       }
     }),
     prisma.activity.create({
@@ -392,7 +414,8 @@ async function createSampleData(userId: string) {
         type: 'LEAD_CREATED',
         title: 'New lead added',
         userId,
-        leadId: leads[2].id
+        leadId: leads[2].id,
+        organizationId: orgId
       }
     })
   ])

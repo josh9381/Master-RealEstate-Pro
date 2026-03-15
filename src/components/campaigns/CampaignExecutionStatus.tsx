@@ -4,7 +4,7 @@
  * Polls backend every 3 seconds while campaign is in "sending" phase
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, CheckCircle2, Clock, AlertTriangle, Radio } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -27,35 +27,42 @@ interface ExecutionStatusData {
 
 interface CampaignExecutionStatusProps {
   campaignId: string;
-  /** Initial status if already known */
-  initialPhase?: string;
   /** Called when execution completes */
   onComplete?: () => void;
 }
 
-export function CampaignExecutionStatus({ campaignId, initialPhase: _initialPhase, onComplete }: CampaignExecutionStatusProps) {
+export function CampaignExecutionStatus({ campaignId, onComplete }: CampaignExecutionStatusProps) {
   const [status, setStatus] = useState<ExecutionStatusData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
-  useEffect(() => {
+  const startPolling = useCallback(() => {
+    // Clear any existing interval first
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
     const fetchStatus = async () => {
+      if (document.hidden) return;
+      
       try {
         const response = await campaignsApi.getCampaignStats(campaignId);
-        const data = (response as any)?.data;
+        const data = response?.data as ExecutionStatusData | undefined;
         if (data) {
           setStatus(data);
           setError(null);
 
-          // Stop polling if completed
-          if (data.phase === 'completed' && !completedRef.current) {
+          if ((data.phase === 'completed' || data.phase === 'draft') && !completedRef.current) {
             completedRef.current = true;
             if (intervalRef.current) {
               clearInterval(intervalRef.current);
               intervalRef.current = null;
             }
-            onComplete?.();
+            if (data.phase === 'completed') onCompleteRef.current?.();
           }
         }
       } catch (err) {
@@ -63,24 +70,51 @@ export function CampaignExecutionStatus({ campaignId, initialPhase: _initialPhas
       }
     };
 
-    // Initial fetch
     fetchStatus();
-
-    // Poll every 3 seconds
     intervalRef.current = setInterval(fetchStatus, 3000);
+  }, [campaignId]);
+
+  const retryFetch = useCallback(() => {
+    setError(null);
+    completedRef.current = false;
+    startPolling();
+  }, [startPolling]);
+
+  useEffect(() => {
+    startPolling();
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Re-fetch immediately when tab becomes visible
+        campaignsApi.getCampaignStats(campaignId).then(response => {
+          const data = response?.data as ExecutionStatusData | undefined;
+          if (data) setStatus(data);
+        }).catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [campaignId, onComplete]);
+  }, [campaignId, startPolling]);
 
   if (error) {
     return (
       <Card>
         <CardContent className="py-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <AlertTriangle className="h-4 w-4" />
-            {error}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              {error}
+            </div>
+            <button
+              onClick={retryFetch}
+              className="text-sm text-primary hover:underline font-medium"
+            >
+              Retry
+            </button>
           </div>
         </CardContent>
       </Card>

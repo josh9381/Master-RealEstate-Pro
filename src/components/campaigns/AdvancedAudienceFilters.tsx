@@ -131,7 +131,21 @@ export function AdvancedAudienceFilters({
           <Input
             type="number"
             value={filter.value as number}
-            onChange={(e) => updateFilter(index, { value: parseInt(e.target.value) || 0 })}
+            onChange={(e) => {
+              const parsed = parseInt(e.target.value)
+              if (!isNaN(parsed)) {
+                // Clamp values to reasonable ranges per field
+                let clamped = parsed
+                if (filter.field === 'score') {
+                  clamped = Math.max(0, Math.min(100, parsed))
+                } else if (filter.field === 'budget' || filter.field === 'dealSize' || filter.field === 'revenue') {
+                  clamped = Math.max(0, Math.min(10000000, parsed))
+                } else {
+                  clamped = Math.max(0, parsed)
+                }
+                updateFilter(index, { value: clamped })
+              }
+            }}
             placeholder="Enter value"
             className="flex-1"
           />
@@ -143,10 +157,35 @@ export function AdvancedAudienceFilters({
             <Input
               type="number"
               value={filter.value as number}
-              onChange={(e) => updateFilter(index, { value: parseInt(e.target.value) || 0 })}
+              onChange={(e) => {
+                const parsed = parseInt(e.target.value)
+                if (!isNaN(parsed) && parsed >= 0) {
+                  updateFilter(index, { value: parsed })
+                }
+              }}
               placeholder="Number of days"
               className="flex-1"
             />
+          )
+        }
+        if (filter.operator === 'between') {
+          const parts = String(filter.value || '').split(',')
+          return (
+            <div className="flex flex-1 items-center gap-2">
+              <Input
+                type="date"
+                value={parts[0] || ''}
+                onChange={(e) => updateFilter(index, { value: `${e.target.value},${parts[1] || ''}` })}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground">to</span>
+              <Input
+                type="date"
+                value={parts[1] || ''}
+                onChange={(e) => updateFilter(index, { value: `${parts[0] || ''},${e.target.value}` })}
+                className="flex-1"
+              />
+            </div>
           )
         }
         return (

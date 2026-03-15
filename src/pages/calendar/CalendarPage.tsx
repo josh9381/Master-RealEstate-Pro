@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog'
+import { ModalErrorBoundary } from '@/components/ModalErrorBoundary'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { appointmentsApi, CreateAppointmentData, UpdateAppointmentData } from '@/lib/api'
@@ -613,6 +614,7 @@ export default function CalendarPage() {
       {/* Create/Edit Event Modal */}
       <Dialog open={showEventModal} onOpenChange={(open) => { if (!open) closeModal() }}>
         <DialogContent className="max-w-md">
+          <ModalErrorBoundary name="Event Editor" onClose={closeModal}>
           <DialogHeader>
             <DialogTitle>{editingEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>
           </DialogHeader>
@@ -741,6 +743,7 @@ export default function CalendarPage() {
               {editingEvent ? 'Save Changes' : 'Create Event'}
             </Button>
           </DialogFooter>
+          </ModalErrorBoundary>
         </DialogContent>
       </Dialog>
     </div>

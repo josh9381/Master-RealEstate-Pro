@@ -21,8 +21,15 @@ app.use(errorHandler);
 describe('Campaign Management Endpoints', () => {
   let testUser: User;
   let testAccessToken: string;
+  let testOrgId: string;
 
   beforeEach(async () => {
+    // Create a test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    });
+    testOrgId = testOrg.id;
+
     // Create a test user
     const hashedPassword = await bcrypt.hash('TestPassword123!', 10);
     testUser = await prisma.user.create({
@@ -32,10 +39,11 @@ describe('Campaign Management Endpoints', () => {
         email: `test${Date.now()}@example.com`,
         password: hashedPassword,
         role: 'USER',
+        organizationId: testOrgId,
       },
     });
 
-    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role);
+    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role, testOrgId);
   });
 
   describe('POST /api/campaigns', () => {
@@ -122,6 +130,7 @@ describe('Campaign Management Endpoints', () => {
             type: 'EMAIL',
             status: 'ACTIVE',
             createdById: testUser.id,
+            organizationId: testOrgId,
             sent: 1000,
             opened: 250,
             clicked: 50,
@@ -131,6 +140,7 @@ describe('Campaign Management Endpoints', () => {
             type: 'SMS',
             status: 'COMPLETED',
             createdById: testUser.id,
+            organizationId: testOrgId,
             sent: 500,
             opened: 400,
           },
@@ -139,6 +149,7 @@ describe('Campaign Management Endpoints', () => {
             type: 'SOCIAL',
             status: 'DRAFT',
             createdById: testUser.id,
+            organizationId: testOrgId,
           },
         ],
       });
@@ -211,6 +222,7 @@ describe('Campaign Management Endpoints', () => {
           type: 'EMAIL',
           status: 'DRAFT',
           createdById: testUser.id,
+          organizationId: testOrgId,
           sent: 100,
           opened: 25,
           clicked: 5,
@@ -255,6 +267,7 @@ describe('Campaign Management Endpoints', () => {
           type: 'EMAIL',
           status: 'DRAFT',
           createdById: testUser.id,
+          organizationId: testOrgId,
         },
       });
       campaignId = campaign.id;
@@ -311,6 +324,7 @@ describe('Campaign Management Endpoints', () => {
           name: 'Campaign to Delete',
           type: 'EMAIL',
           createdById: testUser.id,
+          organizationId: testOrgId,
         },
       });
       campaignId = campaign.id;
@@ -350,6 +364,7 @@ describe('Campaign Management Endpoints', () => {
             type: 'EMAIL',
             status: 'ACTIVE',
             createdById: testUser.id,
+            organizationId: testOrgId,
             sent: 1000,
             opened: 300,
             clicked: 50,
@@ -361,6 +376,7 @@ describe('Campaign Management Endpoints', () => {
             type: 'SMS',
             status: 'COMPLETED',
             createdById: testUser.id,
+            organizationId: testOrgId,
             sent: 500,
             opened: 400,
             revenue: 2000,
@@ -371,6 +387,7 @@ describe('Campaign Management Endpoints', () => {
             type: 'EMAIL',
             status: 'DRAFT',
             createdById: testUser.id,
+            organizationId: testOrgId,
           },
         ],
       });
@@ -402,6 +419,7 @@ describe('Campaign Management Endpoints', () => {
           type: 'EMAIL',
           status: 'ACTIVE',
           createdById: testUser.id,
+          organizationId: testOrgId,
           sent: 100,
         },
       });

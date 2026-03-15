@@ -1,7 +1,7 @@
 import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
-import { NotFoundError, ForbiddenError } from '../middleware/errorHandler';
+import { NotFoundError, ForbiddenError, ValidationError } from '../middleware/errorHandler';
 import type { CampaignStatus, CampaignType } from '@prisma/client';
 import { executeCampaign } from '../services/campaign-executor.service';
 import { getAllTemplates, getTemplateById } from '../data/campaign-templates';
@@ -37,11 +37,11 @@ export const getCampaigns = async (req: Request, res: Response) => {
     where.isArchived = false;
   }
 
-  // Search in name and subject
+  // Search in name and subject (case-insensitive)
   if (search) {
     where.OR = [
-      { name: { contains: search as string } },
-      { subject: { contains: search as string } },
+      { name: { contains: search as string, mode: 'insensitive' } },
+      { subject: { contains: search as string, mode: 'insensitive' } },
     ];
   }
 
@@ -49,9 +49,11 @@ export const getCampaigns = async (req: Request, res: Response) => {
   const skip = (Number(page) - 1) * Number(limit);
   const take = Number(limit);
 
-  // Build orderBy
+  // Build orderBy — whitelist allowed sort fields for safety
+  const allowedSortFields = ['createdAt', 'updatedAt', 'name', 'status', 'type', 'startDate', 'endDate', 'sent', 'opened', 'clicked', 'revenue', 'budget'];
+  const safeSortBy = allowedSortFields.includes(sortBy as string) ? (sortBy as string) : 'createdAt';
   const orderBy = {
-    [sortBy as string]: sortOrder,
+    [safeSortBy]: sortOrder,
   };
 
   // Execute queries
@@ -196,6 +198,14 @@ export const createCampaign = async (req: Request, res: Response) => {
     throw new ForbiddenError('User authentication required');
   }
 
+  // SOCIAL campaign type is not yet supported
+  if (type === 'SOCIAL') {
+    return res.status(400).json({
+      success: false,
+      message: 'Social media campaigns are not yet supported. Use EMAIL or SMS.',
+    });
+  }
+
   // Create the campaign with organizationId
   const campaign = await prisma.campaign.create({
     data: {
@@ -254,57 +264,80 @@ export const updateCampaign = async (req: Request, res: Response) => {
   const { id } = req.params;
   const updateData = req.body;
   const userId = req.user?.userId;
+  const organizationId = req.user!.organizationId;
 
   if (!userId) {
     throw new ForbiddenError('User authentication required');
   }
 
-  // Check if campaign exists AND belongs to this organization
-  const existingCampaign = await prisma.campaign.findFirst({
-    where: { 
-      id,
-      organizationId: req.user!.organizationId  // CRITICAL: Verify ownership
-    },
-  });
-
-  if (!existingCampaign) {
-    throw new NotFoundError('Campaign not found');
-  }
-
-  // Process date fields
-  const processedData: Record<string, any> = { ...updateData };
-  if (updateData.startDate !== undefined) {
-    processedData.startDate = updateData.startDate ? new Date(updateData.startDate) : null;
-  }
-  if (updateData.endDate !== undefined) {
-    processedData.endDate = updateData.endDate ? new Date(updateData.endDate) : null;
-  }
-
-  // Calculate ROI if revenue and spent are available
-  if (processedData.revenue !== undefined || processedData.spent !== undefined) {
-    const revenue = processedData.revenue ?? existingCampaign.revenue ?? 0;
-    const spent = processedData.spent ?? existingCampaign.spent ?? 0;
-    if (spent > 0) {
-      processedData.roi = ((revenue - spent) / spent) * 100;
-    }
-  }
-
-  // Update the campaign
-  const campaign = await prisma.campaign.update({
-    where: { id },
-    data: processedData,
-    include: {
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          avatar: true,
-        },
+  // Use a transaction to prevent race conditions on status transitions
+  const campaign = await prisma.$transaction(async (tx) => {
+    // Check if campaign exists AND belongs to this organization
+    const existingCampaign = await tx.campaign.findFirst({
+      where: { 
+        id,
+        organizationId,  // CRITICAL: Verify ownership
       },
-      tags: true,
-    },
+    });
+
+    if (!existingCampaign) {
+      throw new NotFoundError('Campaign not found');
+    }
+
+    // Validate status transitions
+    if (updateData.status && updateData.status !== existingCampaign.status) {
+      const validTransitions: Record<string, string[]> = {
+        DRAFT: ['SCHEDULED', 'ACTIVE', 'CANCELLED'],
+        SCHEDULED: ['ACTIVE', 'CANCELLED', 'DRAFT'],
+        ACTIVE: ['PAUSED', 'COMPLETED', 'CANCELLED'],
+        SENDING: ['ACTIVE', 'PAUSED', 'CANCELLED', 'DRAFT'],
+        PAUSED: ['ACTIVE', 'CANCELLED'],
+        COMPLETED: [],
+        CANCELLED: ['DRAFT'],
+      };
+      const allowed = validTransitions[existingCampaign.status] || [];
+      if (!allowed.includes(updateData.status)) {
+        throw new ValidationError(
+          `Cannot transition from ${existingCampaign.status} to ${updateData.status}`
+        );
+      }
+    }
+
+    // Process date fields
+    const processedData: Record<string, any> = { ...updateData };
+    if (updateData.startDate !== undefined) {
+      processedData.startDate = updateData.startDate ? new Date(updateData.startDate) : null;
+    }
+    if (updateData.endDate !== undefined) {
+      processedData.endDate = updateData.endDate ? new Date(updateData.endDate) : null;
+    }
+
+    // Calculate ROI if revenue and spent are available
+    if (processedData.revenue !== undefined || processedData.spent !== undefined) {
+      const revenue = processedData.revenue ?? existingCampaign.revenue ?? 0;
+      const spent = processedData.spent ?? existingCampaign.spent ?? 0;
+      if (spent > 0) {
+        processedData.roi = ((revenue - spent) / spent) * 100;
+      }
+    }
+
+    // Update the campaign within the transaction
+    return await tx.campaign.update({
+      where: { id },
+      data: processedData,
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        tags: true,
+      },
+    });
   });
 
   res.json({
@@ -338,9 +371,22 @@ export const deleteCampaign = async (req: Request, res: Response) => {
     throw new NotFoundError('Campaign not found');
   }
 
-  // Delete the campaign
-  await prisma.campaign.delete({
+  // Prevent deleting campaigns that have sent messages — archive instead
+  if ((campaign.sent ?? 0) > 0 && !campaign.isArchived) {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot delete a campaign that has sent messages. Archive it first.',
+    });
+  }
+
+  // Soft-delete: archive the campaign instead of hard-deleting
+  await prisma.campaign.update({
     where: { id },
+    data: {
+      isArchived: true,
+      archivedAt: new Date(),
+      status: 'CANCELLED',
+    },
   });
 
   res.json({
@@ -481,6 +527,15 @@ export const pauseCampaign = async (req: Request, res: Response) => {
     throw new NotFoundError('Campaign not found');
   }
 
+  // Only allow pausing from ACTIVE or SENDING states
+  const pausableStatuses = ['ACTIVE', 'SENDING'];
+  if (!pausableStatuses.includes(existingCampaign.status)) {
+    return res.status(400).json({
+      success: false,
+      message: `Cannot pause a campaign with status '${existingCampaign.status}'. Only ACTIVE or SENDING campaigns can be paused.`,
+    });
+  }
+
   // Update campaign status to PAUSED
   const campaign = await prisma.campaign.update({
     where: { id },
@@ -527,6 +582,16 @@ export const sendCampaign = async (req: Request, res: Response) => {
 
   if (!existingCampaign) {
     throw new NotFoundError('Campaign not found');
+  }
+
+  // Validate campaign is in a sendable state
+  const sendableStatuses = ['DRAFT', 'SCHEDULED', 'PAUSED'];
+  if (!sendableStatuses.includes(existingCampaign.status)) {
+    res.status(400).json({
+      success: false,
+      message: `Cannot send campaign with status ${existingCampaign.status}. Only DRAFT, SCHEDULED, or PAUSED campaigns can be sent.`,
+    });
+    return;
   }
 
   // Execute the campaign (actually send messages)
@@ -756,8 +821,10 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
   // Get target leads based on campaign audience
   let leads: Record<string, any>[] = [];
   
-  // Build where clause for leads
-  const where: Record<string, any> = {};
+  // Build where clause for leads — always scope to the campaign's organization
+  const where: Record<string, any> = {
+    organizationId: campaign.organizationId,
+  };
   
   // If campaign has tags, filter by those tags
   if (campaign.tags && campaign.tags.length > 0) {
@@ -770,9 +837,14 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
     };
   }
 
-  // Get all matching leads
+  // Get all matching leads (use count + limited sample for preview)
+  // First get the count efficiently
+  const recipientCount = await prisma.lead.count({ where });
+  
+  // Then get a small sample for preview purposes
   leads = await prisma.lead.findMany({
     where,
+    take: 10,
     include: {
       tags: {
         select: {
@@ -791,7 +863,7 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
     leads = leads.filter(lead => lead.phone);
   }
 
-  const recipientCount = leads.length;
+  // recipientCount already set from count query above
 
   // Calculate cost estimates
   let unitCost = 0;
@@ -801,7 +873,7 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
 
   const totalCost = recipientCount * unitCost;
 
-  // Status breakdown
+  // Status breakdown from sample (approximate)
   const statusBreakdown = leads.reduce((acc, lead) => {
     acc[lead.status] = (acc[lead.status] || 0) + 1;
     return acc;
@@ -827,6 +899,15 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
     try {
       // Use handlebars to render template with first lead's data
       const Handlebars = require('handlebars');
+      // Register esc helper for XSS prevention (matches executor)
+      if (!Handlebars.helpers['esc']) {
+        Handlebars.registerHelper('esc', (val: unknown) => {
+          if (typeof val !== 'string') return val;
+          return new Handlebars.SafeString(
+            val.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+          );
+        });
+      }
       const bodyTemplate = Handlebars.compile(campaign.body);
       const subjectTemplate = campaign.subject ? Handlebars.compile(campaign.subject) : null;
 
@@ -864,6 +945,9 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
       // Keep default preview if template rendering fails
     }
   }
+
+  // Set Content-Security-Policy for preview endpoint
+  res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data: https:;");
 
   res.json({
     success: true,
@@ -960,6 +1044,31 @@ export const createCampaignFromTemplate = async (req: Request, res: Response) =>
 
   if (!template) {
     throw new NotFoundError('Campaign template not found');
+  }
+
+  // Validate recurringPattern if template is recurring
+  if (template.recurringPattern) {
+    const pattern = template.recurringPattern;
+    if (pattern.daysOfWeek) {
+      if (!Array.isArray(pattern.daysOfWeek) || pattern.daysOfWeek.some(d => typeof d !== 'number' || d < 0 || d > 6)) {
+        throw new ValidationError('Invalid daysOfWeek in recurring pattern (must be 0-6)');
+      }
+    }
+    if (pattern.dayOfMonth !== undefined) {
+      if (typeof pattern.dayOfMonth !== 'number' || pattern.dayOfMonth < 1 || pattern.dayOfMonth > 31) {
+        throw new ValidationError('Invalid dayOfMonth in recurring pattern (must be 1-31)');
+      }
+    }
+    if (pattern.time !== undefined) {
+      if (typeof pattern.time !== 'string' || !/^\d{2}:\d{2}$/.test(pattern.time)) {
+        throw new ValidationError('Invalid time in recurring pattern (must be HH:MM format)');
+      }
+    }
+  }
+
+  // Validate startDate if provided
+  if (startDate && isNaN(new Date(startDate).getTime())) {
+    throw new ValidationError('Invalid startDate format');
   }
 
   // Create campaign from template
@@ -1096,12 +1205,18 @@ export const archiveCampaign = async (req: Request, res: Response) => {
     throw new NotFoundError('Campaign not found');
   }
 
+  // If campaign is actively running, pause it first
+  const updateData: Record<string, any> = {
+    isArchived: true,
+    archivedAt: new Date(),
+  };
+  if (['ACTIVE', 'SENDING', 'SCHEDULED'].includes(campaign.status)) {
+    updateData.status = 'PAUSED';
+  }
+
   const updatedCampaign = await prisma.campaign.update({
     where: { id },
-    data: {
-      isArchived: true,
-      archivedAt: new Date(),
-    },
+    data: updateData,
     include: {
       user: {
         select: {
@@ -1172,6 +1287,15 @@ export const unarchiveCampaign = async (req: Request, res: Response) => {
 export const getCampaignAnalytics = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { getCampaignMetrics } = await import('../services/campaignAnalytics.service');
+
+  // Verify campaign belongs to user's org
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!campaign) {
+    throw new NotFoundError('Campaign not found');
+  }
 
   try {
     const metrics = await getCampaignMetrics(id);
@@ -1252,7 +1376,7 @@ export const trackConversionEvent = async (req: Request, res: Response) => {
   const { trackConversion } = await import('../services/campaignAnalytics.service');
 
   try {
-    await trackConversion(id, leadId, value);
+    await trackConversion(id, leadId, req.user!.organizationId, value);
 
     res.json({
       success: true,
@@ -1275,6 +1399,15 @@ export const trackConversionEvent = async (req: Request, res: Response) => {
 export const getLinkStats = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { getLinkClickStats } = await import('../services/campaignAnalytics.service');
+
+  // Verify campaign belongs to user's org
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!campaign) {
+    throw new NotFoundError('Campaign not found');
+  }
 
   try {
     const stats = await getLinkClickStats(id);
@@ -1301,6 +1434,15 @@ export const getTimeline = async (req: Request, res: Response) => {
   const { id } = req.params;
   const days = req.query.days ? parseInt(req.query.days as string) : 30;
   const { getCampaignTimeSeries } = await import('../services/campaignAnalytics.service');
+
+  // Verify campaign belongs to user's org
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!campaign) {
+    throw new NotFoundError('Campaign not found');
+  }
 
   try {
     const data = await getCampaignTimeSeries(id, days);
@@ -1335,8 +1477,19 @@ export const compareCampaignsEndpoint = async (req: Request, res: Response) => {
     return;
   }
 
+  // Verify all campaigns belong to the user's org
+  const orgCampaigns = await prisma.campaign.findMany({
+    where: { id: { in: campaignIds }, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  const validIds = orgCampaigns.map(c => c.id);
+  if (validIds.length === 0) {
+    res.status(404).json({ success: false, message: 'No matching campaigns found' });
+    return;
+  }
+
   try {
-    const comparison = await compareCampaigns(campaignIds);
+    const comparison = await compareCampaigns(validIds);
 
     res.json({
       success: true,
@@ -1362,7 +1515,7 @@ export const getTopPerformers = async (req: Request, res: Response) => {
   const { getTopPerformingCampaigns } = await import('../services/campaignAnalytics.service');
 
   try {
-    const topCampaigns = await getTopPerformingCampaigns(limit, metric);
+    const topCampaigns = await getTopPerformingCampaigns(limit, metric, req.user!.organizationId);
 
     res.json({
       success: true,

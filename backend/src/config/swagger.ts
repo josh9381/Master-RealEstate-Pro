@@ -45,6 +45,10 @@ const swaggerDefinition: swaggerJsdoc.SwaggerDefinition = {
     { name: 'Webhooks', description: 'Webhook configuration' },
     { name: 'Export', description: 'Data export' },
     { name: 'Reports', description: 'Saved reports' },
+    { name: 'Audit', description: 'Audit trail logging' },
+    { name: 'Support', description: 'Support ticket management' },
+    { name: 'Subscriptions', description: 'Subscription & plan management' },
+    { name: 'Deliverability', description: 'Email deliverability metrics' },
     { name: 'System', description: 'Health & system information' },
   ],
   components: {
@@ -133,7 +137,7 @@ const swaggerDefinition: swaggerJsdoc.SwaggerDefinition = {
           email: { type: 'string', format: 'email' },
           firstName: { type: 'string' },
           lastName: { type: 'string' },
-          role: { type: 'string', enum: ['ADMIN', 'MANAGER', 'AGENT'] },
+          role: { type: 'string', enum: ['ADMIN', 'MANAGER', 'USER'] },
           organizationId: { type: 'string', format: 'uuid' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
@@ -213,6 +217,7 @@ const swaggerDefinition: swaggerJsdoc.SwaggerDefinition = {
           dueDate: { type: 'string', format: 'date-time', nullable: true },
           leadId: { type: 'string', format: 'uuid', nullable: true },
           assignedToId: { type: 'string', format: 'uuid', nullable: true },
+          createdById: { type: 'string', format: 'uuid', nullable: true },
           organizationId: { type: 'string', format: 'uuid' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
@@ -252,9 +257,14 @@ const swaggerDefinition: swaggerJsdoc.SwaggerDefinition = {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string' },
           description: { type: 'string' },
-          trigger: { type: 'string' },
-          status: { type: 'string', enum: ['ACTIVE', 'PAUSED', 'DRAFT'] },
-          steps: { type: 'array', items: { type: 'object' } },
+          isActive: { type: 'boolean' },
+          triggerType: { type: 'string', enum: ['LEAD_CREATED', 'LEAD_UPDATED', 'STATUS_CHANGED', 'SCORE_CHANGED', 'TAG_ADDED', 'TAG_REMOVED', 'FORM_SUBMITTED', 'APPOINTMENT_SCHEDULED', 'EMAIL_OPENED', 'EMAIL_CLICKED', 'MANUAL'] },
+          triggerData: { type: 'object' },
+          actions: { type: 'array', items: { type: 'object' } },
+          executions: { type: 'integer' },
+          successRate: { type: 'number', nullable: true },
+          lastRunAt: { type: 'string', format: 'date-time', nullable: true },
+          createdById: { type: 'string', format: 'uuid', nullable: true },
           organizationId: { type: 'string', format: 'uuid' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
@@ -271,6 +281,83 @@ const swaggerDefinition: swaggerJsdoc.SwaggerDefinition = {
           leadId: { type: 'string', format: 'uuid', nullable: true },
           userId: { type: 'string', format: 'uuid' },
           metadata: { type: 'object' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+
+      // ─── Tag ──────────────────────────────────────────────────
+      Tag: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          color: { type: 'string', nullable: true },
+          createdById: { type: 'string', format: 'uuid', nullable: true },
+          organizationId: { type: 'string', format: 'uuid' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+
+      // ─── Segment ──────────────────────────────────────────────
+      Segment: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          description: { type: 'string', nullable: true },
+          rules: { type: 'array', items: { type: 'object', properties: { field: { type: 'string' }, operator: { type: 'string' }, value: {} } } },
+          matchType: { type: 'string', enum: ['ALL', 'ANY'] },
+          memberCount: { type: 'integer' },
+          isActive: { type: 'boolean' },
+          color: { type: 'string', nullable: true },
+          createdById: { type: 'string', format: 'uuid', nullable: true },
+          organizationId: { type: 'string', format: 'uuid' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+
+      // ─── Subscription ─────────────────────────────────────────
+      Subscription: {
+        type: 'object',
+        properties: {
+          tier: { type: 'string', enum: ['FREE', 'STARTER', 'PROFESSIONAL', 'ELITE', 'TEAM', 'ENTERPRISE'] },
+          name: { type: 'string' },
+          price: { type: 'number' },
+          billingPeriod: { type: 'string' },
+          isInTrial: { type: 'boolean' },
+          trialDaysRemaining: { type: 'integer', nullable: true },
+          features: { type: 'object' },
+        },
+      },
+
+      // ─── SupportTicket ────────────────────────────────────────
+      SupportTicket: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          subject: { type: 'string' },
+          description: { type: 'string' },
+          status: { type: 'string', enum: ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] },
+          priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] },
+          category: { type: 'string' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+
+      // ─── AuditLog ─────────────────────────────────────────────
+      AuditLog: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          action: { type: 'string' },
+          entityType: { type: 'string' },
+          entityId: { type: 'string', nullable: true },
+          description: { type: 'string' },
+          ipAddress: { type: 'string', nullable: true },
+          userAgent: { type: 'string', nullable: true },
           createdAt: { type: 'string', format: 'date-time' },
         },
       },

@@ -22,8 +22,15 @@ describe('Lead Management Endpoints', () => {
   let testUser: User;
   let testAccessToken: string;
   let createdLeadId: string;
+  let testOrgId: string;
 
   beforeEach(async () => {
+    // Create a test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    });
+    testOrgId = testOrg.id;
+
     // Create a test user
     const hashedPassword = await bcrypt.hash('TestPassword123!', 10);
     testUser = await prisma.user.create({
@@ -33,10 +40,11 @@ describe('Lead Management Endpoints', () => {
         email: `test${Date.now()}@example.com`,
         password: hashedPassword,
         role: 'USER',
+        organizationId: testOrgId,
       },
     });
 
-    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role);
+    testAccessToken = generateAccessToken(testUser.id, testUser.email, testUser.role, testOrgId);
   });
 
   describe('POST /api/leads', () => {
@@ -123,18 +131,22 @@ describe('Lead Management Endpoints', () => {
       await prisma.lead.createMany({
         data: [
           {
-            name: 'Lead 1',
+            firstName: 'Lead',
+            lastName: '1',
             email: `lead1${Date.now()}@example.com`,
             status: 'NEW',
             source: 'website',
             score: 50,
+            organizationId: testOrgId,
           },
           {
-            name: 'Lead 2',
+            firstName: 'Lead',
+            lastName: '2',
             email: `lead2${Date.now()}@example.com`,
             status: 'CONTACTED',
             source: 'referral',
             score: 75,
+            organizationId: testOrgId,
           },
         ],
       });
@@ -189,8 +201,10 @@ describe('Lead Management Endpoints', () => {
     beforeEach(async () => {
       const lead = await prisma.lead.create({
         data: {
-          name: 'Test Lead',
+          firstName: 'Test',
+          lastName: 'Lead',
           email: `testlead${Date.now()}@example.com`,
+          organizationId: testOrgId,
         },
       });
       leadId = lead.id;
@@ -223,9 +237,11 @@ describe('Lead Management Endpoints', () => {
     beforeEach(async () => {
       const lead = await prisma.lead.create({
         data: {
-          name: 'Original Name',
+          firstName: 'Original',
+          lastName: 'Name',
           email: `original${Date.now()}@example.com`,
           status: 'NEW',
+          organizationId: testOrgId,
         },
       });
       leadId = lead.id;
@@ -266,8 +282,10 @@ describe('Lead Management Endpoints', () => {
     beforeEach(async () => {
       const lead = await prisma.lead.create({
         data: {
-          name: 'To Delete',
+          firstName: 'To',
+          lastName: 'Delete',
           email: `delete${Date.now()}@example.com`,
+          organizationId: testOrgId,
         },
       });
       leadId = lead.id;
@@ -302,9 +320,9 @@ describe('Lead Management Endpoints', () => {
       // Create leads with different statuses
       await prisma.lead.createMany({
         data: [
-          { name: 'Lead 1', email: `stat1${Date.now()}@example.com`, status: 'NEW', score: 50, value: 1000 },
-          { name: 'Lead 2', email: `stat2${Date.now()}@example.com`, status: 'CONTACTED', score: 70, value: 2000 },
-          { name: 'Lead 3', email: `stat3${Date.now()}@example.com`, status: 'QUALIFIED', score: 90, value: 3000 },
+          { firstName: 'Lead', lastName: '1', email: `stat1${Date.now()}@example.com`, status: 'NEW', score: 50, value: 1000, organizationId: testOrgId },
+          { firstName: 'Lead', lastName: '2', email: `stat2${Date.now()}@example.com`, status: 'CONTACTED', score: 70, value: 2000, organizationId: testOrgId },
+          { firstName: 'Lead', lastName: '3', email: `stat3${Date.now()}@example.com`, status: 'QUALIFIED', score: 90, value: 3000, organizationId: testOrgId },
         ],
       });
     });
@@ -329,10 +347,10 @@ describe('Lead Management Endpoints', () => {
     beforeEach(async () => {
       const leads = await Promise.all([
         prisma.lead.create({
-          data: { name: 'Bulk 1', email: `bulk1${Date.now()}@example.com`, status: 'NEW' },
+          data: { firstName: 'Bulk', lastName: '1', email: `bulk1${Date.now()}@example.com`, status: 'NEW', organizationId: testOrgId },
         }),
         prisma.lead.create({
-          data: { name: 'Bulk 2', email: `bulk2${Date.now()}@example.com`, status: 'NEW' },
+          data: { firstName: 'Bulk', lastName: '2', email: `bulk2${Date.now()}@example.com`, status: 'NEW', organizationId: testOrgId },
         }),
       ]);
       leadIds = leads.map(l => l.id);
@@ -369,10 +387,10 @@ describe('Lead Management Endpoints', () => {
     beforeEach(async () => {
       const leads = await Promise.all([
         prisma.lead.create({
-          data: { name: 'Delete 1', email: `delete1${Date.now()}@example.com` },
+          data: { firstName: 'Delete', lastName: '1', email: `delete1${Date.now()}@example.com`, organizationId: testOrgId },
         }),
         prisma.lead.create({
-          data: { name: 'Delete 2', email: `delete2${Date.now()}@example.com` },
+          data: { firstName: 'Delete', lastName: '2', email: `delete2${Date.now()}@example.com`, organizationId: testOrgId },
         }),
       ]);
       leadIds = leads.map(l => l.id);

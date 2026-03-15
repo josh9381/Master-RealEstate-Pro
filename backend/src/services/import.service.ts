@@ -5,7 +5,6 @@
  */
 import { parse as csvParse } from 'csv-parse/sync';
 import ExcelJS from 'exceljs';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const vCard = require('vcf');
 import prisma from '../config/database';
 

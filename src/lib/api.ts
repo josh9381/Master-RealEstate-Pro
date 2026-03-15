@@ -361,6 +361,11 @@ export const leadsApi = {
     const response = await api.post('/leads/duplicates/scan', config)
     return response.data
   },
+
+  getStats: async () => {
+    const response = await api.get('/leads/stats')
+    return response.data
+  },
 }
 
 // ============================================================================
@@ -819,7 +824,7 @@ export interface TasksQuery {
   page?: number
   limit?: number
   leadId?: string
-  status?: 'pending' | 'completed' | 'cancelled'
+  status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   priority?: 'low' | 'medium' | 'high'
   assignedToId?: string
   dueDate?: string
@@ -829,7 +834,7 @@ export interface CreateTaskData {
   title: string
   description?: string
   leadId?: string
-  status?: 'pending' | 'completed' | 'cancelled'
+  status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   priority?: 'low' | 'medium' | 'high'
   dueDate?: string
   assignedToId?: string

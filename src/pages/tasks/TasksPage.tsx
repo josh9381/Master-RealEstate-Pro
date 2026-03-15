@@ -75,14 +75,14 @@ export default function TasksPage() {
     queryKey: ['tasks', filter, currentPage, pageSize],
     queryFn: async () => {
       const params: {
-        status?: 'pending' | 'completed' | 'cancelled';
+        status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
         priority?: 'low' | 'medium' | 'high';
         page?: number;
         limit?: number;
       } = { page: currentPage, limit: pageSize }
       
-      if (filter === 'completed') params.status = 'completed'
-      if (filter === 'active') params.status = 'pending'
+      if (filter === 'completed') params.status = 'COMPLETED'
+      if (filter === 'active') params.status = 'PENDING'
       if (filter === 'high') params.priority = 'high'
       
       const response = await tasksApi.getTasks(params)

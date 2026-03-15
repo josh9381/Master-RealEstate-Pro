@@ -78,7 +78,7 @@ const LeadsMerge = () => {
   const queryClient = useQueryClient();
 
   const { data: duplicatesData, isLoading, refetch: loadDuplicates } = useQuery({
-    queryKey: ['lead-duplicates', mergeSettings],
+    queryKey: ['lead-duplicates'],
     queryFn: async () => {
       try {
         const result = await leadsApi.scanDuplicates({
@@ -192,9 +192,9 @@ const LeadsMerge = () => {
             Find and merge duplicate lead records with field-level control
           </p>
         </div>
-        <Button onClick={() => { loadDuplicates(); }} disabled={isLoading}>
+        <Button variant="outline" onClick={() => { loadDuplicates(); }} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Scan for Duplicates
+          Refresh
         </Button>
       </div>
 

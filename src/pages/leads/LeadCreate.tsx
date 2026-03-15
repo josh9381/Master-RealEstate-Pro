@@ -2,19 +2,21 @@ import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Save, User, Building2, Mail, Phone, MapPin, DollarSign, Tag, X } from 'lucide-react'
+import { ArrowLeft, Save, User, Mail, Phone, MapPin, DollarSign, Tag, X, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { leadsApi, usersApi, CreateLeadData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
 import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 export default function LeadCreate() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const showConfirm = useConfirm()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -46,7 +48,8 @@ export default function LeadCreate() {
   })
   const [newTagInput, setNewTagInput] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-
+  const [showRealEstate, setShowRealEstate] = useState(false)
+  const [showAddress, setShowAddress] = useState(false)
   // Fetch team members for assigned-to dropdown
   const { data: teamMembers = [] } = useQuery({
     queryKey: ['team-members'],
@@ -87,6 +90,9 @@ export default function LeadCreate() {
     if (formData.phone && !/^[+]?[\d\s()-]{7,}$/.test(formData.phone)) {
       newErrors.phone = 'Please enter a valid phone number (digits, +, -, (, ), spaces)'
     }
+    if (formData.budgetMin && formData.budgetMax && parseFloat(formData.budgetMin) > parseFloat(formData.budgetMax)) {
+      newErrors.budgetMin = 'Budget minimum cannot exceed budget maximum'
+    }
     return newErrors
   }
 
@@ -98,6 +104,25 @@ export default function LeadCreate() {
     if (Object.keys(newErrors).length > 0) {
       toast.error('Please fix the validation errors')
       return
+    }
+
+    // Check for duplicate email before creating (5.1)
+    if (formData.email) {
+      try {
+        const existing = await leadsApi.getLeads({ search: formData.email, limit: 5 })
+        const duplicates = (existing.data?.leads || existing.data || []).filter(
+          (l: { email?: string }) => l.email?.toLowerCase() === formData.email.toLowerCase()
+        )
+        if (duplicates.length > 0) {
+          const confirmed = await showConfirm({
+            title: 'Possible Duplicate',
+            message: `A lead with email "${formData.email}" already exists. Do you want to create this lead anyway?`,
+          })
+          if (!confirmed) return
+        }
+      } catch {
+        // If check fails, allow creation to proceed
+      }
     }
     
     // Transform formData to match backend expectations
@@ -171,11 +196,11 @@ export default function LeadCreate() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Personal Information */}
+            {/* Card 1: Contact Info (merged Personal + Company) */}
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <User className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Personal Information</h2>
+                <h2 className="text-xl font-semibold">Contact Information</h2>
               </div>
               
               <div className="grid gap-4 sm:grid-cols-2">
@@ -241,19 +266,9 @@ export default function LeadCreate() {
                   </div>
                   {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
                 </div>
-              </div>
-            </Card>
 
-            {/* Company Information */}
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Building2 className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Company Information</h2>
-              </div>
-              
-              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="lead-company" className="text-sm font-medium">Company Name</label>
+                  <label htmlFor="lead-company" className="text-sm font-medium">Company</label>
                   <Input
                     id="lead-company"
                     name="company"
@@ -275,237 +290,263 @@ export default function LeadCreate() {
                     className="mt-1"
                   />
                 </div>
-                
-                <div className="sm:col-span-2">
-                  <label htmlFor="lead-dealValue" className="text-sm font-medium">Deal Value</label>
-                  <div className="relative mt-1">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="lead-dealValue"
-                      type="number"
-                      name="dealValue"
-                      value={formData.dealValue}
-                      onChange={handleInputChange}
-                      placeholder="50000"
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
               </div>
             </Card>
 
-            {/* Address Information */}
+            {/* Card 2: Real Estate Details — collapsible, starts collapsed */}
             <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <MapPin className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Address</h2>
-              </div>
+              <button
+                type="button"
+                className="flex items-center justify-between w-full"
+                onClick={() => setShowRealEstate(!showRealEstate)}
+              >
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold">Real Estate Details</h2>
+                </div>
+                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showRealEstate ? 'rotate-180' : ''}`} />
+              </button>
               
-              <div className="grid gap-4">
-                <div>
-                  <label htmlFor="lead-address" className="text-sm font-medium">Street Address</label>
-                  <Input
-                    id="lead-address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    placeholder="123 Main Street"
-                    className="mt-1"
-                  />
-                </div>
-                
-                <div className="grid gap-4 sm:grid-cols-3">
+              {showRealEstate && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label htmlFor="lead-city" className="text-sm font-medium">City</label>
-                    <Input
-                      id="lead-city"
-                      name="city"
-                      value={formData.city}
+                    <label htmlFor="lead-propertyType" className="text-sm font-medium">Property Type</label>
+                    <select
+                      id="lead-propertyType"
+                      name="propertyType"
+                      value={formData.propertyType}
                       onChange={handleInputChange}
-                      placeholder="New York"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Not specified</option>
+                      <option value="Single Family">Single Family</option>
+                      <option value="Condo">Condo</option>
+                      <option value="Townhouse">Townhouse</option>
+                      <option value="Multi-Family">Multi-Family</option>
+                      <option value="Land">Land</option>
+                      <option value="Commercial">Commercial</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="lead-transactionType" className="text-sm font-medium">Transaction Type</label>
+                    <select
+                      id="lead-transactionType"
+                      name="transactionType"
+                      value={formData.transactionType}
+                      onChange={handleInputChange}
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Not specified</option>
+                      <option value="Buyer">Buyer</option>
+                      <option value="Seller">Seller</option>
+                      <option value="Both">Both (Buy + Sell)</option>
+                      <option value="Investor">Investor</option>
+                      <option value="Renter">Renter</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="lead-budgetMin" className="text-sm font-medium">Budget Min ($)</label>
+                    <input
+                      id="lead-budgetMin"
+                      type="number"
+                      name="budgetMin"
+                      min="0"
+                      value={formData.budgetMin}
+                      onChange={handleInputChange}
+                      onKeyDown={(e) => ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault()}
+                      placeholder="e.g. 200000"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                    {errors.budgetMin && <p className="text-sm text-red-500 mt-1">{errors.budgetMin}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="lead-budgetMax" className="text-sm font-medium">Budget Max ($)</label>
+                    <input
+                      id="lead-budgetMax"
+                      type="number"
+                      name="budgetMax"
+                      min="0"
+                      value={formData.budgetMax}
+                      onChange={handleInputChange}
+                      onKeyDown={(e) => ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault()}
+                      placeholder="e.g. 500000"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lead-preApprovalStatus" className="text-sm font-medium">Pre-Approval Status</label>
+                    <select
+                      id="lead-preApprovalStatus"
+                      name="preApprovalStatus"
+                      value={formData.preApprovalStatus}
+                      onChange={handleInputChange}
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Not specified</option>
+                      <option value="Not Started">Not Started</option>
+                      <option value="In-Process">In-Process</option>
+                      <option value="Pre-Approved">Pre-Approved</option>
+                      <option value="Cash Buyer">Cash Buyer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="lead-moveInTimeline" className="text-sm font-medium">Move-In Timeline</label>
+                    <select
+                      id="lead-moveInTimeline"
+                      name="moveInTimeline"
+                      value={formData.moveInTimeline}
+                      onChange={handleInputChange}
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Not specified</option>
+                      <option value="ASAP">ASAP</option>
+                      <option value="1-3 Months">1-3 Months</option>
+                      <option value="3-6 Months">3-6 Months</option>
+                      <option value="6-12 Months">6-12 Months</option>
+                      <option value="Just Browsing">Just Browsing</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label htmlFor="lead-desiredLocation" className="text-sm font-medium">Desired Location</label>
+                    <input
+                      id="lead-desiredLocation"
+                      type="text"
+                      name="desiredLocation"
+                      value={formData.desiredLocation}
+                      onChange={handleInputChange}
+                      placeholder="City, neighborhood, or zip code"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lead-bedsMin" className="text-sm font-medium">Min Bedrooms</label>
+                    <input
+                      id="lead-bedsMin"
+                      type="number"
+                      name="bedsMin"
+                      value={formData.bedsMin}
+                      onChange={handleInputChange}
+                      min="0"
+                      placeholder="e.g. 3"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lead-bathsMin" className="text-sm font-medium">Min Bathrooms</label>
+                    <input
+                      id="lead-bathsMin"
+                      type="number"
+                      name="bathsMin"
+                      value={formData.bathsMin}
+                      onChange={handleInputChange}
+                      min="0"
+                      placeholder="e.g. 2"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label htmlFor="lead-dealValue" className="text-sm font-medium">Deal Value</label>
+                    <div className="relative mt-1">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="lead-dealValue"
+                        type="number"
+                        name="dealValue"
+                        value={formData.dealValue}
+                        onChange={handleInputChange}
+                        placeholder="50000"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Card 3: Address — collapsible, starts collapsed */}
+            <Card className="p-6">
+              <button
+                type="button"
+                className="flex items-center justify-between w-full"
+                onClick={() => setShowAddress(!showAddress)}
+              >
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold">Address</h2>
+                </div>
+                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showAddress ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showAddress && (
+                <div className="grid gap-4 mt-4">
+                  <div>
+                    <label htmlFor="lead-address" className="text-sm font-medium">Street Address</label>
+                    <Input
+                      id="lead-address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      placeholder="123 Main Street"
                       className="mt-1"
                     />
                   </div>
                   
-                  <div>
-                    <label htmlFor="lead-state" className="text-sm font-medium">State</label>
-                    <Input
-                      id="lead-state"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      placeholder="NY"
-                      className="mt-1"
-                    />
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <label htmlFor="lead-city" className="text-sm font-medium">City</label>
+                      <Input
+                        id="lead-city"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        placeholder="New York"
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="lead-state" className="text-sm font-medium">State</label>
+                      <Input
+                        id="lead-state"
+                        name="state"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        placeholder="NY"
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="lead-zipCode" className="text-sm font-medium">ZIP Code</label>
+                      <Input
+                        id="lead-zipCode"
+                        name="zipCode"
+                        value={formData.zipCode}
+                        onChange={handleInputChange}
+                        placeholder="10001"
+                        className="mt-1"
+                      />
+                    </div>
                   </div>
                   
                   <div>
-                    <label htmlFor="lead-zipCode" className="text-sm font-medium">ZIP Code</label>
+                    <label htmlFor="lead-country" className="text-sm font-medium">Country</label>
                     <Input
-                      id="lead-zipCode"
-                      name="zipCode"
-                      value={formData.zipCode}
+                      id="lead-country"
+                      name="country"
+                      value={formData.country}
                       onChange={handleInputChange}
-                      placeholder="10001"
+                      placeholder="United States"
                       className="mt-1"
                     />
                   </div>
                 </div>
-                
-                <div>
-                  <label htmlFor="lead-country" className="text-sm font-medium">Country</label>
-                  <Input
-                    id="lead-country"
-                    name="country"
-                    value={formData.country}
-                    onChange={handleInputChange}
-                    placeholder="United States"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
+              )}
             </Card>
 
-            {/* Real Estate Details */}
+            {/* Card 4: Notes */}
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Real Estate Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="lead-propertyType" className="text-sm font-medium">Property Type</label>
-                  <select
-                    id="lead-propertyType"
-                    name="propertyType"
-                    value={formData.propertyType}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Not specified</option>
-                    <option value="Single Family">Single Family</option>
-                    <option value="Condo">Condo</option>
-                    <option value="Townhouse">Townhouse</option>
-                    <option value="Multi-Family">Multi-Family</option>
-                    <option value="Land">Land</option>
-                    <option value="Commercial">Commercial</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="lead-transactionType" className="text-sm font-medium">Transaction Type</label>
-                  <select
-                    id="lead-transactionType"
-                    name="transactionType"
-                    value={formData.transactionType}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Not specified</option>
-                    <option value="Buyer">Buyer</option>
-                    <option value="Seller">Seller</option>
-                    <option value="Both">Both (Buy + Sell)</option>
-                    <option value="Investor">Investor</option>
-                    <option value="Renter">Renter</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="lead-budgetMin" className="text-sm font-medium">Budget Min ($)</label>
-                  <input
-                    id="lead-budgetMin"
-                    type="number"
-                    name="budgetMin"
-                    value={formData.budgetMin}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 200000"
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lead-budgetMax" className="text-sm font-medium">Budget Max ($)</label>
-                  <input
-                    id="lead-budgetMax"
-                    type="number"
-                    name="budgetMax"
-                    value={formData.budgetMax}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 500000"
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lead-preApprovalStatus" className="text-sm font-medium">Pre-Approval Status</label>
-                  <select
-                    id="lead-preApprovalStatus"
-                    name="preApprovalStatus"
-                    value={formData.preApprovalStatus}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Not specified</option>
-                    <option value="Not Started">Not Started</option>
-                    <option value="In-Process">In-Process</option>
-                    <option value="Pre-Approved">Pre-Approved</option>
-                    <option value="Cash Buyer">Cash Buyer</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="lead-moveInTimeline" className="text-sm font-medium">Move-In Timeline</label>
-                  <select
-                    id="lead-moveInTimeline"
-                    name="moveInTimeline"
-                    value={formData.moveInTimeline}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Not specified</option>
-                    <option value="ASAP">ASAP</option>
-                    <option value="1-3 Months">1-3 Months</option>
-                    <option value="3-6 Months">3-6 Months</option>
-                    <option value="6-12 Months">6-12 Months</option>
-                    <option value="Just Browsing">Just Browsing</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="lead-desiredLocation" className="text-sm font-medium">Desired Location</label>
-                  <input
-                    id="lead-desiredLocation"
-                    type="text"
-                    name="desiredLocation"
-                    value={formData.desiredLocation}
-                    onChange={handleInputChange}
-                    placeholder="City, neighborhood, or zip code"
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lead-bedsMin" className="text-sm font-medium">Min Bedrooms</label>
-                  <input
-                    id="lead-bedsMin"
-                    type="number"
-                    name="bedsMin"
-                    value={formData.bedsMin}
-                    onChange={handleInputChange}
-                    min="0"
-                    placeholder="e.g. 3"
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lead-bathsMin" className="text-sm font-medium">Min Bathrooms</label>
-                  <input
-                    id="lead-bathsMin"
-                    type="number"
-                    name="bathsMin"
-                    value={formData.bathsMin}
-                    onChange={handleInputChange}
-                    min="0"
-                    placeholder="e.g. 2"
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* Additional Notes */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Additional Notes</h2>
+              <h2 className="text-xl font-semibold mb-4">Notes</h2>
               <label htmlFor="lead-notes" className="sr-only">Notes</label>
               <textarea
                 id="lead-notes"
@@ -516,10 +557,30 @@ export default function LeadCreate() {
                 className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </Card>
+
+            {/* Mobile-only Create/Cancel buttons */}
+            <div className="lg:hidden space-y-3">
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={createMutation.isPending}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {createMutation.isPending ? 'Creating...' : 'Create Lead'}
+              </Button>
+              <Button 
+                type="button"
+                variant="outline" 
+                className="w-full"
+                onClick={() => navigate('/leads')}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
+          {/* Sidebar — sticky */}
+          <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
             {/* Lead Details */}
             <Card className="p-6">
               <h3 className="font-semibold mb-4">Lead Details</h3>
@@ -535,15 +596,34 @@ export default function LeadCreate() {
                     className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                     required
                   >
-                    <option value="website">Website</option>
-                    <option value="referral">Referral</option>
-                    <option value="social">Social Media</option>
-                    <option value="email">Email Campaign</option>
-                    <option value="cold_call">Cold Call</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="event">Event</option>
-                    <option value="partner">Partner</option>
-                    <option value="other">Other</option>
+                    <optgroup label="Referral-based">
+                      <option value="referral">Referral</option>
+                      <option value="past_client">Past Client</option>
+                      <option value="sphere_of_influence">Sphere of Influence</option>
+                    </optgroup>
+                    <optgroup label="Online / Digital">
+                      <option value="website">Website</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="facebook_ads">Facebook Ads</option>
+                      <option value="google_ads">Google Ads</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="social_media">Social Media</option>
+                    </optgroup>
+                    <optgroup label="Traditional / Outbound">
+                      <option value="cold_call">Cold Call</option>
+                      <option value="door_knocking">Door Knocking</option>
+                      <option value="open_house">Open House</option>
+                      <option value="print_ad">Print Ad</option>
+                      <option value="networking_event">Networking Event</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                      <option value="ai_assistant">AI Assistant</option>
+                      <option value="email_campaign">Email Campaign</option>
+                      <option value="event">Event</option>
+                      <option value="partner">Partner</option>
+                      <option value="other">Other / Custom</option>
+                    </optgroup>
                   </select>
                 </div>
                 

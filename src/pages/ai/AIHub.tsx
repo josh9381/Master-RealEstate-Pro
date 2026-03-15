@@ -139,7 +139,7 @@ const AIHub = () => {
           title: rec.title || 'AI-recommended follow-up',
           description: rec.description || `AI Recommendation: ${rec.action}`,
           priority: rec.priority === 'high' || rec.priority === 'critical' ? 'high' : 'medium',
-          status: 'pending',
+          status: 'PENDING',
         })
         toast.success('Follow-up task created from recommendation')
       } else if (action.includes('campaign') || action.includes('schedule')) {

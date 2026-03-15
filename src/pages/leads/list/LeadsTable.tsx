@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -46,13 +47,26 @@ export function LeadsTable({
   onQuickNoteChange, onAddQuickNote, getRecentActivities,
 }: LeadsTableProps) {
   const [showRowMenu, setShowRowMenu] = useState<number | null>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
   const rowMenuRef = useRef<HTMLDivElement>(null)
+
+  const openRowMenu = useCallback((leadId: number, buttonEl: HTMLButtonElement) => {
+    if (showRowMenu === leadId) {
+      setShowRowMenu(null)
+      setMenuPos(null)
+      return
+    }
+    const rect = buttonEl.getBoundingClientRect()
+    setMenuPos({ top: rect.bottom + 4, left: rect.right - 192 }) // 192 = w-48
+    setShowRowMenu(leadId)
+  }, [showRowMenu])
 
   useEffect(() => {
     if (!showRowMenu) return
     const handleClickOutside = (e: MouseEvent) => {
       if (rowMenuRef.current && !rowMenuRef.current.contains(e.target as Node)) {
         setShowRowMenu(null)
+        setMenuPos(null)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -77,6 +91,8 @@ export function LeadsTable({
                 checked={selectedLeads.length === leads.length && leads.length > 0}
                 onChange={onToggleAllSelection}
                 className="rounded"
+                title={`Select all ${leads.length} leads on this page`}
+                aria-label={`Select all ${leads.length} leads on this page`}
               />
             </TableHead>
             <TableHead className="w-12"></TableHead>
@@ -190,7 +206,7 @@ export function LeadsTable({
                       const user = lead.assignedTo as UserObject
                       return `${user.firstName} ${user.lastName}`
                     }
-                    return '-'
+                    return <span className="text-muted-foreground/60 italic">Unassigned</span>
                   })()}
                 </TableCell>
                 <TableCell>
@@ -198,22 +214,24 @@ export function LeadsTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setShowRowMenu(showRowMenu === lead.id ? null : lead.id)}
+                      onClick={(e) => openRowMenu(lead.id, e.currentTarget)}
                       aria-label="Lead actions"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
 
-                    {showRowMenu === lead.id && (
+                    {showRowMenu === lead.id && menuPos && createPortal(
                       <RowMenu
                         ref={rowMenuRef}
                         lead={lead}
+                        style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
                         onEdit={() => { onEditLead(lead); setShowRowMenu(null) }}
                         onDuplicate={() => { onDuplicateLead(lead); setShowRowMenu(null) }}
                         onEmail={() => { onSendEmail(lead.id); setShowRowMenu(null) }}
                         onDelete={() => { onDeleteLead(lead.id); setShowRowMenu(null) }}
-                        onClose={() => setShowRowMenu(null)}
-                      />
+                        onClose={() => { setShowRowMenu(null); setMenuPos(null) }}
+                      />,
+                      document.body
                     )}
                   </div>
                 </TableCell>
@@ -262,7 +280,7 @@ export function LeadsTable({
                                 placeholder="Add a quick note..."
                                 value={quickNote?.text || ''}
                                 onChange={(e) => onQuickNoteChange({ leadId: lead.id, text: e.target.value })}
-                                onKeyPress={(e) => {
+                                onKeyDown={(e) => {
                                   if (e.key === 'Enter') onAddQuickNote(lead.id)
                                 }}
                                 autoFocus
@@ -303,6 +321,7 @@ export function LeadsTable({
 
 interface RowMenuProps {
   lead: Lead
+  style?: React.CSSProperties
   onEdit: () => void
   onDuplicate: () => void
   onEmail: () => void
@@ -311,11 +330,12 @@ interface RowMenuProps {
 }
 
 export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
-  ({ lead, onEdit, onDuplicate, onEmail, onDelete, onClose }, ref) => {
+  ({ lead, style, onEdit, onDuplicate, onEmail, onDelete, onClose }, ref) => {
     return (
       <div
         ref={ref}
-        className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border z-50"
+        className="w-48 bg-white rounded-md shadow-lg border"
+        style={style || { position: 'absolute', right: 0, marginTop: 4, zIndex: 50 }}
         role="menu"
         aria-label="Lead actions"
         onKeyDown={(e: React.KeyboardEvent) => {

@@ -473,12 +473,14 @@ export async function compareCampaigns(
  */
 export async function getTopPerformingCampaigns(
   limit = 10,
-  metric: 'openRate' | 'clickRate' | 'conversionRate' = 'conversionRate'
+  metric: 'openRate' | 'clickRate' | 'conversionRate' = 'conversionRate',
+  organizationId?: string
 ): Promise<Array<{ campaign: { id: string; name: string }; metrics: CampaignMetrics }>> {
   const campaigns = await prisma.campaign.findMany({
     where: {
       status: { in: ['ACTIVE', 'COMPLETED'] },
       sent: { gt: 0 },
+      ...(organizationId ? { organizationId } : {}),
     },
     select: {
       id: true,

@@ -150,7 +150,7 @@ const IntelligenceInsights = () => {
           title: `Address at-risk leads: ${insight.title}`,
           description: insight.description || `AI Insight: ${insight.action}`,
           priority: 'high',
-          status: 'pending',
+          status: 'PENDING',
         })
         toast.success('Task created to address at-risk leads')
         navigate('/tasks')
@@ -160,7 +160,7 @@ const IntelligenceInsights = () => {
           title: `Follow up on opportunity: ${insight.title}`,
           description: insight.description || `AI Insight: ${insight.action}`,
           priority: 'medium',
-          status: 'pending',
+          status: 'PENDING',
         })
         toast.success('Follow-up task created')
         navigate('/tasks')
@@ -172,7 +172,7 @@ const IntelligenceInsights = () => {
           title: insight.title || 'AI-recommended action',
           description: insight.description || `AI Insight: ${insight.action}`,
           priority: 'medium',
-          status: 'pending',
+          status: 'PENDING',
         })
         toast.success('Task created from insight')
         navigate('/tasks')

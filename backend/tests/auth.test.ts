@@ -17,8 +17,15 @@ const prisma = new PrismaClient();
 describe('Authentication Endpoints', () => {
   let testUser: any;
   let testUserPassword = 'password123';
+  let testOrgId: string;
 
   beforeEach(async () => {
+    // Create a test organization
+    const testOrg = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    });
+    testOrgId = testOrg.id;
+
     // Create a test user before each test
     const hashedPassword = await bcrypt.hash(testUserPassword, 10);
     testUser = await prisma.user.create({
@@ -27,7 +34,8 @@ describe('Authentication Endpoints', () => {
         lastName: 'User',
         email: 'test@example.com',
         password: hashedPassword,
-        role: 'USER'
+        role: 'USER',
+        organizationId: testOrgId,
       }
     });
   });

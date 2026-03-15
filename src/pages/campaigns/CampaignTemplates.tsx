@@ -1,9 +1,10 @@
 import { logger } from '@/lib/logger'
-import { FileText, RefreshCw } from 'lucide-react';
+import { FileText, RefreshCw, Mail, MessageSquare, Phone, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog';
 import { useState, useMemo } from 'react';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
@@ -33,6 +34,8 @@ interface CampaignTemplate {
 const CampaignTemplates = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<CampaignTemplate | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -67,8 +70,7 @@ const CampaignTemplates = () => {
         filtered = filtered.filter(t => t.isRecurring);
       } else {
         filtered = filtered.filter(t => 
-          t.type === selectedCategory.toUpperCase() || 
-          t.category === selectedCategory
+          t.category.toLowerCase() === selectedCategory.toLowerCase()
         );
       }
     }
@@ -87,7 +89,9 @@ const CampaignTemplates = () => {
   }, [templates, selectedCategory, searchQuery]);
 
   const handleUseTemplate = async (templateId: string) => {
+    if (creatingTemplateId) return; // Prevent double-click
     try {
+      setCreatingTemplateId(templateId);
       const template = templates.find(t => t.id === templateId);
       if (!template) return;
 
@@ -108,6 +112,8 @@ const CampaignTemplates = () => {
     } catch (error) {
       logger.error('Error creating campaign from template:', error);
       toast.error('Failed to create campaign from template');
+    } finally {
+      setCreatingTemplateId(null);
     }
   };
 
@@ -134,8 +140,8 @@ const CampaignTemplates = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Templates</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -145,40 +151,44 @@ const CampaignTemplates = () => {
             <p className="text-xs text-muted-foreground">Ready to use</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Email</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <Mail className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.email}</div>
             <p className="text-xs text-muted-foreground">Email campaigns</p>
           </CardContent>
         </Card>
-        <Card>
+        {stats.sms > 0 && (
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">SMS</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <MessageSquare className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.sms}</div>
             <p className="text-xs text-muted-foreground">Text messages</p>
           </CardContent>
         </Card>
-        <Card>
+        )}
+        {stats.phone > 0 && (
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Phone</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <Phone className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.phone}</div>
             <p className="text-xs text-muted-foreground">Call scripts</p>
           </CardContent>
         </Card>
-        <Card>
+        )}
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recurring</CardTitle>
-            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+            <RefreshCw className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.recurring}</div>
@@ -258,18 +268,31 @@ const CampaignTemplates = () => {
                 </div>
                 {template.subject && (
                   <div className="text-xs text-muted-foreground mb-4 p-2 bg-muted rounded">
-                    <span className="font-medium">Subject:</span> {template.subject.substring(0, 50)}...
+                    <span className="font-medium">Subject:</span> {template.subject.length > 50 ? `${template.subject.substring(0, 50)}…` : template.subject}
                   </div>
                 )}
                 <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setPreviewTemplate(template)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview
+                  </Button>
                   <Button 
                     variant="default" 
                     size="sm" 
                     className="flex-1" 
                     onClick={() => handleUseTemplate(template.id)}
+                    disabled={creatingTemplateId === template.id}
                   >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Use Template
+                    {creatingTemplateId === template.id ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileText className="h-4 w-4 mr-2" />
+                    )}
+                    {creatingTemplateId === template.id ? 'Creating...' : 'Use Template'}
                   </Button>
                 </div>
               </CardContent>
@@ -278,6 +301,71 @@ const CampaignTemplates = () => {
         </div>
       )}
 
+      {/* Template Preview Dialog */}
+      <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{previewTemplate?.icon}</span>
+              <div>
+                <DialogTitle>{previewTemplate?.name}</DialogTitle>
+                <DialogDescription>{previewTemplate?.description}</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          {previewTemplate && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{previewTemplate.type}</Badge>
+                <Badge variant="secondary">{previewTemplate.category}</Badge>
+                {previewTemplate.isRecurring && (
+                  <Badge variant="secondary">
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    {previewTemplate.frequency}
+                  </Badge>
+                )}
+              </div>
+              {previewTemplate.subject && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Subject</p>
+                  <div className="p-3 bg-muted rounded-md text-sm">{previewTemplate.subject}</div>
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Body</p>
+                <pre className="p-4 bg-muted rounded-md text-sm whitespace-pre-wrap font-sans leading-relaxed max-h-[40vh] overflow-y-auto">
+                  {previewTemplate.body}
+                </pre>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Tags</p>
+                <div className="flex flex-wrap gap-1">
+                  {previewTemplate.tags.map((tag, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">{tag}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewTemplate(null)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (previewTemplate) {
+                  handleUseTemplate(previewTemplate.id);
+                  setPreviewTemplate(null);
+                }
+              }}
+              disabled={!!creatingTemplateId}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Use Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

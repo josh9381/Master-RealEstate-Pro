@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { deleteUploadFile, getUploadUrl } from '../config/upload';
 import { logger } from '../lib/logger';
+import { logActivity } from '../utils/activityLogger';
 
 const MAX_DOCUMENTS_PER_LEAD = 20;
 
@@ -59,6 +60,14 @@ export async function uploadDocuments(req: Request, res: Response) {
   );
 
   logger.info(`${documents.length} document(s) uploaded for lead ${leadId} by user ${userId}`);
+
+  logActivity({
+    type: 'DOCUMENT_UPLOADED',
+    title: `${documents.length} document(s) uploaded`,
+    leadId,
+    userId,
+    organizationId,
+  });
 
   res.status(201).json({
     success: true,
@@ -127,6 +136,14 @@ export async function deleteDocument(req: Request, res: Response) {
   await prisma.leadDocument.delete({ where: { id: documentId } });
 
   logger.info(`Document ${documentId} deleted from lead ${leadId}`);
+
+  logActivity({
+    type: 'DOCUMENT_DELETED',
+    title: `Document deleted: ${doc.filename}`,
+    leadId,
+    userId: (req as any).user!.id,
+    organizationId,
+  });
 
   res.json({ success: true, message: 'Document deleted' });
 }

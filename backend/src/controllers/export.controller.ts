@@ -1,14 +1,29 @@
 import { Request, Response } from 'express'
 import { logger } from '../lib/logger'
 import { exportToResponse, ExportOptions } from '../services/export.service'
+import prisma from '../config/database'
 
 export const exportData = async (req: Request, res: Response) => {
   try {
     const { type } = req.params
     const organizationId = req.user?.organizationId
+    const userId = req.user?.userId
 
-    if (!organizationId) {
+    if (!organizationId || !userId) {
       return res.status(400).json({ success: false, message: 'Organization required' })
+    }
+
+    // Check export permission
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    })
+
+    if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to export data',
+      })
     }
 
     const validTypes = ['leads', 'campaigns', 'activities']

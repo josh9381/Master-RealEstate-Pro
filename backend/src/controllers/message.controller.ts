@@ -167,7 +167,7 @@ export const getMessages = async (req: Request, res: Response) => {
   const threads = Array.from(threadMap.values()).map(thread => {
     // Sort messages within each thread by timestamp (oldest first, like iMessage)
     thread.messages.sort((a: { createdAt: string }, b: { createdAt: string }) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     )
     // Calculate total unread count for the thread (only INBOUND messages that haven't been read)
     thread.unread = thread.messages.filter((m: { unread?: boolean }) => m.unread).length

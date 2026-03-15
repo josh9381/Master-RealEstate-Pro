@@ -1,9 +1,10 @@
 import { getErrorMessage } from '../utils/errors'
 import { logger } from '../lib/logger'
+import { logActivity } from '../utils/activityLogger'
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/errorHandler';
-import type { LeadStatus } from '@prisma/client';
+import type { LeadStatus, Prisma } from '@prisma/client';
 import { workflowTriggerService } from '../services/workflow-trigger.service';
 import { updateLeadScore, updateMultipleLeadScores, updateAllLeadScores, getScoreCategory, getLeadsByScoreCategory } from '../services/leadScoring.service';
 import { getLeadsFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
@@ -62,8 +63,22 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
   // Build additional filters
   const additionalWhere: Record<string, any> = {};
   
-  if (status) additionalWhere.status = status as LeadStatus;
-  if (source) additionalWhere.source = source;
+  if (status) {
+    const statusStr = String(status);
+    if (statusStr.includes(',')) {
+      additionalWhere.status = { in: statusStr.split(',').map(s => s.trim()) as LeadStatus[] };
+    } else {
+      additionalWhere.status = status as LeadStatus;
+    }
+  }
+  if (source) {
+    const sourceStr = String(source);
+    if (sourceStr.includes(',')) {
+      additionalWhere.source = { in: sourceStr.split(',').map(s => s.trim()) };
+    } else {
+      additionalWhere.source = source;
+    }
+  }
   if (assignedToId) additionalWhere.assignedToId = assignedToId;
   
   // Score filtering
@@ -448,7 +463,7 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
   });
 
   // Log activity for significant changes
-  const activityData: Record<string, any>[] = [];
+  const activityData: Prisma.ActivityCreateManyInput[] = [];
 
   if (updates.status && updates.status !== existingLead.status) {
     activityData.push({
@@ -482,12 +497,14 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
 
   if (updates.assignedToId && updates.assignedToId !== existingLead.assignedToId) {
     activityData.push({
-      type: 'LEAD_ASSIGNED',
-      title: 'Lead reassigned',
+      organizationId: req.user!.organizationId,
+      type: existingLead.assignedToId ? 'LEAD_REASSIGNED' : 'LEAD_ASSIGNED',
+      title: existingLead.assignedToId ? 'Lead reassigned' : 'Lead assigned',
       description: `Lead assigned to ${lead.assignedTo?.firstName} ${lead.assignedTo?.lastName}`,
       leadId: lead.id,
       userId: req.user!.userId,
       metadata: {
+        oldAssignedToId: existingLead.assignedToId,
         assignedToId: updates.assignedToId,
       },
     });
@@ -675,6 +692,11 @@ export async function getLeadStats(req: Request, res: Response): Promise<void> {
     avgScore,
     totalValue,
     recentLeads,
+    sourceCounts,
+    scoreHigh,
+    scoreMedHigh,
+    scoreMed,
+    scoreMedLow,
   ] = await Promise.all([
     // Total leads
     prisma.lead.count({ where }),
@@ -711,7 +733,22 @@ export async function getLeadStats(req: Request, res: Response): Promise<void> {
         },
       },
     }),
+
+    // Count by source (for charts)
+    prisma.lead.groupBy({
+      by: ['source'],
+      where,
+      _count: true,
+    }),
+
+    // Score distribution buckets
+    prisma.lead.count({ where: { ...where, score: { gte: 91 } } }),
+    prisma.lead.count({ where: { ...where, score: { gte: 81, lt: 91 } } }),
+    prisma.lead.count({ where: { ...where, score: { gte: 71, lt: 81 } } }),
+    prisma.lead.count({ where: { ...where, score: { gte: 60, lt: 71 } } }),
   ]);
+
+  const scoreLow = total - scoreHigh - scoreMedHigh - scoreMed - scoreMedLow;
 
   const stats = {
     total,
@@ -722,6 +759,17 @@ export async function getLeadStats(req: Request, res: Response): Promise<void> {
     averageScore: avgScore._avg.score || 0,
     totalValue: totalValue._sum.value || 0,
     recentLeads,
+    bySource: sourceCounts.reduce((acc, curr) => {
+      acc[curr.source ?? 'Unknown'] = curr._count;
+      return acc;
+    }, {} as Record<string, number>),
+    scoreDistribution: [
+      { range: '0-59', count: scoreLow },
+      { range: '60-70', count: scoreMedLow },
+      { range: '71-80', count: scoreMed },
+      { range: '81-90', count: scoreMedHigh },
+      { range: '91-100', count: scoreHigh },
+    ],
   };
 
   res.status(200).json({
@@ -1075,6 +1123,14 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
 
   if (imported > 0) {
     pushLeadUpdate(organizationId, { type: 'imported', count: imported });
+    logActivity({
+      type: 'LEAD_IMPORTED',
+      title: 'Leads imported',
+      description: `${imported} leads imported from file (${skipped} skipped)`,
+      userId: req.user!.userId,
+      organizationId,
+      metadata: { imported, skipped, total: records.length },
+    });
   }
 
   res.json({
@@ -1419,6 +1475,17 @@ export async function mergeLeads(req: Request, res: Response): Promise<void> {
         pipeline: { select: { id: true, name: true } },
         pipelineStage: { select: { id: true, name: true } },
       },
+    });
+
+    // Log merge activity
+    logActivity({
+      type: 'LEAD_MERGED',
+      title: 'Leads merged',
+      description: `${secondaryLeadIds.length} lead(s) merged into ${primaryLead.firstName} ${primaryLead.lastName}`,
+      leadId: primaryLeadId,
+      userId: req.user!.userId,
+      organizationId: orgId,
+      metadata: { secondaryLeadIds, fieldsUpdated: Object.keys(updateData) },
     });
 
     res.json({ success: true, data: merged });

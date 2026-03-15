@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const createEmailTemplateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name too long'),
   subject: z.string().min(1, 'Subject is required').max(300, 'Subject too long'),
-  body: z.string().min(1, 'Body is required'),
+  body: z.string().min(1, 'Body is required').max(500000, 'Body too large (max 500KB)'),
   category: z.string().optional(),
   isActive: z.boolean().optional().default(true),
   variables: z.record(z.string(), z.string()).optional(),
@@ -18,7 +18,7 @@ export const createEmailTemplateSchema = z.object({
 export const updateEmailTemplateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   subject: z.string().min(1).max(300).optional(),
-  body: z.string().min(1).optional(),
+  body: z.string().min(1).max(500000, 'Body too large (max 500KB)').optional(),
   category: z.string().optional(),
   isActive: z.boolean().optional(),
   variables: z.record(z.string(), z.string()).optional(),

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/errorHandler';
+import { logActivity } from '../utils/activityLogger';
 
 /**
  * Get all tags
@@ -270,6 +271,14 @@ export const addTagsToLead = async (req: Request, res: Response) => {
     },
   });
 
+  logActivity({
+    type: 'TAG_ADDED',
+    title: `${newTagIds.length} tag(s) added to lead`,
+    leadId,
+    userId: req.user!.userId,
+    organizationId: req.user!.organizationId,
+  });
+
   res.json({
     success: true,
     data: { leads: updatedLead },
@@ -314,6 +323,14 @@ export const removeTagFromLead = async (req: Request, res: Response) => {
     include: {
       tags: true,
     },
+  });
+
+  logActivity({
+    type: 'TAG_REMOVED',
+    title: 'Tag removed from lead',
+    leadId,
+    userId: req.user!.userId,
+    organizationId: req.user!.organizationId,
   });
 
   res.json({

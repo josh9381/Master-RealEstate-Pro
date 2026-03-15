@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import DOMPurify from 'dompurify'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
-import { Edit, Pause, Trash2, X, Copy, ShieldCheck, AlertTriangle, ShieldAlert, ChevronDown, ChevronUp, Users } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog'
+import { Edit, Pause, Trash2, Copy, ShieldCheck, AlertTriangle, ShieldAlert, ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, analyticsApi, deliverabilityApi, CreateCampaignData } from '@/lib/api'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
@@ -58,8 +60,8 @@ function CampaignDetail() {
       return {
         id,
         name: 'Loading...',
-        type: 'email' as 'email' | 'sms' | 'phone' | 'social',
-        status: 'draft' as 'active' | 'paused' | 'completed' | 'draft' | 'scheduled',
+        type: 'EMAIL' as string,
+        status: 'DRAFT' as string,
         sent: 0,
         opened: 0,
         clicked: 0,
@@ -76,9 +78,9 @@ function CampaignDetail() {
 
     return {
       ...campaignResponse,
-      opened: campaignResponse.opened || campaignResponse.opens || 0,
-      clicked: campaignResponse.clicked || campaignResponse.clicks || 0,
-      converted: campaignResponse.converted || campaignResponse.conversions || 0,
+      opened: campaignResponse.opened ?? campaignResponse.opens ?? 0,
+      clicked: campaignResponse.clicked ?? campaignResponse.clicks ?? 0,
+      converted: campaignResponse.converted ?? campaignResponse.conversions ?? 0,
       fullContent: campaignResponse.body || campaignResponse.content || campaignResponse.fullContent || '',
     }
   }, [campaignResponse, id])
@@ -117,16 +119,16 @@ function CampaignDetail() {
   })
 
   // Derive chart data from campaign metrics + real analytics
-  const hasSentData = (campaignData.sent || 0) > 0 || (analyticsData?.sent || 0) > 0
+  const hasSentData = (campaignData.sent ?? 0) > 0 || (analyticsData?.sent ?? 0) > 0
 
   const performanceData = useMemo(() => {
     // Use real timeline data from the campaign analytics API
     if (timelineData && Array.isArray(timelineData) && timelineData.length > 0) {
       return timelineData.map((d: TimelineDataPoint) => ({
         date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        sent: d.sent || 0,
-        opened: d.opened || 0,
-        clicked: d.clicked || 0,
+        sent: d.sent ?? 0,
+        opened: d.opened ?? 0,
+        clicked: d.clicked ?? 0,
       }))
     }
     return []
@@ -134,12 +136,12 @@ function CampaignDetail() {
 
   const funnelData = useMemo(() => {
     // Prefer analytics data over campaign field data
-    const sent = analyticsData?.sent || campaignData.sent || 0
+    const sent = analyticsData?.sent ?? campaignData.sent ?? 0
     if (sent === 0) return []
-    const delivered = analyticsData?.delivered || campaignData.delivered || 0
-    const opened = analyticsData?.opened || campaignData.opened || 0
-    const clicked = analyticsData?.clicked || campaignData.clicked || 0
-    const converted = analyticsData?.converted || campaignData.converted || 0
+    const delivered = analyticsData?.delivered ?? campaignData.delivered ?? 0
+    const opened = analyticsData?.opened ?? campaignData.opened ?? 0
+    const clicked = analyticsData?.clicked ?? campaignData.clicked ?? 0
+    const converted = analyticsData?.converted ?? campaignData.converted ?? 0
     return [
       { stage: 'Sent', count: sent, percentage: 100 },
       { stage: 'Delivered', count: delivered, percentage: sent > 0 ? Math.round((delivered / sent) * 100) : 0 },
@@ -164,20 +166,18 @@ function CampaignDetail() {
     if (hourlyResponse?.hourly && Array.isArray(hourlyResponse.hourly)) {
       return hourlyResponse.hourly.map((h: HourlyEngagementEntry) => ({
         hour: h.label,
-        opens: h.opens || 0,
-        clicks: h.clicks || 0,
+        opens: h.opens ?? 0,
+        clicks: h.clicks ?? 0,
       }))
     }
     return []
   }, [hourlyResponse])
 
   const deviceData = useMemo((): { name: string; value: number; color: string }[] => {
-    // Phase 8.9: Fetch real device breakdown from analytics API
     return []
   }, [])
 
   const geoData = useMemo((): { location: string; opens: number; clicks: number; conversions: number }[] => {
-    // Phase 8.9: Fetch real geographic data from analytics API
     return []
   }, [])
 
@@ -230,7 +230,7 @@ function CampaignDetail() {
     if (campaignResponse) {
       setEditForm(campaignData)
     }
-  }, [campaignResponse])
+  }, [campaignResponse, campaignData])
 
   // Update campaign mutation
   const updateCampaignMutation = useMutation({
@@ -280,11 +280,6 @@ function CampaignDetail() {
     updateCampaignMutation.mutate({ status: newStatus })
   }
 
-  const handleEditClick = () => {
-    setEditForm({ ...campaignData })
-    setShowEditModal(true)
-  }
-
   const handleSaveEdit = () => {
     if (!editForm.name?.trim()) {
       toast.error('Campaign name is required')
@@ -295,8 +290,12 @@ function CampaignDetail() {
         toast.error('Email subject is required')
         return
       }
+      if (!(editForm.fullContent?.trim() || editForm.content?.trim())) {
+        toast.error('Email body content is required')
+        return
+      }
     }
-    if (editForm.startDate && new Date(editForm.startDate) < new Date()) {
+    if (editForm.startDate && new Date(editForm.startDate) < new Date() && !['ACTIVE', 'COMPLETED', 'SENDING'].includes((editForm.status || '').toUpperCase())) {
       toast.error('Start date must be in the future')
       return
     }
@@ -393,7 +392,7 @@ function CampaignDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleEditClick}>
+          <Button variant="outline" onClick={() => navigate(`/campaigns/${id}/edit`)}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
@@ -417,48 +416,62 @@ function CampaignDetail() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
               Sent
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(campaign.sent || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(campaign.sent ?? 0).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Total messages</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
               Opened
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(campaign.opened || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(campaign.opened ?? 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{openRate}% open rate</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
               Clicked
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(campaign.clicked || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(campaign.clicked ?? 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{clickRate}% click rate</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
               Converted
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(campaign.converted || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(campaign.converted ?? 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">{conversionRate}% conversion</p>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Unsubscribed
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(campaign.unsubscribed ?? 0).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              {campaign.sent ? ((campaign.unsubscribed ?? 0) / campaign.sent * 100).toFixed(1) : '0'}% unsub rate
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -466,9 +479,9 @@ function CampaignDetail() {
       {/* Deliverability Stats */}
       {deliverabilityData && (
         <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Delivery Rate
               </CardTitle>
@@ -478,9 +491,9 @@ function CampaignDetail() {
               <p className="text-xs text-muted-foreground">{(deliverabilityData.delivered ?? 0).toLocaleString()} of {(deliverabilityData.sent ?? 0).toLocaleString()} delivered</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Bounce Rate
               </CardTitle>
@@ -488,15 +501,16 @@ function CampaignDetail() {
             <CardContent>
               <div className={`text-2xl font-bold ${(deliverabilityData.bounceRate ?? 0) > 5 ? 'text-red-600' : 'text-muted-foreground'}`}>
                 {deliverabilityData.bounceRate ?? 0}%
+                {(deliverabilityData.bounceRate ?? 0) > 5 && <span className="text-sm ml-1">(High)</span>}
               </div>
               <p className="text-xs text-muted-foreground">
                 {(deliverabilityData.hardBounces ?? 0)} hard / {(deliverabilityData.softBounces ?? 0)} soft
               </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 <ShieldAlert className="h-3.5 w-3.5" />
                 Spam Complaints
               </CardTitle>
@@ -520,9 +534,9 @@ function CampaignDetail() {
       )}
 
       {/* Performance Chart */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
-          <CardTitle>Performance Over Time</CardTitle>
+          <CardTitle className="text-lg">Performance Over Time</CardTitle>
         </CardHeader>
         <CardContent>
           {hasSentData ? (
@@ -548,9 +562,9 @@ function CampaignDetail() {
       {/* Enhanced Performance Dashboard */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Conversion Funnel */}
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>Conversion Funnel</CardTitle>
+            <CardTitle className="text-lg">Conversion Funnel</CardTitle>
           </CardHeader>
           <CardContent>
             {funnelData.length > 0 ? (
@@ -584,9 +598,9 @@ function CampaignDetail() {
         </Card>
 
         {/* Device Breakdown */}
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>Device Breakdown</CardTitle>
+            <CardTitle className="text-lg">Device Breakdown</CardTitle>
           </CardHeader>
           <CardContent>
             {realDeviceData.length > 0 ? (
@@ -634,9 +648,9 @@ function CampaignDetail() {
         </Card>
 
         {/* Engagement by Time of Day */}
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>Engagement by Time of Day</CardTitle>
+            <CardTitle className="text-lg">Engagement by Time of Day</CardTitle>
           </CardHeader>
           <CardContent>
             {hourlyEngagementData.length > 0 ? (
@@ -660,9 +674,9 @@ function CampaignDetail() {
         </Card>
 
         {/* Geographic Distribution */}
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>Top Performing Locations</CardTitle>
+            <CardTitle className="text-lg">Top Performing Locations</CardTitle>
           </CardHeader>
           <CardContent>
             {realGeoData.length > 0 ? (
@@ -722,9 +736,9 @@ function CampaignDetail() {
       {campaignData?.isABTest && <ABTestResultsSection campaignId={id!} />}
 
       {/* Additional Performance Metrics */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
-          <CardTitle>Key Performance Indicators</CardTitle>
+          <CardTitle className="text-lg">Key Performance Indicators</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 md:grid-cols-3">
@@ -733,14 +747,14 @@ function CampaignDetail() {
                 Open Rate
               </div>
               <div className="text-2xl font-bold">{openRate}%</div>
-              <div className="text-xs text-muted-foreground">{campaign.opened?.toLocaleString() || 0} of {campaign.sent?.toLocaleString() || 0} opened</div>
+              <div className="text-xs text-muted-foreground">{(campaign.opened ?? 0).toLocaleString()} of {(campaign.sent ?? 0).toLocaleString()} opened</div>
             </div>
             <div className="space-y-2">
               <div className="text-sm font-medium text-muted-foreground">
                 Click-Through Rate
               </div>
               <div className="text-2xl font-bold">{clickRate}%</div>
-              <div className="text-xs text-muted-foreground">{campaign.clicked?.toLocaleString() || 0} clicks</div>
+              <div className="text-xs text-muted-foreground">{(campaign.clicked ?? 0).toLocaleString()} clicks</div>
             </div>
             <div className="space-y-2">
               <div className="text-sm font-medium text-muted-foreground">
@@ -756,9 +770,9 @@ function CampaignDetail() {
       </Card>
 
       {/* Campaign Content Preview */}
-      <Card>
+      <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
-          <CardTitle>Campaign Content</CardTitle>
+          <CardTitle className="text-lg">Campaign Content</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border p-6 bg-muted/30">
@@ -775,248 +789,220 @@ function CampaignDetail() {
       <RecipientActivitySection campaignId={id || ''} />
 
       {/* Full Content Modal */}
-      {showContentModal && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="content-modal-title"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowContentModal(false) }}
-          onKeyDown={(e) => { if (e.key === 'Escape') setShowContentModal(false) }}
-        >
-          <div className="bg-background rounded-lg p-6 max-w-4xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto" ref={(el) => { if (el) el.focus() }} tabIndex={-1}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 id="content-modal-title" className="text-xl font-semibold">Full Campaign Content</h3>
-              <button
-                onClick={() => setShowContentModal(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <Dialog open={showContentModal} onOpenChange={setShowContentModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Full Campaign Content</DialogTitle>
+          </DialogHeader>
 
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              <div className="bg-white dark:bg-gray-900 p-8 rounded-lg border">
+          <div className="prose prose-sm max-w-none dark:prose-invert">
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-lg border">
+              {(campaign.type || '').toUpperCase() === 'EMAIL' ? (
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.fullContent || campaign.body || '<p>No content available</p>') }} />
+              ) : (
                 <div className="whitespace-pre-wrap">{campaign.fullContent || campaign.body || 'No content available'}</div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setShowContentModal(false)}
-              >
-                Close
-              </Button>
-              <Button onClick={() => {
-                setShowContentModal(false)
-                setShowEditModal(true)
-              }}>
-                Edit Content
-              </Button>
+              )}
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowContentModal(false)}
+            >
+              Close
+            </Button>
+            <Button onClick={() => {
+              setShowContentModal(false)
+              setShowEditModal(true)
+            }}>
+              Edit Content
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Modal */}
-      {showEditModal && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-modal-title"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false) }}
-          onKeyDown={(e) => { if (e.key === 'Escape') setShowEditModal(false) }}
-        >
-          <div className="bg-background rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto" ref={(el) => { if (el) el.focus() }} tabIndex={-1}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 id="edit-modal-title" className="text-xl font-semibold">Edit Campaign</h3>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Campaign</DialogTitle>
+          </DialogHeader>
 
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div>
-                <h4 className="text-sm font-semibold mb-3">Basic Information</h4>
-                <div className="grid gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Campaign Name</label>
-                    <Input
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      placeholder="Enter campaign name"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Type</label>
-                      <select
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        value={editForm.type}
-                        onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL' })}
-                      >
-                        <option value="EMAIL">Email</option>
-                        <option value="SMS">SMS</option>
-                        <option value="PHONE">Phone</option>
-                        <option value="SOCIAL">Social Media</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Status</label>
-                      <select
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        value={editForm.status}
-                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'DRAFT' | 'SCHEDULED' })}
-                      >
-                        <option value="ACTIVE">Active</option>
-                        <option value="PAUSED">Paused</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="DRAFT">Draft</option>
-                        <option value="SCHEDULED">Scheduled</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Start Date</label>
-                      <Input
-                        type="date"
-                        value={editForm.startDate}
-                        onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">End Date</label>
-                      <Input
-                        type="date"
-                        value={editForm.endDate}
-                        onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
-                      />
-                    </div>
-                  </div>
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Basic Information</h4>
+              <div className="grid gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Campaign Name</label>
+                  <Input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    placeholder="Enter campaign name"
+                  />
                 </div>
-              </div>
-
-              {/* Budget */}
-              <div>
-                <h4 className="text-sm font-semibold mb-3">Budget</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Total Budget</label>
-                    <Input
-                      type="number"
-                      value={editForm.budget}
-                      onChange={(e) => setEditForm({ ...editForm, budget: Number(e.target.value) })}
-                      placeholder="Enter budget"
-                    />
+                    <label className="block text-sm font-medium mb-2">Type</label>
+                    <select
+                      className="w-full rounded-md border border-input bg-background px-3 py-2"
+                      value={editForm.type}
+                      onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'EMAIL' | 'SMS' | 'PHONE' })}
+                    >
+                      <option value="EMAIL">Email</option>
+                      <option value="SMS">SMS</option>
+                      <option value="PHONE">Phone</option>
+                    </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Amount Spent</label>
-                    <Input
-                      type="number"
-                      value={editForm.spent}
-                      onChange={(e) => setEditForm({ ...editForm, spent: Number(e.target.value) })}
-                      placeholder="Enter amount spent"
-                    />
+                    <label className="block text-sm font-medium mb-2">Status</label>
+                    {(() => {
+                      const validTransitions: Record<string, string[]> = {
+                        DRAFT: ['SCHEDULED', 'ACTIVE'],
+                        SCHEDULED: ['DRAFT', 'ACTIVE', 'CANCELLED'],
+                        ACTIVE: ['PAUSED', 'COMPLETED', 'CANCELLED'],
+                        PAUSED: ['ACTIVE', 'COMPLETED', 'CANCELLED', 'DRAFT'],
+                        SENDING: ['ACTIVE', 'PAUSED', 'CANCELLED', 'DRAFT'],
+                        COMPLETED: ['DRAFT'],
+                        CANCELLED: ['DRAFT'],
+                      };
+                      const currentStatus = (campaignData.status || 'DRAFT').toUpperCase();
+                      const options = [currentStatus, ...(validTransitions[currentStatus] || [])];
+                      return (
+                        <select
+                          className="w-full rounded-md border border-input bg-background px-3 py-2"
+                          value={editForm.status}
+                          onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
+                        >
+                          {options.map(s => (
+                            <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>
+                          ))}
+                        </select>
+                      );
+                    })()}
                   </div>
                 </div>
-              </div>
-
-              {/* Content */}
-              <div>
-                <h4 className="text-sm font-semibold mb-3">Campaign Content</h4>
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Subject/Title</label>
+                    <label className="block text-sm font-medium mb-2">Start Date</label>
                     <Input
-                      value={editForm.subject}
-                      onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
-                      placeholder="Enter subject or title"
+                      type="date"
+                      value={editForm.startDate}
+                      onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Preview Content</label>
-                    <textarea
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[100px]"
-                      value={editForm.content}
-                      onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
-                      placeholder="Enter preview content"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Full Content (HTML)</label>
-                    <textarea
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[200px] font-mono text-sm"
-                      value={editForm.fullContent}
-                      onChange={(e) => setEditForm({ ...editForm, fullContent: e.target.value })}
-                      placeholder="Enter full HTML content"
+                    <label className="block text-sm font-medium mb-2">End Date</label>
+                    <Input
+                      type="date"
+                      value={editForm.endDate}
+                      onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3 justify-end mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setShowEditModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSaveEdit}>
-                Save Changes
-              </Button>
+            {/* Budget */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Budget</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Total Budget</label>
+                  <Input
+                    type="number"
+                    value={editForm.budget}
+                    onChange={(e) => setEditForm({ ...editForm, budget: Number(e.target.value) })}
+                    placeholder="Enter budget"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Amount Spent</label>
+                  <Input
+                    type="number"
+                    value={editForm.spent}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                    title="Spent amount is tracked automatically"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Campaign Content</h4>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Subject/Title</label>
+                  <Input
+                    value={editForm.subject}
+                    onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                    placeholder="Enter subject or title"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Preview Content</label>
+                  <textarea
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[100px]"
+                    value={editForm.content}
+                    onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+                    placeholder="Enter preview content"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Full Content (HTML)</label>
+                  <textarea
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[200px] font-mono text-sm"
+                    value={editForm.fullContent}
+                    onChange={(e) => setEditForm({ ...editForm, fullContent: e.target.value })}
+                    placeholder="Enter full HTML content"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-modal-title"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}
-          onKeyDown={(e) => { if (e.key === 'Escape') setShowDeleteModal(false) }}
-        >
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" ref={(el) => { if (el) el.focus() }} tabIndex={-1}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 id="delete-modal-title" className="text-lg font-semibold text-red-600">Delete Campaign</h3>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-sm text-muted-foreground mb-6">
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle><span className="text-red-600">Delete Campaign</span></DialogTitle>
+            <DialogDescription>
               Are you sure you want to delete "{campaign.name}"? This action cannot be undone and all campaign data will be permanently removed.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-              >
-                Delete Campaign
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+            >
+              Delete Campaign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1180,17 +1166,21 @@ function RecipientActivitySection({ campaignId }: { campaignId: string }) {
   })
 
   const recipients = data?.data?.recipients || []
-  const total = data?.data?.total || 0
+  const total = data?.data?.total ?? 0
   const totalPages = data?.data?.totalPages || 1
   const statusSummary = data?.data?.statusSummary || {}
 
   const formatDate = (d: string | null) => d ? new Date(d).toLocaleString() : '—'
 
   return (
-    <Card>
+    <Card className="hover:shadow-lg transition-shadow">
       <CardHeader
         className="cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded) } }}
+        aria-expanded={expanded}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -1198,7 +1188,7 @@ function RecipientActivitySection({ campaignId }: { campaignId: string }) {
             <CardTitle>Per-Recipient Activity</CardTitle>
             {total > 0 && <Badge variant="secondary">{total} recipients</Badge>}
           </div>
-          {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          {expanded ? <ChevronUp className="h-5 w-5" aria-hidden="true" /> : <ChevronDown className="h-5 w-5" aria-hidden="true" />}
         </div>
       </CardHeader>
       {expanded && (
@@ -1212,7 +1202,7 @@ function RecipientActivitySection({ campaignId }: { campaignId: string }) {
               All
             </button>
             {Object.entries(STATUS_BADGES).map(([key, { label }]) => {
-              const count = statusSummary[key] || 0
+              const count = statusSummary[key] ?? 0
               if (count === 0 && !statusFilter) return null
               return (
                 <button

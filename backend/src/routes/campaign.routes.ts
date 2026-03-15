@@ -37,6 +37,7 @@ import {
   campaignIdSchema,
   listCampaignsQuerySchema,
   updateCampaignMetricsSchema,
+  sendCampaignSchema,
 } from '../validators/campaign.validator';
 import { sensitiveLimiter } from '../middleware/rateLimiter';
 import { compileEmailBlocks } from '../utils/mjmlCompiler';
@@ -200,7 +201,7 @@ router.get('/:id/execution-status', validateParams(campaignIdSchema), asyncHandl
   }
 
   // Check if SENDGRID_API_KEY or TWILIO env vars are configured
-  const isMockMode = !process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === '';
+  const isMockMode = !process.env.SENDGRID_API_KEY?.trim();
 
   res.json({
     success: true,
@@ -228,17 +229,29 @@ router.get('/:id/execution-status', validateParams(campaignIdSchema), asyncHandl
  */
 router.post('/:id/recipients', validateParams(campaignIdSchema), asyncHandler(async (req: any, res: any) => {
   const { leadIds } = req.body;
+  if (!Array.isArray(leadIds) || leadIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'leadIds must be a non-empty array' });
+  }
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id, organizationId: req.user!.organizationId }
   });
   if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
 
-  const currentCount = campaign.audience || 0;
-  await prisma.campaign.update({
-    where: { id: req.params.id },
-    data: { audience: currentCount + (leadIds?.length || 0) }
+  // Verify leads belong to the same org and filter out duplicates
+  const existingLeads = await prisma.campaignLead.findMany({
+    where: { campaignId: req.params.id, leadId: { in: leadIds } },
+    select: { leadId: true },
   });
-  res.json({ success: true, data: { added: leadIds.length } });
+  const existingSet = new Set(existingLeads.map(l => l.leadId));
+  const newLeadIds = leadIds.filter((id: string) => !existingSet.has(id));
+
+  if (newLeadIds.length > 0) {
+    await prisma.campaign.update({
+      where: { id: req.params.id },
+      data: { audience: { increment: newLeadIds.length } }
+    });
+  }
+  res.json({ success: true, data: { added: newLeadIds.length, duplicatesSkipped: leadIds.length - newLeadIds.length } });
 }));
 
 /**
@@ -308,6 +321,7 @@ router.patch(
 router.post(
   '/:id/pause',
   validateParams(campaignIdSchema),
+  sensitiveLimiter,
   asyncHandler(pauseCampaign)
 );
 
@@ -330,6 +344,8 @@ router.get(
 router.post(
   '/:id/send',
   validateParams(campaignIdSchema),
+  validateBody(sendCampaignSchema),
+  sensitiveLimiter,
   asyncHandler(sendCampaign)
 );
 
@@ -341,6 +357,7 @@ router.post(
 router.post(
   '/:id/send-now',
   validateParams(campaignIdSchema),
+  sensitiveLimiter,
   asyncHandler(sendCampaignNow)
 );
 
@@ -363,6 +380,7 @@ router.patch(
 router.post(
   '/:id/duplicate',
   validateParams(campaignIdSchema),
+  sensitiveLimiter,
   asyncHandler(duplicateCampaign)
 );
 
@@ -374,6 +392,7 @@ router.post(
 router.post(
   '/:id/archive',
   validateParams(campaignIdSchema),
+  sensitiveLimiter,
   asyncHandler(archiveCampaign)
 );
 
@@ -385,6 +404,7 @@ router.post(
 router.post(
   '/:id/unarchive',
   validateParams(campaignIdSchema),
+  sensitiveLimiter,
   asyncHandler(unarchiveCampaign)
 );
 
@@ -429,6 +449,7 @@ router.get(
 router.post(
   '/:id/track/open',
   validateParams(campaignIdSchema),
+  sensitiveLimiter,
   asyncHandler(trackOpen)
 );
 
@@ -440,6 +461,7 @@ router.post(
 router.post(
   '/:id/track/click',
   validateParams(campaignIdSchema),
+  sensitiveLimiter,
   asyncHandler(trackClick)
 );
 
@@ -451,6 +473,7 @@ router.post(
 router.post(
   '/:id/track/conversion',
   validateParams(campaignIdSchema),
+  sensitiveLimiter,
   asyncHandler(trackConversionEvent)
 );
 
