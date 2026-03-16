@@ -38,6 +38,15 @@ import {
   listCampaignsQuerySchema,
   updateCampaignMetricsSchema,
   sendCampaignSchema,
+  trackOpenSchema,
+  trackClickSchema,
+  trackConversionSchema,
+  compileEmailSchema,
+  fromTemplateSchema,
+  rescheduleSchema,
+  duplicateSchema,
+  compareCampaignsSchema,
+  addRecipientsSchema,
 } from '../validators/campaign.validator';
 import { sensitiveLimiter } from '../middleware/rateLimiter';
 import { compileEmailBlocks } from '../utils/mjmlCompiler';
@@ -61,11 +70,8 @@ router.get('/stats', asyncHandler(getCampaignStats));
  * @desc    Compile email blocks JSON to final HTML via MJML (for preview)
  * @access  Private
  */
-router.post('/compile-email', asyncHandler(async (req, res) => {
+router.post('/compile-email', validateBody(compileEmailSchema), asyncHandler(async (req, res) => {
   const { content, subject, previewText } = req.body;
-  if (!content) {
-    return res.status(400).json({ error: 'content is required' });
-  }
   const result = compileEmailBlocks(content);
   res.json({
     html: result.html,
@@ -80,7 +86,7 @@ router.post('/compile-email', asyncHandler(async (req, res) => {
  * @desc    Upload email attachments for a campaign (max 5 files, 10MB each)
  * @access  Private
  */
-router.post('/upload-attachments', attachmentUpload, asyncHandler(async (req: any, res) => {
+router.post('/upload-attachments', attachmentUpload, asyncHandler(async (req: Request, res) => {
   const files = req.files as Express.Multer.File[];
   if (!files || files.length === 0) {
     return res.status(400).json({ error: 'No files uploaded' });
@@ -114,7 +120,7 @@ router.get('/templates/:templateId', asyncHandler(getCampaignTemplate));
  * @desc    Create a campaign from a template
  * @access  Private
  */
-router.post('/from-template/:templateId', asyncHandler(createCampaignFromTemplate));
+router.post('/from-template/:templateId', validateBody(fromTemplateSchema), asyncHandler(createCampaignFromTemplate));
 
 /**
  * @route   GET /api/campaigns/top-performers
@@ -128,14 +134,14 @@ router.get('/top-performers', asyncHandler(getTopPerformers));
  * @desc    Compare multiple campaigns
  * @access  Private
  */
-router.post('/compare', asyncHandler(compareCampaignsEndpoint));
+router.post('/compare', validateBody(compareCampaignsSchema), asyncHandler(compareCampaignsEndpoint));
 
 /**
  * @route   GET /api/campaigns/:id/stats
  * @desc    Get per-campaign statistics
  * @access  Private
  */
-router.get('/:id/stats', validateParams(campaignIdSchema), asyncHandler(async (req: any, res: any) => {
+router.get('/:id/stats', validateParams(campaignIdSchema), asyncHandler(async (req: Request, res: Response) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id, organizationId: req.user!.organizationId }
   });
@@ -160,7 +166,7 @@ router.get('/:id/stats', validateParams(campaignIdSchema), asyncHandler(async (r
  * @desc    Get real-time campaign execution progress
  * @access  Private
  */
-router.get('/:id/execution-status', validateParams(campaignIdSchema), asyncHandler(async (req: any, res: any) => {
+router.get('/:id/execution-status', validateParams(campaignIdSchema), asyncHandler(async (req: Request, res: Response) => {
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id, organizationId: req.user!.organizationId },
     select: {
@@ -227,23 +233,31 @@ router.get('/:id/execution-status', validateParams(campaignIdSchema), asyncHandl
  * @desc    Add recipients to a campaign
  * @access  Private
  */
-router.post('/:id/recipients', validateParams(campaignIdSchema), asyncHandler(async (req: any, res: any) => {
+router.post('/:id/recipients', validateParams(campaignIdSchema), validateBody(addRecipientsSchema), asyncHandler(async (req: Request, res: Response) => {
   const { leadIds } = req.body;
-  if (!Array.isArray(leadIds) || leadIds.length === 0) {
-    return res.status(400).json({ success: false, message: 'leadIds must be a non-empty array' });
-  }
   const campaign = await prisma.campaign.findFirst({
     where: { id: req.params.id, organizationId: req.user!.organizationId }
   });
   if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
 
-  // Verify leads belong to the same org and filter out duplicates
+  // Verify ALL leadIds belong to the same organization
+  const orgLeads = await prisma.lead.findMany({
+    where: { id: { in: leadIds }, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  const orgLeadSet = new Set(orgLeads.map(l => l.id));
+  const validLeadIds = leadIds.filter((id: string) => orgLeadSet.has(id));
+  if (validLeadIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'No valid leads found in your organization' });
+  }
+
+  // Filter out duplicates already in campaign
   const existingLeads = await prisma.campaignLead.findMany({
-    where: { campaignId: req.params.id, leadId: { in: leadIds } },
+    where: { campaignId: req.params.id, leadId: { in: validLeadIds } },
     select: { leadId: true },
   });
   const existingSet = new Set(existingLeads.map(l => l.leadId));
-  const newLeadIds = leadIds.filter((id: string) => !existingSet.has(id));
+  const newLeadIds = validLeadIds.filter((id: string) => !existingSet.has(id));
 
   if (newLeadIds.length > 0) {
     await prisma.campaign.update({
@@ -251,7 +265,8 @@ router.post('/:id/recipients', validateParams(campaignIdSchema), asyncHandler(as
       data: { audience: { increment: newLeadIds.length } }
     });
   }
-  res.json({ success: true, data: { added: newLeadIds.length, duplicatesSkipped: leadIds.length - newLeadIds.length } });
+  const rejected = leadIds.length - validLeadIds.length;
+  res.json({ success: true, data: { added: newLeadIds.length, duplicatesSkipped: validLeadIds.length - newLeadIds.length, rejectedInvalidOrg: rejected } });
 }));
 
 /**
@@ -369,6 +384,7 @@ router.post(
 router.patch(
   '/:id/reschedule',
   validateParams(campaignIdSchema),
+  validateBody(rescheduleSchema),
   asyncHandler(rescheduleCampaign)
 );
 
@@ -380,6 +396,7 @@ router.patch(
 router.post(
   '/:id/duplicate',
   validateParams(campaignIdSchema),
+  validateBody(duplicateSchema),
   sensitiveLimiter,
   asyncHandler(duplicateCampaign)
 );
@@ -449,6 +466,7 @@ router.get(
 router.post(
   '/:id/track/open',
   validateParams(campaignIdSchema),
+  validateBody(trackOpenSchema),
   sensitiveLimiter,
   asyncHandler(trackOpen)
 );
@@ -461,6 +479,7 @@ router.post(
 router.post(
   '/:id/track/click',
   validateParams(campaignIdSchema),
+  validateBody(trackClickSchema),
   sensitiveLimiter,
   asyncHandler(trackClick)
 );
@@ -473,6 +492,7 @@ router.post(
 router.post(
   '/:id/track/conversion',
   validateParams(campaignIdSchema),
+  validateBody(trackConversionSchema),
   sensitiveLimiter,
   asyncHandler(trackConversionEvent)
 );
@@ -488,14 +508,14 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { page = '1', limit = '50', status } = req.query;
-    const orgId = (req as any).user?.organizationId;
+    const orgId = req.user?.organizationId;
+    if (!orgId) return res.status(403).json({ success: false, message: 'Organization required' });
 
     const pageNum = Math.max(1, parseInt(page as string, 10));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10)));
     const skip = (pageNum - 1) * limitNum;
 
-    const where: any = { campaignId: id };
-    if (orgId) where.organizationId = orgId;
+    const where: Record<string, unknown> = { campaignId: id, organizationId: orgId };
     if (status && typeof status === 'string') where.status = status;
 
     const [recipients, total] = await Promise.all([
@@ -522,7 +542,7 @@ router.get(
     // Status summary counts
     const statusCounts = await prisma.campaignLead.groupBy({
       by: ['status'],
-      where: { campaignId: id, ...(orgId ? { organizationId: orgId } : {}) },
+      where: { campaignId: id, organizationId: orgId },
       _count: { status: true },
     });
 
@@ -534,7 +554,7 @@ router.get(
         page: pageNum,
         limit: limitNum,
         totalPages: Math.ceil(total / limitNum),
-        statusSummary: statusCounts.reduce((acc: any, s: any) => {
+        statusSummary: statusCounts.reduce((acc: Record<string, number>, s: { status: string; _count: { status: number } }) => {
           acc[s.status] = s._count.status;
           return acc;
         }, {}),
@@ -553,11 +573,12 @@ router.get(
   validateParams(campaignIdSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const orgId = (req as any).user?.organizationId;
+    const orgId = req.user?.organizationId;
+    if (!orgId) return res.status(403).json({ success: false, message: 'Organization required' });
 
     // Find the ABTest linked to this campaign via ABTestResult
     const abTestResult = await prisma.aBTestResult.findFirst({
-      where: { campaignId: id, ...(orgId ? { organizationId: orgId } : {}) },
+      where: { campaignId: id, organizationId: orgId },
       select: { testId: true },
     });
 

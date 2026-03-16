@@ -50,6 +50,8 @@ export interface ABTest {
   variantB: ABTestVariant;
   participantCount: number;
   winnerId: string | null;
+  winnerVariant: string | null;
+  winnerMetric: string | null;
   confidence: number | null;
   startDate: string | null;
   endDate: string | null;
@@ -71,7 +73,7 @@ export interface ABTest {
  */
 export async function createABTest(data: CreateABTestInput): Promise<ABTest> {
   const response = await api.post('/ab-tests', data);
-  return response.data;
+  return response.data?.data ?? response.data;
 }
 
 /**
@@ -79,7 +81,7 @@ export async function createABTest(data: CreateABTestInput): Promise<ABTest> {
  */
 export async function getABTests(): Promise<ABTest[]> {
   const response = await api.get('/ab-tests');
-  return response.data;
+  return response.data?.data ?? response.data;
 }
 
 /**
@@ -87,7 +89,7 @@ export async function getABTests(): Promise<ABTest[]> {
  */
 export async function getABTest(testId: string): Promise<ABTest> {
   const response = await api.get(`/ab-tests/${testId}`);
-  return response.data;
+  return response.data?.data ?? response.data;
 }
 
 /**
@@ -101,7 +103,7 @@ export async function getABTestResults(testId: string): Promise<{
   analysis: StatisticalAnalysis;
 }> {
   const response = await api.get(`/ab-tests/${testId}/results`);
-  return response.data;
+  return response.data?.data ?? response.data;
 }
 
 /**
@@ -109,7 +111,7 @@ export async function getABTestResults(testId: string): Promise<{
  */
 export async function startABTest(testId: string): Promise<ABTest> {
   const response = await api.post(`/ab-tests/${testId}/start`);
-  return response.data;
+  return response.data?.data ?? response.data;
 }
 
 /**
@@ -117,7 +119,7 @@ export async function startABTest(testId: string): Promise<ABTest> {
  */
 export async function pauseABTest(testId: string): Promise<ABTest> {
   const response = await api.post(`/ab-tests/${testId}/pause`);
-  return response.data;
+  return response.data?.data ?? response.data;
 }
 
 /**
@@ -125,7 +127,7 @@ export async function pauseABTest(testId: string): Promise<ABTest> {
  */
 export async function stopABTest(testId: string): Promise<ABTest> {
   const response = await api.post(`/ab-tests/${testId}/stop`);
-  return response.data;
+  return response.data?.data ?? response.data;
 }
 
 /**

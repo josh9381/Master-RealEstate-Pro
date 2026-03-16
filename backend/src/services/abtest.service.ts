@@ -14,6 +14,7 @@ interface CreateTestInput {
   createdBy: string;
   variantA: Prisma.InputJsonValue;
   variantB: Prisma.InputJsonValue;
+  confidenceLevel?: number;
 }
 
 interface TestResult {
@@ -47,6 +48,7 @@ export class ABTestService {
         variantA: input.variantA,
         variantB: input.variantB,
         status: ABTestStatus.DRAFT,
+        confidence: input.confidenceLevel ?? 95,
       },
       include: {
         organization: true,
@@ -56,14 +58,16 @@ export class ABTestService {
   }
 
   /**
-   * Start an A/B test
+   * Start an A/B test (or resume a paused test)
    */
   async startTest(testId: string) {
+    const test = await prisma.aBTest.findUnique({ where: { id: testId }, select: { startDate: true } });
     return prisma.aBTest.update({
       where: { id: testId },
       data: {
         status: ABTestStatus.RUNNING,
-        startDate: new Date(),
+        // Only set startDate on first start, preserve it on resume
+        ...(!test?.startDate ? { startDate: new Date() } : {}),
       },
     });
   }
@@ -82,14 +86,17 @@ export class ABTestService {
    * Stop/complete an A/B test
    */
   async stopTest(testId: string) {
-    const analysis = await this.analyzeTest(testId);
+    const test = await prisma.aBTest.findUnique({ where: { id: testId }, select: { confidence: true } });
+    const threshold = test?.confidence ?? 95;
+    const analysis = await this.analyzeTest(testId, threshold);
     
     return prisma.aBTest.update({
       where: { id: testId },
       data: {
         status: ABTestStatus.COMPLETED,
         endDate: new Date(),
-        winnerId: analysis.winner,
+        winnerVariant: analysis.winner,
+        winnerMetric: 'conversion_rate',
         confidence: analysis.confidence,
       },
     });
@@ -238,7 +245,7 @@ export class ABTestService {
    * Analyze test and determine winner using statistical significance
    * Uses Chi-square test for proportions
    */
-  async analyzeTest(testId: string): Promise<StatisticalSignificance> {
+  async analyzeTest(testId: string, confidenceLevel: number = 95): Promise<StatisticalSignificance> {
     const { variantA, variantB } = await this.getTestResults(testId);
 
     // Need at least 30 participants per variant for statistical validity
@@ -280,8 +287,9 @@ export class ABTestService {
     // Calculate p-value (two-tailed test)
     const pValue = 2 * (1 - this.normalCDF(zScore));
 
-    // Determine significance (p < 0.05 for 95% confidence)
-    const isSignificant = pValue < 0.05;
+    // Determine significance using user-configured confidence level
+    const pThreshold = 1 - (confidenceLevel / 100);
+    const isSignificant = pValue < pThreshold;
     const confidence = (1 - pValue) * 100;
 
     // Determine winner

@@ -275,9 +275,14 @@ function CampaignsList() {
         )
       )
     )
-    const failed = results.filter(r => r.status === 'rejected').length
-    if (failed > 0) {
-      toast.error(`Failed to update ${failed} of ${selectedCampaigns.length} campaigns`)
+    const failedIndices = results
+      .map((r, i) => r.status === 'rejected' ? i : -1)
+      .filter(i => i >= 0)
+    if (failedIndices.length > 0) {
+      const failedNames = failedIndices
+        .map(i => campaigns.find(c => c.id === String(selectedCampaigns[i]))?.name || selectedCampaigns[i])
+        .join(', ')
+      toast.error(`Failed to update ${failedIndices.length} campaign(s): ${failedNames}`)
     }
     queryClient.invalidateQueries({ queryKey: ['campaigns'] })
 
@@ -293,9 +298,14 @@ function CampaignsList() {
         campaignsApi.deleteCampaign(String(campaignId))
       )
     )
-    const failed = results.filter(r => r.status === 'rejected').length
-    if (failed > 0) {
-      toast.error(`Failed to delete ${failed} of ${selectedCampaigns.length} campaigns`)
+    const failedIndices = results
+      .map((r, i) => r.status === 'rejected' ? i : -1)
+      .filter(i => i >= 0)
+    if (failedIndices.length > 0) {
+      const failedNames = failedIndices
+        .map(i => campaigns.find(c => c.id === String(selectedCampaigns[i]))?.name || selectedCampaigns[i])
+        .join(', ')
+      toast.error(`Failed to delete ${failedIndices.length} campaign(s): ${failedNames}`)
     }
     queryClient.invalidateQueries({ queryKey: ['campaigns'] })
 

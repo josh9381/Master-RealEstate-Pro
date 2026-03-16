@@ -1304,6 +1304,7 @@ enum ActivityType {
   LEAD_IMPORTED
   CAMPAIGN_LAUNCHED
   CAMPAIGN_COMPLETED
+  CAMPAIGN_CONVERTED
 }
 
 enum AppointmentStatus {

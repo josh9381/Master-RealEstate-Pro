@@ -172,7 +172,10 @@ function OverviewTab() {
         </Card>
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Conversion Rate
+              <HelpTooltip text="Percentage of recipients who completed a desired action (e.g. signed up, purchased). A good conversion rate is 1–3%." />
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -486,6 +489,7 @@ function DetailedReportsTab() {
           <CardDescription>Delivery, open, and click trends</CardDescription>
         </CardHeader>
         <CardContent>
+          {performanceData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={performanceData}>
               <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
@@ -499,6 +503,11 @@ function DetailedReportsTab() {
               <Line type="monotone" dataKey="clicked" stroke="#8b5cf6" name="Clicked" />
             </LineChart>
           </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              No campaign performance data yet
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -641,7 +650,7 @@ function DetailedReportsTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {campaigns
+              {[...campaigns]
                 .sort((a, b) => (b.delivered > 0 ? b.opened / b.delivered : 0) - (a.delivered > 0 ? a.opened / a.delivered : 0))
                 .slice(0, 3)
                 .map((item, index) => (
@@ -669,7 +678,7 @@ function DetailedReportsTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {campaigns
+              {[...campaigns]
                 .sort((a, b) => (b.opened > 0 ? b.clicked / b.opened : 0) - (a.opened > 0 ? a.clicked / a.opened : 0))
                 .slice(0, 3)
                 .map((item, index) => (

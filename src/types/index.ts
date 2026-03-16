@@ -336,6 +336,8 @@ export interface EnrichedCampaign {
   spent?: number
   converted?: number
   conversions?: number
+  roi?: number
+  budget?: number
 }
 
 // Activity from API

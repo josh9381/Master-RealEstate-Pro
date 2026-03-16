@@ -35,10 +35,10 @@ async function processDeferredSendTimeOptimization() {
     // Group by campaign and filter by scheduledSendAt
     const campaignGroups = new Map<string, string[]>();
     for (const cl of pendingLeads) {
-      const meta = cl.metadata as any;
+      const meta = cl.metadata as Record<string, unknown> | null;
       if (!meta?.scheduledSendAt) continue;
       
-      const scheduledAt = new Date(meta.scheduledSendAt);
+      const scheduledAt = new Date(meta.scheduledSendAt as string);
       if (scheduledAt > now) continue; // Not yet time
       
       if (!campaignGroups.has(cl.campaignId)) campaignGroups.set(cl.campaignId, []);
@@ -68,7 +68,7 @@ async function processDeferredSendTimeOptimization() {
 function calculateNextSendDate(
   lastSentAt: Date,
   frequency: string,
-  recurringPattern: any
+  recurringPattern: Record<string, unknown> | null
 ): Date | null {
   const next = new Date(lastSentAt);
   
@@ -77,7 +77,7 @@ function calculateNextSendDate(
       // Send every day at the specified time
       next.setDate(next.getDate() + 1);
       if (recurringPattern?.time) {
-        const [hours, minutes] = recurringPattern.time.split(':');
+        const [hours, minutes] = (recurringPattern.time as string).split(':');
         next.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       }
       break;
@@ -86,7 +86,7 @@ function calculateNextSendDate(
       // Send on specific days of the week
       if (recurringPattern?.daysOfWeek && Array.isArray(recurringPattern.daysOfWeek)) {
         const currentDay = next.getDay();
-        const daysOfWeek = recurringPattern.daysOfWeek.sort((a: number, b: number) => a - b);
+        const daysOfWeek = (recurringPattern.daysOfWeek as number[]).sort((a: number, b: number) => a - b);
         
         // Find the next day of week
         let nextDay = daysOfWeek.find((day: number) => day > currentDay);
@@ -102,7 +102,7 @@ function calculateNextSendDate(
         }
         
         if (recurringPattern?.time) {
-          const [hours, minutes] = recurringPattern.time.split(':');
+          const [hours, minutes] = (recurringPattern.time as string).split(':');
           next.setHours(parseInt(hours), parseInt(minutes), 0, 0);
         }
       } else {
@@ -115,10 +115,10 @@ function calculateNextSendDate(
       // Send on a specific day of the month
       if (recurringPattern?.dayOfMonth) {
         next.setMonth(next.getMonth() + 1);
-        next.setDate(Math.min(recurringPattern.dayOfMonth, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
+        next.setDate(Math.min(recurringPattern.dayOfMonth as number, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
         
         if (recurringPattern?.time) {
-          const [hours, minutes] = recurringPattern.time.split(':');
+          const [hours, minutes] = (recurringPattern.time as string).split(':');
           next.setHours(parseInt(hours), parseInt(minutes), 0, 0);
         }
       } else {
@@ -209,12 +209,25 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
           `campaign: ${campaign.name} (ID: ${campaign.id})`
         );
         
-        // Set status to SENDING before execution to prevent duplicate sends
-        // if execution takes longer than the scheduler interval (1 minute)
-        await prisma.campaign.update({
-          where: { id: campaign.id },
+        // Atomically claim this campaign by setting status to SENDING.
+        // Uses optimistic concurrency control: both status AND updatedAt must match
+        // the values we read. If another scheduler instance modified this campaign
+        // between our SELECT and this UPDATE, updatedAt will differ and claim fails.
+        const claimed = await prisma.campaign.updateMany({
+          where: { 
+            id: campaign.id,
+            status: campaign.status,
+            updatedAt: campaign.updatedAt,
+          },
           data: { status: 'SENDING' },
         });
+
+        if (claimed.count === 0) {
+          logger.info(
+            `[CAMPAIGN SCHEDULER] Campaign "${campaign.name}" already claimed by another process, skipping`
+          );
+          continue;
+        }
 
         // Execute the campaign
         const result = await executeCampaign({
@@ -269,6 +282,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
                 await prisma.campaign.update({
                   where: { id: campaign.id },
                   data: {
+                    status: 'ACTIVE',
                     occurrenceCount: newOccurrenceCount,
                     lastSentAt: now,
                     nextSendAt,

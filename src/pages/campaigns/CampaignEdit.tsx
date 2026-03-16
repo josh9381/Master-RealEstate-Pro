@@ -29,7 +29,7 @@ function CampaignEdit() {
     spent: 0,
     isABTest: false,
     abTestData: null as Record<string, unknown> | null,
-    abTestWinnerMetric: 'openRate' as string,
+    abTestWinnerMetric: 'open_rate' as string,
     abTestEvalHours: 24,
     isRecurring: false,
     frequency: '' as string,
@@ -66,7 +66,7 @@ function CampaignEdit() {
         spent: campaignResponse.spent || 0,
         isABTest: campaignResponse.isABTest || false,
         abTestData: campaignResponse.abTestData || null,
-        abTestWinnerMetric: campaignResponse.abTestWinnerMetric || 'openRate',
+        abTestWinnerMetric: campaignResponse.abTestWinnerMetric || 'open_rate',
         abTestEvalHours: campaignResponse.abTestEvalHours || 24,
         isRecurring: campaignResponse.isRecurring || false,
         frequency: campaignResponse.frequency || '',
@@ -113,8 +113,12 @@ function CampaignEdit() {
       budget: editForm.budget != null ? editForm.budget : undefined,
       isABTest: editForm.isABTest,
       abTestData: editForm.abTestData || undefined,
+      abTestWinnerMetric: editForm.isABTest ? editForm.abTestWinnerMetric : undefined,
+      abTestEvalHours: editForm.isABTest ? editForm.abTestEvalHours : undefined,
       isRecurring: editForm.isRecurring,
       frequency: editForm.frequency ? editForm.frequency as 'daily' | 'weekly' | 'monthly' : undefined,
+      recurringPattern: editForm.isRecurring && editForm.recurringPattern ? editForm.recurringPattern : undefined,
+      maxOccurrences: editForm.isRecurring && editForm.maxOccurrences > 0 ? editForm.maxOccurrences : undefined,
       sendTimeOptimization: editForm.sendTimeOptimization !== 'none' ? editForm.sendTimeOptimization : undefined,
     } as Partial<CreateCampaignData>)
   }
@@ -200,8 +204,6 @@ function CampaignEdit() {
               >
                 <option value="EMAIL">Email</option>
                 <option value="SMS">SMS</option>
-                <option value="PHONE">Phone</option>
-                <option value="SOCIAL">Social Media</option>
               </select>
             </div>
             <div>
@@ -309,9 +311,8 @@ function CampaignEdit() {
                   value={editForm.abTestWinnerMetric}
                   onChange={(e) => setEditForm({ ...editForm, abTestWinnerMetric: e.target.value })}
                 >
-                  <option value="openRate">Open Rate</option>
-                  <option value="clickRate">Click Rate</option>
-                  <option value="conversionRate">Conversion Rate</option>
+                  <option value="open_rate">Open Rate</option>
+                  <option value="click_rate">Click Rate</option>
                 </select>
               </div>
               <div>

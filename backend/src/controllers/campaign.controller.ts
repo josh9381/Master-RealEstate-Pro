@@ -13,7 +13,7 @@ import { getCampaignsFilter, getRoleFilterFromRequest } from '../utils/roleFilte
  */
 export const getCampaigns = async (req: Request, res: Response) => {
   // Get validated query parameters
-  const validatedQuery = (req.validatedQuery || req.query) as Record<string, any>;
+  const validatedQuery = (req.validatedQuery || req.query) as Record<string, unknown>;
   const {
     page = 1,
     limit = 20,
@@ -27,7 +27,7 @@ export const getCampaigns = async (req: Request, res: Response) => {
 
   // Build where clause with role-based filtering
   const roleFilter = getRoleFilterFromRequest(req);
-  const where: Record<string, any> = getCampaignsFilter(roleFilter);
+  const where: Record<string, unknown> = getCampaignsFilter(roleFilter);
 
   if (status) where.status = status as CampaignStatus;
   if (type) where.type = type as CampaignType;
@@ -206,6 +206,20 @@ export const createCampaign = async (req: Request, res: Response) => {
     });
   }
 
+  // P1-10 FIX: Calculate nextSendAt for recurring campaigns
+  let nextSendAt: Date | null = null;
+  if (isRecurring && startDate) {
+    nextSendAt = new Date(startDate);
+  } else if (isRecurring) {
+    // Default to tomorrow if no start date provided
+    nextSendAt = new Date();
+    nextSendAt.setDate(nextSendAt.getDate() + 1);
+    if (recurringPattern?.time) {
+      const [hours, minutes] = recurringPattern.time.split(':');
+      nextSendAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    }
+  }
+
   // Create the campaign with organizationId
   const campaign = await prisma.campaign.create({
     data: {
@@ -228,6 +242,7 @@ export const createCampaign = async (req: Request, res: Response) => {
       frequency: frequency || null,
       recurringPattern: recurringPattern || null,
       maxOccurrences: maxOccurrences || null,
+      nextSendAt,
       createdById: userId,
       ...(tagIds && tagIds.length > 0 && {
         tags: {
@@ -304,7 +319,7 @@ export const updateCampaign = async (req: Request, res: Response) => {
     }
 
     // Process date fields
-    const processedData: Record<string, any> = { ...updateData };
+    const processedData: Record<string, unknown> = { ...updateData };
     if (updateData.startDate !== undefined) {
       processedData.startDate = updateData.startDate ? new Date(updateData.startDate) : null;
     }
@@ -391,7 +406,7 @@ export const deleteCampaign = async (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    message: 'Campaign deleted successfully',
+    message: 'Campaign archived successfully',
   });
 };
 
@@ -402,13 +417,20 @@ export const deleteCampaign = async (req: Request, res: Response) => {
 export const getCampaignStats = async (req: Request, res: Response) => {
   const organizationId = req.user?.organizationId;
 
+  if (!organizationId) {
+    throw new ForbiddenError('Organization context required');
+  }
+
+  // P1-12 FIX: Exclude archived campaigns from stats by default
+  const statsWhere = { organizationId, isArchived: false };
+
   // Get campaign counts by status
   const byStatus = await prisma.campaign.groupBy({
     by: ['status'],
     _count: {
       id: true,
     },
-    ...(organizationId && { where: { organizationId } }),
+    where: statsWhere,
   });
 
   // Get campaign counts by type
@@ -417,7 +439,7 @@ export const getCampaignStats = async (req: Request, res: Response) => {
     _count: {
       id: true,
     },
-    ...(organizationId && { where: { organizationId } }),
+    where: statsWhere,
   });
 
   // Get aggregate metrics
@@ -437,7 +459,7 @@ export const getCampaignStats = async (req: Request, res: Response) => {
     _count: {
       id: true,
     },
-    ...(organizationId && { where: { organizationId } }),
+    where: statsWhere,
   });
 
   // Calculate overall rates
@@ -684,14 +706,17 @@ export const sendCampaignNow = async (req: Request, res: Response) => {
     return;
   }
 
-  // Update campaign status
-  await prisma.campaign.update({
-    where: { id },
-    data: {
-      status: 'COMPLETED',
-      endDate: new Date(),
-    },
-  });
+  // BUG-3 FIX: Only mark as COMPLETED for non-recurring campaigns
+  // Recurring campaigns keep their executor-set ACTIVE status for the scheduler
+  if (!campaign.isRecurring) {
+    await prisma.campaign.update({
+      where: { id },
+      data: {
+        status: 'COMPLETED',
+        endDate: new Date(),
+      },
+    });
+  }
 
   res.json({
     success: true,
@@ -819,10 +844,10 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
   }
 
   // Get target leads based on campaign audience
-  let leads: Record<string, any>[] = [];
+  let leads: Record<string, unknown>[] = [];
   
   // Build where clause for leads — always scope to the campaign's organization
-  const where: Record<string, any> = {
+  const where: Record<string, unknown> = {
     organizationId: campaign.organizationId,
   };
   
@@ -1152,10 +1177,10 @@ export const duplicateCampaign = async (req: Request, res: Response) => {
       previewText: originalCampaign.previewText,
       budget: originalCampaign.budget,
       isABTest: originalCampaign.isABTest,
-      abTestData: originalCampaign.abTestData as any,
+      abTestData: originalCampaign.abTestData as Record<string, unknown> | undefined,
       isRecurring: originalCampaign.isRecurring,
       frequency: originalCampaign.frequency,
-      recurringPattern: originalCampaign.recurringPattern as any,
+      recurringPattern: originalCampaign.recurringPattern as Record<string, unknown> | undefined,
       maxOccurrences: originalCampaign.maxOccurrences,
       createdById: userId,
       // Copy tags
@@ -1206,7 +1231,7 @@ export const archiveCampaign = async (req: Request, res: Response) => {
   }
 
   // If campaign is actively running, pause it first
-  const updateData: Record<string, any> = {
+  const updateData: Record<string, unknown> = {
     isArchived: true,
     archivedAt: new Date(),
   };
@@ -1305,11 +1330,10 @@ export const getCampaignAnalytics = async (req: Request, res: Response) => {
       data: metrics,
     });
   } catch (error) {
-    const err = error as Error;
+    logger.error('[CAMPAIGN] Failed to get campaign analytics:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get campaign analytics',
-      error: err.message,
     });
   }
 };
@@ -1323,6 +1347,24 @@ export const trackOpen = async (req: Request, res: Response) => {
   const { leadId, messageId } = req.body;
   const { trackEmailOpen } = await import('../services/campaignAnalytics.service');
 
+  // SEC-1: Verify lead belongs to user's organization
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!lead) {
+    throw new NotFoundError('Lead not found in your organization');
+  }
+
+  // Verify campaign belongs to user's organization
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!campaign) {
+    throw new NotFoundError('Campaign not found');
+  }
+
   try {
     await trackEmailOpen(id, leadId, messageId, req.user!.organizationId);
 
@@ -1331,11 +1373,10 @@ export const trackOpen = async (req: Request, res: Response) => {
       message: 'Email open tracked successfully',
     });
   } catch (error) {
-    const err = error as Error;
+    logger.error('[CAMPAIGN] Failed to track email open:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to track email open',
-      error: err.message,
     });
   }
 };
@@ -1349,6 +1390,24 @@ export const trackClick = async (req: Request, res: Response) => {
   const { leadId, messageId, url } = req.body;
   const { trackEmailClick } = await import('../services/campaignAnalytics.service');
 
+  // SEC-1: Verify lead belongs to user's organization
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!lead) {
+    throw new NotFoundError('Lead not found in your organization');
+  }
+
+  // Verify campaign belongs to user's organization
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!campaign) {
+    throw new NotFoundError('Campaign not found');
+  }
+
   try {
     await trackEmailClick(id, leadId, messageId, url, req.user!.organizationId);
 
@@ -1357,11 +1416,10 @@ export const trackClick = async (req: Request, res: Response) => {
       message: 'Email click tracked successfully',
     });
   } catch (error) {
-    const err = error as Error;
+    logger.error('[CAMPAIGN] Failed to track email click:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to track email click',
-      error: err.message,
     });
   }
 };
@@ -1375,6 +1433,24 @@ export const trackConversionEvent = async (req: Request, res: Response) => {
   const { leadId, value } = req.body;
   const { trackConversion } = await import('../services/campaignAnalytics.service');
 
+  // SEC-1: Verify lead belongs to user's organization
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!lead) {
+    throw new NotFoundError('Lead not found in your organization');
+  }
+
+  // Verify campaign belongs to user's organization
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, organizationId: req.user!.organizationId },
+    select: { id: true },
+  });
+  if (!campaign) {
+    throw new NotFoundError('Campaign not found');
+  }
+
   try {
     await trackConversion(id, leadId, req.user!.organizationId, value);
 
@@ -1383,11 +1459,10 @@ export const trackConversionEvent = async (req: Request, res: Response) => {
       message: 'Conversion tracked successfully',
     });
   } catch (error) {
-    const err = error as Error;
+    logger.error('[CAMPAIGN] Failed to track conversion:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to track conversion',
-      error: err.message,
     });
   }
 };
@@ -1417,11 +1492,10 @@ export const getLinkStats = async (req: Request, res: Response) => {
       data: stats,
     });
   } catch (error) {
-    const err = error as Error;
+    logger.error('[CAMPAIGN] Failed to get link statistics:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get link statistics',
-      error: err.message,
     });
   }
 };
@@ -1452,11 +1526,10 @@ export const getTimeline = async (req: Request, res: Response) => {
       data,
     });
   } catch (error) {
-    const err = error as Error;
+    logger.error('[CAMPAIGN] Failed to get campaign timeline:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get campaign timeline',
-      error: err.message,
     });
   }
 };
@@ -1496,11 +1569,10 @@ export const compareCampaignsEndpoint = async (req: Request, res: Response) => {
       data: comparison,
     });
   } catch (error) {
-    const err = error as Error;
+    logger.error('[CAMPAIGN] Failed to compare campaigns:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to compare campaigns',
-      error: err.message,
     });
   }
 };
@@ -1522,11 +1594,10 @@ export const getTopPerformers = async (req: Request, res: Response) => {
       data: topCampaigns,
     });
   } catch (error) {
-    const err = error as Error;
+    logger.error('[CAMPAIGN] Failed to get top performing campaigns:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get top performing campaigns',
-      error: err.message,
     });
   }
 };

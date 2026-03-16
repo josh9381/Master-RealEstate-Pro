@@ -43,12 +43,17 @@ interface TimeSeriesData {
 
 /**
  * Get comprehensive metrics for a campaign
+ * SEC-2 FIX: Added organizationId for defense-in-depth org scoping
  */
-export async function getCampaignMetrics(campaignId: string): Promise<CampaignMetrics> {
+export async function getCampaignMetrics(campaignId: string, organizationId?: string): Promise<CampaignMetrics> {
+  // Build base filter with optional org scoping
+  const orgFilter = organizationId ? { organizationId } : {};
+
   // Get campaign activities
   const activities = await prisma.activity.findMany({
     where: {
       campaignId,
+      ...orgFilter,
       type: {
         in: ['EMAIL_SENT', 'EMAIL_OPENED', 'EMAIL_CLICKED', 'CAMPAIGN_LAUNCHED', 'CAMPAIGN_COMPLETED'],
       },
@@ -269,7 +274,7 @@ export async function trackConversion(
   // Create activity
   await prisma.activity.create({
     data: {
-      type: 'LEAD_CREATED', // Using existing enum value
+      type: 'CAMPAIGN_CONVERTED',
       title: 'Campaign Conversion',
       description: 'Lead converted from campaign',
       campaignId,
@@ -445,12 +450,17 @@ export async function getCampaignTimeSeries(
 
 /**
  * Get campaign comparison metrics
+ * SEC-3 FIX: Added organizationId for org scoping
  */
 export async function compareCampaigns(
-  campaignIds: string[]
+  campaignIds: string[],
+  organizationId?: string
 ): Promise<Array<{ campaignId: string; name: string; metrics: CampaignMetrics }>> {
   const campaigns = await prisma.campaign.findMany({
-    where: { id: { in: campaignIds } },
+    where: {
+      id: { in: campaignIds },
+      ...(organizationId ? { organizationId } : {}),
+    },
     select: {
       id: true,
       name: true,
@@ -461,7 +471,7 @@ export async function compareCampaigns(
     campaigns.map(async (campaign) => ({
       campaignId: campaign.id,
       name: campaign.name,
-      metrics: await getCampaignMetrics(campaign.id),
+      metrics: await getCampaignMetrics(campaign.id, organizationId),
     }))
   )
 
@@ -470,17 +480,18 @@ export async function compareCampaigns(
 
 /**
  * Get top performing campaigns
+ * SEC-3 FIX: organizationId is now required (not optional)
  */
 export async function getTopPerformingCampaigns(
   limit = 10,
   metric: 'openRate' | 'clickRate' | 'conversionRate' = 'conversionRate',
-  organizationId?: string
+  organizationId: string
 ): Promise<Array<{ campaign: { id: string; name: string }; metrics: CampaignMetrics }>> {
   const campaigns = await prisma.campaign.findMany({
     where: {
       status: { in: ['ACTIVE', 'COMPLETED'] },
       sent: { gt: 0 },
-      ...(organizationId ? { organizationId } : {}),
+      organizationId,
     },
     select: {
       id: true,

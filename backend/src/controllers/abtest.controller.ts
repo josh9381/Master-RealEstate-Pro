@@ -8,6 +8,7 @@ import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { getABTestService } from '../services/abtest.service';
 import { ABTestType } from '@prisma/client';
+import { prisma } from '../config/database';
 
 const abTestService = getABTestService();
 
@@ -17,7 +18,7 @@ const abTestService = getABTestService();
  */
 export async function createTest(req: Request, res: Response) {
   try {
-    const { name, description, type, variantA, variantB } = req.body;
+    const { name, description, type, variantA, variantB, duration, confidenceLevel } = req.body;
     const organizationId = req.user?.organizationId;
     const createdBy = req.user?.userId;
 
@@ -40,14 +41,21 @@ export async function createTest(req: Request, res: Response) {
       });
     }
 
+    // Include test config (duration/confidence) in the description for reference
+    const testDescription = description || 
+      (duration || confidenceLevel 
+        ? `Duration: ${duration || 48}h, Confidence: ${confidenceLevel || 95}%`
+        : undefined);
+
     const test = await abTestService.createTest({
       name,
-      description,
+      description: testDescription,
       type,
       organizationId,
       createdBy,
       variantA,
       variantB,
+      confidenceLevel: confidenceLevel ? Number(confidenceLevel) : undefined,
     });
 
     res.status(201).json({ success: true, data: test });
@@ -129,7 +137,8 @@ export async function getTestResults(req: Request, res: Response) {
     }
 
     const results = await abTestService.getTestResults(id);
-    const analysis = await abTestService.analyzeTest(id);
+    const threshold = test.confidence ?? 95;
+    const analysis = await abTestService.analyzeTest(id, threshold);
 
     res.json({
       success: true,
@@ -163,8 +172,8 @@ export async function startTest(req: Request, res: Response) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    if (test.status !== 'DRAFT') {
-      return res.status(400).json({ success: false, message: 'Can only start tests in DRAFT status' });
+    if (test.status !== 'DRAFT' && test.status !== 'PAUSED') {
+      return res.status(400).json({ success: false, message: 'Can only start tests in DRAFT or PAUSED status' });
     }
 
     const updatedTest = await abTestService.startTest(id);
@@ -279,9 +288,24 @@ export async function deleteTest(req: Request, res: Response) {
 export async function recordInteraction(req: Request, res: Response) {
   try {
     const { resultId, type } = req.body;
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
 
     if (!resultId || !type) {
       return res.status(400).json({ success: false, message: 'Missing resultId or type' });
+    }
+
+    // Verify the result belongs to the user's organization
+    const testResult = await prisma.aBTestResult.findUnique({
+      where: { id: resultId },
+      select: { organizationId: true },
+    });
+
+    if (!testResult || testResult.organizationId !== organizationId) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
     let result;
