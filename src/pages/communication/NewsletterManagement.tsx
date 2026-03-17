@@ -10,6 +10,7 @@ import { messagesApi } from '@/lib/api'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { useNavigate } from 'react-router-dom'
 import { ComingSoon } from '@/components/shared/ComingSoon'
+import { formatRate } from '@/lib/metricsCalculator'
 
 const NewsletterManagement = () => {
   const { toast } = useToast()
@@ -160,8 +161,8 @@ const NewsletterManagement = () => {
                         </span>
                         {newsletter.status === 'sent' && (
                           <>
-                            <span>{newsletter.openRate}% opens</span>
-                            <span>{newsletter.clickRate}% clicks</span>
+                            <span>{formatRate(newsletter.openRate)}% opens</span>
+                            <span>{formatRate(newsletter.clickRate)}% clicks</span>
                           </>
                         )}
                       </div>

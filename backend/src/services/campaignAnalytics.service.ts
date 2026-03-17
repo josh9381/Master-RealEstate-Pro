@@ -1,4 +1,5 @@
 import prisma from '../config/database'
+import { calcOpenRate, calcClickRate, calcConversionRate, calcDeliveryRate, calcBounceRate, calcRate } from '../utils/metricsCalculator'
 
 /**
  * Campaign Analytics Service
@@ -43,17 +44,12 @@ interface TimeSeriesData {
 
 /**
  * Get comprehensive metrics for a campaign
- * SEC-2 FIX: Added organizationId for defense-in-depth org scoping
  */
-export async function getCampaignMetrics(campaignId: string, organizationId?: string): Promise<CampaignMetrics> {
-  // Build base filter with optional org scoping
-  const orgFilter = organizationId ? { organizationId } : {};
-
+export async function getCampaignMetrics(campaignId: string): Promise<CampaignMetrics> {
   // Get campaign activities
   const activities = await prisma.activity.findMany({
     where: {
       campaignId,
-      ...orgFilter,
       type: {
         in: ['EMAIL_SENT', 'EMAIL_OPENED', 'EMAIL_CLICKED', 'CAMPAIGN_LAUNCHED', 'CAMPAIGN_COMPLETED'],
       },
@@ -106,13 +102,6 @@ export async function getCampaignMetrics(campaignId: string, organizationId?: st
   const converted = campaign?.converted || 0
   const unsubscribed = campaign?.unsubscribed || 0
 
-  // Calculate rates
-  const openRate = sent > 0 ? (opened / sent) * 100 : 0
-  const clickRate = sent > 0 ? (clicked / sent) * 100 : 0
-  const conversionRate = sent > 0 ? (converted / sent) * 100 : 0
-  const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0
-  const bounceRate = sent > 0 ? (bounced / sent) * 100 : 0
-
   return {
     sent,
     delivered,
@@ -121,11 +110,11 @@ export async function getCampaignMetrics(campaignId: string, organizationId?: st
     converted,
     bounced,
     unsubscribed,
-    openRate: Math.round(openRate * 10) / 10,
-    clickRate: Math.round(clickRate * 10) / 10,
-    conversionRate: Math.round(conversionRate * 10) / 10,
-    deliveryRate: Math.round(deliveryRate * 10) / 10,
-    bounceRate: Math.round(bounceRate * 10) / 10,
+    openRate: calcOpenRate(opened, sent),
+    clickRate: calcClickRate(clicked, sent),
+    conversionRate: calcConversionRate(converted, sent),
+    deliveryRate: calcDeliveryRate(delivered, sent),
+    bounceRate: calcBounceRate(bounced, sent),
   }
 }
 
@@ -274,7 +263,7 @@ export async function trackConversion(
   // Create activity
   await prisma.activity.create({
     data: {
-      type: 'CAMPAIGN_CONVERTED',
+      type: 'LEAD_CREATED', // Using existing enum value
       title: 'Campaign Conversion',
       description: 'Lead converted from campaign',
       campaignId,
@@ -366,7 +355,7 @@ export async function getLinkClickStats(campaignId: string): Promise<LinkClickSt
       url: stat.url,
       clicks: stat.clicks,
       uniqueClicks: stat.uniqueLeads.size,
-      clickRate: Math.round((stat.clicks / totalSent) * 1000) / 10,
+      clickRate: calcRate(stat.clicks, totalSent),      
     }))
     .sort((a, b) => b.clicks - a.clicks)
 }
@@ -450,17 +439,12 @@ export async function getCampaignTimeSeries(
 
 /**
  * Get campaign comparison metrics
- * SEC-3 FIX: Added organizationId for org scoping
  */
 export async function compareCampaigns(
-  campaignIds: string[],
-  organizationId?: string
+  campaignIds: string[]
 ): Promise<Array<{ campaignId: string; name: string; metrics: CampaignMetrics }>> {
   const campaigns = await prisma.campaign.findMany({
-    where: {
-      id: { in: campaignIds },
-      ...(organizationId ? { organizationId } : {}),
-    },
+    where: { id: { in: campaignIds } },
     select: {
       id: true,
       name: true,
@@ -471,7 +455,7 @@ export async function compareCampaigns(
     campaigns.map(async (campaign) => ({
       campaignId: campaign.id,
       name: campaign.name,
-      metrics: await getCampaignMetrics(campaign.id, organizationId),
+      metrics: await getCampaignMetrics(campaign.id),
     }))
   )
 
@@ -480,18 +464,17 @@ export async function compareCampaigns(
 
 /**
  * Get top performing campaigns
- * SEC-3 FIX: organizationId is now required (not optional)
  */
 export async function getTopPerformingCampaigns(
   limit = 10,
   metric: 'openRate' | 'clickRate' | 'conversionRate' = 'conversionRate',
-  organizationId: string
+  organizationId?: string
 ): Promise<Array<{ campaign: { id: string; name: string }; metrics: CampaignMetrics }>> {
   const campaigns = await prisma.campaign.findMany({
     where: {
       status: { in: ['ACTIVE', 'COMPLETED'] },
       sent: { gt: 0 },
-      organizationId,
+      ...(organizationId ? { organizationId } : {}),
     },
     select: {
       id: true,

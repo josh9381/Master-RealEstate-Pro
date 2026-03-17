@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fmtMoney } from '@/lib/metricsCalculator';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, AlertTriangle, CheckCircle, Clock, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
@@ -285,7 +286,7 @@ const PredictiveAnalytics = () => {
                 <p className="text-sm text-muted-foreground">Avg Pipeline Duration</p>
               </div>
               <div className="text-center p-4 border rounded-lg">
-                <p className="text-3xl font-bold">${pipelineSummary.totalPipelineValue.toLocaleString()}</p>
+                <p className="text-3xl font-bold">{fmtMoney(pipelineSummary.totalPipelineValue)}</p>
                 <p className="text-sm text-muted-foreground">Pipeline Value</p>
               </div>
             </div>

@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { prisma } from '../config/database'
 import { NotFoundError, ValidationError } from '../middleware/errorHandler'
 import type { WorkflowTrigger } from '@prisma/client'
+import { calcRate } from '../utils/metricsCalculator'
 
 // Get all workflows
 export const getWorkflows = async (req: Request, res: Response) => {
@@ -344,9 +345,7 @@ export const getWorkflowStats = async (req: Request, res: Response) => {
     where: { status: 'FAILED', workflow: { organizationId: orgId } },
   })
 
-  const successRate = totalExecutions > 0 
-    ? ((successfulExecutions / totalExecutions) * 100).toFixed(2) 
-    : 0
+  const successRate = calcRate(successfulExecutions, totalExecutions, 2)
 
   res.json({
     success: true,

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { analyticsApi } from '@/lib/api';
+import { calcRate } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import {
@@ -89,7 +90,7 @@ const UsageAnalytics = () => {
         return Object.entries(typeCounts).map(([feature, usage]) => ({
           feature: feature.charAt(0).toUpperCase() + feature.slice(1).replace(/_/g, ' '),
           usage,
-          percentage: Math.round((usage / total) * 100)
+          percentage: calcRate(usage, total, 0)
         })).sort((a, b) => b.usage - a.usage).slice(0, 8);
       })()
     : [] as { feature: string; usage: number; percentage: number }[];
@@ -226,10 +227,10 @@ const UsageAnalytics = () => {
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 font-bold text-primary">
-                      {user.name.charAt(0)}
+                      {(user.name || 'U').charAt(0)}
                     </div>
                     <div>
-                      <p className="font-medium">{user.name}</p>
+                      <p className="font-medium">{user.name || 'Unknown'}</p>
                       <p className="text-xs text-muted-foreground">
                         {user.logins} logins • {user.actions} actions
                       </p>

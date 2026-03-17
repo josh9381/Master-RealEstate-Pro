@@ -1,5 +1,4 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { Home, ChevronRight } from 'lucide-react'
 
 const LABEL_MAP: Record<string, string> = {
@@ -89,44 +88,24 @@ function getLabel(segment: string): string {
 }
 
 function isIdSegment(segment: string): boolean {
-  // Match UUIDs, numeric IDs, and cuid/nanoid-style IDs (long alphanumeric strings)
-  return /^[0-9a-f-]{8,}$|^\d+$|^[a-zA-Z0-9_-]{16,}$/.test(segment)
+  return /^[0-9a-f-]{8,}$|^\d+$/.test(segment)
 }
 
 export function Breadcrumbs() {
   const { pathname } = useLocation()
-  const queryClient = useQueryClient()
 
   if (pathname === '/' || pathname === '/dashboard') return null
 
   const segments = pathname.split('/').filter(Boolean)
   if (segments.length === 0) return null
 
-  // Try to resolve a friendly name for an ID segment from the query cache
-  const resolveIdLabel = (idSegment: string, parentSegment?: string): string => {
-    if (parentSegment === 'campaigns') {
-      const cached = queryClient.getQueryData<Record<string, unknown>>(['campaign', idSegment])
-      if (cached?.name) return cached.name as string
-    }
-    if (parentSegment === 'leads') {
-      const cached = queryClient.getQueryData<Record<string, unknown>>(['lead', idSegment])
-      if (cached) {
-        const name = [cached.firstName, cached.lastName].filter(Boolean).join(' ')
-        if (name) return name
-      }
-    }
-    return idSegment.length > 12 ? `${idSegment.slice(0, 8)}…` : idSegment
-  }
-
   // Build breadcrumb items
   const items: { label: string; path: string }[] = []
   let currentPath = ''
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i]
+  for (const seg of segments) {
     currentPath += `/${seg}`
     if (isIdSegment(seg)) {
-      const parentSeg = i > 0 ? segments[i - 1] : undefined
-      items.push({ label: resolveIdLabel(seg, parentSeg), path: currentPath })
+      items.push({ label: 'Detail', path: currentPath })
     } else {
       items.push({ label: getLabel(seg), path: currentPath })
     }

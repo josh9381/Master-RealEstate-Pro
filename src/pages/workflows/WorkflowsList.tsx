@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { workflowsApi } from '@/lib/api';
+import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import type { WorkflowAction, WorkflowExecution, WorkflowTriggerData } from '@/types';
@@ -255,7 +256,7 @@ const WorkflowsList = () => {
             <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
               <div 
                 className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 rounded-full"
-                style={{ width: `${stats.totalWorkflows > 0 ? (stats.activeWorkflows / stats.totalWorkflows) * 100 : 0}%` }}
+                style={{ width: `${calcRate(stats.activeWorkflows, stats.totalWorkflows, 0)}%` }}
               />
             </div>
           </CardContent>
@@ -280,7 +281,7 @@ const WorkflowsList = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold bg-gradient-to-br from-emerald-600 to-emerald-800 bg-clip-text text-transparent">{stats.successRate.toFixed(1)}%</div>
+            <div className="text-3xl font-bold bg-gradient-to-br from-emerald-600 to-emerald-800 bg-clip-text text-transparent">{formatRate(stats.successRate, 1)}%</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-semibold">{stats.successfulExecutions}</span> / {stats.totalExecutions} successful
             </p>
@@ -414,7 +415,7 @@ const WorkflowsList = () => {
                         <div>
                           <p className="text-xs text-muted-foreground">Success Rate</p>
                           <p className="text-sm font-medium">
-                            {workflow.successRate !== null ? `${workflow.successRate.toFixed(1)}%` : 'N/A'}
+                            {workflow.successRate !== null ? `${formatRate(workflow.successRate, 1)}%` : 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -544,7 +545,7 @@ const WorkflowsList = () => {
                     <div>
                       <p className="text-xs text-muted-foreground">Success Rate</p>
                       <p className="font-medium">
-                        {workflow.successRate !== null ? `${workflow.successRate.toFixed(1)}%` : 'N/A'}
+                        {workflow.successRate !== null ? `${formatRate(workflow.successRate, 1)}%` : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -660,7 +661,7 @@ const WorkflowsList = () => {
                   <CardContent>
                     <div className="text-2xl font-bold">
                       {analyticsWorkflow.successRate !== null 
-                        ? `${analyticsWorkflow.successRate.toFixed(1)}%` 
+                        ? `${formatRate(analyticsWorkflow.successRate, 1)}%` 
                         : 'N/A'}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">

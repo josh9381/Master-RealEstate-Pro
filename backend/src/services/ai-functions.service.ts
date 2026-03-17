@@ -4,6 +4,7 @@ import { getOpenAIService } from './openai.service';
 import { getIntelligenceService } from './intelligence.service';
 import { sendEmail as sendRealEmail, type EmailResult } from './email.service';
 import { sendSMS as sendRealSMS, type SMSResult } from './sms.service';
+import { formatRate, calcOpenRate, calcClickRate, calcConversionRate, calcRate } from '../utils/metricsCalculator';
 
 export const AI_FUNCTIONS = [
   {
@@ -2316,9 +2317,9 @@ Generate the script:`;
         return JSON.stringify({ error: 'Campaign not found' });
       }
       
-      const openRate = campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : '0.0';
-      const clickRate = campaign.sent > 0 ? ((campaign.clicked / campaign.sent) * 100).toFixed(1) : '0.0';
-      const conversionRate = campaign.sent > 0 ? ((campaign.converted / campaign.sent) * 100).toFixed(1) : '0.0';
+      const openRate = formatRate(calcOpenRate(campaign.opened, campaign.sent));
+      const clickRate = formatRate(calcClickRate(campaign.clicked, campaign.sent));
+      const conversionRate = formatRate(calcConversionRate(campaign.converted, campaign.sent));
       
       return JSON.stringify({
         success: true,
@@ -2778,10 +2779,10 @@ Generate the script:`;
         }),
       ]);
       
-      const contactedRate = total > 0 ? ((contacted / total) * 100).toFixed(1) : '0.0';
-      const qualifiedRate = contacted > 0 ? ((qualified / contacted) * 100).toFixed(1) : '0.0';
-      const convertedRate = qualified > 0 ? ((converted / qualified) * 100).toFixed(1) : '0.0';
-      const overallRate = total > 0 ? ((converted / total) * 100).toFixed(1) : '0.0';
+      const contactedRate = formatRate(calcRate(contacted, total));
+      const qualifiedRate = formatRate(calcRate(qualified, contacted));
+      const convertedRate = formatRate(calcRate(converted, qualified));
+      const overallRate = formatRate(calcRate(converted, total));
       
       return JSON.stringify({
         success: true,

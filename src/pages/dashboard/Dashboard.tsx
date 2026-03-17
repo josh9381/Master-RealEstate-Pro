@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/useToast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { calcProgress, formatRate, fmtMoney } from '@/lib/metricsCalculator'
 import {
   TrendingUp,
   TrendingDown,
@@ -263,7 +264,7 @@ function Dashboard() {
     opens: campaign.opened || 0,
     clicks: campaign.clicked || 0,
     conversions: campaign.converted || 0,
-    roi: campaign.roi ? (String(campaign.roi).endsWith('%') ? String(campaign.roi) : `${campaign.roi}%`) : '0%'
+    roi: campaign.roi ? `${formatRate(Number(String(campaign.roi).replace('%', '')))}%` : '0%'
   })) || []
 
   // Revenue data from API — limit to last 6 months to match subtitle
@@ -280,7 +281,7 @@ function Dashboard() {
     { label: 'Total Activities', value: dashboardData?.activities?.total?.toString() || '0', change: '' },
     { label: 'Tasks Due Today', value: dashboardData?.tasks?.dueToday?.toString() || '0', change: '' },
     { label: 'Active Campaigns', value: dashboardData?.campaigns?.active?.toString() || '0', change: '' },
-    { label: 'Tasks Completed', value: `${dashboardData?.tasks?.completed || 0}/${dashboardData?.tasks?.total || 0}`, change: `${dashboardData?.tasks?.completionRate || 0}%` },
+    { label: 'Tasks Completed', value: `${dashboardData?.tasks?.completed || 0}/${dashboardData?.tasks?.total || 0}`, change: `${formatRate(dashboardData?.tasks?.completionRate || 0)}%` },
   ]
 
   // Dashboard performance targets (can be customized per organization)
@@ -298,7 +299,7 @@ function Dashboard() {
       trend: 'up' as const,
       icon: Users,
       target: DEFAULT_LEADS_TARGET.toLocaleString(),
-      progress: Math.min(Math.round((dashboardData.overview?.totalLeads / DEFAULT_LEADS_TARGET) * 100), 100) || 0,
+      progress: calcProgress(dashboardData.overview?.totalLeads, DEFAULT_LEADS_TARGET) || 0,
       helpText: 'Total number of leads in your CRM. Includes all statuses (new, contacted, qualified, won, lost).',
     },
     {
@@ -308,27 +309,27 @@ function Dashboard() {
       trend: 'up' as const,
       icon: Megaphone,
       target: DEFAULT_CAMPAIGNS_TARGET.toString(),
-      progress: Math.min(Math.round((dashboardData.overview?.activeCampaigns / DEFAULT_CAMPAIGNS_TARGET) * 100), 100) || 0,
+      progress: calcProgress(dashboardData.overview?.activeCampaigns, DEFAULT_CAMPAIGNS_TARGET) || 0,
       helpText: 'Campaigns currently running or scheduled to send. Completed and draft campaigns are not counted.',
     },
     {
       name: 'Conversion Rate',
-      value: `${dashboardData.leads?.conversionRate?.toFixed(1) ?? '0.0'}%`,
+      value: `${formatRate(dashboardData.leads?.conversionRate ?? 0, 1)}%`,
       change: dashboardData.leads?.previousConversionRate != null
-        ? `${((dashboardData.leads?.conversionRate ?? 0) - dashboardData.leads.previousConversionRate).toFixed(1)}%`
+        ? `${formatRate((dashboardData.leads?.conversionRate ?? 0) - dashboardData.leads.previousConversionRate, 1)}%`
         : '—',
       trend: dashboardData.leads?.previousConversionRate != null
         ? ((dashboardData.leads?.conversionRate ?? 0) >= dashboardData.leads.previousConversionRate ? 'up' as const : 'down' as const)
         : 'up' as const,
       icon: Target,
       target: `${DEFAULT_CONVERSION_RATE_TARGET}%`,
-      progress: Math.min(Math.round((dashboardData.leads?.conversionRate / DEFAULT_CONVERSION_RATE_TARGET) * 100), 100) || 0,
-      helpText: 'Percentage of total leads that reached "Won" status. Calculated as (Won leads ÷ Total leads) × 100. Higher is better — aim for 15-25% in real estate.',
+      progress: calcProgress(dashboardData.leads?.conversionRate, DEFAULT_CONVERSION_RATE_TARGET) || 0,
+      helpText: 'Percentage of decided leads that were won. Calculated as (Won leads ÷ (Won + Lost)) × 100. Higher is better — aim for 15-25% in real estate.',
     },
     {
       name: 'Tasks Completed',
       value: `${dashboardData.tasks?.completed || 0}/${dashboardData.tasks?.total || 0}`,
-      change: `${dashboardData.tasks?.completionRate || 0}%`,
+      change: `${formatRate(dashboardData.tasks?.completionRate || 0)}%`,
       trend: 'up' as const,
       icon: CheckCircle2,
       target: `${DEFAULT_TASK_COMPLETION_TARGET}%`,
@@ -447,7 +448,7 @@ function Dashboard() {
     if (conversionData.length > 0) {
       rows.push({ Section: 'Pipeline', Metric: '', Value: '', Details: '' })
       for (const stage of conversionData) {
-        rows.push({ Section: 'Pipeline', Metric: stage.stage, Value: stage.count, Details: `Rate: ${stage.rate}%` })
+        rows.push({ Section: 'Pipeline', Metric: stage.stage, Value: stage.count, Details: `Rate: ${formatRate(stage.rate)}%` })
       }
     }
 
@@ -563,7 +564,7 @@ function Dashboard() {
         doc.setFontSize(10)
         for (const stage of conversionData) {
           doc.setTextColor(60, 60, 60)
-          doc.text(`${stage.stage}: ${stage.count} leads (${stage.rate}%)`, 18, y)
+          doc.text(`${stage.stage}: ${stage.count} leads (${formatRate(stage.rate)}%)`, 18, y)
           y += 6
         }
         y += 4
@@ -595,7 +596,7 @@ function Dashboard() {
         doc.setFontSize(10)
         for (const r of revenueData) {
           doc.setTextColor(60, 60, 60)
-          doc.text(`${r.month}: $${Number(r.revenue).toLocaleString()} (${r.deals} deals)`, 18, y)
+          doc.text(`${r.month}: ${fmtMoney(Number(r.revenue))} (${r.deals} deals)`, 18, y)
           y += 6
         }
         y += 4
@@ -929,7 +930,7 @@ function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={(v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `$${(v / 1_000).toFixed(0)}K` : `$${v}`} />
-                <Tooltip formatter={(value: number, name: string) => [name === 'revenue' ? `$${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : 'Deals']} />
+                <Tooltip formatter={(value: number, name: string) => [name === 'revenue' ? fmtMoney(value) : value, name === 'revenue' ? 'Revenue' : 'Deals']} />
                 <Legend />
                 <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRevenue)" />
                 <Area type="monotone" dataKey="deals" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" />
@@ -949,7 +950,7 @@ function Dashboard() {
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">Lead progression (stage-to-stage rates)</p>
             </div>
-            <Badge>{conversionFunnelData?.overallConversionRate ? `${conversionFunnelData.overallConversionRate}%` : '—'} Overall</Badge>
+            <Badge>{conversionFunnelData?.overallConversionRate ? `${formatRate(conversionFunnelData.overallConversionRate)}%` : '—'} Overall</Badge>
           </CardHeader>
           <CardContent>
             {funnelLoading ? (

@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/useToast'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { MessagePreview } from './MessagePreview'
 import { aiApi } from '@/lib/api'
+import { formatRate } from '@/lib/metricsCalculator'
 
 interface Message {
   id: string
@@ -340,7 +341,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
               const pred = parsedResponse.prediction
               const emoji = pred.probability >= 70 ? '🔥' : pred.probability >= 40 ? '📈' : '📊'
               assistantMessage.content = `${emoji} **Conversion Prediction**\n\n` +
-                `Probability: **${pred.probability}%** (${pred.confidence} confidence)\n\n` +
+                `Probability: **${formatRate(pred.probability)}%** (${pred.confidence} confidence)\n\n` +
                 `**Key Factors:**\n` +
                 `• Score: ${pred.factors.score}/100\n` +
                 `• Activity Level: ${pred.factors.activityLevel}\n` +

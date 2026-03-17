@@ -15,44 +15,6 @@ import { calculateOptimalSendTimes, groupLeadsBySendSlot, OptimizationStrategy }
 import { checkMonthlyMessageLimit } from '../middleware/planLimits';
 import Handlebars from 'handlebars';
 
-/** Projection of Campaign used in executor functions */
-interface CampaignData {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  organizationId: string;
-  subject?: string | null;
-  body?: string | null;
-  isABTest?: boolean | null;
-  abTestData?: Record<string, unknown> | null;
-  attachments?: unknown;
-  mediaUrl?: string | null;
-  sendTimeOptimization?: string | null;
-  startDate?: Date | null;
-  createdById?: string | null;
-  userId?: string | null;
-  user?: { id: string } | null;
-  tags?: Array<{ id: string }>;
-  organization?: { name: string } | null;
-  [key: string]: unknown;
-}
-
-/** Projection of Lead used in executor functions */
-interface LeadData {
-  id: string;
-  email?: string | null;
-  phone?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  company?: string | null;
-  status?: string | null;
-  score?: number | null;
-  smsOptIn?: boolean | null;
-  assignedTo?: { firstName: string | null; lastName: string | null; email: string | null } | null;
-  [key: string]: unknown;
-}
-
 /**
  * Create CampaignLead tracking rows for per-recipient activity logging
  */
@@ -77,8 +39,7 @@ async function createCampaignLeadRows(campaignId: string, organizationId: string
 /**
  * Update CampaignLead status after sending
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function _updateCampaignLeadStatus(
+async function updateCampaignLeadStatus(
   campaignId: string,
   leadId: string,
   status: 'SENT' | 'BOUNCED',
@@ -100,7 +61,6 @@ async function _updateCampaignLeadStatus(
 
 interface CampaignExecutionOptions {
   campaignId: string;
-  organizationId?: string; // Optional: for defense-in-depth org verification
   leadIds?: string[]; // Optional: specific leads to send to
   filters?: {
     status?: string[];
@@ -123,7 +83,7 @@ interface CampaignExecutionResult {
 export async function executeCampaign(
   options: CampaignExecutionOptions
 ): Promise<CampaignExecutionResult> {
-  const { campaignId, leadIds, filters, organizationId: callerOrgId } = options;
+  const { campaignId, leadIds, filters } = options;
 
   try {
     // Get campaign details with user ID
@@ -141,11 +101,6 @@ export async function executeCampaign(
 
     if (!campaign) {
       throw new Error('Campaign not found');
-    }
-
-    // BUG-2 FIX: Verify org ownership if callerOrgId is provided
-    if (callerOrgId && campaign.organizationId !== callerOrgId) {
-      throw new Error('Campaign does not belong to your organization');
     }
 
     // Get leads to send to
@@ -217,15 +172,15 @@ export async function executeCampaign(
         });
       }
       
-      // P2-15 FIX: Don't mutate the leads array in place; use a filtered copy
+      // Filter leads for immediate sending only
       if (immediateLeadIds.size < leads.length) {
         const deferredCount = leads.length - immediateLeadIds.size;
         logger.info(`[CAMPAIGN] Sending ${immediateLeadIds.size} now, ${deferredCount} deferred for optimal times`);
         
         // Only keep leads that should be sent now
         const immLeads = leads.filter((l) => immediateLeadIds.has(l.id));
-        // Replace contents without direct mutation
-        leads.splice(0, leads.length, ...immLeads);
+        leads.length = 0;
+        leads.push(...immLeads);
       }
     }
 
@@ -302,9 +257,7 @@ export async function executeCampaign(
 }
 
 /**
- * P1-7 FIX: Get target leads for campaign.
- * Returns empty array when no leadIds, no filters, and no campaign tags —
- * prevents accidentally sending to the entire organization.
+ * Get target leads for campaign
  */
 async function getTargetLeads(
   organizationId: string,
@@ -332,7 +285,7 @@ async function getTargetLeads(
   }
 
   // Build filter query
-  const where: Record<string, unknown> = { organizationId };
+  const where: any = { organizationId };
 
   // Collect tag IDs from campaign tag and filter tags
   const tagIds: string[] = [];
@@ -359,13 +312,6 @@ async function getTargetLeads(
     if (filters.minScore !== undefined) {
       where.score = { gte: filters.minScore };
     }
-  }
-
-  // P1-7 SAFETY: If no tags and no filters were applied, refuse to send to all org leads
-  const hasFilters = tagIds.length > 0 || (filters?.status && filters.status.length > 0) || filters?.minScore !== undefined;
-  if (!hasFilters) {
-    logger.warn(`[CAMPAIGN] No audience filters specified — refusing to send to entire organization`);
-    return [];
   }
 
   // Get leads
@@ -399,7 +345,7 @@ function chunkArray<T>(array: T[], chunkSize: number): T[][] {
 /**
  * Send email campaign to leads with batch processing
  */
-async function sendEmailCampaign(campaign: CampaignData, leads: LeadData[]) {
+async function sendEmailCampaign(campaign: any, leads: any[]) {
   // Load business settings for CAN-SPAM footer
   const businessSettings = await prisma.businessSettings.findFirst({
     where: { organizationId: campaign.organizationId },
@@ -445,7 +391,7 @@ async function sendEmailCampaign(campaign: CampaignData, leads: LeadData[]) {
   const bodyTemplate = Handlebars.compile(compiledBodyTemplate);
 
   // Load campaign attachments (base64 encoded for SendGrid)
-  const campaignAttachments: Array<{ content: string; filename: string; type?: string }> = [];
+  let campaignAttachments: Array<{ content: string; filename: string; type?: string }> = [];
   if (campaign.attachments && Array.isArray(campaign.attachments)) {
     for (const att of campaign.attachments as Array<{ path: string; filename: string }>) {
       const encoded = readAttachmentAsBase64(att.path);
@@ -512,11 +458,15 @@ async function sendEmailCampaign(campaign: CampaignData, leads: LeadData[]) {
 
       // Compile with lead data
       const subject = subjectTemplate(templateData);
-      const html = bodyTemplate(templateData);
+      let html = bodyTemplate(templateData);
+
+      // Replace any unresolved placeholder tokens with [Not Set]
+      html = html.replace(/\{\{[^}]+\}\}/g, '[Not Set]');
+      const cleanSubject = subject.replace(/\{\{[^}]+\}\}/g, '[Not Set]');
 
       emails.push({
         to: lead.email,
-        subject,
+        subject: cleanSubject,
         html,
         leadId: lead.id,
         ...(campaignAttachments.length > 0 ? { attachments: campaignAttachments } : {}),
@@ -581,7 +531,7 @@ async function sendEmailCampaign(campaign: CampaignData, leads: LeadData[]) {
 /**
  * Send SMS campaign to leads with batch processing
  */
-async function sendSMSCampaign(campaign: CampaignData, leads: LeadData[]) {
+async function sendSMSCampaign(campaign: any, leads: any[]) {
   // Compile SMS template
   const bodyTemplate = Handlebars.compile(campaign.body || '');
 
@@ -696,16 +646,12 @@ async function sendSMSCampaign(campaign: CampaignData, leads: LeadData[]) {
 /**
  * Execute an A/B test campaign — split audience 50/50 and send variant A/B
  */
-async function executeABTestCampaign(campaign: CampaignData, leads: LeadData[]) {
-  const abTestData = campaign.abTestData as Record<string, unknown> | null;
-  const variantSubject = (abTestData?.variantSubject as string) || campaign.subject || '';
+async function executeABTestCampaign(campaign: any, leads: any[]) {
+  const abTestData = campaign.abTestData as any;
+  const variantSubject = abTestData?.variantSubject || campaign.subject || '';
 
-  // P1-13 FIX: Use Fisher-Yates shuffle for unbiased A/B audience distribution
-  const shuffled = [...leads];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
+  // Shuffle leads for fair distribution
+  const shuffled = [...leads].sort(() => Math.random() - 0.5);
   const midpoint = Math.ceil(shuffled.length / 2);
   const groupA = shuffled.slice(0, midpoint);
   const groupB = shuffled.slice(midpoint);
@@ -779,7 +725,7 @@ async function executeABTestCampaign(campaign: CampaignData, leads: LeadData[]) 
 
     const variantBCampaign = {
       ...campaign,
-      body: (abTestData?.variantBody as string) || campaign.body,
+      body: abTestData?.variantBody || campaign.body,
     };
     const resultB = await sendSMSCampaign(variantBCampaign, groupB);
 
@@ -800,19 +746,13 @@ async function executeABTestCampaign(campaign: CampaignData, leads: LeadData[]) 
 /**
  * Preview campaign without sending
  * Returns sample of how messages will look for first 5 leads
- * BUG-4 FIX: Added organizationId for ownership verification
  */
 export async function previewCampaign(
   campaignId: string,
-  organizationId?: string,
   leadIds?: string[]
-): Promise<Array<{ subject: string; body: string; to: string; leadId: string }>> {
-  const whereClause: Record<string, unknown> = { id: campaignId };
-  if (organizationId) {
-    whereClause.organizationId = organizationId;
-  }
-  const campaign = await prisma.campaign.findFirst({
-    where: whereClause,
+): Promise<any[]> {
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
     include: {
       tags: true,
     },

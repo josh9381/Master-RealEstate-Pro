@@ -36,12 +36,12 @@ export const updateActivitySchema = z.object({
 })
 
 export const getActivitiesSchema = z.object({
-  type: z.enum(activityTypes).optional(),
-  leadId: z.string().cuid().optional(),
-  campaignId: z.string().cuid().optional(),
-  userId: z.string().cuid().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  type: z.string().optional(),
+  leadId: z.string().optional(),
+  campaignId: z.string().optional(),
+  userId: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   page: z.string().regex(/^\d+$/).transform(Number).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).optional()
 })

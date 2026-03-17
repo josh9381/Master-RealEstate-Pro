@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useState, useEffect, useCallback } from 'react'
 import { aiApi } from '@/lib/api'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
+import { formatRate } from '@/lib/metricsCalculator'
 
 interface Suggestion {
   id: string
@@ -260,7 +261,7 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
                       variant="secondary" 
                       className={cn("text-xs", getConfidenceColor(suggestion.confidence))}
                     >
-                      {suggestion.confidence}%
+                      {formatRate(suggestion.confidence)}%
                     </Badge>
                   </div>
                 </div>

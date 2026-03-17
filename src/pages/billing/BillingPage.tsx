@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useSearchParams } from 'react-router-dom';
 import api from '@/lib/api';
 import { billingApi } from '@/lib/api';
+import { calcRate } from '@/lib/metricsCalculator';
 
 // ---------- Types ----------
 interface UsageEntry {
@@ -141,7 +142,7 @@ const BillingPage = () => {
   const usagePct = (current: number, limit: number | 'unlimited' | null | undefined) => {
     const num = normalizeLimit(limit);
     if (!num) return 0;
-    return (current / num) * 100;
+    return calcRate(current, num);
   };
 
   // ---------- Render helpers ----------

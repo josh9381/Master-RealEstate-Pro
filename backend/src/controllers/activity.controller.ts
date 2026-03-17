@@ -23,7 +23,25 @@ export const getActivities = async (req: Request, res: Response) => {
   const roleFilter = getRoleFilterFromRequest(req)
   const where: Record<string, any> = getActivitiesFilter(roleFilter)
   
-  if (type) where.type = type
+  if (type) {
+    // Map generic frontend types to Prisma enum prefixes
+    const typeMap: Record<string, string[]> = {
+      email: ['EMAIL_SENT', 'EMAIL_OPENED', 'EMAIL_CLICKED', 'EMAIL_RECEIVED'],
+      sms: ['SMS_SENT', 'SMS_DELIVERED'],
+      call: ['CALL_MADE', 'CALL_RECEIVED', 'CALL_LOGGED'],
+      meeting: ['MEETING_SCHEDULED', 'MEETING_COMPLETED'],
+      note: ['NOTE_ADDED', 'NOTE_EDITED', 'NOTE_DELETED'],
+      task: ['TASK_CREATED', 'TASK_COMPLETED'],
+      lead: ['LEAD_CREATED', 'LEAD_ASSIGNED'],
+      status_change: ['STATUS_CHANGED', 'STAGE_CHANGED'],
+    }
+    const mapped = typeMap[type.toLowerCase()]
+    if (mapped) {
+      where.type = { in: mapped }
+    } else {
+      where.type = type
+    }
+  }
   if (leadId) where.leadId = leadId
   if (campaignId) where.campaignId = campaignId
   if (userId) where.userId = userId

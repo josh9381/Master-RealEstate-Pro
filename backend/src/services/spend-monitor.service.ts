@@ -13,6 +13,8 @@ import prisma from '../config/database'
 import { logger } from '../lib/logger'
 import { aiLogger } from '../utils/ai-logger'
 import { calculateCost, MODEL_TIERS } from './ai-config.service'
+import { calcRate } from '../utils/metricsCalculator'
+import { calcProgress } from '../utils/metricsCalculator'
 
 // Alert thresholds
 const PLATFORM_MONTHLY_THRESHOLD = parseFloat(process.env.AI_SPEND_ALERT_THRESHOLD || '500')
@@ -60,7 +62,7 @@ export async function checkPlatformSpend(): Promise<void> {
         period: currentMonth,
       })
       markAlerted(alertKey, 'warning')
-      logger.warn(`⚠️ [SPEND WARNING] Platform AI spend $${totalSpend.toFixed(2)} is at ${Math.round((totalSpend / PLATFORM_MONTHLY_THRESHOLD) * 100)}% of threshold $${PLATFORM_MONTHLY_THRESHOLD}`)
+      logger.warn(`⚠️ [SPEND WARNING] Platform AI spend $${totalSpend.toFixed(2)} is at ${calcProgress(totalSpend, PLATFORM_MONTHLY_THRESHOLD)}% of threshold $${PLATFORM_MONTHLY_THRESHOLD}`)
     }
   }
 }
@@ -100,7 +102,7 @@ export async function checkOrgSpend(organizationId: string): Promise<{
   // Convert token budget to approximate dollar budget
   // Use mainModel pricing as baseline
   const dollarBudget = calculateCost(budget, MODEL_TIERS.mainModel)
-  const percentUsed = dollarBudget > 0 ? (spend / dollarBudget) * 100 : 0
+  const percentUsed = calcRate(spend, dollarBudget)
   const overBudget = percentUsed >= 100
 
   const alertKey = `org:${organizationId}:${currentMonth}`

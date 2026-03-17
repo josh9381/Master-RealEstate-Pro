@@ -1,6 +1,7 @@
 import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { getIntelligenceService } from './intelligence.service';
+import { calcRate, formatRate } from '../utils/metricsCalculator';
 const intelligenceService = getIntelligenceService();
 
 /**
@@ -251,7 +252,7 @@ export class MLOptimizationService {
       }
     }
 
-    return leads.length > 0 ? (correct / leads.length) * 100 : 0;
+    return leads.length > 0 ? calcRate(correct, leads.length) : 0;
   }
 
   /**
@@ -272,25 +273,25 @@ export class MLOptimizationService {
 
     if (Math.abs(scoreDiff) > 0.05) {
       improvements.push(
-        `Lead score ${scoreDiff > 0 ? 'increased' : 'decreased'} in importance (${Math.abs(scoreDiff * 100).toFixed(1)}%)`
+        `Lead score ${scoreDiff > 0 ? 'increased' : 'decreased'} in importance (${formatRate(Math.abs(scoreDiff) * 100)}%)`
       );
     }
 
     if (Math.abs(activityDiff) > 0.05) {
       improvements.push(
-        `Activity level ${activityDiff > 0 ? 'increased' : 'decreased'} in importance (${Math.abs(activityDiff * 100).toFixed(1)}%)`
+        `Activity level ${activityDiff > 0 ? 'increased' : 'decreased'} in importance (${formatRate(Math.abs(activityDiff) * 100)}%)`
       );
     }
 
     if (Math.abs(recencyDiff) > 0.05) {
       improvements.push(
-        `Recency ${recencyDiff > 0 ? 'increased' : 'decreased'} in importance (${Math.abs(recencyDiff * 100).toFixed(1)}%)`
+        `Recency ${recencyDiff > 0 ? 'increased' : 'decreased'} in importance (${formatRate(Math.abs(recencyDiff) * 100)}%)`
       );
     }
 
     if (Math.abs(funnelDiff) > 0.05) {
       improvements.push(
-        `Funnel time ${funnelDiff > 0 ? 'increased' : 'decreased'} in importance (${Math.abs(funnelDiff * 100).toFixed(1)}%)`
+        `Funnel time ${funnelDiff > 0 ? 'increased' : 'decreased'} in importance (${formatRate(Math.abs(funnelDiff) * 100)}%)`
       );
     }
 

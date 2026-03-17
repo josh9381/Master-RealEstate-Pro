@@ -78,16 +78,20 @@ export const updateLeadSchema = z.object({
 export const listLeadsQuerySchema = z.object({
   page: z.string().regex(/^\d+$/).optional().default('1').transform(Number),
   limit: z.string().regex(/^\d+$/).optional().default('20').transform(Number),
-  status: leadStatusSchema.optional(),
+  status: z.string().optional(),
   source: z.string().optional(),
-  assignedToId: z.string().cuid().optional(),
-  search: z.string().optional(), // Search in firstName, lastName, email, company
-  sortBy: z.enum(['createdAt', 'updatedAt', 'score', 'value', 'firstName', 'lastName']).optional().default('createdAt'),
+  assignedToId: z.string().optional(),
+  assignedTo: z.string().optional(),
+  search: z.string().optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'score', 'value', 'firstName', 'lastName', 'company', 'name', 'status', 'source']).optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
   minScore: z.string().regex(/^\d+$/).transform(Number).optional(),
   maxScore: z.string().regex(/^\d+$/).transform(Number).optional(),
   minValue: z.string().regex(/^\d+$/).transform(Number).optional(),
   maxValue: z.string().regex(/^\d+$/).transform(Number).optional(),
+  tags: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 /**

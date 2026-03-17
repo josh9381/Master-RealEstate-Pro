@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import { workflowsApi } from '@/lib/api';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import type { AutomationRule, RawWorkflow, WorkflowAction } from '@/types';
+import { formatRate } from '@/lib/metricsCalculator';
 
 const AutomationRules = () => {
   const { toast } = useToast();
@@ -586,7 +587,7 @@ const AutomationRules = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.successRate}%</div>
+            <div className="text-2xl font-bold">{formatRate(stats.successRate)}%</div>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
               {stats.successRate >= 95 ? 'Excellent!' : stats.successRate >= 80 ? 'Good' : 'Needs attention'}
             </p>

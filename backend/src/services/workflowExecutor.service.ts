@@ -2,6 +2,7 @@ import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { ExecutionStatus, WorkflowTrigger } from '@prisma/client';
 import { executeWorkflow, triggerWorkflowsForLead } from './workflow.service';
+import { calcRate } from '../utils/metricsCalculator';
 
 /**
  * Workflow Executor Service
@@ -488,7 +489,7 @@ export async function getExecutionStats(days: number = 7) {
     successfulExecutions,
     failedExecutions,
     runningExecutions,
-    successRate: totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : 0,
+    successRate: calcRate(successfulExecutions, totalExecutions),
     avgDurationMs: Math.round(avgDuration),
     queueStatus: getQueueStatus(),
   };

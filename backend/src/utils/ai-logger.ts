@@ -5,6 +5,7 @@
  */
 
 import { logger } from '../lib/logger'
+import { calcProgress } from './metricsCalculator'
 
 export interface AILogEntry {
   timestamp: string
@@ -159,7 +160,7 @@ class AILogger {
         currentSpend: params.currentSpend,
         threshold: params.threshold,
         period: params.period,
-        percentOfThreshold: Math.round((params.currentSpend / params.threshold) * 100),
+        percentOfThreshold: calcProgress(params.currentSpend, params.threshold),
       },
     }
 

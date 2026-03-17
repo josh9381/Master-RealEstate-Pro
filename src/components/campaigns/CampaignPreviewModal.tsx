@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge'
 import { AlertTriangle, DollarSign, Users, CheckCircle } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import type { CampaignPreviewData } from '@/types'
+import { formatCurrency } from '@/lib/metricsCalculator'
 
 interface CampaignPreviewModalProps {
   isOpen: boolean
@@ -97,7 +98,7 @@ export function CampaignPreviewModal({
                 ${(preview.cost?.total || 0).toFixed(2)}
               </p>
               <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                ${(preview.cost?.perRecipient || 0).toFixed(3)} per {(preview.campaignType || '').toLowerCase()}
+                ${formatCurrency(preview.cost?.perRecipient || 0)} per {(preview.campaignType || '').toLowerCase()}
               </p>
             </div>
           </div>
@@ -203,7 +204,7 @@ export function CampaignPreviewModal({
               <div className="space-y-1 text-gray-600 dark:text-gray-400">
                 <div className="flex justify-between">
                   <span>Unit cost ({preview.campaignType}):</span>
-                  <span className="font-mono">${(preview.cost?.perRecipient || 0).toFixed(3)}</span>
+                  <span className="font-mono">${formatCurrency(preview.cost?.perRecipient || 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Recipients:</span>

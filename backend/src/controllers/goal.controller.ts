@@ -2,6 +2,7 @@ import { getErrorMessage } from '../utils/errors'
 import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { prisma } from '../config/database'
+import { calcRate, calcLeadConversionRate, calcRateClamped } from '../utils/metricsCalculator'
 
 /**
  * Phase 5.4: Goal Setting & Tracking
@@ -31,7 +32,7 @@ async function calculateMetricValue(metricType: string, organizationId: string, 
         prisma.lead.count({ where: { organizationId, ...dateWhere } }),
         prisma.lead.count({ where: { organizationId, status: 'WON', ...dateWhere } }),
       ])
-      return total > 0 ? Math.round((won / total) * 1000) / 10 : 0
+      return total > 0 ? calcLeadConversionRate(won, total) : 0
     }
     case 'CALLS_MADE': {
       return prisma.call.count({
@@ -112,7 +113,7 @@ export async function listGoals(req: Request, res: Response) {
             goal.startDate,
             goal.endDate,
           )
-          const progress = goal.targetValue > 0 ? Math.min(100, Math.round((currentValue / goal.targetValue) * 1000) / 10) : 0
+          const progress = goal.targetValue > 0 ? calcRateClamped(currentValue, goal.targetValue) : 0
           const isCompleted = currentValue >= goal.targetValue
 
           // Update in DB if value changed
@@ -129,7 +130,7 @@ export async function listGoals(req: Request, res: Response) {
           return { ...goal, currentValue, progress, isCompleted }
         } catch (error) {
           logger.error(`[GOALS] Failed to calculate metric for goal ${goal.id}:`, error)
-          return { ...goal, progress: goal.targetValue > 0 ? Math.round((goal.currentValue / goal.targetValue) * 1000) / 10 : 0 }
+          return { ...goal, progress: goal.targetValue > 0 ? calcRate(goal.currentValue, goal.targetValue) : 0 }
         }
       }),
     )
@@ -176,7 +177,7 @@ export async function createGoal(req: Request, res: Response) {
       },
     })
 
-    const progress = goal.targetValue > 0 ? Math.round((goal.currentValue / goal.targetValue) * 1000) / 10 : 0
+    const progress = goal.targetValue > 0 ? calcRate(goal.currentValue, goal.targetValue) : 0
     res.status(201).json({ success: true, data: { ...goal, progress } })
   } catch (error: unknown) {
     logger.error('Error creating goal:', error)
@@ -255,7 +256,7 @@ export async function getGoal(req: Request, res: Response) {
       }
     }
 
-    const progress = goal.targetValue > 0 ? Math.min(100, Math.round((currentValue / goal.targetValue) * 1000) / 10) : 0
+    const progress = goal.targetValue > 0 ? calcRateClamped(currentValue, goal.targetValue) : 0
 
     res.json({ success: true, data: { ...goal, currentValue, progress } })
   } catch (error: unknown) {

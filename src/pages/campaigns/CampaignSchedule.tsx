@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
+import { formatRate, calcRate } from '@/lib/metricsCalculator';
 
 interface CampaignRecord {
   id: string | number;
@@ -55,26 +56,30 @@ const CampaignSchedule = () => {
   const { data: campaignData, isFetching: isLoading, refetch: loadCampaigns } = useQuery({
     queryKey: ['campaignSchedule'],
     queryFn: async () => {
-      const response = await campaignsApi.getCampaigns();
-      const campaigns: CampaignRecord[] = (response.data?.campaigns || []).filter(
+      // Server-side filtering: fetch only the statuses we need
+      const [scheduledRes, completedRes] = await Promise.all([
+        campaignsApi.getCampaigns({ status: 'SCHEDULED,PAUSED', sortBy: 'startDate', sortOrder: 'asc', limit: 50 }),
+        campaignsApi.getCampaigns({ status: 'COMPLETED', sortBy: 'updatedAt', sortOrder: 'desc', limit: 5 }),
+      ]);
+
+      const scheduledRaw: CampaignRecord[] = (scheduledRes.data?.campaigns || []).filter(
+        (c: CampaignRecord) => c.type !== 'SOCIAL' && c.type !== 'PHONE'
+      );
+      const completedRaw: CampaignRecord[] = (completedRes.data?.campaigns || []).filter(
         (c: CampaignRecord) => c.type !== 'SOCIAL' && c.type !== 'PHONE'
       );
 
-      // Filter scheduled campaigns (status: SCHEDULED or PAUSED - uppercase from backend)
-      const scheduled = campaigns.filter((c: CampaignRecord) => 
-        c.status === 'SCHEDULED' || c.status === 'PAUSED'
-      ).map((c: CampaignRecord) => ({
+      // Map scheduled campaigns (already sorted by startDate from server)
+      const scheduled = scheduledRaw.map((c: CampaignRecord) => ({
         ...c,
-        type: c.type, // Already uppercase from backend
+        type: c.type,
         scheduledDate: c.startDate ? new Date(c.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         scheduledTime: c.startDate ? new Date(c.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         recipients: c.audience || 0,
       }));
 
-      // Filter completed campaigns
-      const sent = campaigns.filter((c: CampaignRecord) => 
-        c.status === 'COMPLETED'
-      ).map((c: CampaignRecord) => ({
+      // Map completed campaigns (already limited to 5 and sorted by server)
+      const sent = completedRaw.map((c: CampaignRecord) => ({
         ...c,
         type: c.type,
         sentDate: c.endDate ? new Date(c.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date(c.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -82,12 +87,12 @@ const CampaignSchedule = () => {
         recipients: c.sent || 0,
         opened: c.opened || 0,
         clicked: c.clicked || 0,
-      })).slice(0, 5);
+      }));
 
-      // Recurring campaigns (use isRecurring field from backend)
-      const recurring = campaigns.filter((c: CampaignRecord) => 
+      // Recurring campaigns from the scheduled results
+      const recurring = scheduledRaw.filter((c: CampaignRecord) => 
         c.isRecurring === true
-      ).slice(0, 3);
+      );
 
       // Calculate stats
       const totalRecipients = scheduled.reduce((sum: number, c: CampaignRecord) => sum + (c.recipients || 0), 0);
@@ -192,6 +197,7 @@ const CampaignSchedule = () => {
     }
 
     try {
+      // Send ISO string which preserves the local timezone offset
       await campaignsApi.rescheduleCampaign(
         rescheduleModal.campaignId,
         newStartDate.toISOString()
@@ -467,11 +473,11 @@ const CampaignSchedule = () => {
                       <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
                         <span>
                           Opened: {campaign.opened || 0} (
-                          {(campaign.recipients || 0) > 0 ? (((campaign.opened || 0) / (campaign.recipients || 1)) * 100).toFixed(1) : '0.0'}%)
+                          {formatRate(calcRate(campaign.opened || 0, campaign.recipients || 0))}%)
                         </span>
                         <span>
                           Clicked: {campaign.clicked || 0} (
-                          {(campaign.recipients || 0) > 0 ? (((campaign.clicked || 0) / (campaign.recipients || 1)) * 100).toFixed(1) : '0.0'}%)
+                          {formatRate(calcRate(campaign.clicked || 0, campaign.recipients || 0))}%)
                         </span>
                       </div>
                     </div>
@@ -543,6 +549,9 @@ const CampaignSchedule = () => {
                 onChange={(e) => setNewScheduleTime(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Times are in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+              </p>
             </div>
           </div>
 

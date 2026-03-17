@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { aiApi, tasksApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import intelligenceService, { type DashboardInsights, type ScoringModel } from '@/services/intelligenceService';
+import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -113,7 +114,7 @@ const IntelligenceInsights = () => {
     setOptimizing(true)
     try {
       const result = await intelligenceService.optimizeScoring()
-      toast.success(`Scoring optimized! New accuracy: ${result.accuracy.toFixed(1)}%`)
+      toast.success(`Scoring optimized! New accuracy: ${formatRate(result.accuracy, 1)}%`)
       await refetch() // Reload to get updated model
     } catch (error) {
       const err = error as Error
@@ -288,7 +289,7 @@ const IntelligenceInsights = () => {
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Model Accuracy</p>
                 <div className="text-3xl font-bold text-primary">
-                  {scoringModel.accuracy ? `${scoringModel.accuracy.toFixed(1)}%` : 'Not trained'}
+                  {scoringModel.accuracy ? `${formatRate(scoringModel.accuracy, 1)}%` : 'Not trained'}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {scoringModel.accuracy && scoringModel.accuracy >= 90 ? 'Excellent' : 
@@ -317,19 +318,19 @@ const IntelligenceInsights = () => {
                 <div className="text-xs space-y-1">
                   <div className="flex justify-between">
                     <span>Score:</span>
-                    <span className="font-medium">{(scoringModel.factors?.scoreWeight != null ? (scoringModel.factors.scoreWeight * 100).toFixed(0) : '—')}%</span>
+                    <span className="font-medium">{(scoringModel.factors?.scoreWeight != null ? formatRate(scoringModel.factors.scoreWeight * 100, 0) : '—')}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Activity:</span>
-                    <span className="font-medium">{(scoringModel.factors?.activityWeight != null ? (scoringModel.factors.activityWeight * 100).toFixed(0) : '—')}%</span>
+                    <span className="font-medium">{(scoringModel.factors?.activityWeight != null ? formatRate(scoringModel.factors.activityWeight * 100, 0) : '—')}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Recency:</span>
-                    <span className="font-medium">{(scoringModel.factors?.recencyWeight != null ? (scoringModel.factors.recencyWeight * 100).toFixed(0) : '—')}%</span>
+                    <span className="font-medium">{(scoringModel.factors?.recencyWeight != null ? formatRate(scoringModel.factors.recencyWeight * 100, 0) : '—')}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Funnel Time:</span>
-                    <span className="font-medium">{(scoringModel.factors?.funnelTimeWeight != null ? (scoringModel.factors.funnelTimeWeight * 100).toFixed(0) : '—')}%</span>
+                    <span className="font-medium">{(scoringModel.factors?.funnelTimeWeight != null ? formatRate(scoringModel.factors.funnelTimeWeight * 100, 0) : '—')}%</span>
                   </div>
                 </div>
               </div>
@@ -360,7 +361,7 @@ const IntelligenceInsights = () => {
                     <Badge variant="success" className="mb-1">
                       {opp.probability}% probability
                     </Badge>
-                    <p className="text-sm font-medium">${opp.value.toLocaleString()} est. value</p>
+                    <p className="text-sm font-medium">{fmtMoney(opp.value)} est. value</p>
                   </div>
                 </div>
               ))}

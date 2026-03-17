@@ -14,10 +14,19 @@ export function onReconnect(cb: ReconnectCallback): () => void {
   return () => { reconnectCallbacks.delete(cb) }
 }
 
+function getBackendBaseURL(): string {
+  const envApiUrl = import.meta.env.VITE_API_URL
+  if (envApiUrl) return envApiUrl.replace(/\/api\/?$/, '')
+  if (window.location.hostname.includes('app.github.dev')) {
+    return window.location.origin.replace('-3000.', '-8000.')
+  }
+  return window.location.origin
+}
+
 function getSocket(): Socket {
   if (!socket) {
     const token = localStorage.getItem('accessToken')
-    const baseURL = import.meta.env.VITE_API_URL?.replace('/api', '') || ''
+    const baseURL = getBackendBaseURL()
 
     socket = io(baseURL, {
       auth: { token },

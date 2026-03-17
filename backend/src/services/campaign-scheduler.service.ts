@@ -270,7 +270,7 @@ export async function checkAndExecuteScheduledCampaigns(): Promise<void> {
               const nextSendAt = calculateNextSendDate(
                 now,
                 campaign.frequency || 'weekly',
-                campaign.recurringPattern
+                campaign.recurringPattern as Record<string, unknown> | null
               );
               
               if (nextSendAt) {

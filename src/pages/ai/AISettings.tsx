@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { aiApi } from '@/lib/api';
+import { calcProgress } from '@/lib/metricsCalculator';
 import { useToast } from '@/hooks/useToast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -710,7 +711,7 @@ const AISettings = () => {
                     return categories.map(({ key, label, icon: Icon }) => {
                       const used = (usage as Record<string, number>)[key] || 0;
                       const limit = (limits as Record<string, number>)[key] || 0;
-                      const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                      const pct = limit > 0 ? calcProgress(used, limit) : 0;
                       const isNearLimit = pct >= 80;
 
                       return (

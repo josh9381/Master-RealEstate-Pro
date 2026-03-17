@@ -13,6 +13,7 @@ import { incrementAIUsage, getUsageWithLimits, getCostBreakdown } from '../servi
 import { getOrgAISettings, updateOrgAISettings, MODEL_PRICING, MODEL_TIERS, calculateCost } from '../services/ai-config.service'
 import prisma from '../config/database'
 import { AIInsightType, AIInsightPriority } from '@prisma/client'
+import { calcRate, calcPercentChange, calcLeadConversionRate, calcProgress, formatRate, roundTo2 } from '../utils/metricsCalculator'
 
 /**
  * Generate actionable insights from real DB data and store in AIInsight table.
@@ -128,8 +129,8 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
         await upsertInsight(
           'EMAIL_PERFORMANCE',
           'MEDIUM',
-          `Email open rate dropped ${Math.round((1 - latestRate / avgOpenRate) * 100)}% vs average`,
-          `Your latest campaign open rate (${(latestRate * 100).toFixed(1)}%) is below your average (${(avgOpenRate * 100).toFixed(1)}%). Consider A/B testing subject lines.`,
+          `Email open rate dropped ${calcRate(avgOpenRate - latestRate, avgOpenRate, 0)}% vs average`,
+          `Your latest campaign open rate (${formatRate(latestRate)}) is below your average (${formatRate(avgOpenRate)}%). Consider A/B testing subject lines.`,
           { latestRate, avgOpenRate },
           '/campaigns'
         )
@@ -255,9 +256,7 @@ export const getAIStats = async (req: Request, res: Response) => {
         role: 'assistant',
       },
     })
-    const messageChange = messagesLastMonth > 0
-      ? Math.round(((messagesThisMonth - messagesLastMonth) / messagesLastMonth) * 100)
-      : 0
+    const messageChange = calcPercentChange(messagesThisMonth, messagesLastMonth)
 
     // Active insights count
     const activeInsights = await prisma.aIInsight.count({
@@ -294,7 +293,7 @@ export const getAIStats = async (req: Request, res: Response) => {
         leadsScored: leadsCount,
         messagesThisMonth,
         totalTokensThisMonth: costData._sum.tokens || 0,
-        totalCostThisMonth: costData._sum.cost ? Math.round(costData._sum.cost * 100) / 100 : 0,
+        totalCostThisMonth: costData._sum.cost ? roundTo2(costData._sum.cost) : 0,
       },
     })
   } catch (error: unknown) {
@@ -1018,7 +1017,7 @@ export const getRecommendations = async (req: Request, res: Response) => {
           description: `Based on your campaign data, emails sent on ${dayNames[bestDay]} have the highest open rates. Consider scheduling important campaigns for this day.`,
           priority: 'medium',
           actionUrl: '/campaigns',
-          data: { bestDay: dayNames[bestDay], avgOpenRate: (bestAvg * 100).toFixed(1) },
+          data: { bestDay: dayNames[bestDay], avgOpenRate: formatRate(bestAvg * 100) },
         })
       }
     }
@@ -1215,7 +1214,7 @@ export const getGlobalPredictions = async (req: Request, res: Response) => {
         month: monthLabel,
         converted,
         total,
-        rate: total > 0 ? Math.round((converted / total) * 100) : 0,
+        rate: calcLeadConversionRate(converted, total),
       })
     }
 
@@ -1499,7 +1498,7 @@ export const getFeatureImportance = async (req: Request, res: Response) => {
     const totalWeight = Object.values(weights).reduce((sum, w) => sum + w.weight, 0)
     const data = Object.values(weights).map(w => ({
       name: w.label,
-      value: totalWeight > 0 ? Math.round((w.weight / totalWeight) * 100) : 25,
+      value: totalWeight > 0 ? calcRate(w.weight, totalWeight, 0) : 25,
       color: w.color,
     }))
 
@@ -2857,7 +2856,7 @@ export const getFeedbackStats = async (req: Request, res: Response) => {
           positive: chatPositive,
           negative: chatNegative,
           total: chatTotal,
-          satisfactionRate: chatTotal > 0 ? Math.round(((chatPositive) / Math.max(1, chatPositive + chatNegative)) * 100) : null,
+          satisfactionRate: chatTotal > 0 ? calcRate(chatPositive, Math.max(1, chatPositive + chatNegative), 0) : null,
         },
         insights: {
           helpful: insightHelpful,

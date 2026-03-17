@@ -20,6 +20,8 @@ export interface CampaignTemplate {
   };
   tags: string[];
   icon: string;
+  usageCount: number;
+  lastUsedAt?: string;
 }
 
 export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
@@ -58,6 +60,7 @@ Best regards,
     },
     tags: ['newsletter', 'market-update'],
     icon: '📊',
+    usageCount: 0,
   },
   
   {
@@ -101,6 +104,7 @@ Cheers,
     },
     tags: ['newsletter', 'monthly'],
     icon: '📰',
+    usageCount: 0,
   },
   
   {
@@ -133,6 +137,7 @@ Best,
     isRecurring: false,
     tags: ['alert', 'listing', 'buyer'],
     icon: '🏠',
+    usageCount: 0,
   },
   
   {
@@ -170,6 +175,7 @@ Looking forward to seeing you!
     isRecurring: false,
     tags: ['event', 'open-house', 'buyer'],
     icon: '🎉',
+    usageCount: 0,
   },
   
   {
@@ -204,6 +210,7 @@ Best,
     isRecurring: false,
     tags: ['alert', 'price-drop', 'buyer'],
     icon: '💰',
+    usageCount: 0,
   },
   
   {
@@ -241,6 +248,7 @@ Warmest congratulations,
     isRecurring: false,
     tags: ['follow-up', 'celebration', 'referral'],
     icon: '🎊',
+    usageCount: 0,
   },
   
   {
@@ -285,6 +293,7 @@ Best regards,
     },
     tags: ['newsletter', 'seasonal', 'market-update'],
     icon: '📊',
+    usageCount: 0,
   },
 
   // SMS Templates
@@ -298,6 +307,7 @@ Best regards,
     isRecurring: false,
     tags: ['sms', 'alert', 'listing'],
     icon: '📱',
+    usageCount: 0,
   },
 
   {
@@ -310,6 +320,7 @@ Best regards,
     isRecurring: false,
     tags: ['sms', 'event', 'reminder'],
     icon: '🔔',
+    usageCount: 0,
   },
 
   {
@@ -322,6 +333,90 @@ Best regards,
     isRecurring: false,
     tags: ['sms', 'follow-up', 'showing'],
     icon: '💬',
+    usageCount: 0,
+  },
+
+  // Phone (Call Script) Templates
+  {
+    id: 'phone-new-lead-intro',
+    name: 'Phone: New Lead Introduction',
+    description: 'Call script for reaching out to new leads for the first time',
+    category: 'Follow-up',
+    type: 'PHONE',
+    body: `Call Script — New Lead Introduction
+
+Opening: "Hi {{lead.firstName}}, this is {{user.firstName}} {{user.lastName}}. I'm a real estate agent in your area. I noticed you were interested in properties — do you have a moment to chat?"
+
+Discovery Questions:
+• "Are you currently looking to buy, sell, or both?"
+• "What's your ideal timeline for making a move?"
+• "Do you have a specific neighborhood or price range in mind?"
+• "Have you been pre-approved for a mortgage yet?"
+
+Value Proposition: "I specialize in helping people find their perfect home. I have access to off-market listings and can set up personalized property alerts for you."
+
+Close: "I'd love to set up a time to meet and discuss your goals in more detail. Would [suggest two times] work for a quick coffee?"
+
+If voicemail: "Hi {{lead.firstName}}, this is {{user.firstName}} from [company]. I'd love to help with your real estate search. Please call me back at {{user.phone}} or reply to the email I'll send over. Talk soon!"`,
+    isRecurring: false,
+    tags: ['phone', 'new-lead', 'introduction'],
+    icon: '📞',
+    usageCount: 0,
+  },
+
+  {
+    id: 'phone-listing-followup',
+    name: 'Phone: Listing Follow-up',
+    description: 'Call script for following up after a property showing',
+    category: 'Follow-up',
+    type: 'PHONE',
+    body: `Call Script — Post-Showing Follow-up
+
+Opening: "Hi {{lead.firstName}}, it's {{user.firstName}}. I wanted to follow up on the property at {{property.address}} that we viewed. How are you feeling about it?"
+
+Key Questions:
+• "What were your favorite features of the home?"
+• "Were there any concerns or things you'd like to know more about?"
+• "On a scale of 1-10, how interested are you in this property?"
+• "Would you like to see any comparable properties in the area?"
+
+If interested: "Great! The listing is getting a lot of attention. Would you like me to prepare an offer analysis so you can see what a competitive offer might look like?"
+
+If not interested: "No worries at all. Based on what you've shared, I have a few other properties that might be a better fit. Can I send those over?"
+
+Close: "I'll follow up with an email summary. Let me know if you have any questions!"`,
+    isRecurring: false,
+    tags: ['phone', 'follow-up', 'showing'],
+    icon: '🏡',
+    usageCount: 0,
+  },
+
+  {
+    id: 'phone-seller-listing-pitch',
+    name: 'Phone: Seller Listing Pitch',
+    description: 'Call script for pitching listing services to potential sellers',
+    category: 'Event',
+    type: 'PHONE',
+    body: `Call Script — Seller Listing Pitch
+
+Opening: "Hi {{lead.firstName}}, this is {{user.firstName}} {{user.lastName}}. I specialize in real estate in your area and I wanted to share some exciting market news with you."
+
+Market Hook: "Homes in your neighborhood have been selling for strong prices lately — the average sale price is {{market.averagePrice}} and properties are moving in just {{market.daysOnMarket}} days."
+
+Key Questions:
+• "Have you thought about what your home might be worth in today's market?"
+• "Is there a timeline you're considering for a potential move?"
+• "What's most important to you in choosing an agent?"
+
+Value Proposition: "I offer a comprehensive marketing strategy including professional photography, virtual tours, targeted digital marketing, and access to my network of qualified buyers."
+
+Close: "I'd love to provide you with a free, no-obligation home valuation. Would [suggest two times] work for a quick walkthrough?"
+
+If voicemail: "Hi {{lead.firstName}}, this is {{user.firstName}}. Homes in your area are selling fast and I'd love to share what yours could be worth. Call me at {{user.phone}} for a free home valuation!"`,
+    isRecurring: false,
+    tags: ['phone', 'seller', 'listing-pitch'],
+    icon: '🏷️',
+    usageCount: 0,
   },
 ];
 
@@ -358,4 +453,15 @@ export function getTemplatesByType(type: 'EMAIL' | 'SMS' | 'PHONE'): CampaignTem
  */
 export function getRecurringTemplates(): CampaignTemplate[] {
   return CAMPAIGN_TEMPLATES.filter(template => template.isRecurring);
+}
+
+/**
+ * Track template usage — increments usageCount and sets lastUsedAt
+ */
+export function trackTemplateUsage(id: string): void {
+  const template = CAMPAIGN_TEMPLATES.find(t => t.id === id);
+  if (template) {
+    template.usageCount += 1;
+    template.lastUsedAt = new Date().toISOString();
+  }
 }

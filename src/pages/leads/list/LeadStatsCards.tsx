@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/Card'
 import { Users, Target, TrendingUp } from 'lucide-react'
+import { calcRate } from '@/lib/metricsCalculator'
 
 interface BackendStats {
   total: number
@@ -21,12 +22,12 @@ interface LeadStatsCardsProps {
 export function LeadStatsCards({ backendStats, totalLeads, globalTotal, currentPage, totalPages, hasActiveFilters }: LeadStatsCardsProps) {
   const total = backendStats?.total || globalTotal || totalLeads
   const qualified = backendStats?.byStatus?.QUALIFIED || 0
-  const qualifiedRate = total > 0 ? Math.round((qualified / total) * 100) : 0
+  const qualifiedRate = calcRate(qualified, total, 0)
   const avgScore = Math.round(backendStats?.averageScore || 0)
   const won = backendStats?.byStatus?.WON || 0
   const lost = backendStats?.byStatus?.LOST || 0
   const closedTotal = won + lost
-  const conversionRate = closedTotal > 0 ? Math.round((won / closedTotal) * 100) : 0
+  const conversionRate = calcRate(won, closedTotal, 0)
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

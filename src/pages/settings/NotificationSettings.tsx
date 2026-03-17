@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
 import { settingsApi } from '@/lib/api';
+import { calcRate } from '@/lib/metricsCalculator';
 import { useAuthStore } from '@/store/authStore';
 import { getSoundSettings, saveSoundSettings, playPreviewSound, type SoundSettings } from '@/lib/notificationSounds';
 
@@ -419,7 +420,7 @@ const NotificationSettings = () => {
                 className="flex-1 h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
               />
               <Volume2 className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground w-8">{Math.round(soundSettings.volume * 100)}%</span>
+              <span className="text-xs text-muted-foreground w-8">{calcRate(soundSettings.volume, 1, 0)}%</span>
             </div>
 
             {/* Per-event sound toggles */}

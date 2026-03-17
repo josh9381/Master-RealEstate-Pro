@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger'
+import { fmtMoney } from '@/lib/metricsCalculator'
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -773,9 +774,9 @@ function LeadDetail() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Budget Range</span>
                       <span className="text-sm font-medium">
-                        {lead.budgetMin ? `$${Number(lead.budgetMin).toLocaleString()}` : '?'}
+                        {lead.budgetMin ? fmtMoney(Number(lead.budgetMin)) : '?'}
                         {' – '}
-                        {lead.budgetMax ? `$${Number(lead.budgetMax).toLocaleString()}` : '?'}
+                        {lead.budgetMax ? fmtMoney(Number(lead.budgetMax)) : '?'}
                       </span>
                     </div>
                   )}
@@ -1229,7 +1230,7 @@ function LeadDetail() {
                 <div>
                   <p className="text-sm font-medium">Deal Value</p>
                   <p className="mt-1 text-sm text-muted-foreground font-medium">
-                    ${lead.value.toLocaleString()}
+                    {fmtMoney(lead.value)}
                   </p>
                 </div>
               )}

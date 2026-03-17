@@ -1,6 +1,7 @@
 import { TrendingUp, DollarSign, Clock, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
+import { fmtMoney } from '@/lib/metricsCalculator';
 
 export type PredictionType = 'probability' | 'value' | 'time' | 'risk';
 
@@ -64,7 +65,7 @@ export const PredictionBadge = ({
                  val >= 10000 ? 'bg-blue-100 text-blue-700 border-blue-200' :
                  'bg-slate-100 text-slate-700 border-slate-200',
           label: label || 'Est. Value',
-          displayValue: `$${val.toLocaleString()}`,
+          displayValue: fmtMoney(val),
         };
       }
       case 'time': {

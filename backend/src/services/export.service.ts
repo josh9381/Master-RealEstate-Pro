@@ -7,6 +7,7 @@
 import ExcelJS from 'exceljs';
 import { prisma } from '../config/database';
 import { Response } from 'express';
+import { formatRate, calcOpenRate, calcClickRate, calcBounceRate } from '../utils/metricsCalculator';
 
 export interface ExportOptions {
   organizationId: string;
@@ -237,9 +238,9 @@ async function fetchCampaignsBatch(
     deliveredCount: c.deliveredCount || 0,
     openedCount: c.openedCount || 0,
     clickedCount: c.clickedCount || 0,
-    openRate: c.sentCount > 0 ? `${((c.openedCount || 0) / c.sentCount * 100).toFixed(1)}%` : '0%',
-    clickRate: c.sentCount > 0 ? `${((c.clickedCount || 0) / c.sentCount * 100).toFixed(1)}%` : '0%',
-    bounceRate: c.sentCount > 0 ? `${((c.bouncedCount || 0) / c.sentCount * 100).toFixed(1)}%` : '0%',
+    openRate: `${formatRate(calcOpenRate(c.openedCount || 0, c.sentCount))}%`,
+    clickRate: `${formatRate(calcClickRate(c.clickedCount || 0, c.sentCount))}%`,
+    bounceRate: `${formatRate(calcBounceRate(c.bouncedCount || 0, c.sentCount))}%`,
     createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : '',
     sentAt: c.sentAt ? new Date(c.sentAt).toISOString() : '',
   }));

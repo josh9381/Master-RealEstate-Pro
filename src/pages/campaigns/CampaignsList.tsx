@@ -25,6 +25,7 @@ import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { campaignsApi } from '@/lib/api'
 import { exportToCSV, campaignExportColumns } from '@/lib/exportService'
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
+import { calcROI, calcOpenRate, calcClickRate, formatRate, calcRate, calcProgress, fmtMoney } from '@/lib/metricsCalculator'
 type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE'
 
 function CampaignsList() {
@@ -211,7 +212,7 @@ function CampaignsList() {
     const totalSent = base.reduce((sum, c) => sum + (c.sent ?? 0), 0)
     const totalRevenue = base.reduce((sum, c) => sum + (c.revenue ?? 0), 0)
     const totalSpent = base.reduce((sum, c) => sum + (c.spent ?? 0), 0)
-    const avgROI = totalSpent > 0 ? (((totalRevenue - totalSpent) / totalSpent) * 100).toFixed(1) : '0'
+    const avgROI = totalSpent > 0 ? formatRate(calcROI(totalRevenue, totalSpent)) : '0'
 
     return {
       active: activeCampaigns.length,
@@ -235,7 +236,7 @@ function CampaignsList() {
         campaigns: typeCampaigns.length,
         revenue,
         spent,
-        roi: spent > 0 ? Math.round((revenue / spent) * 100) : 0
+        roi: calcROI(revenue, spent)
       }
     })
   }, [campaigns, typeFilter])
@@ -275,14 +276,9 @@ function CampaignsList() {
         )
       )
     )
-    const failedIndices = results
-      .map((r, i) => r.status === 'rejected' ? i : -1)
-      .filter(i => i >= 0)
-    if (failedIndices.length > 0) {
-      const failedNames = failedIndices
-        .map(i => campaigns.find(c => c.id === String(selectedCampaigns[i]))?.name || selectedCampaigns[i])
-        .join(', ')
-      toast.error(`Failed to update ${failedIndices.length} campaign(s): ${failedNames}`)
+    const failed = results.filter(r => r.status === 'rejected').length
+    if (failed > 0) {
+      toast.error(`Failed to update ${failed} of ${selectedCampaigns.length} campaigns`)
     }
     queryClient.invalidateQueries({ queryKey: ['campaigns'] })
 
@@ -298,14 +294,9 @@ function CampaignsList() {
         campaignsApi.deleteCampaign(String(campaignId))
       )
     )
-    const failedIndices = results
-      .map((r, i) => r.status === 'rejected' ? i : -1)
-      .filter(i => i >= 0)
-    if (failedIndices.length > 0) {
-      const failedNames = failedIndices
-        .map(i => campaigns.find(c => c.id === String(selectedCampaigns[i]))?.name || selectedCampaigns[i])
-        .join(', ')
-      toast.error(`Failed to delete ${failedIndices.length} campaign(s): ${failedNames}`)
+    const failed = results.filter(r => r.status === 'rejected').length
+    if (failed > 0) {
+      toast.error(`Failed to delete ${failed} of ${selectedCampaigns.length} campaigns`)
     }
     queryClient.invalidateQueries({ queryKey: ['campaigns'] })
 
@@ -543,7 +534,7 @@ function CampaignsList() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-3xl font-bold">{fmtMoney(stats.totalRevenue)}</div>
             <p className="mt-1 text-xs text-muted-foreground">Total generated</p>
           </CardContent>
         </Card>
@@ -572,25 +563,25 @@ function CampaignsList() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Total Budget</p>
-                <p className="text-2xl font-bold">${stats.totalBudget.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{fmtMoney(stats.totalBudget)}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Spent</p>
-                <p className="text-2xl font-bold">${stats.totalSpent.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{fmtMoney(stats.totalSpent)}</p>
               </div>
               <div className="space-y-1 text-right">
                 <p className="text-sm font-medium text-muted-foreground">Remaining</p>
-                <p className="text-2xl font-bold text-green-600">${(stats.totalBudget - stats.totalSpent).toLocaleString()}</p>
+                <p className="text-2xl font-bold text-green-600">{fmtMoney(stats.totalBudget - stats.totalSpent)}</p>
               </div>
             </div>
             <div className="h-4 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                style={{ width: `${stats.totalBudget > 0 ? Math.min((stats.totalSpent / stats.totalBudget) * 100, 100) : 0}%` }}
+                style={{ width: `${calcProgress(stats.totalSpent, stats.totalBudget)}%` }}
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              {stats.totalBudget > 0 ? ((stats.totalSpent / stats.totalBudget) * 100).toFixed(1) : '0.0'}% of budget used
+              {formatRate(calcRate(stats.totalSpent, stats.totalBudget))}% of budget used
             </p>
           </div>
         </CardContent>
@@ -811,8 +802,8 @@ function CampaignsList() {
                         <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.opened ?? 0).toLocaleString() : '—'}</td>
                         <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.clicked ?? 0).toLocaleString() : '—'}</td>
                         <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.converted ?? 0).toLocaleString() : '—'}</td>
-                        <td className="py-2 text-right text-sm">{campaign.sent ? `$${(campaign.revenue ?? 0).toLocaleString()}` : '—'}</td>
-                        <td className="py-2 text-right text-sm font-medium">{campaign.sent ? `${campaign.roi ?? 0}%` : 'N/A'}</td>
+                        <td className="py-2 text-right text-sm">{campaign.sent ? fmtMoney(campaign.revenue ?? 0) : '—'}</td>
+                        <td className="py-2 text-right text-sm font-medium">{campaign.sent ? `${formatRate(Number(campaign.roi) || 0)}%` : 'N/A'}</td>
                       </tr>
                     )
                   })}
@@ -902,7 +893,7 @@ function CampaignsList() {
                     <p className="text-2xl font-bold">{(campaign.opened ?? 0).toLocaleString()}</p>
                     {campaign.sent > 0 && campaign.opened && (
                       <p className="text-xs text-muted-foreground">
-                        {((campaign.opened / campaign.sent) * 100).toFixed(1)}%
+                        {formatRate(calcOpenRate(campaign.opened, campaign.sent))}%
                       </p>
                     )}
                   </div>
@@ -911,28 +902,28 @@ function CampaignsList() {
                     <p className="text-2xl font-bold">{(campaign.clicked ?? 0).toLocaleString()}</p>
                     {campaign.sent > 0 && campaign.clicked && (
                       <p className="text-xs text-muted-foreground">
-                        {((campaign.clicked / campaign.sent) * 100).toFixed(1)}%
+                        {formatRate(calcClickRate(campaign.clicked, campaign.sent))}%
                       </p>
                     )}
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">ROI</p>
-                    <p className="text-2xl font-bold">{campaign.sent ? `${campaign.roi ?? 0}%` : 'N/A'}</p>
+                    <p className="text-2xl font-bold">{campaign.sent ? `${formatRate(Number(campaign.roi) || 0)}%` : 'N/A'}</p>
                     <p className="text-xs text-muted-foreground">
-                      ${(campaign.revenue ?? 0).toLocaleString()} revenue
+                      {fmtMoney(campaign.revenue ?? 0)} revenue
                     </p>
                   </div>
                 </div>
                 {campaign.budget && (
                   <div className="mt-4">
                     <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                      <span>Budget: ${campaign.budget.toLocaleString()}</span>
-                      <span>Spent: ${(campaign.spent ?? 0).toLocaleString()}</span>
+                      <span>Budget: {fmtMoney(campaign.budget)}</span>
+                      <span>Spent: {fmtMoney(campaign.spent ?? 0)}</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                        style={{ width: `${Math.min(((campaign.spent ?? 0) / campaign.budget) * 100, 100)}%` }}
+                        style={{ width: `${calcProgress(campaign.spent ?? 0, campaign.budget)}%` }}
                       />
                     </div>
                   </div>
@@ -1010,7 +1001,7 @@ function CampaignsList() {
                       <span className="font-bold">{(campaign.opened ?? 0).toLocaleString()}</span>
                       {campaign.sent > 0 && campaign.opened && (
                         <p className="text-xs text-muted-foreground">
-                          {((campaign.opened / campaign.sent) * 100).toFixed(1)}%
+                          {formatRate(calcOpenRate(campaign.opened, campaign.sent))}%
                         </p>
                       )}
                     </div>
@@ -1021,7 +1012,7 @@ function CampaignsList() {
                       <span className="font-bold">{(campaign.clicked ?? 0).toLocaleString()}</span>
                       {campaign.sent > 0 && campaign.clicked && (
                         <p className="text-xs text-muted-foreground">
-                          {((campaign.clicked / campaign.sent) * 100).toFixed(1)}%
+                          {formatRate(calcClickRate(campaign.clicked, campaign.sent))}%
                         </p>
                       )}
                     </div>
@@ -1029,22 +1020,22 @@ function CampaignsList() {
                   <div className="pt-2 border-t">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">ROI</span>
-                      <span className="text-lg font-bold text-green-600">{campaign.sent ? `${campaign.roi ?? 0}%` : 'N/A'}</span>
+                      <span className="text-lg font-bold text-green-600">{campaign.sent ? `${formatRate(Number(campaign.roi) || 0)}%` : 'N/A'}</span>
                     </div>
                     <p className="text-xs text-muted-foreground text-right">
-                      ${(campaign.revenue ?? 0).toLocaleString()} revenue
+                      {fmtMoney(campaign.revenue ?? 0)} revenue
                     </p>
                   </div>
                   {campaign.budget && (
                     <div className="pt-2">
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>Budget</span>
-                        <span>${(campaign.spent ?? 0).toLocaleString()} / ${campaign.budget.toLocaleString()}</span>
+                        <span>{fmtMoney(campaign.spent ?? 0)} / {fmtMoney(campaign.budget)}</span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                          style={{ width: `${Math.min(((campaign.spent ?? 0) / campaign.budget) * 100, 100)}%` }}
+                          style={{ width: `${calcProgress(campaign.spent ?? 0, campaign.budget)}%` }}
                         />
                       </div>
                     </div>

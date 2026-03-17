@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { aiApi } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { formatCurrency } from '@/lib/metricsCalculator';
 
 interface CostData {
   period: string;
@@ -237,7 +238,7 @@ const AICostDashboard = () => {
                       <span className="text-sm font-medium truncate">{m.model}</span>
                       <span className="text-xs text-muted-foreground">{m.requests} req</span>
                     </div>
-                    <span className="text-sm font-medium">${m.cost.toFixed(3)}</span>
+                    <span className="text-sm font-medium">${formatCurrency(m.cost)}</span>
                   </div>
                 ))}
               </div>
@@ -274,7 +275,7 @@ const AICostDashboard = () => {
                       <td className="py-2">{u.name}</td>
                       <td className="py-2 text-right">{u.requests}</td>
                       <td className="py-2 text-right">{(u.tokens / 1000).toFixed(1)}k</td>
-                      <td className="py-2 text-right font-medium">${u.cost.toFixed(3)}</td>
+                      <td className="py-2 text-right font-medium">${formatCurrency(u.cost)}</td>
                     </tr>
                   ))}
                 </tbody>

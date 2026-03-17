@@ -1,6 +1,7 @@
 import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
 import { getOpenAIService } from './openai.service';
+import { calcPercentChange, calcRate, calcRateClamped } from '../utils/metricsCalculator';
 
 // Types for intelligence predictions and insights
 export interface Prediction {
@@ -205,7 +206,7 @@ export class IntelligenceService {
       return daysSince <= 30;
     });
 
-    const engagementScore = Math.min((recentActivities.length / 15) * 100, 100);
+    const engagementScore = calcRateClamped(recentActivities.length, 15);
 
     // Determine trend by comparing recent vs older activities
     const veryRecentActivities = activities.filter(a => {
@@ -247,7 +248,7 @@ export class IntelligenceService {
         return {
           dayOfWeek,
           hourOfDay: parseInt(hourOfDay),
-          confidence: Math.min((count / activities.length) * 100, 100),
+          confidence: calcRateClamped(count, activities.length),
         };
       });
 
@@ -375,7 +376,7 @@ export class IntelligenceService {
           atRiskLeadsData.push({
             leadId: lead.id,
             leadName: `${lead.firstName} ${lead.lastName}`,
-            churnRisk: Math.min((daysSince / 30) * 100, 100),
+            churnRisk: calcRateClamped(daysSince, 30),
             daysSinceLastContact: daysSince,
           });
         }
@@ -423,15 +424,11 @@ export class IntelligenceService {
       const d = new Date(l.createdAt);
       return d >= twoWeeksAgo && d < oneWeekAgo;
     }).length;
-    const newLeadsChange = lastWeekLeads > 0
-      ? Math.round(((thisWeekLeads - lastWeekLeads) / lastWeekLeads) * 1000) / 10
-      : thisWeekLeads > 0 ? 100 : 0;
+    const newLeadsChange = calcPercentChange(thisWeekLeads, lastWeekLeads);
 
     const thisMonthHotLeads = leads.filter(l => (l.score || 0) >= 80 && new Date(l.updatedAt) >= oneMonthAgo).length;
     const lastMonthHotLeads = leads.filter(l => (l.score || 0) >= 80 && new Date(l.updatedAt) >= twoMonthsAgo && new Date(l.updatedAt) < oneMonthAgo).length;
-    const hotLeadsChange = lastMonthHotLeads > 0
-      ? Math.round(((thisMonthHotLeads - lastMonthHotLeads) / lastMonthHotLeads) * 1000) / 10
-      : thisMonthHotLeads > 0 ? 100 : 0;
+    const hotLeadsChange = calcPercentChange(thisMonthHotLeads, lastMonthHotLeads);
 
     const thisMonthLeads = leads.filter(l => new Date(l.updatedAt) >= oneMonthAgo);
     const lastMonthLeads = leads.filter(l => {
@@ -444,9 +441,7 @@ export class IntelligenceService {
     const lastMonthAvgScore = lastMonthLeads.length > 0
       ? Math.round(lastMonthLeads.reduce((s, l) => s + (l.score || 0), 0) / lastMonthLeads.length)
       : 0;
-    const engagementChange = lastMonthAvgScore > 0
-      ? Math.round(((thisMonthAvgScore - lastMonthAvgScore) / lastMonthAvgScore) * 1000) / 10
-      : thisMonthAvgScore > 0 ? 100 : 0;
+    const engagementChange = calcPercentChange(thisMonthAvgScore, lastMonthAvgScore);
 
     const trends = [
       {
@@ -668,17 +663,18 @@ export class IntelligenceService {
     }
 
     // Calculate completeness (fields filled)
-    const completeness = leads.reduce((acc, lead) => {
+    const filledTotal = leads.reduce((acc, lead) => {
       const fields = [lead.email, lead.phone, lead.company, lead.status];
       const filled = fields.filter(f => f && f.trim() !== '').length;
       return acc + (filled / fields.length);
-    }, 0) / leads.length * 100;
+    }, 0);
+    const completeness = calcRate(filledTotal, leads.length);
 
     // Calculate timeliness (how recent are leads)
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const recentLeads = leads.filter(l => l.createdAt >= thirtyDaysAgo).length;
-    const timeliness = (recentLeads / leads.length) * 100;
+    const timeliness = calcRate(recentLeads, leads.length);
 
     return [
       {

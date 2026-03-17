@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { useAuthStore } from '@/store/authStore'
 import { getUserItem, setUserItem } from '@/lib/userStorage'
+import { calcProgress } from '@/lib/metricsCalculator'
 import {
   Users,
   Megaphone,
@@ -80,7 +81,7 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
   ]
 
   const completedCount = steps.filter((s) => s.isComplete).length
-  const progressPercent = Math.round((completedCount / steps.length) * 100)
+  const progressPercent = calcProgress(completedCount, steps.length)
 
   const handleDismiss = () => {
     setUserItem(userId, STORAGE_KEY, 'true')

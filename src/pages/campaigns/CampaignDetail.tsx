@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog'
-import { Edit, Pause, Play, Trash2, Copy, ShieldCheck, AlertTriangle, ShieldAlert, ChevronDown, ChevronUp, Users } from 'lucide-react'
+import { Edit, Pause, Trash2, Copy, ShieldCheck, AlertTriangle, ShieldAlert, ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, analyticsApi, deliverabilityApi, CreateCampaignData } from '@/lib/api'
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { CampaignExecutionStatus } from '@/components/campaigns/CampaignExecutionStatus'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
-import type { Campaign, TimelineDataPoint, HourlyEngagementEntry, DeviceBreakdownEntry, GeoBreakdownEntry } from '@/types'
+import type { TimelineDataPoint, HourlyEngagementEntry, DeviceBreakdownEntry, GeoBreakdownEntry } from '@/types'
 import {
   LineChart,
   Line,
@@ -29,6 +29,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { calcRate, calcOpenRate, calcClickRate, calcConversionRate, calcUnsubscribeRate, formatRate, fmtMoney } from '@/lib/metricsCalculator'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
@@ -144,18 +145,18 @@ function CampaignDetail() {
     const converted = analyticsData?.converted ?? campaignData.converted ?? 0
     return [
       { stage: 'Sent', count: sent, percentage: 100 },
-      { stage: 'Delivered', count: delivered, percentage: sent > 0 ? Math.round((delivered / sent) * 100) : 0 },
-      { stage: 'Opened', count: opened, percentage: sent > 0 ? Math.round((opened / sent) * 100) : 0 },
-      { stage: 'Clicked', count: clicked, percentage: sent > 0 ? Math.round((clicked / sent) * 100) : 0 },
-      { stage: 'Converted', count: converted, percentage: sent > 0 ? Math.round((converted / sent) * 100) : 0 },
+      { stage: 'Delivered', count: delivered, percentage: calcRate(delivered, sent, 0) },
+      { stage: 'Opened', count: opened, percentage: calcRate(opened, sent, 0) },
+      { stage: 'Clicked', count: clicked, percentage: calcRate(clicked, sent, 0) },
+      { stage: 'Converted', count: converted, percentage: calcRate(converted, sent, 0) },
     ]
   }, [analyticsData, campaignData.sent, campaignData.delivered, campaignData.opened, campaignData.clicked, campaignData.converted])
 
-  // Fetch hourly engagement data scoped to this campaign
+  // Fetch hourly engagement data from Phase 5 backend
   const { data: hourlyResponse } = useQuery({
-    queryKey: ['hourly-engagement', id],
+    queryKey: ['hourly-engagement'],
     queryFn: async () => {
-      const response = await analyticsApi.getHourlyEngagement({ days: 90, campaignId: id })
+      const response = await analyticsApi.getHourlyEngagement({ days: 90 })
       return response.data || response
     },
     enabled: !!id && hasSentData,
@@ -172,6 +173,14 @@ function CampaignDetail() {
     }
     return []
   }, [hourlyResponse])
+
+  const deviceData = useMemo((): { name: string; value: number; color: string }[] => {
+    return []
+  }, [])
+
+  const geoData = useMemo((): { location: string; opens: number; clicks: number; conversions: number }[] => {
+    return []
+  }, [])
 
   // Phase 8.9: Fetch real device/geo breakdown
   const { data: deviceBreakdownData } = useQuery({
@@ -195,43 +204,39 @@ function CampaignDetail() {
   })
 
   const realDeviceData = useMemo(() => {
-    if (!deviceBreakdownData?.devices || deviceBreakdownData.devices.length === 0) return []
+    if (!deviceBreakdownData?.devices || deviceBreakdownData.devices.length === 0) return deviceData
     const colorMap: Record<string, string> = { Desktop: '#3b82f6', Mobile: '#10b981', Tablet: '#f59e0b', Unknown: '#94a3b8' }
     return deviceBreakdownData.devices.map((d: DeviceBreakdownEntry) => ({
       name: d.name,
       value: d.count,
       color: colorMap[d.name] || '#8b5cf6',
     }))
-  }, [deviceBreakdownData])
+  }, [deviceBreakdownData, deviceData])
 
   const realGeoData = useMemo(() => {
-    if (!geoBreakdownData?.countries || geoBreakdownData.countries.length === 0) return []
+    if (!geoBreakdownData?.countries || geoBreakdownData.countries.length === 0) return geoData
     return geoBreakdownData.countries.map((c: GeoBreakdownEntry) => ({
       location: c.name,
       opens: c.count,
       clicks: 0,
       conversions: 0,
     }))
-  }, [geoBreakdownData])
+  }, [geoBreakdownData, geoData])
 
-  const [editForm, setEditForm] = useState<typeof campaignData | null>(null)
+  const [editForm, setEditForm] = useState(campaignData)
 
   // Keep editForm in sync when campaign data loads
+  // (useState only captures initial value which is the loading placeholder)
   useEffect(() => {
     if (campaignResponse) {
       setEditForm(campaignData)
     }
   }, [campaignResponse, campaignData])
 
-  // Resolve the form data (never use placeholder values)
-  const resolvedEditForm = editForm ?? campaignData
-
   // Update campaign mutation
   const updateCampaignMutation = useMutation({
-    mutationFn: (data: Partial<CreateCampaignData>) => {
-      if (!id) throw new Error('Campaign ID is required')
-      return campaignsApi.updateCampaign(id, data)
-    },
+    mutationFn: (data: Partial<CreateCampaignData>) =>
+      campaignsApi.updateCampaign(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaign', id] })
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
@@ -244,10 +249,7 @@ function CampaignDetail() {
 
   // Delete campaign mutation
   const deleteCampaignMutation = useMutation({
-    mutationFn: () => {
-      if (!id) throw new Error('Campaign ID is required')
-      return campaignsApi.deleteCampaign(id)
-    },
+    mutationFn: () => campaignsApi.deleteCampaign(id!),
     onSuccess: () => {
       toast.success('Campaign deleted successfully')
       navigate('/campaigns')
@@ -259,10 +261,7 @@ function CampaignDetail() {
 
   // Duplicate campaign mutation
   const duplicateCampaignMutation = useMutation({
-    mutationFn: () => {
-      if (!id) throw new Error('Campaign ID is required')
-      return campaignsApi.duplicateCampaign(id, `${campaignData.name} (Copy)`)
-    },
+    mutationFn: () => campaignsApi.duplicateCampaign(id!, `${campaignData.name} (Copy)`),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
       toast.success('Campaign duplicated successfully')
@@ -278,49 +277,38 @@ function CampaignDetail() {
 
   const handleStatusToggle = () => {
     const currentStatus = (campaignData.status || '').toUpperCase()
-    let newStatus: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
-    if (currentStatus === 'ACTIVE') {
-      newStatus = 'PAUSED'
-    } else if (currentStatus === 'PAUSED') {
-      newStatus = 'ACTIVE'
-    } else if (currentStatus === 'DRAFT') {
-      newStatus = 'SCHEDULED'
-    } else if (currentStatus === 'SCHEDULED') {
-      newStatus = 'ACTIVE'
-    } else {
-      newStatus = 'ACTIVE'
-    }
+    const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
     updateCampaignMutation.mutate({ status: newStatus })
   }
 
   const handleSaveEdit = () => {
-    if (!resolvedEditForm.name?.trim()) {
+    if (!editForm.name?.trim()) {
       toast.error('Campaign name is required')
       return
     }
-    if (resolvedEditForm.type === 'email' || resolvedEditForm.type === 'EMAIL') {
-      if (!resolvedEditForm.subject?.trim()) {
+    if (editForm.type === 'email' || editForm.type === 'EMAIL') {
+      if (!editForm.subject?.trim()) {
         toast.error('Email subject is required')
         return
       }
-      if (!(resolvedEditForm.fullContent?.trim() || resolvedEditForm.content?.trim())) {
+      if (!(editForm.fullContent?.trim() || editForm.content?.trim())) {
         toast.error('Email body content is required')
         return
       }
     }
-    if (resolvedEditForm.startDate && new Date(resolvedEditForm.startDate) < new Date() && !['ACTIVE', 'COMPLETED', 'SENDING'].includes((resolvedEditForm.status || '').toUpperCase())) {
+    if (editForm.startDate && new Date(editForm.startDate) < new Date() && !['ACTIVE', 'COMPLETED', 'SENDING'].includes((editForm.status || '').toUpperCase())) {
       toast.error('Start date must be in the future')
       return
     }
     updateCampaignMutation.mutate({
-      name: resolvedEditForm.name,
-      type: (resolvedEditForm.type || '').toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL',
-      status: (resolvedEditForm.status || '').toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED',
-      subject: resolvedEditForm.subject || undefined,
-      body: resolvedEditForm.fullContent || resolvedEditForm.content || undefined,
-      startDate: resolvedEditForm.startDate || undefined,
-      endDate: resolvedEditForm.endDate || undefined,
-      budget: resolvedEditForm.budget != null ? resolvedEditForm.budget : undefined,
+      name: editForm.name,
+      type: (editForm.type || '').toUpperCase() as 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL',
+      status: (editForm.status || '').toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED',
+      subject: editForm.subject || undefined,
+      body: editForm.fullContent || editForm.content || undefined,
+      startDate: editForm.startDate || undefined,
+      endDate: editForm.endDate || undefined,
+      budget: editForm.budget != null ? editForm.budget : undefined,
     })
     setShowEditModal(false)
   }
@@ -379,9 +367,9 @@ function CampaignDetail() {
 
   const campaign = campaignData
 
-  const openRate = campaign.sent > 0 ? ((campaign.opened / campaign.sent) * 100).toFixed(1) : '0.0'
-  const clickRate = campaign.sent > 0 ? ((campaign.clicked / campaign.sent) * 100).toFixed(1) : '0.0'
-  const conversionRate = campaign.sent > 0 ? ((campaign.converted / campaign.sent) * 100).toFixed(1) : '0.0'
+  const openRate = formatRate(calcOpenRate(campaign.opened, campaign.sent))
+  const clickRate = formatRate(calcClickRate(campaign.clicked, campaign.sent))
+  const conversionRate = formatRate(calcConversionRate(campaign.converted, campaign.sent))
 
   return (
     <div className="space-y-6">
@@ -398,11 +386,9 @@ function CampaignDetail() {
               : (campaign.status || '').toUpperCase() === 'SCHEDULED' ? 'warning'
               : (campaign.status || '').toUpperCase() === 'COMPLETED' ? 'outline'
               : 'secondary'
-            }>{(campaign.status || '').charAt(0).toUpperCase() + (campaign.status || '').slice(1).toLowerCase()}</Badge>
+            }>{campaign.status}</Badge>
             <span className="text-sm text-muted-foreground">
-              {campaign.startDate || campaign.endDate
-                ? `${campaign.startDate ? new Date(campaign.startDate).toLocaleDateString() : 'N/A'} - ${campaign.endDate ? new Date(campaign.endDate).toLocaleDateString() : 'N/A'}`
-                : 'No dates set'}
+              {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString() : 'N/A'} - {campaign.endDate ? new Date(campaign.endDate).toLocaleDateString() : 'N/A'}
             </span>
           </div>
         </div>
@@ -417,24 +403,13 @@ function CampaignDetail() {
             disabled={duplicateCampaignMutation.isPending}
           >
             <Copy className="mr-2 h-4 w-4" />
-            {duplicateCampaignMutation.isPending ? 'Duplicating...' : 'Duplicate'}
+            Duplicate
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleStatusToggle}
-            disabled={updateCampaignMutation.isPending}
-          >
-            {campaign.status?.toUpperCase() === 'ACTIVE'
-              ? <><Pause className="mr-2 h-4 w-4" />Pause</>
-              : campaign.status?.toUpperCase() === 'DRAFT'
-              ? <><Play className="mr-2 h-4 w-4" />Schedule</>
-              : <><Play className="mr-2 h-4 w-4" />Resume</>}
+          <Button variant="outline" onClick={handleStatusToggle}>
+            <Pause className="mr-2 h-4 w-4" />
+            {campaign.status?.toUpperCase() === 'ACTIVE' ? 'Pause' : 'Resume'}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowDeleteModal(true)}
-            disabled={deleteCampaignMutation.isPending}
-          >
+          <Button variant="outline" onClick={() => setShowDeleteModal(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
@@ -496,7 +471,7 @@ function CampaignDetail() {
           <CardContent>
             <div className="text-2xl font-bold">{(campaign.unsubscribed ?? 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              {campaign.sent ? ((campaign.unsubscribed ?? 0) / campaign.sent * 100).toFixed(1) : '0.0'}% unsub rate
+              {formatRate(calcUnsubscribeRate(campaign.unsubscribed ?? 0, campaign.sent))}% unsub rate
             </p>
           </CardContent>
         </Card>
@@ -513,7 +488,7 @@ function CampaignDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{deliverabilityData.deliveryRate ?? 0}%</div>
+              <div className="text-2xl font-bold text-green-600">{formatRate(deliverabilityData.deliveryRate ?? 0)}%</div>
               <p className="text-xs text-muted-foreground">{(deliverabilityData.delivered ?? 0).toLocaleString()} of {(deliverabilityData.sent ?? 0).toLocaleString()} delivered</p>
             </CardContent>
           </Card>
@@ -526,7 +501,7 @@ function CampaignDetail() {
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${(deliverabilityData.bounceRate ?? 0) > 5 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                {deliverabilityData.bounceRate ?? 0}%
+                {formatRate(deliverabilityData.bounceRate ?? 0)}%
                 {(deliverabilityData.bounceRate ?? 0) > 5 && <span className="text-sm ml-1">(High)</span>}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -543,7 +518,7 @@ function CampaignDetail() {
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${(deliverabilityData.complaintRate ?? 0) > 0.1 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                {deliverabilityData.complaintRate ?? 0}%
+                {formatRate(deliverabilityData.complaintRate ?? 0)}%
               </div>
               <p className="text-xs text-muted-foreground">{(deliverabilityData.spamComplaints ?? 0).toLocaleString()} complaints</p>
             </CardContent>
@@ -572,7 +547,6 @@ function CampaignDetail() {
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
                 <Line type="monotone" dataKey="sent" stroke="#3b82f6" name="Sent" />
                 <Line type="monotone" dataKey="opened" stroke="#10b981" name="Opened" />
                 <Line type="monotone" dataKey="clicked" stroke="#f59e0b" name="Clicked" />
@@ -639,7 +613,7 @@ function CampaignDetail() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name}: ${formatRate(percent * 100, 0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -731,7 +705,7 @@ function CampaignDetail() {
                       <div
                         className="h-full bg-green-500"
                         style={{
-                          width: `${(location.opens / Math.max(...realGeoData.map((g: { opens: number }) => g.opens), 1)) * 100}%`,
+                          width: `${calcRate(location.opens, Math.max(...realGeoData.map((g: { opens: number }) => g.opens), 1), 0)}%`,
                         }}
                       />
                     </div>
@@ -739,7 +713,7 @@ function CampaignDetail() {
                       <div
                         className="h-full bg-blue-500"
                         style={{
-                          width: `${(location.clicks / Math.max(...realGeoData.map((g: { clicks: number }) => g.clicks), 1)) * 100}%`,
+                          width: `${calcRate(location.clicks, Math.max(...realGeoData.map((g: { clicks: number }) => g.clicks), 1), 0)}%`,
                         }}
                       />
                     </div>
@@ -762,29 +736,35 @@ function CampaignDetail() {
       {/* A/B Test Results */}
       {campaignData?.isABTest && <ABTestResultsSection campaignId={id!} />}
 
-      {/* Revenue & Budget */}
+      {/* Additional Performance Metrics */}
       <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
-          <CardTitle className="text-lg">Revenue & Budget</CardTitle>
+          <CardTitle className="text-lg">Key Performance Indicators</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-muted-foreground">
+                Open Rate
+              </div>
+              <div className="text-2xl font-bold">{openRate}%</div>
+              <div className="text-xs text-muted-foreground">{(campaign.opened ?? 0).toLocaleString()} of {(campaign.sent ?? 0).toLocaleString()} opened</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-muted-foreground">
+                Click-Through Rate
+              </div>
+              <div className="text-2xl font-bold">{clickRate}%</div>
+              <div className="text-xs text-muted-foreground">{(campaign.clicked ?? 0).toLocaleString()} clicks</div>
+            </div>
             <div className="space-y-2">
               <div className="text-sm font-medium text-muted-foreground">
                 Revenue Generated
               </div>
-              <div className="text-2xl font-bold">${campaign.revenue?.toLocaleString() || '0'}</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-muted-foreground">
-                Budget
+              <div className="text-2xl font-bold">{fmtMoney(campaign.revenue ?? 0)}</div>
+              <div className="text-xs text-blue-600">
+                {campaign.budget && campaign.budget > 0 ? `Budget: ${fmtMoney(campaign.budget)}` : 'No budget set'}
               </div>
-              <div className="text-2xl font-bold">
-                {campaign.budget && campaign.budget > 0 ? `$${campaign.budget.toLocaleString()}` : 'No budget set'}
-              </div>
-              {campaign.spent != null && campaign.spent > 0 && (
-                <div className="text-xs text-muted-foreground">Spent: ${campaign.spent.toLocaleString()}</div>
-              )}
             </div>
           </div>
         </CardContent>
@@ -858,8 +838,8 @@ function CampaignDetail() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Campaign Name</label>
                   <Input
-                    value={resolvedEditForm.name}
-                    onChange={(e) => setEditForm({ ...resolvedEditForm, name: e.target.value })}
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                     placeholder="Enter campaign name"
                   />
                 </div>
@@ -868,8 +848,8 @@ function CampaignDetail() {
                     <label className="block text-sm font-medium mb-2">Type</label>
                     <select
                       className="w-full rounded-md border border-input bg-background px-3 py-2"
-                      value={resolvedEditForm.type}
-                      onChange={(e) => setEditForm({ ...resolvedEditForm, type: e.target.value as 'EMAIL' | 'SMS' | 'PHONE' })}
+                      value={editForm.type}
+                      onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'EMAIL' | 'SMS' | 'PHONE' })}
                     >
                       <option value="EMAIL">Email</option>
                       <option value="SMS">SMS</option>
@@ -893,8 +873,8 @@ function CampaignDetail() {
                       return (
                         <select
                           className="w-full rounded-md border border-input bg-background px-3 py-2"
-                          value={resolvedEditForm.status}
-                          onChange={(e) => setEditForm({ ...resolvedEditForm, status: e.target.value as Campaign['status'] })}
+                          value={editForm.status}
+                          onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
                         >
                           {options.map(s => (
                             <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>
@@ -909,16 +889,16 @@ function CampaignDetail() {
                     <label className="block text-sm font-medium mb-2">Start Date</label>
                     <Input
                       type="date"
-                      value={resolvedEditForm.startDate}
-                      onChange={(e) => setEditForm({ ...resolvedEditForm, startDate: e.target.value })}
+                      value={editForm.startDate}
+                      onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">End Date</label>
                     <Input
                       type="date"
-                      value={resolvedEditForm.endDate}
-                      onChange={(e) => setEditForm({ ...resolvedEditForm, endDate: e.target.value })}
+                      value={editForm.endDate}
+                      onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
                     />
                   </div>
                 </div>
@@ -933,8 +913,8 @@ function CampaignDetail() {
                   <label className="block text-sm font-medium mb-2">Total Budget</label>
                   <Input
                     type="number"
-                    value={resolvedEditForm.budget}
-                    onChange={(e) => setEditForm({ ...resolvedEditForm, budget: Number(e.target.value) })}
+                    value={editForm.budget}
+                    onChange={(e) => setEditForm({ ...editForm, budget: Number(e.target.value) })}
                     placeholder="Enter budget"
                   />
                 </div>
@@ -942,7 +922,7 @@ function CampaignDetail() {
                   <label className="block text-sm font-medium mb-2">Amount Spent</label>
                   <Input
                     type="number"
-                    value={resolvedEditForm.spent}
+                    value={editForm.spent}
                     disabled
                     className="bg-muted cursor-not-allowed"
                     title="Spent amount is tracked automatically"
@@ -958,8 +938,8 @@ function CampaignDetail() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Subject/Title</label>
                   <Input
-                    value={resolvedEditForm.subject}
-                    onChange={(e) => setEditForm({ ...resolvedEditForm, subject: e.target.value })}
+                    value={editForm.subject}
+                    onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
                     placeholder="Enter subject or title"
                   />
                 </div>
@@ -967,8 +947,8 @@ function CampaignDetail() {
                   <label className="block text-sm font-medium mb-2">Preview Content</label>
                   <textarea
                     className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[100px]"
-                    value={resolvedEditForm.content}
-                    onChange={(e) => setEditForm({ ...resolvedEditForm, content: e.target.value })}
+                    value={editForm.content}
+                    onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
                     placeholder="Enter preview content"
                   />
                 </div>
@@ -976,8 +956,8 @@ function CampaignDetail() {
                   <label className="block text-sm font-medium mb-2">Full Content (HTML)</label>
                   <textarea
                     className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[200px] font-mono text-sm"
-                    value={resolvedEditForm.fullContent}
-                    onChange={(e) => setEditForm({ ...resolvedEditForm, fullContent: e.target.value })}
+                    value={editForm.fullContent}
+                    onChange={(e) => setEditForm({ ...editForm, fullContent: e.target.value })}
                     placeholder="Enter full HTML content"
                   />
                 </div>
@@ -992,8 +972,8 @@ function CampaignDetail() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={updateCampaignMutation.isPending}>
-              {updateCampaignMutation.isPending ? 'Saving...' : 'Save Changes'}
+            <Button onClick={handleSaveEdit}>
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1018,9 +998,8 @@ function CampaignDetail() {
             <Button
               variant="destructive"
               onClick={handleDelete}
-              disabled={deleteCampaignMutation.isPending}
             >
-              {deleteCampaignMutation.isPending ? 'Deleting...' : 'Delete Campaign'}
+              Delete Campaign
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1110,13 +1089,13 @@ function ABTestResultsSection({ campaignId }: { campaignId: string }) {
           <div>
             <div className="text-muted-foreground">Open Rate</div>
             <div className={`font-semibold text-lg ${isWinner && winnerMetric === 'open_rate' ? 'text-green-600' : ''}`}>
-              {stats.openRate.toFixed(1)}%
+              {formatRate(stats.openRate, 1)}%
             </div>
           </div>
           <div>
             <div className="text-muted-foreground">Click Rate</div>
             <div className={`font-semibold text-lg ${isWinner && winnerMetric === 'click_rate' ? 'text-green-600' : ''}`}>
-              {stats.clickRate.toFixed(1)}%
+              {formatRate(stats.clickRate, 1)}%
             </div>
           </div>
         </div>
@@ -1143,8 +1122,8 @@ function ABTestResultsSection({ campaignId }: { campaignId: string }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
-          {renderVariantCard('A', variantA, (test?.variantA as Record<string, unknown>)?.subject as string || 'Original')}
-          {renderVariantCard('B', variantB, (test?.variantB as Record<string, unknown>)?.subject as string || 'Variant')}
+          {renderVariantCard('A', variantA, (test?.variantA as any)?.subject || 'Original')}
+          {renderVariantCard('B', variantB, (test?.variantB as any)?.subject || 'Variant')}
         </div>
 
         {/* Summary bar */}
@@ -1159,7 +1138,7 @@ function ABTestResultsSection({ campaignId }: { campaignId: string }) {
           <div>
             <span className="font-medium">Confidence:</span>{' '}
             <span className={confidence >= 0.95 ? 'text-green-600 font-semibold' : confidence >= 0.8 ? 'text-yellow-600' : 'text-muted-foreground'}>
-              {(confidence * 100).toFixed(1)}%
+              {formatRate(confidence * 100)}%
             </span>
           </div>
           <div>
@@ -1257,7 +1236,7 @@ function RecipientActivitySection({ campaignId }: { campaignId: string }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {recipients.map((r: { id: string; status: string; lead?: { firstName?: string; lastName?: string; email?: string; phone?: string }; sentAt?: string; deliveredAt?: string; openedAt?: string; clickedAt?: string }) => {
+                    {recipients.map((r: any) => {
                       const badge = STATUS_BADGES[r.status] || STATUS_BADGES.PENDING
                       return (
                         <tr key={r.id} className="border-b last:border-0">

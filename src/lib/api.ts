@@ -133,7 +133,7 @@ api.interceptors.response.use(
     }
 
     // Surface API error messages so .message contains the server's message
-    const serverMessage = (error as AxiosError<{ message?: string }>).response?.data?.message
+    const serverMessage = (error as any).response?.data?.message
     if (serverMessage && typeof serverMessage === 'string') {
       error.message = serverMessage
     }
@@ -270,7 +270,7 @@ export interface CreateLeadData {
   stage?: string
   assignedToId?: string
   notes?: string
-  customFields?: Record<string, unknown>
+  customFields?: Record<string, any>
   tags?: string[]
   // Real-estate specific fields
   propertyType?: string
@@ -529,7 +529,7 @@ export interface CampaignsQuery {
   limit?: number
   search?: string
   type?: 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL'
-  status?: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
+  status?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
 }
@@ -922,7 +922,7 @@ export const analyticsApi = {
     return response.data
   },
 
-  getHourlyEngagement: async (params?: { days?: number; campaignId?: string }) => {
+  getHourlyEngagement: async (params?: { days?: number }) => {
     const response = await api.get('/analytics/hourly-engagement', { params })
     return response.data
   },

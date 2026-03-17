@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger'
+import { fmtMoney } from '@/lib/metricsCalculator'
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -960,7 +961,7 @@ function CampaignCreate() {
                           <div>
                             <div className="text-muted-foreground">Per message</div>
                             <div className="font-medium">
-                              ~${(((() => { const totalLen = formData.content.length + 26; return totalLen <= 160 ? 1 : Math.ceil(totalLen / 153); })()) * (formData.mediaUrl ? 0.02 : 0.0079)).toFixed(3)}
+                              ~${(((() => { const totalLen = formData.content.length + 26; return totalLen <= 160 ? 1 : Math.ceil(totalLen / 153); })()) * (formData.mediaUrl ? 0.02 : 0.0079)).toFixed(2)}
                             </div>
                           </div>
                           <div>
@@ -1638,7 +1639,7 @@ function CampaignCreate() {
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Budget</div>
-                  <div className="font-medium">{formData.budget ? `$${Number(formData.budget).toLocaleString()}` : 'No budget set'}</div>
+                  <div className="font-medium">{formData.budget ? fmtMoney(Number(formData.budget)) : 'No budget set'}</div>
                 </div>
               </div>
             </CardContent>

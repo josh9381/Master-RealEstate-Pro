@@ -8,6 +8,7 @@
 
 import { logger } from '../lib/logger'
 import { prisma } from '../config/database';
+import { calcRate } from '../utils/metricsCalculator';
 
 export type WinnerMetric = 'open_rate' | 'click_rate';
 
@@ -60,8 +61,8 @@ export async function getVariantStats(testId: string): Promise<{ A: VariantStats
   // Calculate rates
   for (const v of ['A', 'B']) {
     if (stats[v].total > 0) {
-      stats[v].openRate = (stats[v].opened / stats[v].total) * 100;
-      stats[v].clickRate = (stats[v].clicked / stats[v].total) * 100;
+      stats[v].openRate = calcRate(stats[v].opened, stats[v].total);
+      stats[v].clickRate = calcRate(stats[v].clicked, stats[v].total);
     }
   }
 

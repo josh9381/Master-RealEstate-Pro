@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { adminApi } from '@/lib/api';
+import { calcRate } from '@/lib/metricsCalculator';
 
 const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -235,13 +236,13 @@ const HealthCheckDashboard = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full ${
-                      (resource.value / resource.max) * 100 > 80
+                      calcRate(resource.value, resource.max, 0) > 80
                         ? 'bg-red-600'
-                        : (resource.value / resource.max) * 100 > 60
+                        : calcRate(resource.value, resource.max, 0) > 60
                         ? 'bg-orange-600'
                         : 'bg-green-600'
                     }`}
-                    style={{ width: `${(resource.value / resource.max) * 100}%` }}
+                    style={{ width: `${calcRate(resource.value, resource.max, 0)}%` }}
                   />
                 </div>
               </div>

@@ -10,12 +10,12 @@ import {
   ResponsiveContainer, Cell,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
+import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#84cc16'];
 
-const formatCurrency = (val: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+const formatCurrency = fmtMoney;
 
 const SourceROI = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('90d'));
@@ -98,7 +98,7 @@ const SourceROI = () => {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-gray-500 dark:text-gray-400">Overall Conversion</p>
-            <p className="text-2xl font-bold text-blue-600">{totals.overallConversionRate || 0}%</p>
+            <p className="text-2xl font-bold text-blue-600">{formatRate(totals.overallConversionRate || 0)}%</p>
           </CardContent>
         </Card>
       </div>
@@ -168,7 +168,7 @@ const SourceROI = () => {
                         <span className={`font-medium ${
                           s.conversionRate > (totals.overallConversionRate || 0) ? 'text-green-600' : 'text-gray-600 dark:text-gray-300'
                         }`}>
-                          {s.conversionRate}%
+                          {formatRate(s.conversionRate)}%
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(s.revenue)}</td>

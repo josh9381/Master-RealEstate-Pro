@@ -14,6 +14,7 @@ import { DateRangePicker, DateRange, computeDateRange } from '@/components/share
 import { exportToCSV, exportToJSON, exportAnalyticsAsPDF, ExportColumn } from '@/lib/exportService';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import type { ReportConfig } from '@/types';
+import { formatRate } from '@/lib/metricsCalculator';
 
 // ——— Report Builder types ———
 type WidgetType = 'table' | 'bar-chart' | 'line-chart' | 'pie-chart' | 'number-card' | 'gauge' | 'funnel' | 'area-chart';
@@ -707,7 +708,7 @@ const CustomReports = () => {
                 <Filter className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{leadData?.conversionRate || 0}%</div>
+                <div className="text-2xl font-bold">{formatRate(leadData?.conversionRate || 0)}%</div>
                 <p className="text-xs text-muted-foreground">Lead conversion</p>
               </CardContent>
             </Card>
@@ -1005,7 +1006,7 @@ const CustomReports = () => {
                     <Card>
                       <CardContent className="pt-4">
                         <div className="text-sm text-muted-foreground">Conversion Rate</div>
-                        <div className="text-2xl font-bold">{generatedReport.conversionRate as number}%</div>
+                        <div className="text-2xl font-bold">{formatRate(generatedReport.conversionRate as number)}%</div>
                       </CardContent>
                     </Card>
                   )}
@@ -1071,7 +1072,7 @@ const CustomReports = () => {
                     onClick={() => {
                       const sections: { label: string; value: string | number }[] = [
                         { label: 'Total Leads', value: leadData?.total || 0 },
-                        { label: 'Conversion Rate', value: `${leadData?.conversionRate || 0}%` },
+                        { label: 'Conversion Rate', value: `${formatRate(leadData?.conversionRate || 0)}%` },
                         { label: 'Total Campaigns', value: campaignData?.total || 0 },
                       ];
                       if (leadData?.byStatus) {

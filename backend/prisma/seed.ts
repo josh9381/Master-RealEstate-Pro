@@ -626,7 +626,7 @@ async function main() {
     { name: 'Q1 Market Report', type: 'EMAIL', status: 'SCHEDULED', subject: '📊 Q1 2026 Real Estate Market Report', body: 'Your comprehensive quarterly market analysis is here...', budget: 1200 },
     { name: 'Referral Program Launch', type: 'EMAIL', status: 'DRAFT', subject: '🎁 Earn $500 for Every Referral!', body: 'Know someone looking to buy or sell? Refer them and earn $500...', budget: 3000 },
     { name: 'Cold Call Follow-Up', type: 'PHONE', status: 'ACTIVE', subject: null, body: 'Follow-up call script for expired listing leads...', budget: 200 },
-    { name: 'Social Media Lead Capture', type: 'SOCIAL', status: 'ACTIVE', subject: null, body: 'Targeted ad campaign for Facebook and Instagram lead generation...', budget: 4500 },
+    { name: 'Social Media Lead Capture', type: 'EMAIL', status: 'ACTIVE', subject: 'Social Media Lead Capture Campaign', body: 'Targeted ad campaign for Facebook and Instagram lead generation...', budget: 4500 },
   ];
 
   const campaigns: any[] = [];
@@ -939,14 +939,14 @@ async function main() {
   // ==========================================================================
   console.log('🔔 Creating notifications...');
   const notificationData = [
-    { type: 'lead_assigned', title: 'New Lead Assigned', message: 'You\'ve been assigned a new lead: {{name}}' },
-    { type: 'appointment_reminder', title: 'Upcoming Appointment', message: 'You have a showing in 1 hour with {{name}}' },
-    { type: 'task_due', title: 'Task Due Today', message: 'Task "{{task}}" is due today' },
-    { type: 'campaign_completed', title: 'Campaign Completed', message: 'Campaign "{{campaign}}" has finished with {{opens}} opens' },
-    { type: 'lead_converted', title: '🎉 Lead Converted!', message: '{{name}} has been marked as WON — Congratulations!' },
-    { type: 'new_message', title: 'New Message', message: 'You received a new {{type}} from {{name}}' },
-    { type: 'workflow_error', title: 'Workflow Error', message: 'Workflow "{{workflow}}" failed — please check' },
-    { type: 'system', title: 'System Update', message: 'New features available! Check out AI Compose and Smart Scoring.' },
+    { type: 'LEAD_ASSIGNED', title: 'New Lead Assigned', message: 'You\'ve been assigned a new lead: {{name}}' },
+    { type: 'REMINDER', title: 'Upcoming Appointment', message: 'You have a showing in 1 hour with {{name}}' },
+    { type: 'TASK_DUE', title: 'Task Due Today', message: 'Task "{{task}}" is due today' },
+    { type: 'CAMPAIGN_COMPLETED', title: 'Campaign Completed', message: 'Campaign "{{campaign}}" has finished with {{opens}} opens' },
+    { type: 'LEAD_STATUS_CHANGED', title: '🎉 Lead Converted!', message: '{{name}} has been marked as WON — Congratulations!' },
+    { type: 'MESSAGE_RECEIVED', title: 'New Message', message: 'You received a new {{type}} from {{name}}' },
+    { type: 'WORKFLOW', title: 'Workflow Error', message: 'Workflow "{{workflow}}" failed — please check' },
+    { type: 'SYSTEM', title: 'System Update', message: 'New features available! Check out AI Compose and Smart Scoring.' },
   ];
 
   let notifCount = 0;

@@ -5,6 +5,7 @@ import { sendEmail } from './email.service';
 import { sendSMS } from './sms.service';
 import { pushWorkflowEvent, pushNotification } from '../config/socket';
 import crypto from 'crypto';
+import { calcRate } from '../utils/metricsCalculator';
 
 /**
  * Workflow Service
@@ -1279,7 +1280,7 @@ async function updateWorkflowStats(workflowId: string, success: boolean) {
     where: { id: workflowId },
     data: {
       executions: totalExecutions,
-      successRate: totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : null,
+      successRate: totalExecutions > 0 ? calcRate(successfulExecutions, totalExecutions) : null,
       lastRunAt: new Date(),
     },
   });
@@ -1369,9 +1370,7 @@ export async function getWorkflowAnalytics(workflowId: string, days: number = 30
     totalExecutions: executions.length,
     successfulExecutions: executions.filter(e => e.status === ExecutionStatus.SUCCESS).length,
     failedExecutions: executions.filter(e => e.status === ExecutionStatus.FAILED).length,
-    successRate: executions.length > 0
-      ? (executions.filter(e => e.status === ExecutionStatus.SUCCESS).length / executions.length) * 100
-      : 0,
+    successRate: calcRate(executions.filter(e => e.status === ExecutionStatus.SUCCESS).length, executions.length),
     dailyStats: Object.entries(dailyStats).map(([date, stats]) => ({
       date,
       ...stats,

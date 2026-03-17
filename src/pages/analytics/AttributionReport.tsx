@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
+import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 
 type AttributionModel = 'first-touch' | 'last-touch' | 'linear' | 'time-decay' | 'u-shaped';
@@ -25,8 +26,7 @@ const MODEL_OPTIONS: { value: AttributionModel; label: string; description: stri
 
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#84cc16'];
 
-const formatCurrency = (val: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+const formatCurrency = fmtMoney;
 
 const AttributionReport = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('90d'));
@@ -214,7 +214,7 @@ const AttributionReport = () => {
                         outerRadius={100}
                         dataKey="revenue"
                         nameKey="name"
-                        label={({ name, percent }: any) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        label={({ name, percent }: any) => `${name} (${formatRate(percent * 100, 0)}%)`}
                       >
                         {data.bySource.map((_: any, i: number) => (
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -254,9 +254,9 @@ const AttributionReport = () => {
                       {data.byCampaign.map((c: any) => (
                         <tr key={c.campaignId} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                           <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">{c.name}</td>
-                          <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{c.credit.toFixed(2)}</td>
+                          <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{formatRate(c.credit)}</td>
                           <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(c.revenue)}</td>
-                          <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{c.conversions.toFixed(1)}</td>
+                          <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{formatRate(c.conversions, 1)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -305,7 +305,7 @@ const AttributionReport = () => {
                                   color: COLORS[i % COLORS.length],
                                 }}
                               >
-                                {c.channel} ({(c.credit * 100).toFixed(0)}%)
+                                {c.channel} ({formatRate(c.credit * 100, 0)}%)
                               </div>
                               {i < lead.credits.length - 1 && <ArrowRight className="h-3 w-3 text-gray-300" />}
                             </div>

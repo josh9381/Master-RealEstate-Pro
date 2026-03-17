@@ -1,5 +1,6 @@
 import { logger } from '../lib/logger'
 import prisma from '../config/database'
+import { roundTo2 } from '../utils/metricsCalculator'
 
 /**
  * Lead Scoring Algorithm
@@ -435,7 +436,7 @@ export async function getLeadScoreBreakdown(leadId: string) {
       scheduledAppointments: factors.scheduledAppointments,
       completedAppointments: factors.completedAppointments,
       daysSinceLastActivity: factors.daysSinceLastActivity,
-      activityFrequency: Math.round(factors.activityFrequency * 100) / 100,
+      activityFrequency: roundTo2(factors.activityFrequency),
       emailOptedOut: factors.emailOptedOut,
       hasEmail: factors.hasEmail,
       hasPhone: factors.hasPhone,

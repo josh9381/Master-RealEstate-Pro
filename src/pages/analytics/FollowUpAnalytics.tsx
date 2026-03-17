@@ -9,6 +9,7 @@ import {
   ResponsiveContainer, Legend, PieChart, Pie, Cell,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
+import { formatRate } from '@/lib/metricsCalculator';
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: '#6b7280', MEDIUM: '#3b82f6', HIGH: '#f59e0b', URGENT: '#ef4444',
@@ -94,7 +95,7 @@ const FollowUpAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Completion Rate</p>
-                <p className="text-2xl font-bold text-green-600">{summary.completionRate || 0}%</p>
+                <p className="text-2xl font-bold text-green-600">{formatRate(summary.completionRate || 0)}%</p>
               </div>
               <CheckCircle2 className="h-8 w-8 text-green-500 opacity-40" />
             </div>
@@ -144,7 +145,7 @@ const FollowUpAnalytics = () => {
                     outerRadius={90}
                     dataKey="value"
                     nameKey="name"
-                    label={({ name, percent }: any) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    label={({ name, percent }: any) => `${name} (${formatRate(percent * 100, 0)}%)`}
                   >
                     {statusData.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
@@ -225,7 +226,7 @@ const FollowUpAnalytics = () => {
                   <div className="flex-1">
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                       <span>{p.completed} / {p.total} completed</span>
-                      <span>{p.completionRate}%</span>
+                      <span>{formatRate(p.completionRate)}%</span>
                     </div>
                     <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div

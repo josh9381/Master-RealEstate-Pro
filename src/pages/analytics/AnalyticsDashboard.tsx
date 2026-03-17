@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, TrendingUp, Users, DollarSign, Mail, Phone, Target, RefreshCw, ArrowRightLeft, Activity, FileBarChart, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import {
@@ -73,7 +74,7 @@ const AnalyticsDashboard = () => {
   const channelData = leadAnalytics?.bySource 
     ? Object.entries(leadAnalytics.bySource).map(([name, value]: [string, any], index) => ({
         name,
-        value: totalLeads > 0 ? Math.round((value / totalLeads) * 100) : 0,
+        value: calcRate(value, totalLeads),
         color: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899'][index] || '#6b7280'
       }))
     : [];
@@ -172,7 +173,7 @@ const AnalyticsDashboard = () => {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{conversionRate}%</div>
+            <div className="text-2xl font-bold">{formatRate(conversionRate)}%</div>
             <p className="text-xs text-muted-foreground">
               {leadAnalytics?.byStatus?.WON || 0} won deals
             </p>
@@ -349,15 +350,15 @@ const AnalyticsDashboard = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm">Open Rate</span>
-                <span className="font-semibold">{emailOpenRate}%</span>
+                <span className="font-semibold">{formatRate(emailOpenRate)}%</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Click Rate</span>
-                <span className="font-semibold">{emailClickRate}%</span>
+                <span className="font-semibold">{formatRate(emailClickRate)}%</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Conversion Rate</span>
-                <span className="font-semibold">{emailConversionRate}%</span>
+                <span className="font-semibold">{formatRate(emailConversionRate)}%</span>
               </div>
             </div>
           </CardContent>
@@ -382,7 +383,7 @@ const AnalyticsDashboard = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Completion Rate</span>
-                <span className="font-semibold">{dashboardData?.tasks?.completionRate || 0}%</span>
+                <span className="font-semibold">{formatRate(dashboardData?.tasks?.completionRate || 0)}%</span>
               </div>
             </div>
           </CardContent>

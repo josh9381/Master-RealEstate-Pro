@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3, TrendingUp, Users, Mail, MousePointer, RefreshCw, Download, Send, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -11,9 +11,10 @@ import { useToast } from '@/hooks/useToast';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
-import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { DateRangePicker, DateRange, DateRangePreset, computeDateRange } from '@/components/shared/DateRangePicker';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { exportToCSV, campaignExportColumns } from '@/lib/exportService';
+import { calcOpenRate, calcClickRate, calcConversionRate, calcDeliveryRate, calcBounceRate, calcUnsubscribeRate, formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import {
   Table,
   TableBody,
@@ -46,7 +47,9 @@ const TYPE_DISPLAY: Record<string, string> = {
 // ─── Overview Tab (from CampaignAnalytics) ────────────────────────────────────
 
 function OverviewTab() {
-  const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPreset = (searchParams.get('range') as DateRangePreset) || '30d';
+  const dateRangeRef = useRef<DateRange>(computeDateRange(initialPreset));
   const navigate = useNavigate();
 
   const { data: campaignData = null, isLoading: loading, isError: campaignError, error: campaignErrorObj, refetch } = useQuery({
@@ -78,8 +81,13 @@ function OverviewTab() {
     enabled: !loading && (!campaignData?.topCampaigns || campaignData.topCampaigns.length === 0),
   });
 
-  const handleDateChange = (range: DateRange) => {
+  const handleDateChange = (range: DateRange, preset: DateRangePreset) => {
     dateRangeRef.current = range;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('range', preset);
+      return next;
+    });
     refetch();
   };
 
@@ -109,19 +117,16 @@ function OverviewTab() {
     converted: (d.converted as number) ?? 0,
   }));
 
-  const hourlyPerformance = (campaignData?.hourlyStats || []).map((h: Record<string, unknown>) => {
-    const rawRate = (h.opens as number) ?? (h.openRate as number) ?? 0;
-    return {
-      hour: (h.label as string) || (h.hour as string),
-      openRate: rawRate < 1 ? rawRate * 100 : rawRate,
-      clicks: (h.clicks as number) ?? 0,
-    };
-  });
+  const hourlyPerformance = (campaignData?.hourlyStats || []).map((h: Record<string, unknown>) => ({
+    hour: (h.label as string) || (h.hour as string),
+    openRate: (h.openRate as number) ?? (h.opens as number) ?? 0,
+    clicks: (h.clicks as number) ?? 0,
+  }));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-end gap-2">
-        <DateRangePicker onChange={handleDateChange} />
+        <DateRangePicker value={initialPreset} onChange={handleDateChange} />
         <Button variant="outline" size="sm" onClick={() => refetch()}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
@@ -172,10 +177,7 @@ function OverviewTab() {
         </Card>
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Conversion Rate
-              <HelpTooltip text="Percentage of recipients who completed a desired action (e.g. signed up, purchased). A good conversion rate is 1–3%." />
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -243,9 +245,9 @@ function OverviewTab() {
                   const opened = (campaign.opened as number) ?? 0;
                   const clicked = (campaign.clicked as number) ?? 0;
                   const converted = (campaign.converted as number) ?? 0;
-                  const openRate = sent > 0 ? ((opened / sent) * 100).toFixed(1) : '0.0';
-                  const clickRate = sent > 0 ? ((clicked / sent) * 100).toFixed(1) : '0.0';
-                  const convRate = sent > 0 ? ((converted / sent) * 100).toFixed(1) : '0.0';
+                  const openRate = formatRate(calcOpenRate(opened, sent));
+                  const clickRate = formatRate(calcClickRate(clicked, sent));
+                  const convRate = formatRate(calcConversionRate(converted, sent));
                   return (
                     <TableRow key={campaign.id as string} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                       <TableCell className="font-medium">{campaign.name as string}</TableCell>
@@ -254,8 +256,8 @@ function OverviewTab() {
                       <TableCell>{openRate}%</TableCell>
                       <TableCell>{clickRate}%</TableCell>
                       <TableCell>{convRate}%</TableCell>
-                      <TableCell>${((campaign.revenue as number) ?? 0).toLocaleString()}</TableCell>
-                      <TableCell><Badge variant="success">{(campaign.roi as number) ?? 0}%</Badge></TableCell>
+                      <TableCell>{fmtMoney((campaign.revenue as number) ?? 0)}</TableCell>
+                      <TableCell><Badge variant="success">{formatRate((campaign.roi as number) ?? 0)}%</Badge></TableCell>
                     </TableRow>
                   );
                 })}
@@ -311,11 +313,11 @@ function OverviewTab() {
                 <div key={index} className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium truncate">{(campaign.name as string) || (campaign.subject as string) || 'Campaign'}</p>
-                    <Badge variant="outline">{sent > 0 ? ((opened / sent) * 100).toFixed(1) : 0}%</Badge>
+                    <Badge variant="outline">{formatRate(calcOpenRate(opened, sent))}%</Badge>
                   </div>
                   <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                    <span>Open: {sent > 0 ? ((opened / sent) * 100).toFixed(1) : 0}%</span>
-                    <span>Click: {sent > 0 ? ((clicked / sent) * 100).toFixed(1) : 0}%</span>
+                    <span>Open: {formatRate(calcOpenRate(opened, sent))}%</span>
+                    <span>Click: {formatRate(calcClickRate(clicked, sent))}%</span>
                   </div>
                 </div>
               );
@@ -380,9 +382,9 @@ function DetailedReportsTab() {
         campaigns: enrichedCampaigns,
         stats: {
           totalSent,
-          deliveryRate: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0,
-          openRate: totalDelivered > 0 ? (totalOpened / totalDelivered) * 100 : 0,
-          clickRate: totalOpened > 0 ? (totalClicked / totalOpened) * 100 : 0,
+          deliveryRate: calcDeliveryRate(totalDelivered, totalSent),
+          openRate: calcOpenRate(totalOpened, totalSent),
+          clickRate: calcClickRate(totalClicked, totalSent),
           revenue: totalRevenue,
         },
         performanceData: trend,
@@ -434,7 +436,7 @@ function DetailedReportsTab() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.deliveryRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">{formatRate(stats.deliveryRate, 1)}%</div>
             <p className="text-xs text-muted-foreground">Successfully delivered</p>
           </CardContent>
         </Card>
@@ -444,7 +446,7 @@ function DetailedReportsTab() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.openRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">{formatRate(stats.openRate, 1)}%</div>
             <p className="text-xs text-muted-foreground">Campaign opens</p>
           </CardContent>
         </Card>
@@ -454,7 +456,7 @@ function DetailedReportsTab() {
             <MousePointer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.clickRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">{formatRate(stats.clickRate, 1)}%</div>
             <p className="text-xs text-muted-foreground">Click-through rate</p>
           </CardContent>
         </Card>
@@ -464,7 +466,7 @@ function DetailedReportsTab() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.revenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{fmtMoney(stats.revenue)}</div>
             <p className="text-xs text-muted-foreground">From {campaigns.length} campaigns</p>
           </CardContent>
         </Card>
@@ -489,7 +491,6 @@ function DetailedReportsTab() {
           <CardDescription>Delivery, open, and click trends</CardDescription>
         </CardHeader>
         <CardContent>
-          {performanceData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={performanceData}>
               <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
@@ -503,11 +504,6 @@ function DetailedReportsTab() {
               <Line type="monotone" dataKey="clicked" stroke="#8b5cf6" name="Clicked" />
             </LineChart>
           </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-              No campaign performance data yet
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -544,21 +540,21 @@ function DetailedReportsTab() {
                     <p className="text-sm text-muted-foreground mb-1">Delivered</p>
                     <p className="text-2xl font-bold">{(campaign.delivered ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-green-600">
-                      {campaign.sent > 0 ? (((campaign.delivered ?? 0) / campaign.sent) * 100).toFixed(1) : '0.0'}%
+                      {formatRate(calcDeliveryRate(campaign.delivered ?? 0, campaign.sent))}%
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Opened</p>
                     <p className="text-2xl font-bold">{(campaign.opened ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-blue-600">
-                      {(campaign.delivered ?? 0) > 0 ? (((campaign.opened ?? 0) / campaign.delivered) * 100).toFixed(1) : '0.0'}%
+                      {formatRate(calcOpenRate(campaign.opened ?? 0, campaign.sent))}%
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Clicked</p>
                     <p className="text-2xl font-bold">{(campaign.clicked ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-purple-600">
-                      {(campaign.opened ?? 0) > 0 ? (((campaign.clicked ?? 0) / campaign.opened) * 100).toFixed(1) : '0.0'}%
+                      {formatRate(calcClickRate(campaign.clicked ?? 0, campaign.sent))}%
                     </p>
                   </div>
                 </div>
@@ -567,19 +563,19 @@ function DetailedReportsTab() {
                     <p className="text-sm text-muted-foreground mb-1">Bounced</p>
                     <p className="text-lg font-semibold">{campaign.bounced ?? 0}</p>
                     <p className="text-xs text-red-600">
-                      {campaign.sent > 0 ? (((campaign.bounced ?? 0) / campaign.sent) * 100).toFixed(1) : '0.0'}%
+                      {formatRate(calcBounceRate(campaign.bounced ?? 0, campaign.sent))}%
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Unsubscribed</p>
                     <p className="text-lg font-semibold">{campaign.unsubscribed ?? 0}</p>
                     <p className="text-xs text-muted-foreground">
-                      {campaign.sent > 0 ? (((campaign.unsubscribed ?? 0) / campaign.sent) * 100).toFixed(2) : '0.00'}%
+                      {formatRate(calcUnsubscribeRate(campaign.unsubscribed ?? 0, campaign.sent), 2)}%
                     </p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground mb-1">Revenue Generated</p>
-                    <p className="text-lg font-semibold">${(campaign.revenue ?? 0).toLocaleString()}</p>
+                    <p className="text-lg font-semibold">{fmtMoney((campaign.revenue ?? 0) as number)}</p>
                   </div>
                 </div>
               </div>
@@ -613,10 +609,10 @@ function DetailedReportsTab() {
               const totalConverted = campaigns.reduce((sum, c) => sum + ((c.converted ?? c.conversions ?? 0) as number), 0);
               return [
                 { stage: 'Sent', count: totalSent, percentage: 100, color: 'bg-blue-500' },
-                { stage: 'Delivered', count: totalDelivered, percentage: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0, color: 'bg-green-500' },
-                { stage: 'Opened', count: totalOpened, percentage: totalSent > 0 ? (totalOpened / totalSent) * 100 : 0, color: 'bg-orange-500' },
-                { stage: 'Clicked', count: totalClicked, percentage: totalSent > 0 ? (totalClicked / totalSent) * 100 : 0, color: 'bg-purple-500' },
-                { stage: 'Converted', count: totalConverted, percentage: totalSent > 0 ? (totalConverted / totalSent) * 100 : 0, color: 'bg-pink-500' },
+                { stage: 'Delivered', count: totalDelivered, percentage: calcDeliveryRate(totalDelivered, totalSent), color: 'bg-green-500' },
+                { stage: 'Opened', count: totalOpened, percentage: calcOpenRate(totalOpened, totalSent), color: 'bg-orange-500' },
+                { stage: 'Clicked', count: totalClicked, percentage: calcClickRate(totalClicked, totalSent), color: 'bg-purple-500' },
+                { stage: 'Converted', count: totalConverted, percentage: calcConversionRate(totalConverted, totalSent), color: 'bg-pink-500' },
               ].map((stage) => (
                 <div key={stage.stage}>
                   <div className="flex items-center justify-between mb-2">
@@ -625,7 +621,7 @@ function DetailedReportsTab() {
                       <span className="font-medium">{stage.stage}</span>
                     </div>
                     <span className="text-sm text-muted-foreground">
-                      {stage.count.toLocaleString()} ({stage.percentage.toFixed(1)}%)
+                      {stage.count.toLocaleString()} ({formatRate(stage.percentage, 1)}%)
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-4">
@@ -650,8 +646,8 @@ function DetailedReportsTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[...campaigns]
-                .sort((a, b) => (b.delivered > 0 ? b.opened / b.delivered : 0) - (a.delivered > 0 ? a.opened / a.delivered : 0))
+              {campaigns
+                .sort((a, b) => calcOpenRate(b.opened, b.sent) - calcOpenRate(a.opened, a.sent))
                 .slice(0, 3)
                 .map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
@@ -660,7 +656,7 @@ function DetailedReportsTab() {
                       <Badge variant="secondary" className="mt-1">{item.type}</Badge>
                     </div>
                     <span className="text-2xl font-bold text-green-600">
-                      {item.delivered > 0 ? ((item.opened / item.delivered) * 100).toFixed(1) : 0}%
+                      {formatRate(calcOpenRate(item.opened, item.sent))}%
                     </span>
                   </div>
                 ))}
@@ -678,8 +674,8 @@ function DetailedReportsTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[...campaigns]
-                .sort((a, b) => (b.opened > 0 ? b.clicked / b.opened : 0) - (a.opened > 0 ? a.clicked / a.opened : 0))
+              {campaigns
+                .sort((a, b) => calcClickRate(b.clicked, b.sent) - calcClickRate(a.clicked, a.sent))
                 .slice(0, 3)
                 .map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
@@ -688,7 +684,7 @@ function DetailedReportsTab() {
                       <Badge variant="secondary" className="mt-1">{item.type}</Badge>
                     </div>
                     <span className="text-2xl font-bold text-purple-600">
-                      {item.opened > 0 ? ((item.clicked / item.opened) * 100).toFixed(1) : 0}%
+                      {formatRate(calcClickRate(item.clicked, item.sent))}%
                     </span>
                   </div>
                 ))}

@@ -6,6 +6,7 @@ import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { formatRate } from '@/lib/metricsCalculator';
 import {
   AreaChart,
   Area,
@@ -16,6 +17,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
+import { calcRate } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
@@ -67,7 +69,7 @@ const LeadAnalytics = () => {
     ? Object.entries(leadData.bySource).map(([source, count]: [string, any]) => ({
         source,
         count: count as number,
-        percentage: totalLeads > 0 ? Math.round(((count as number) / totalLeads) * 100) : 0
+        percentage: calcRate((count as number), totalLeads, 0)
       }))
     : [];
 
@@ -139,7 +141,7 @@ const LeadAnalytics = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{conversionRate}%</div>
+            <div className="text-2xl font-bold">{formatRate(conversionRate)}%</div>
             <p className="text-xs text-muted-foreground">
               {leadData?.byStatus?.WON || 0} won deals
             </p>

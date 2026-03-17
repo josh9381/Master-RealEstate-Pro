@@ -5,6 +5,7 @@
 
 import { ABTestType, ABTestStatus, Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
+import { calcRate } from '../utils/metricsCalculator';
 
 interface CreateTestInput {
   name: string;
@@ -234,10 +235,10 @@ export class ABTestService {
     return {
       variant: results[0].variant,
       participantCount: total,
-      openRate: (opens / total) * 100,
-      clickRate: (clicks / total) * 100,
-      replyRate: (replies / total) * 100,
-      conversionRate: (conversions / total) * 100,
+      openRate: calcRate(opens, total),
+      clickRate: calcRate(clicks, total),
+      replyRate: calcRate(replies, total),
+      conversionRate: calcRate(conversions, total),
     };
   }
 
@@ -248,8 +249,8 @@ export class ABTestService {
   async analyzeTest(testId: string, confidenceLevel: number = 95): Promise<StatisticalSignificance> {
     const { variantA, variantB } = await this.getTestResults(testId);
 
-    // Need at least 30 participants per variant for statistical validity
-    if (variantA.participantCount < 30 || variantB.participantCount < 30) {
+    // Need at least 100 participants per variant for statistical validity
+    if (variantA.participantCount < 100 || variantB.participantCount < 100) {
       return {
         isSignificant: false,
         confidence: 0,

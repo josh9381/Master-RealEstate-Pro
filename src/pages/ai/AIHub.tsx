@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { aiApi, tasksApi } from '@/lib/api';
+import { calcProgress } from '@/lib/metricsCalculator';
 import { useToast } from '@/hooks/useToast';
 import { useQuery } from '@tanstack/react-query';
 
@@ -398,7 +399,7 @@ const AIHub = () => {
                 { label: 'Compose Uses', used: usage.usage.composeUses, limit: usage.limits.maxComposeUses },
               ].map((item) => {
                 const isUnlimited = item.limit === 'unlimited'
-                const pct = isUnlimited ? 0 : Math.min(100, Math.round((item.used / (item.limit as number)) * 100))
+                const pct = isUnlimited ? 0 : calcProgress(item.used, item.limit as number)
                 const isWarning = !isUnlimited && pct >= 80
                 const isDanger = !isUnlimited && pct >= 95
                 return (

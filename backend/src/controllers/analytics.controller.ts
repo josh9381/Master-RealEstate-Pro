@@ -2,6 +2,11 @@ import { getErrorMessage } from '../utils/errors'
 import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { prisma } from '../config/database'
+import {
+  calcRate, calcRateClamped, calcOpenRate, calcClickRate, calcConversionRate,
+  calcDeliveryRate, calcCompletionRate, calcLeadConversionRate, calcPercentChange,
+  roundTo2
+} from '../utils/metricsCalculator'
 
 // Get overall dashboard statistics
 export const getDashboardStats = async (req: Request, res: Response) => {
@@ -110,9 +115,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
   }, {} as Record<string, number>)
 
   // Calculate task completion rate
-  const taskCompletionRate = totalTasks > 0 
-    ? Math.round((completedTasks / totalTasks) * 100) 
-    : 0
+  const taskCompletionRate = calcCompletionRate(completedTasks, totalTasks)
 
   res.json({
     success: true,
@@ -187,7 +190,7 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
       where: { ...whereDate, status: 'WON' },
       _count: true
     }),
-    calculateLeadConversionRate(organizationId),
+    calculateLeadConversionRate(organizationId, Object.keys(dateFilter).length > 0 ? dateFilter : undefined),
     prisma.lead.aggregate({
       where: whereDate,
       _avg: { score: true }
@@ -473,14 +476,18 @@ export const getActivityFeed = async (req: Request, res: Response) => {
 }
 
 // Helper: Calculate lead conversion rate
-async function calculateLeadConversionRate(organizationId: string) {
-  const where = { organizationId }
-  const [totalLeads, convertedLeads] = await Promise.all([
-    prisma.lead.count({ where }),
-    prisma.lead.count({ where: { ...where, status: 'WON' } })
+// Uses WON / (WON + LOST) — industry-standard pipeline conversion.
+async function calculateLeadConversionRate(organizationId: string, dateFilter?: Record<string, any>) {
+  const where: Record<string, any> = { organizationId }
+  if (dateFilter && Object.keys(dateFilter).length > 0) {
+    where.createdAt = dateFilter
+  }
+  const [wonLeads, lostLeads] = await Promise.all([
+    prisma.lead.count({ where: { ...where, status: 'WON' } }),
+    prisma.lead.count({ where: { ...where, status: 'LOST' } })
   ])
-  
-  return totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0
+  const decided = wonLeads + lostLeads
+  return calcLeadConversionRate(wonLeads, decided)
 }
 
 // Helper: Calculate campaign performance
@@ -514,10 +521,10 @@ async function calculateCampaignPerformance(organizationId: string) {
     totalOpened: opened,
     totalClicked: clicked,
     totalConverted: converted,
-    deliveryRate: sent > 0 ? Math.min(Math.round((delivered / sent) * 100), 100) : 0,
-    openRate: delivered > 0 ? Math.min(Math.round((opened / delivered) * 100), 100) : 0,
-    clickRate: opened > 0 ? Math.min(Math.round((clicked / opened) * 100), 100) : 0,
-    conversionRate: sent > 0 ? Math.min(Math.round((converted / sent) * 100), 100) : 0,
+    deliveryRate: calcDeliveryRate(delivered, sent),
+    openRate: calcOpenRate(opened, sent),
+    clickRate: calcClickRate(clicked, sent),
+    conversionRate: calcConversionRate(converted, sent),
     totalRevenue: aggregate._sum.revenue || 0,
     totalSpent: aggregate._sum.spent || 0,
     averageROI: Math.round(aggregate._avg.roi || 0)
@@ -532,7 +539,7 @@ async function calculateTaskCompletionRate(organizationId?: string) {
     prisma.task.count({ where: { ...where, status: 'COMPLETED' as any } })
   ])
   
-  return total > 0 ? Math.round((completed / total) * 100) : 0
+  return calcCompletionRate(completed, total)
 }
 
 // Get conversion funnel analytics
@@ -575,7 +582,8 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
     // Calculate conversion rates
     const totalLeads = Object.values(funnelData).reduce((sum, count) => sum + count, 0)
     const wonLeads = funnelData.won
-    const overallConversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0
+    const decidedLeads = wonLeads + funnelData.lost
+    const overallConversionRate = calcLeadConversionRate(wonLeads, decidedLeads)
 
     // Calculate stage-to-stage conversion rates
     const stages = [
@@ -590,12 +598,12 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
     const stagesWithRates = stages.map((stage, index) => {
       let conversionRate = 0
       if (index > 0 && stages[index - 1].count > 0) {
-        conversionRate = Math.min(Math.round((stage.count / stages[index - 1].count) * 100), 100)
+        conversionRate = calcRateClamped(stage.count, stages[index - 1].count)
       }
       return {
         ...stage,
         conversionRate,
-        percentage: totalLeads > 0 ? Math.min(Math.round((stage.count / totalLeads) * 100), 100) : 0
+        percentage: calcRateClamped(stage.count, totalLeads)
       }
     })
 
@@ -608,7 +616,7 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
         wonLeads,
         lostLeads: funnelData.lost,
         overallConversionRate,
-        lostRate: totalLeads > 0 ? Math.round((funnelData.lost / totalLeads) * 100) : 0
+        lostRate: calcLeadConversionRate(funnelData.lost, totalLeads)
       }
     })
   } catch (error: unknown) {
@@ -716,10 +724,10 @@ export const getMonthlyPerformance = async (req: Request, res: Response) => {
     // Calculate rates for each month
     const result = Object.values(monthlyData).map((m) => ({
       ...m,
-      openRate: m.delivered > 0 ? Math.round((m.opened / m.delivered) * 100) : 0,
-      clickRate: m.opened > 0 ? Math.round((m.clicked / m.opened) * 100) : 0,
-      conversionRate: m.sent > 0 ? Math.round((m.converted / m.sent) * 100) : 0,
-      deliveryRate: m.sent > 0 ? Math.round((m.delivered / m.sent) * 100) : 0,
+      openRate: calcOpenRate(m.opened, m.sent),
+      clickRate: calcClickRate(m.clicked, m.sent),
+      conversionRate: calcConversionRate(m.converted, m.sent),
+      deliveryRate: calcDeliveryRate(m.delivered, m.sent),
     }))
 
     res.json({
@@ -854,19 +862,21 @@ export const getTeamPerformance = async (req: Request, res: Response) => {
         const [
           totalLeads,
           wonLeads,
+          lostLeads,
           totalActivities,
           completedTasks,
           totalTasks,
         ] = await Promise.all([
           prisma.lead.count({ where: leadWhere }),
           prisma.lead.count({ where: { ...leadWhere, status: 'WON' } }),
+          prisma.lead.count({ where: { ...leadWhere, status: 'LOST' } }),
           prisma.activity.count({ where: activityWhere }),
           prisma.task.count({ where: { ...taskWhere, status: 'COMPLETED' } }),
           prisma.task.count({ where: taskWhere }),
         ])
 
-        const conversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0
-        const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+        const conversionRate = calcLeadConversionRate(wonLeads, wonLeads + lostLeads)
+        const taskCompletionRate = calcCompletionRate(completedTasks, totalTasks)
 
         return {
           user: {
@@ -1157,7 +1167,7 @@ export const getDashboardAlerts = async (req: Request, res: Response) => {
 
     // Underperforming campaigns
     const lowPerformers = underperformingCampaigns.filter((c) => {
-      const openRate = c.sent > 0 ? (c.opened / c.sent) * 100 : 0
+      const openRate = calcOpenRate(c.opened, c.sent)
       return openRate < 15
     })
     if (lowPerformers.length > 0) {
@@ -1170,7 +1180,7 @@ export const getDashboardAlerts = async (req: Request, res: Response) => {
         data: lowPerformers.slice(0, 5).map((c) => ({
           id: c.id,
           name: c.name,
-          openRate: c.sent > 0 ? Math.round((c.opened / c.sent) * 100) : 0,
+          openRate: calcOpenRate(c.opened, c.sent),
         })),
       })
     }
@@ -1390,7 +1400,7 @@ export async function getDeviceBreakdown(req: Request, res: Response) {
           .map(([name, count]) => ({
             name,
             count,
-            percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+            percentage: calcRate(count, total),
           })),
         browsers: Object.entries(browserCounts)
           .sort(([, a], [, b]) => b - a)
@@ -1462,7 +1472,7 @@ export async function getGeographicBreakdown(req: Request, res: Response) {
           .map(([name, count]) => ({
             name,
             count,
-            percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+            percentage: calcRate(count, total),
           })),
         regions: Object.entries(regionCounts)
           .sort(([, a], [, b]) => b - a)
@@ -1760,7 +1770,7 @@ export async function getAttributionReport(req: Request, res: Response) {
           type: c.type,
           channel: activityToChannel(c.type),
           campaignId: c.campaignId,
-          credit: Math.round(c.credit * 1000) / 1000,
+          credit: roundTo2(c.credit),
         })),
       })
     }
@@ -1773,13 +1783,13 @@ export async function getAttributionReport(req: Request, res: Response) {
         totalRevenue: totalAttributedRevenue,
         bySource: Object.entries(sourceCredits)
           .sort(([, a], [, b]) => b.revenue - a.revenue)
-          .map(([name, data]) => ({ name, ...data, credit: Math.round(data.credit * 100) / 100 })),
+          .map(([name, data]) => ({ name, ...data, credit: roundTo2(data.credit) })),
         byCampaign: Object.entries(campaignCredits)
           .sort(([, a], [, b]) => b.revenue - a.revenue)
-          .map(([id, data]) => ({ campaignId: id, ...data, credit: Math.round(data.credit * 100) / 100 })),
+          .map(([id, data]) => ({ campaignId: id, ...data, credit: roundTo2(data.credit) })),
         byChannel: Object.entries(channelCredits)
           .sort(([, a], [, b]) => b.revenue - a.revenue)
-          .map(([name, data]) => ({ name, ...data, credit: Math.round(data.credit * 1000) / 1000 })),
+          .map(([name, data]) => ({ name, ...data, credit: roundTo2(data.credit) })),
         leads: leadResults.slice(0, 50), // Top 50 leads with touchpoint details
       },
     })
@@ -1860,7 +1870,7 @@ export async function getLeadTouchpoints(req: Request, res: Response) {
           createdAt: a.createdAt,
           campaignId: a.campaignId,
           campaignName: (a as any).campaign?.name || null,
-          credit: credits[i] ? Math.round(credits[i].credit * 1000) / 1000 : 0,
+          credit: credits[i] ? roundTo2(credits[i].credit) : 0,
         })),
       },
     })
@@ -1903,6 +1913,7 @@ export async function getPeriodComparison(req: Request, res: Response) {
     const [
       currentLeads, previousLeads,
       currentWon, previousWon,
+      currentLost, previousLost,
       currentActivities, previousActivities,
       currentCampaigns, previousCampaigns,
       currentRevenue, previousRevenue,
@@ -1913,6 +1924,8 @@ export async function getPeriodComparison(req: Request, res: Response) {
       prisma.lead.count({ where: buildWhere(previousStart, previousEnd) }),
       prisma.lead.count({ where: { ...buildWhere(currentStart, currentEnd), status: 'WON' } }),
       prisma.lead.count({ where: { ...buildWhere(previousStart, previousEnd), status: 'WON' } }),
+      prisma.lead.count({ where: { ...buildWhere(currentStart, currentEnd), status: 'LOST' } }),
+      prisma.lead.count({ where: { ...buildWhere(previousStart, previousEnd), status: 'LOST' } }),
       prisma.activity.count({ where: buildWhere(currentStart, currentEnd) }),
       prisma.activity.count({ where: buildWhere(previousStart, previousEnd) }),
       prisma.campaign.count({ where: buildWhere(currentStart, currentEnd) }),
@@ -1926,14 +1939,13 @@ export async function getPeriodComparison(req: Request, res: Response) {
     ])
 
     const calcChange = (current: number, previous: number) => {
-      if (previous === 0) return current > 0 ? 100 : 0
-      return Math.round(((current - previous) / previous) * 1000) / 10
+      return calcPercentChange(current, previous)
     }
 
     const currentRevenueVal = currentRevenue._sum.value || 0
     const previousRevenueVal = previousRevenue._sum.value || 0
-    const currentConvRate = currentLeads > 0 ? (currentWon / currentLeads) * 100 : 0
-    const previousConvRate = previousLeads > 0 ? (previousWon / previousLeads) * 100 : 0
+    const currentConvRate = calcLeadConversionRate(currentWon, currentWon + currentLost)
+    const previousConvRate = calcLeadConversionRate(previousWon, previousWon + previousLost)
 
     res.json({
       success: true,
@@ -1962,8 +1974,8 @@ export async function getPeriodComparison(req: Request, res: Response) {
           },
           {
             name: 'Conversion Rate',
-            current: Math.round(currentConvRate * 10) / 10,
-            previous: Math.round(previousConvRate * 10) / 10,
+            current: currentConvRate,
+            previous: previousConvRate,
             change: calcChange(currentConvRate, previousConvRate),
             format: 'percentage',
           },
@@ -2152,20 +2164,21 @@ export async function getSourceROI(req: Request, res: Response) {
         wonLeads: data.won,
         lostLeads: data.lost,
         revenue: data.revenue,
-        conversionRate: data.total > 0 ? Math.round((data.won / data.total) * 1000) / 10 : 0,
+        conversionRate: calcLeadConversionRate(data.won, data.won + data.lost),
         avgDealSize: data.values.length > 0 ? Math.round(data.revenue / data.values.length) : 0,
         // ROI = revenue per lead (since we don't track ad spend, this is revenue efficiency)
         revenuePerLead: data.total > 0 ? Math.round(data.revenue / data.total) : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue)
 
+    const totalWon = results.reduce((s, r) => s + r.wonLeads, 0)
+    const totalLost = results.reduce((s, r) => s + r.lostLeads, 0)
+
     const totals = {
       totalLeads: leads.length,
-      totalWon: results.reduce((s, r) => s + r.wonLeads, 0),
+      totalWon,
       totalRevenue: results.reduce((s, r) => s + r.revenue, 0),
-      overallConversionRate: leads.length > 0
-        ? Math.round((results.reduce((s, r) => s + r.wonLeads, 0) / leads.length) * 1000) / 10
-        : 0,
+      overallConversionRate: calcLeadConversionRate(totalWon, totalWon + totalLost),
     }
 
     res.json({
@@ -2274,13 +2287,13 @@ export async function getFollowUpAnalytics(req: Request, res: Response) {
           snoozed,
           cancelled,
           overdue,
-          completionRate: total > 0 ? Math.round((completed / total) * 1000) / 10 : 0,
+          completionRate: calcCompletionRate(completed, total),
           avgResponseHours,
         },
         byPriority: Object.entries(byPriority).map(([priority, data]) => ({
           priority,
           ...data,
-          completionRate: data.total > 0 ? Math.round((data.completed / data.total) * 1000) / 10 : 0,
+          completionRate: calcCompletionRate(data.completed, data.total),
         })),
         channelUsage,
         monthlyTrend: Object.entries(monthlyTrend)

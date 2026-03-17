@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger'
+import { fmtMoney } from '@/lib/metricsCalculator'
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -89,15 +90,18 @@ function LeadsPipeline() {
     queryFn: () => pipelinesApi.getPipelines(),
   })
 
-  const pipelines: PipelineData[] = pipelinesResponse?.data || []
+  const pipelines: PipelineData[] = Array.isArray(pipelinesResponse?.data) ? pipelinesResponse.data : []
   const activePipeline = pipelines.find(p => p.id === selectedPipelineId) || pipelines.find(p => p.isDefault) || pipelines[0]
 
   // Auto-select first pipeline via useEffect (not in render)
   useEffect(() => {
-    if (activePipeline && !selectedPipelineId) {
-      setSelectedPipelineId(activePipeline.id)
+    if (pipelines.length > 0 && !selectedPipelineId) {
+      const defaultPipeline = pipelines.find(p => p.isDefault) || pipelines[0]
+      if (defaultPipeline) {
+        setSelectedPipelineId(defaultPipeline.id)
+      }
     }
-  }, [activePipeline, selectedPipelineId])
+  }, [pipelines.length, selectedPipelineId])
 
   // Fetch leads for the active pipeline
   const { data: pipelineLeadsResponse, isLoading: loadingLeads, refetch: refetchLeads } = useQuery({
@@ -572,7 +576,7 @@ function LeadsPipeline() {
                         <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                           <span>
                             {typeof lead.value === 'number'
-                              ? `$${lead.value.toLocaleString()}`
+                              ? fmtMoney(lead.value)
                               : lead.value || ''}
                           </span>
                           <span>

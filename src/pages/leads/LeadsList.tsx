@@ -258,7 +258,7 @@ function LeadsList() {
     enabled: showPipelineModal,
   })
 
-  const pipelines: PipelineData[] = pipelinesData || []
+  const pipelines: PipelineData[] = Array.isArray(pipelinesData) ? pipelinesData : []
   const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId)
 
   // ── DERIVED DATA ──

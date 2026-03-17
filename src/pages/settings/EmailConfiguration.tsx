@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { settingsApi, messagesApi, deliverabilityApi, type SuppressedContact } from '@/lib/api';
+import { calcDeliveryRate, calcOpenRateByDelivered, calcBounceRate, formatRate } from '@/lib/metricsCalculator';
 
 const EmailConfiguration = () => {
   const { toast } = useToast();
@@ -107,9 +108,9 @@ const EmailConfiguration = () => {
       const opened = stats.opened || 0;
       const failed = stats.failed || 0;
       
-      const deliveryRate = emailCount > 0 ? (delivered / emailCount) * 100 : 0;
-      const openRate = delivered > 0 ? (opened / delivered) * 100 : 0;
-      const bounceRate = emailCount > 0 ? (failed / emailCount) * 100 : 0;
+      const deliveryRate = calcDeliveryRate(delivered, emailCount);
+      const openRate = calcOpenRateByDelivered(opened, delivered);
+      const bounceRate = calcBounceRate(failed, emailCount);
       
       setUsageStats({
         sent: emailCount,
@@ -730,7 +731,7 @@ const EmailConfiguration = () => {
             </div>
             <div className="text-center p-4 border rounded-lg">
               <p className="text-3xl font-bold text-green-600">
-                {usageStats.deliveryRate.toFixed(1)}%
+                {formatRate(usageStats.deliveryRate, 1)}%
               </p>
               <p className="text-sm text-muted-foreground mt-1">Delivered</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -739,7 +740,7 @@ const EmailConfiguration = () => {
             </div>
             <div className="text-center p-4 border rounded-lg">
               <p className="text-3xl font-bold text-orange-600">
-                {usageStats.openRate.toFixed(1)}%
+                {formatRate(usageStats.openRate, 1)}%
               </p>
               <p className="text-sm text-muted-foreground mt-1">Opened</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -748,7 +749,7 @@ const EmailConfiguration = () => {
             </div>
             <div className="text-center p-4 border rounded-lg">
               <p className="text-3xl font-bold text-red-600">
-                {usageStats.bounceRate.toFixed(1)}%
+                {formatRate(usageStats.bounceRate, 1)}%
               </p>
               <p className="text-sm text-muted-foreground mt-1">Bounced</p>
               <p className="text-xs text-muted-foreground mt-1">

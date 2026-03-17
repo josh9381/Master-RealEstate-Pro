@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { TrendingUp, Star, CheckCircle } from 'lucide-react'
+import { formatRate } from '@/lib/metricsCalculator'
 
 interface Variation {
   id: number
@@ -102,7 +103,7 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
                   <div className="flex items-center gap-1">
                     <TrendingUp className={`h-4 w-4 ${getRateColor(variation.predictedResponseRate)}`} />
                     <span className={`text-sm font-bold ${getRateColor(variation.predictedResponseRate)}`}>
-                      {variation.predictedResponseRate}%
+                      {formatRate(variation.predictedResponseRate)}%
                     </span>
                   </div>
                 </div>
@@ -130,7 +131,7 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
                 <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950 rounded-lg p-2">
                   <span className="text-xs">💡</span>
                   <p className="text-xs text-gray-600 dark:text-gray-400 flex-1">
-                    <strong>Why {variation.predictedResponseRate}%:</strong> {variation.reasoning}
+                    <strong>Why {formatRate(variation.predictedResponseRate)}%:</strong> {variation.reasoning}
                   </p>
                 </div>
                 

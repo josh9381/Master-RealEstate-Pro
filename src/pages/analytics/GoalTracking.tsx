@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { useConfirm } from '@/hooks/useConfirm';
 import { goalsApi } from '@/lib/api';
+import { calcRateClamped } from '@/lib/metricsCalculator';
 
 const METRIC_TYPES = [
   { value: 'LEADS_GENERATED', label: 'Leads Generated', icon: Users, color: '#3b82f6', unit: '' },
@@ -314,7 +315,7 @@ const GoalTracking = () => {
             {activeGoals.map((goal: any) => {
               const metric = METRIC_TYPES.find((m) => m.value === goal.metricType) || METRIC_TYPES[METRIC_TYPES.length - 1];
               const Icon = metric.icon;
-              const progress = goal.progress || (goal.targetValue > 0 ? Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 1000) / 10) : 0);
+              const progress = goal.progress || (goal.targetValue > 0 ? calcRateClamped(goal.currentValue, goal.targetValue) : 0);
               const isCompleted = progress >= 100;
               const daysLeft = Math.max(0, Math.ceil((new Date(goal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 

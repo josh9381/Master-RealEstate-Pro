@@ -1,6 +1,7 @@
 import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { SubscriptionTier } from '@prisma/client';
+import { calcProgress } from '../utils/metricsCalculator';
 import { 
   PLAN_FEATURES, 
   getPlanFeatures, 
@@ -66,7 +67,7 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
         remaining: usageLimits.users.remaining,
         percentage: usageLimits.users.limit === 'unlimited' 
           ? 0 
-          : Math.round((userCount / (usageLimits.users.limit as number)) * 100),
+          : calcProgress(userCount, usageLimits.users.limit as number),
         isAtLimit: usageLimits.users.isAtLimit,
       },
       leads: {
@@ -75,7 +76,7 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
         remaining: usageLimits.leads.remaining,
         percentage: usageLimits.leads.limit === 'unlimited'
           ? 0
-          : Math.round((leadCount / (usageLimits.leads.limit as number)) * 100),
+          : calcProgress(leadCount, usageLimits.leads.limit as number),
         isAtLimit: usageLimits.leads.isAtLimit,
       },
       campaigns: {
@@ -84,7 +85,7 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
         remaining: usageLimits.campaigns.remaining,
         percentage: usageLimits.campaigns.limit === 'unlimited'
           ? 0
-          : Math.round((campaignCount / (usageLimits.campaigns.limit as number)) * 100),
+          : calcProgress(campaignCount, usageLimits.campaigns.limit as number),
         isAtLimit: usageLimits.campaigns.isAtLimit,
       },
       workflows: {
@@ -93,7 +94,7 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
         remaining: usageLimits.workflows.remaining,
         percentage: usageLimits.workflows.limit === 'unlimited'
           ? 0
-          : Math.round((workflowCount / (usageLimits.workflows.limit as number)) * 100),
+          : calcProgress(workflowCount, usageLimits.workflows.limit as number),
         isAtLimit: usageLimits.workflows.isAtLimit,
       },
     };

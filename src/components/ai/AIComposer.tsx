@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { useToast } from '@/hooks/useToast'
 import api from '@/lib/api'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
+import { formatCurrency, formatRate } from '@/lib/metricsCalculator'
 import { VariationsPanel } from './VariationsPanel'
 
 interface AIComposerProps {
@@ -427,7 +428,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
             <p className="text-sm text-muted-foreground">
               💡 <strong>{context.leadName}</strong> • 
               {context.lastContact ? ` Last contact ${context.daysSinceContact} days ago` : ' Never contacted'} • 
-              Opens {context.openRate}% of emails • 
+              Opens {formatRate(context.openRate)}% of emails • 
               Score: {context.leadScore}/100
             </p>
           </div>
@@ -747,7 +748,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         {/* Token Info */}
         {context && (
           <p className="text-xs text-muted-foreground text-center">
-            ~{context.tokens} tokens • ${context.cost?.toFixed(4)}
+            ~{context.tokens} tokens • ${formatCurrency(context.cost || 0)}
           </p>
         )}
       </CardContent>

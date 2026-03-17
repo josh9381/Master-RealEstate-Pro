@@ -1,5 +1,6 @@
 import prisma from '../config/database'
 import { MessageStatus, BounceType } from '@prisma/client'
+import { calcDeliveryRate, calcBounceRate, calcRate } from '../utils/metricsCalculator'
 
 /**
  * Email Deliverability Monitoring Service
@@ -164,10 +165,6 @@ export async function getCampaignDeliverability(
   const softBounces = messages.filter((m) => m.bounceType === BounceType.SOFT).length
   const spamComplaints = messages.filter((m) => m.spamComplaintAt !== null).length
 
-  const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0
-  const bounceRate = sent > 0 ? (bounced / sent) * 100 : 0
-  const complaintRate = sent > 0 ? (spamComplaints / sent) * 100 : 0
-
   return {
     sent,
     delivered,
@@ -175,9 +172,9 @@ export async function getCampaignDeliverability(
     hardBounces,
     softBounces,
     spamComplaints,
-    deliveryRate: Math.round(deliveryRate * 10) / 10,
-    bounceRate: Math.round(bounceRate * 10) / 10,
-    complaintRate: Math.round(complaintRate * 10) / 10,
+    deliveryRate: calcDeliveryRate(delivered, sent),
+    bounceRate: calcBounceRate(bounced, sent),
+    complaintRate: calcRate(spamComplaints, sent),
   }
 }
 
@@ -215,10 +212,6 @@ export async function getOverallDeliverability(
   const softBounces = messages.filter((m) => m.bounceType === BounceType.SOFT).length
   const spamComplaints = messages.filter((m) => m.spamComplaintAt !== null).length
 
-  const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0
-  const bounceRate = sent > 0 ? (bounced / sent) * 100 : 0
-  const complaintRate = sent > 0 ? (spamComplaints / sent) * 100 : 0
-
   return {
     sent,
     delivered,
@@ -226,9 +219,9 @@ export async function getOverallDeliverability(
     hardBounces,
     softBounces,
     spamComplaints,
-    deliveryRate: Math.round(deliveryRate * 10) / 10,
-    bounceRate: Math.round(bounceRate * 10) / 10,
-    complaintRate: Math.round(complaintRate * 10) / 10,
+    deliveryRate: calcDeliveryRate(delivered, sent),
+    bounceRate: calcBounceRate(bounced, sent),
+    complaintRate: calcRate(spamComplaints, sent),
   }
 }
 

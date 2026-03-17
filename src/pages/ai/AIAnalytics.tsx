@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Activity, TrendingUp, Zap, Brain, RefreshCw } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { aiApi } from '@/lib/api'
+import { formatRate, calcRate } from '@/lib/metricsCalculator'
 import { useToast } from '@/hooks/useToast'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 
@@ -73,7 +74,7 @@ const AIAnalytics = () => {
 
   // Calculate metrics from performance data
   const avgAccuracy = performanceData.length > 0
-    ? (performanceData.reduce((sum, p) => sum + (p.accuracy || 0), 0) / performanceData.length).toFixed(1)
+    ? formatRate(performanceData.reduce((sum, p) => sum + (p.accuracy || 0), 0) / performanceData.length, 1)
     : '0'
   const latestLatency = performanceData.length > 0
     ? performanceData[performanceData.length - 1]?.latency || 0
@@ -159,7 +160,7 @@ const AIAnalytics = () => {
           <CardContent>
             <div className="text-2xl font-bold">
               {performanceData.length > 0
-                ? `${(performanceData.filter(p => (p.accuracy ?? 0) > 0).length / performanceData.length * 100).toFixed(1)}%`
+                ? `${formatRate(calcRate(performanceData.filter(p => (p.accuracy ?? 0) > 0).length, performanceData.length))}%`
                 : 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground" title={performanceData.length > 0 ? 'Percentage of data points with non-zero accuracy (proxy for service availability)' : 'No performance data available to calculate uptime'}>

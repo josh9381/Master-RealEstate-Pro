@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { logger } from '../lib/logger';
 import { pushCallUpdate } from '../config/socket';
+import { calcRate } from '../utils/metricsCalculator';
 
 /**
  * Log a manual call (not Vapi AI)
@@ -343,7 +344,7 @@ export async function getTodayStats(req: Request, res: Response) {
   }, {} as Record<string, number>);
 
   const answered = (outcomes['ANSWERED'] || 0) + (outcomes['CALLBACK_SCHEDULED'] || 0) + (outcomes['NOT_INTERESTED'] || 0);
-  const connectionRate = totalCalls > 0 ? Math.round((answered / totalCalls) * 100) : 0;
+  const connectionRate = calcRate(answered, totalCalls, 0);
 
   res.json({
     success: true,

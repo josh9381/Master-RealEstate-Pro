@@ -1,5 +1,6 @@
 import { logger } from '../lib/logger'
 import { prisma } from '../config/database'
+import { calcRate } from '../utils/metricsCalculator'
 
 export interface MessageContext {
   lead: {
@@ -250,14 +251,10 @@ function calculateEmailMetrics(messages: MessageData[]): MessageContext['engagem
   // Calculate open rate (using status if available)
   const emailMessages = outboundMessages.filter(m => m.type === 'EMAIL')
   const openedMessages = emailMessages.filter(m => m.status === 'READ' || m.status === 'OPENED')
-  const openRate = emailMessages.length > 0 
-    ? Math.round((openedMessages.length / emailMessages.length) * 100) 
-    : 0
+  const openRate = calcRate(openedMessages.length, emailMessages.length, 0)
   
   // Calculate response rate
-  const responseRate = outboundMessages.length > 0
-    ? Math.round((inboundMessages.length / outboundMessages.length) * 100)
-    : 0
+  const responseRate = calcRate(inboundMessages.length, outboundMessages.length, 0)
   
   // Calculate average response time (in hours)
   let totalResponseTime = 0

@@ -7,6 +7,7 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { analyticsApi } from '@/lib/api';
+import { formatRate, calcRate } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
@@ -67,7 +68,7 @@ const ConversionReports = () => {
     ? (Object.entries(leadData.byStatus) as [string, number][]).map(([stage, count]) => ({
         stage: stage.charAt(0).toUpperCase() + stage.slice(1),
         count: count,
-        percentage: (leadData.total && leadData.total > 0) ? ((count / leadData.total) * 100).toFixed(1) : 0,
+        percentage: formatRate(calcRate(count, leadData.total || 0)),
       }))
     : [
         { stage: 'New', count: 0, percentage: 0 },
@@ -88,7 +89,7 @@ const ConversionReports = () => {
           source: source.charAt(0).toUpperCase() + source.slice(1).replace('-', ' '),
           leads: count,
           converted,
-          rate: count > 0 ? ((converted / count) * 100).toFixed(1) : '0.0'
+          rate: formatRate(calcRate(converted, count))
         };
       })
     : [];
@@ -165,7 +166,7 @@ const ConversionReports = () => {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overallConversionRate}%</div>
+            <div className="text-2xl font-bold">{formatRate(overallConversionRate)}%</div>
             <p className="text-xs text-muted-foreground">From lead data</p>
           </CardContent>
         </Card>
@@ -185,7 +186,7 @@ const ConversionReports = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaignData?.performance?.conversionRate || 0}%</div>
+            <div className="text-2xl font-bold">{formatRate(campaignData?.performance?.conversionRate || 0)}%</div>
             <p className="text-xs text-muted-foreground">Conversion rate</p>
           </CardContent>
         </Card>
@@ -195,7 +196,7 @@ const ConversionReports = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{sourceConversion.length > 0 ? Math.max(...sourceConversion.map(s => parseFloat(String(s.rate)))).toFixed(1) : 0}%</div>
+            <div className="text-2xl font-bold">{sourceConversion.length > 0 ? formatRate(Math.max(...sourceConversion.map(s => parseFloat(String(s.rate)))), 1) : 0}%</div>
             <p className="text-xs text-muted-foreground">Top source conversion</p>
           </CardContent>
         </Card>

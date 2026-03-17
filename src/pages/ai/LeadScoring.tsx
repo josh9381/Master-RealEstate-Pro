@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { leadsApi, aiApi } from '@/lib/api';
+import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { useToast } from '@/hooks/useToast';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -110,7 +111,7 @@ const LeadScoring = () => {
       // Build chart-friendly model performance from history entries
       const modelPerformance = optimizationHistory.map((h: OptimizationHistoryEntry) => ({
         month: new Date(h.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-        accuracy: h.accuracyAfter ? Math.round(h.accuracyAfter * 100) : 0,
+        accuracy: h.accuracyAfter ? calcRate(h.accuracyAfter, 1, 0) : 0,
         predictions: h.sampleSize || 0,
       })).reverse()
       return {
@@ -269,7 +270,7 @@ const LeadScoring = () => {
           const perfData = await aiApi.getModelPerformance()
           const perfModels = perfData?.data || []
           if (Array.isArray(perfModels) && perfModels.length > 0 && perfModels[0]?.accuracy) {
-            scoringStats = { ...scoringStats, accuracy: Math.floor(perfModels[0].accuracy * 100) }
+            scoringStats = { ...scoringStats, accuracy: calcRate(perfModels[0].accuracy, 1, 0) }
           }
           if (perfData?.data?.status) {
             modelStatus = perfData.data.status
@@ -673,14 +674,14 @@ const LeadScoring = () => {
                 <div className="space-y-3">
                   {factorBreakdown.data.components?.map((c: { name: string; count: number; weight: number; points: number }, i: number) => {
                     const maxPoints = 50 // Scale bar to reasonable max
-                    const barWidth = Math.min(100, Math.abs(c.points) / maxPoints * 100)
+                    const barWidth = Math.min(100, calcRate(Math.abs(c.points), maxPoints, 0))
                     const isNegative = c.points < 0
                     return (
                       <div key={i} className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-medium">{c.name}</span>
                           <span className={`font-bold tabular-nums ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-                            {isNegative ? '' : '+'}{c.points.toFixed(1)} pts
+                            {isNegative ? '' : '+'}{formatRate(c.points, 1)} pts
                             {c.count > 1 && <span className="text-muted-foreground font-normal"> ({c.count} × {c.weight})</span>}
                           </span>
                         </div>
@@ -734,7 +735,7 @@ const LeadScoring = () => {
               const bCount = recentScores.filter((l: { score: number }) => l.score >= 60 && l.score < 80).length
               const cCount = recentScores.filter((l: { score: number }) => l.score >= 40 && l.score < 60).length
               const dCount = recentScores.filter((l: { score: number }) => l.score < 40).length
-              const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0
+              const pct = (n: number) => calcRate(n, total, 0)
               const grades = [
                 { label: 'A Grade (80-100)', count: aCount, color: 'bg-green-500' },
                 { label: 'B Grade (60-79)', count: bCount, color: 'bg-blue-500' },
@@ -892,11 +893,11 @@ const LeadScoring = () => {
               {chartsData?.optimizationHistory && chartsData.optimizationHistory.length > 0 ? (
                 <div className="space-y-3">
                   {chartsData.optimizationHistory.slice(0, 10).map((entry, index) => {
-                    const accuracyBefore = entry.accuracyBefore != null ? (entry.accuracyBefore * 100).toFixed(1) : null
-                    const accuracyAfter = (entry.accuracyAfter * 100).toFixed(1)
+                    const accuracyBefore = entry.accuracyBefore != null ? formatRate(entry.accuracyBefore * 100) : null
+                    const accuracyAfter = formatRate(entry.accuracyAfter * 100)
                     const improved = entry.accuracyBefore != null && entry.accuracyAfter > entry.accuracyBefore
                     const change = entry.accuracyBefore != null
-                      ? ((entry.accuracyAfter - entry.accuracyBefore) * 100).toFixed(1)
+                      ? formatRate((entry.accuracyAfter - entry.accuracyBefore) * 100)
                       : null
                     return (
                       <div key={entry.id || index} className="flex items-center justify-between p-3 border rounded-lg">
@@ -998,7 +999,7 @@ const LeadScoring = () => {
                           </span>
                         )}
                         {model.accuracy && (
-                          <span>Accuracy: {typeof model.accuracy === 'number' ? `${(model.accuracy * 100).toFixed(1)}%` : model.accuracy}</span>
+                          <span>Accuracy: {typeof model.accuracy === 'number' ? `${formatRate(model.accuracy * 100)}%` : model.accuracy}</span>
                         )}
                       </div>
                     </div>
