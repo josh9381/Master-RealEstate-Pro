@@ -70,24 +70,22 @@ const SMSTemplatesLibrary = () => {
   const [showSettings, setShowSettings] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
 
-  // Template settings
+  // SMS Template settings
   interface TemplateSettings {
-    defaultFont: string;
-    primaryColor: string;
-    logoUrl: string;
-    includeUnsubscribe: boolean;
-    enableOpenTracking: boolean;
-    enableClickTracking: boolean;
-    includeSocialSharing: boolean;
+    defaultOptOutText: string;
+    characterWarningThreshold: number;
+    includeOptOut: boolean;
+    enableDeliveryTracking: boolean;
+    enableLinkShortening: boolean;
+    autoSegmentWarning: boolean;
   }
   const SETTINGS_DEFAULTS: TemplateSettings = {
-    defaultFont: 'Arial',
-    primaryColor: '#0066cc',
-    logoUrl: '',
-    includeUnsubscribe: true,
-    enableOpenTracking: true,
-    enableClickTracking: true,
-    includeSocialSharing: false,
+    defaultOptOutText: 'Reply STOP to unsubscribe',
+    characterWarningThreshold: 160,
+    includeOptOut: true,
+    enableDeliveryTracking: true,
+    enableLinkShortening: false,
+    autoSegmentWarning: true,
   }
   const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(SETTINGS_DEFAULTS)
 
@@ -95,6 +93,7 @@ const SMSTemplatesLibrary = () => {
     queryKey: ['sms-template-settings'],
     queryFn: async () => {
       const res = await api.get('/api/settings/email-template-defaults')
+      // SMS settings share the org defaults endpoint — extract SMS-relevant fields
       return res.data?.data || null
     },
   })
@@ -502,46 +501,30 @@ const SMSTemplatesLibrary = () => {
                       <div className="px-4 pb-4 space-y-4 border-t">
                         <div className="grid gap-4 md:grid-cols-2 pt-3">
                           <div>
-                            <label className="text-sm font-medium mb-2 block">Default Font</label>
-                            <select className="w-full px-3 py-2 border rounded-lg bg-background" value={templateSettings.defaultFont} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultFont: e.target.value }))}>
-                              <option>Arial</option>
-                              <option>Helvetica</option>
-                              <option>Georgia</option>
-                              <option>Times New Roman</option>
-                              <option>Verdana</option>
-                            </select>
+                            <label className="text-sm font-medium mb-2 block">Default Opt-Out Text</label>
+                            <input type="text" className="w-full px-3 py-2 border rounded-lg bg-background" value={templateSettings.defaultOptOutText} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultOptOutText: e.target.value }))} placeholder="Reply STOP to unsubscribe" />
                           </div>
                           <div>
-                            <label className="text-sm font-medium mb-2 block">Primary Color</label>
-                            <input type="color" value={templateSettings.primaryColor} onChange={(e) => setTemplateSettings(s => ({ ...s, primaryColor: e.target.value }))} className="w-full h-10 border rounded-lg" />
+                            <label className="text-sm font-medium mb-2 block">Character Warning Threshold</label>
+                            <input type="number" min={80} max={1600} className="w-full px-3 py-2 border rounded-lg bg-background" value={templateSettings.characterWarningThreshold} onChange={(e) => setTemplateSettings(s => ({ ...s, characterWarningThreshold: Number(e.target.value) }))} />
                           </div>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Company Logo URL</label>
-                          <input
-                            type="url"
-                            placeholder="https://example.com/logo.png"
-                            value={templateSettings.logoUrl}
-                            onChange={(e) => setTemplateSettings(s => ({ ...s, logoUrl: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded-lg bg-background"
-                          />
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
                           <label className="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" checked={templateSettings.includeUnsubscribe} onChange={(e) => setTemplateSettings(s => ({ ...s, includeUnsubscribe: e.target.checked }))} className="rounded" />
-                            <span className="text-sm">Include unsubscribe link</span>
+                            <input type="checkbox" checked={templateSettings.includeOptOut} onChange={(e) => setTemplateSettings(s => ({ ...s, includeOptOut: e.target.checked }))} className="rounded" />
+                            <span className="text-sm">Include opt-out text in templates</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" checked={templateSettings.enableOpenTracking} onChange={(e) => setTemplateSettings(s => ({ ...s, enableOpenTracking: e.target.checked }))} className="rounded" />
-                            <span className="text-sm">Enable open tracking</span>
+                            <input type="checkbox" checked={templateSettings.enableDeliveryTracking} onChange={(e) => setTemplateSettings(s => ({ ...s, enableDeliveryTracking: e.target.checked }))} className="rounded" />
+                            <span className="text-sm">Enable delivery tracking</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" checked={templateSettings.enableClickTracking} onChange={(e) => setTemplateSettings(s => ({ ...s, enableClickTracking: e.target.checked }))} className="rounded" />
-                            <span className="text-sm">Enable click tracking</span>
+                            <input type="checkbox" checked={templateSettings.enableLinkShortening} onChange={(e) => setTemplateSettings(s => ({ ...s, enableLinkShortening: e.target.checked }))} className="rounded" />
+                            <span className="text-sm">Enable link shortening</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" checked={templateSettings.includeSocialSharing} onChange={(e) => setTemplateSettings(s => ({ ...s, includeSocialSharing: e.target.checked }))} className="rounded" />
-                            <span className="text-sm">Include social sharing</span>
+                            <input type="checkbox" checked={templateSettings.autoSegmentWarning} onChange={(e) => setTemplateSettings(s => ({ ...s, autoSegmentWarning: e.target.checked }))} className="rounded" />
+                            <span className="text-sm">Show segment count warnings</span>
                           </label>
                         </div>
                         <Button onClick={() => saveSettingsMutation.mutate(templateSettings)} disabled={saveSettingsMutation.isPending} size="sm">

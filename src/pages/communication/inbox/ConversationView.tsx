@@ -356,7 +356,7 @@ export const ConversationView = ({
             const showChannelBadge = activeTab === 'all'
 
             return (
-              <div key={message.id} className={`flex ${isFromMe ? 'justify-end' : 'justify-start'} mb-4`}>
+              <div key={message.id} className={`flex ${isFromMe ? 'justify-end' : 'justify-start'} mb-4`} role="article" aria-label={`${isFromMe ? 'Sent' : 'Received'} ${message.type} message${message.subject ? ': ' + message.subject : ''}`}>
                 <div className={`max-w-[70%] ${isFromMe ? 'order-2' : 'order-1'}`}>
                   <div className={`flex items-center gap-2 mb-1 ${isFromMe ? 'justify-end' : 'justify-start'}`}>
                     {!isFromMe && <Icon className={`h-4 w-4 ${getChannelColor(message.type)}`} />}
@@ -603,15 +603,15 @@ export const ConversationView = ({
               <Paperclip className="h-4 w-4" />
             </Button>
             <div className="relative">
-              <Button size="sm" variant="ghost" onClick={() => onShowEmojiPicker(!showEmojiPicker)}>
+              <Button size="sm" variant="ghost" onClick={() => onShowEmojiPicker(!showEmojiPicker)} aria-label="Toggle emoji picker" aria-expanded={showEmojiPicker}>
                 <Smile className="h-4 w-4" />
               </Button>
               {showEmojiPicker && (
-                <Card className="absolute bottom-full left-0 mb-2 w-64 z-10 shadow-lg">
+                <Card className="absolute bottom-full left-0 mb-2 w-64 z-10 shadow-lg" role="dialog" aria-label="Emoji picker">
                   <CardContent className="p-3">
-                    <div className="grid grid-cols-8 gap-2">
+                    <div className="grid grid-cols-8 gap-2" role="grid">
                       {['😊', '👍', '❤️', '🎉', '😂', '🤔', '👏', '🔥', '✅', '⭐', '💯', '🚀', '💪', '🙏', '😎', '🎯'].map(emoji => (
-                        <button key={emoji} onClick={() => onInsertEmoji(emoji)} className="text-2xl hover:bg-accent rounded p-1 transition">
+                        <button key={emoji} onClick={() => onInsertEmoji(emoji)} className="text-2xl hover:bg-accent rounded p-1 transition focus:outline-none focus:ring-2 focus:ring-primary" aria-label={`Insert ${emoji}`}>
                           {emoji}
                         </button>
                       ))}

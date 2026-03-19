@@ -69,7 +69,6 @@ const NewsletterManagement = () => {
         <LoadingSkeleton rows={4} />
       ) : (
         <>
-      <div className="hidden">Wrapper for loading state</div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">

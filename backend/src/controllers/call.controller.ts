@@ -45,12 +45,13 @@ export async function logCall(req: Request, res: Response) {
 
   // Also create an activity record for the timeline
   try {
-    const outcomeLabel = outcome.replace(/_/g, ' ').toLowerCase();
+    const outcomeLabel = (outcome || 'unknown').replace(/_/g, ' ').toLowerCase();
+    const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown';
     await prisma.activity.create({
       data: {
         type: direction === 'INBOUND' ? 'CALL_RECEIVED' : 'CALL_MADE',
         title: `${direction === 'INBOUND' ? 'Received' : 'Made'} call — ${outcomeLabel}`,
-        description: `${direction === 'INBOUND' ? 'Received' : 'Made'} a call to ${lead.firstName} ${lead.lastName} — ${outcomeLabel}`,
+        description: `${direction === 'INBOUND' ? 'Received' : 'Made'} a call to ${leadName} — ${outcomeLabel}`,
         leadId,
         userId,
         organizationId,

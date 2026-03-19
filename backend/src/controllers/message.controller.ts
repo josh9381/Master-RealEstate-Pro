@@ -300,10 +300,11 @@ export const sendEmail = async (req: Request, res: Response) => {
     if (leadId) {
       const lead = await prisma.lead.findFirst({ where: { id: leadId, organizationId } })
       if (lead) {
-        const {firstName, lastName} = { firstName: lead.firstName, lastName: lead.lastName }
+        const firstName = lead.firstName || ''
+        const lastName = lead.lastName || ''
         context.lead = {
           id: lead.id,
-          name: `${lead.firstName} ${lead.lastName}`.trim(),
+          name: `${firstName} ${lastName}`.trim() || 'Unknown',
           firstName,
           lastName,
           email: lead.email,
@@ -406,10 +407,11 @@ export const sendSMS = async (req: Request, res: Response) => {
     if (leadId) {
       const lead = await prisma.lead.findFirst({ where: { id: leadId, organizationId } })
       if (lead) {
-        const {firstName, lastName} = { firstName: lead.firstName, lastName: lead.lastName }
+        const firstName = lead.firstName || ''
+        const lastName = lead.lastName || ''
         context.lead = {
           id: lead.id,
-          name: `${lead.firstName} ${lead.lastName}`.trim(),
+          name: `${firstName} ${lastName}`.trim() || 'Unknown',
           firstName,
           lastName,
           email: lead.email,
@@ -724,8 +726,10 @@ export const replyToMessage = async (req: Request, res: Response) => {
       throw new ValidationError('Organization ID is required')
     }
 
+    // Clean phone formatting before sending SMS reply
+    const cleanedPhone = replyTo ? replyTo.replace(/[\s\-()]/g, '') : replyTo
     const result = await sendSMSService({
-      to: replyTo,
+      to: cleanedPhone,
       message: body,
       leadId: originalMessage.leadId || undefined,
       organizationId: req.user.organizationId,
@@ -891,6 +895,9 @@ export const batchStarMessages = async (req: Request, res: Response) => {
   if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
     throw new ValidationError('messageIds array is required')
   }
+  if (messageIds.length > 500) {
+    throw new ValidationError('Maximum 500 messages per batch operation')
+  }
 
   await prisma.message.updateMany({
     where: { id: { in: messageIds }, organizationId },
@@ -908,6 +915,9 @@ export const batchArchiveMessages = async (req: Request, res: Response) => {
   if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
     throw new ValidationError('messageIds array is required')
   }
+  if (messageIds.length > 500) {
+    throw new ValidationError('Maximum 500 messages per batch operation')
+  }
 
   await prisma.message.updateMany({
     where: { id: { in: messageIds }, organizationId },
@@ -924,6 +934,9 @@ export const batchDeleteMessages = async (req: Request, res: Response) => {
 
   if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
     throw new ValidationError('messageIds array is required')
+  }
+  if (messageIds.length > 500) {
+    throw new ValidationError('Maximum 500 messages per batch operation')
   }
 
   await prisma.message.updateMany({

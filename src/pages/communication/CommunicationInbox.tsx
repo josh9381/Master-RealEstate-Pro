@@ -911,7 +911,6 @@ const CommunicationInbox = () => {
         <LoadingSkeleton rows={6} showChart={false} />
       ) : (
         <>
-          <div className="hidden">Wrapper for loading state</div>
           <div className="grid grid-cols-12 gap-4" style={{ height: 'calc(100vh - 240px)' }}>
             <ContactList
               contacts={filteredContacts}
