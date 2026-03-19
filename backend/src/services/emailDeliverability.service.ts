@@ -284,7 +284,7 @@ export async function getRetryableMessages(limit = 100): Promise<
       status: MessageStatus.FAILED,
       bounceType: BounceType.SOFT, // Only retry soft bounces
       retryCount: {
-        lt: prisma.message.fields.maxRetries,
+        lt: 3,
       },
     },
     select: {

@@ -388,7 +388,7 @@ function CampaignDetail() {
               : 'secondary'
             }>{campaign.status}</Badge>
             <span className="text-sm text-muted-foreground">
-              {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString() : 'N/A'} - {campaign.endDate ? new Date(campaign.endDate).toLocaleDateString() : 'N/A'}
+              {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'} - {campaign.endDate ? new Date(campaign.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
             </span>
           </div>
         </div>
@@ -1171,7 +1171,7 @@ function RecipientActivitySection({ campaignId }: { campaignId: string }) {
   const totalPages = data?.data?.totalPages || 1
   const statusSummary = data?.data?.statusSummary || {}
 
-  const formatDate = (d: string | null) => d ? new Date(d).toLocaleString() : '—'
+  const formatDate = (d: string | null) => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'
 
   return (
     <Card className="hover:shadow-lg transition-shadow">

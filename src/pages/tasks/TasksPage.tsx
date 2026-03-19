@@ -70,6 +70,16 @@ export default function TasksPage() {
     staleTime: 120_000,
   })
 
+  // Fetch task stats from API (MOD-3: accurate totals regardless of pagination)
+  const { data: taskStatsResponse } = useQuery({
+    queryKey: ['task-stats'],
+    queryFn: async () => {
+      const response = await tasksApi.getTaskStats()
+      return response.data?.stats
+    },
+    staleTime: 30_000,
+  })
+
   // Fetch tasks from API with server-side pagination (#111)
   const { data: tasksResponse, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['tasks', filter, currentPage, pageSize],
@@ -255,12 +265,10 @@ export default function TasksPage() {
   }
 
   const filteredTasks = tasks.filter(task => {
-    if (filter === 'completed' && !task.completed) return false
-    if (filter === 'active' && task.completed) return false
-    if (filter === 'high' && task.priority !== 'high') return false
+    // Search filter (client-only supplement)
     if (searchTerm && !(task.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) &&
         !(task.description?.toLowerCase() || '').includes(searchTerm.toLowerCase())) return false
-    // More filters
+    // Additional client-side filters (not sent to server)
     if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false
     if (assigneeFilter !== 'all' && task.assignedToId !== assigneeFilter) return false
     return true
@@ -333,19 +341,19 @@ export default function TasksPage() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="p-4">
-          <div className="text-2xl font-bold">{tasks.filter(t => !t.completed).length}</div>
+          <div className="text-2xl font-bold">{(taskStatsResponse?.total || 0) - (taskStatsResponse?.byStatus?.COMPLETED || 0) - (taskStatsResponse?.byStatus?.CANCELLED || 0)}</div>
           <div className="text-sm text-muted-foreground">Active Tasks</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{tasks.filter(t => isDueToday(t.dueDate)).length}</div>
+          <div className="text-2xl font-bold">{taskStatsResponse?.dueToday || 0}</div>
           <div className="text-sm text-muted-foreground">Due Today</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{tasks.filter(t => t.priority === 'high').length}</div>
+          <div className="text-2xl font-bold">{taskStatsResponse?.byPriority?.HIGH || 0}</div>
           <div className="text-sm text-muted-foreground">High Priority</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{tasks.filter(t => t.completed).length}</div>
+          <div className="text-2xl font-bold">{taskStatsResponse?.byStatus?.COMPLETED || 0}</div>
           <div className="text-sm text-muted-foreground">Completed</div>
         </Card>
       </div>

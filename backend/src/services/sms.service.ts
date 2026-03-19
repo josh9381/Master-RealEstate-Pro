@@ -108,6 +108,18 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
   const { to, message, leadId, campaignId, userId, organizationId, mediaUrl } = options;
 
   try {
+    // Check SMS opt-out / suppression before sending (#20)
+    if (leadId) {
+      const lead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { smsOptOutAt: true, phone: true },
+      });
+      if (lead?.smsOptOutAt) {
+        logger.warn(`[SMS] Lead ${leadId} has opted out of SMS. Blocking send.`);
+        return { success: false, error: 'Lead has opted out of SMS communications' };
+      }
+    }
+
     // Get SMS configuration (database or environment)
     const config = await getSMSConfig(userId);
 
@@ -239,7 +251,7 @@ export async function sendTemplateSMS(
     return await sendSMS({
       to,
       message,
-      organizationId: options?.organizationId || 'clz0000000000000000000000',
+      organizationId: options?.organizationId || '',
       ...options,
     });
   } catch (error: unknown) {
@@ -276,7 +288,7 @@ export async function sendBulkSMS(
       ...sms,
       campaignId,
       userId,
-      organizationId: organizationId || 'clz0000000000000000000000',
+      organizationId: organizationId || '',
     });
 
     if (result.success) {
@@ -309,7 +321,7 @@ async function mockSMSSend(options: SMSOptions): Promise<SMSResult> {
     body: message,
     fromAddress: TWILIO_PHONE_NUMBER || '+1234567890',
     toAddress: to,
-    status: 'DELIVERED', // Mock mode treats as immediately delivered
+    status: 'SENT', // Mock mode should use SENT, not DELIVERED (#21)
     provider: 'mock',
     organizationId,
     leadId,

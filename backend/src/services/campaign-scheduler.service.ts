@@ -65,7 +65,7 @@ async function processDeferredSendTimeOptimization() {
 /**
  * Calculate the next send date for a recurring campaign
  */
-function calculateNextSendDate(
+export function calculateNextSendDate(
   lastSentAt: Date,
   frequency: string,
   recurringPattern: Record<string, unknown> | null

@@ -225,7 +225,7 @@ function CampaignCreate() {
   // Track filtered lead count
   const [filteredLeadCount, setFilteredLeadCount] = useState(totalLeads)
 
-  // Fetch filtered lead count when filters change (Todo #18: Dynamic Audience Size Calculation)
+  // Fetch filtered lead count when filters change
   useEffect(() => {
     const fetchFilteredCount = async () => {
       if (formData.audience === 'custom' && formData.audienceFilters.length > 0) {
@@ -404,6 +404,52 @@ function CampaignCreate() {
     return newErrors
   }
 
+  /** Validate only the fields relevant to the current step. Returns true if ok. */
+  const validateStep = (currentStep: number): boolean => {
+    const newErrors: Record<string, string> = {}
+    if (currentStep === 2) {
+      if (!formData.name.trim()) newErrors.name = 'Campaign name is required'
+      if (selectedType === 'email' && !formData.subject?.trim()) newErrors.subject = 'Email subject is required'
+    }
+    if (currentStep === 3) {
+      if ((selectedType === 'email' || selectedType === 'sms') && !formData.content?.trim()) {
+        newErrors.content = `${selectedType === 'email' ? 'Email body' : 'SMS message'} is required`
+      }
+      if (selectedType === 'sms' && formData.content.length > 294) {
+        newErrors.content = 'SMS message exceeds maximum length (294 characters + TCPA footer)'
+      }
+      if (formData.enableABTest && !formData.abTestVariant?.trim()) {
+        newErrors.abTestVariant = 'A/B test variant subject is required'
+      }
+    }
+    if (currentStep === 5) {
+      if (formData.schedule === 'scheduled' && formData.scheduleDate) {
+        const scheduleDateTime = new Date(`${formData.scheduleDate}T${formData.scheduleTime || '00:00'}:00`)
+        if (scheduleDateTime <= new Date()) newErrors.scheduleDate = 'Schedule date must be in the future'
+      }
+      if (formData.budget && (isNaN(Number(formData.budget)) || Number(formData.budget) <= 0)) {
+        newErrors.budget = 'Budget must be a valid number greater than 0'
+      }
+      if (formData.isRecurring && formData.frequency === 'weekly' && formData.daysOfWeek.length === 0) {
+        newErrors.daysOfWeek = 'Select at least one day for weekly recurring campaigns'
+      }
+    }
+
+    setCampaignErrors(prev => {
+      // Merge: keep errors from other steps, replace errors for this step
+      const merged = { ...prev, ...newErrors }
+      // Remove keys that were valid this pass
+      Object.keys(prev).forEach(k => { if (!(k in newErrors)) delete merged[k] })
+      return newErrors  // only show current step errors
+    })
+
+    if (Object.keys(newErrors).length > 0) {
+      toast.error('Please fix the errors before continuing')
+      return false
+    }
+    return true
+  }
+
   const handleCreate = async () => {
     const newErrors = validateCampaignForm()
     setCampaignErrors(newErrors)
@@ -458,7 +504,18 @@ function CampaignCreate() {
       
       // If immediate send, trigger the send
       if (formData.schedule === 'immediate') {
-        await campaignsApi.sendCampaign(createdCampaignId)
+        const sendResult = await campaignsApi.sendCampaign(createdCampaignId)
+        // Handle large campaign confirmation
+        if (sendResult?.requiresConfirmation) {
+          const confirmed = window.confirm(sendResult.message)
+          if (confirmed) {
+            await campaignsApi.sendCampaign(createdCampaignId, { confirmLargeSend: true })
+          } else {
+            toast.info('Campaign saved as draft. You can send it later.')
+            navigate('/campaigns')
+            return
+          }
+        }
       }
       
       // Success!
@@ -694,7 +751,7 @@ function CampaignCreate() {
               <Button variant="outline" onClick={() => setStep(1)}>
                 Back
               </Button>
-              <Button onClick={() => setStep(3)} disabled={!formData.name}>
+              <Button onClick={() => validateStep(2) && setStep(3)} disabled={!formData.name}>
                 Next: Content
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
@@ -1141,7 +1198,7 @@ function CampaignCreate() {
               <ChevronLeft className="mr-1 h-4 w-4" />
               Back: Details
             </Button>
-            <Button onClick={() => setStep(4)}>
+            <Button onClick={() => validateStep(3) && setStep(4)}>
               Next: Audience
               <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
@@ -1580,7 +1637,7 @@ function CampaignCreate() {
               <ChevronLeft className="mr-1 h-4 w-4" />
               Back: Audience
             </Button>
-            <Button onClick={() => setStep(6)}>
+            <Button onClick={() => validateStep(5) && setStep(6)}>
               Next: Review
               <ChevronRight className="ml-1 h-4 w-4" />
             </Button>

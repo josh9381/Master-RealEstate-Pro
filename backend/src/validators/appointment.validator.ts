@@ -25,9 +25,6 @@ export const createAppointmentSchema = z.object({
   },
   { message: 'End time must be after start time', path: ['endTime'] }
 ).refine(
-  (data) => data.location || data.meetingUrl,
-  { message: 'Either location or meeting URL is required', path: ['location'] }
-).refine(
   (data) => {
     const start = new Date(data.startTime);
     const now = new Date();

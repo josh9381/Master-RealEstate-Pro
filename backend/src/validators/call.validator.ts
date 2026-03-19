@@ -33,7 +33,7 @@ const callStatusValues = [
  */
 export const logCallSchema = z.object({
   leadId: z.string().min(1, 'Lead ID is required'),
-  phoneNumber: z.string().min(1, 'Phone number is required'),
+  phoneNumber: z.string().min(1, 'Phone number is required').regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format. Use E.164 format (e.g., +1234567890)'),
   direction: z.enum(callDirectionValues).default('OUTBOUND'),
   outcome: z.enum(callOutcomeValues),
   duration: z.number().int().min(0).max(86400).optional(), // seconds, max 24h

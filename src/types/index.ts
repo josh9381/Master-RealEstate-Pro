@@ -274,6 +274,7 @@ export interface EmailTemplate {
   category?: string
   isActive?: boolean
   usageCount?: number
+  lastUsedAt?: string
   createdAt?: string
   updatedAt?: string
 }

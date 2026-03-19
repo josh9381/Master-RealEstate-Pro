@@ -115,6 +115,8 @@ function CampaignEdit() {
       abTestData: editForm.abTestData || undefined,
       isRecurring: editForm.isRecurring,
       frequency: editForm.frequency ? editForm.frequency as 'daily' | 'weekly' | 'monthly' : undefined,
+      recurringPattern: editForm.recurringPattern || undefined,
+      maxOccurrences: editForm.maxOccurrences || undefined,
       sendTimeOptimization: editForm.sendTimeOptimization !== 'none' ? editForm.sendTimeOptimization : undefined,
     } as Partial<CreateCampaignData>)
   }

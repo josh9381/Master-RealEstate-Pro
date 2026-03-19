@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger'
+import DOMPurify from 'dompurify'
 import { useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -781,9 +782,9 @@ function AlignButtons({ align, onChange }: { align: string; onChange: (v: 'left'
  */
 function renderTextContent(text: string): string {
   if (!text) return ''
-  // If it already contains HTML tags, return as-is (with newline conversion)
+  // If it already contains HTML tags, use DOMPurify for proper sanitization
   if (/<[a-z][\s\S]*>/i.test(text)) {
-    return text.replace(/\n/g, '<br/>')
+    return DOMPurify.sanitize(text.replace(/\n/g, '<br/>'))
   }
   let html = text
     .replace(/&/g, '&amp;')

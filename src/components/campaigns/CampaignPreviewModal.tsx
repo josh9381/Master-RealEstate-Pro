@@ -129,7 +129,7 @@ export function CampaignPreviewModal({
                 <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Subject:</p>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {preview.messagePreview.subject}
+                    {preview.messagePreview?.subject}
                   </p>
                 </div>
               )}

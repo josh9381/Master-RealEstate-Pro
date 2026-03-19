@@ -7,6 +7,7 @@ import { executeCampaign } from '../services/campaign-executor.service';
 import { getAllTemplates, getTemplateById, trackTemplateUsage } from '../data/campaign-templates';
 import { getCampaignsFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
 import { calcOpenRate, calcClickRate, calcConversionRate, calcBounceRate, calcROI, formatRate } from '../utils/metricsCalculator';
+import { compileEmailBlocks, compilePlainText } from '../utils/mjmlCompiler';
 
 /**
  * Get all campaigns with filtering and pagination
@@ -236,6 +237,10 @@ export const createCampaign = async (req: Request, res: Response) => {
       frequency: frequency || null,
       recurringPattern: recurringPattern || null,
       maxOccurrences: maxOccurrences || null,
+      // For recurring campaigns, calculate the initial nextSendAt so the scheduler picks them up
+      ...(isRecurring && startDate ? {
+        nextSendAt: new Date(startDate),
+      } : {}),
       createdById: userId,
       ...(tagIds && tagIds.length > 0 && {
         tags: {
@@ -535,12 +540,12 @@ export const pauseCampaign = async (req: Request, res: Response) => {
     throw new NotFoundError('Campaign not found');
   }
 
-  // Only allow pausing from ACTIVE or SENDING states
-  const pausableStatuses = ['ACTIVE', 'SENDING'];
+  // Only allow pausing from ACTIVE, SENDING, or SCHEDULED states
+  const pausableStatuses = ['ACTIVE', 'SENDING', 'SCHEDULED'];
   if (!pausableStatuses.includes(existingCampaign.status)) {
     return res.status(400).json({
       success: false,
-      message: `Cannot pause a campaign with status '${existingCampaign.status}'. Only ACTIVE or SENDING campaigns can be paused.`,
+      message: `Cannot pause a campaign with status '${existingCampaign.status}'. Only ACTIVE, SENDING, or SCHEDULED campaigns can be paused.`,
     });
   }
 
@@ -576,7 +581,7 @@ export const pauseCampaign = async (req: Request, res: Response) => {
  */
 export const sendCampaign = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { leadIds, filters } = req.body;
+  const { leadIds, filters, confirmLargeSend } = req.body;
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -586,10 +591,23 @@ export const sendCampaign = async (req: Request, res: Response) => {
   // Check if campaign exists and belongs to user's org
   const existingCampaign = await prisma.campaign.findFirst({
     where: { id, organizationId: req.user!.organizationId },
+    include: { tags: true },
   });
 
   if (!existingCampaign) {
     throw new NotFoundError('Campaign not found');
+  }
+
+  // Large campaign approval check: require explicit confirmation for >500 recipients
+  const LARGE_CAMPAIGN_THRESHOLD = 500;
+  if (!confirmLargeSend && (existingCampaign.audience || 0) > LARGE_CAMPAIGN_THRESHOLD) {
+    res.status(200).json({
+      success: false,
+      requiresConfirmation: true,
+      recipientCount: existingCampaign.audience,
+      message: `This campaign targets ${existingCampaign.audience} recipients (threshold: ${LARGE_CAMPAIGN_THRESHOLD}). Please confirm you want to proceed.`,
+    });
+    return;
   }
 
   // Validate campaign is in a sendable state
@@ -667,11 +685,11 @@ export const sendCampaignNow = async (req: Request, res: Response) => {
     throw new NotFoundError('Campaign not found');
   }
 
-  // Only allow sending scheduled campaigns
-  if (campaign.status !== 'SCHEDULED') {
+  // Only allow sending scheduled or active recurring campaigns
+  if (campaign.status !== 'SCHEDULED' && !(campaign.isRecurring && campaign.status === 'ACTIVE')) {
     res.status(400).json({
       success: false,
-      message: `Cannot send campaign with status ${campaign.status}. Only SCHEDULED campaigns can be sent now.`,
+      message: `Cannot send campaign with status ${campaign.status}. Only SCHEDULED campaigns (or ACTIVE recurring) can be sent now.`,
     });
     return;
   }
@@ -692,14 +710,49 @@ export const sendCampaignNow = async (req: Request, res: Response) => {
     return;
   }
 
-  // Update campaign status
-  await prisma.campaign.update({
-    where: { id },
-    data: {
-      status: 'COMPLETED',
-      endDate: new Date(),
-    },
-  });
+  // For recurring campaigns, set status to ACTIVE and calculate nextSendAt
+  // For one-time campaigns, mark as COMPLETED
+  if (campaign.isRecurring) {
+    const { calculateNextSendDate } = await import('../services/campaign-scheduler.service');
+    const newOccurrenceCount = (campaign.occurrenceCount ?? 0) + 1;
+    const hasReachedMax = campaign.maxOccurrences && newOccurrenceCount >= campaign.maxOccurrences;
+    const hasReachedEnd = campaign.endDate && new Date(campaign.endDate) <= new Date();
+
+    if (hasReachedMax || hasReachedEnd) {
+      await prisma.campaign.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          occurrenceCount: newOccurrenceCount,
+          lastSentAt: new Date(),
+          nextSendAt: null,
+        },
+      });
+    } else {
+      const nextSendAt = calculateNextSendDate(
+        new Date(),
+        campaign.frequency || 'weekly',
+        campaign.recurringPattern as Record<string, unknown> | null
+      );
+      await prisma.campaign.update({
+        where: { id },
+        data: {
+          status: 'ACTIVE',
+          occurrenceCount: newOccurrenceCount,
+          lastSentAt: new Date(),
+          nextSendAt,
+        },
+      });
+    }
+  } else {
+    await prisma.campaign.update({
+      where: { id },
+      data: {
+        status: 'COMPLETED',
+        endDate: new Date(),
+      },
+    });
+  }
 
   res.json({
     success: true,
@@ -753,20 +806,23 @@ export const rescheduleCampaign = async (req: Request, res: Response) => {
     throw new NotFoundError('Campaign not found');
   }
 
-  // Only allow rescheduling scheduled campaigns
-  if (campaign.status !== 'SCHEDULED') {
+  // Only allow rescheduling scheduled or paused campaigns
+  if (campaign.status !== 'SCHEDULED' && campaign.status !== 'PAUSED') {
     res.status(400).json({
       success: false,
-      message: `Cannot reschedule campaign with status ${campaign.status}. Only SCHEDULED campaigns can be rescheduled.`,
+      message: `Cannot reschedule campaign with status ${campaign.status}. Only SCHEDULED or PAUSED campaigns can be rescheduled.`,
     });
     return;
   }
 
-  // Update campaign start date
+  // Update campaign start date and ensure it's in SCHEDULED status
+  // Reset occurrence count when rescheduling recurring campaigns so they start fresh
   const updatedCampaign = await prisma.campaign.update({
     where: { id },
     data: {
       startDate: newStartDate,
+      status: 'SCHEDULED',
+      ...(campaign.isRecurring ? { nextSendAt: newStartDate, occurrenceCount: 0 } : {}),
     },
     include: {
       user: {
@@ -905,6 +961,27 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
 
   if (leads.length > 0 && campaign.body) {
     try {
+      // Compile block-based content through MJML for accurate preview
+      let bodyContent = campaign.body;
+      let isBlockBased = false;
+      try {
+        const parsed = JSON.parse(campaign.body);
+        isBlockBased = parsed && parsed.__emailBlocks;
+      } catch {
+        // Legacy plain text/HTML content
+      }
+
+      if (isBlockBased) {
+        const mjmlResult = compileEmailBlocks(campaign.body);
+        if (mjmlResult.errors.length > 0) {
+          logger.warn('[CAMPAIGN] MJML preview compilation warnings:', mjmlResult.errors);
+        }
+        bodyContent = mjmlResult.html;
+      } else if (campaign.type === 'EMAIL') {
+        const mjmlResult = compilePlainText(campaign.body);
+        bodyContent = mjmlResult.html;
+      }
+
       // Use handlebars to render template with first lead's data
       const Handlebars = require('handlebars');
       // Register esc helper for XSS prevention (matches executor)
@@ -916,7 +993,7 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
           );
         });
       }
-      const bodyTemplate = Handlebars.compile(campaign.body);
+      const bodyTemplate = Handlebars.compile(bodyContent);
       const subjectTemplate = campaign.subject ? Handlebars.compile(campaign.subject) : null;
 
       const firstLead = leads[0];
@@ -1052,6 +1129,11 @@ export const createCampaignFromTemplate = async (req: Request, res: Response) =>
 
   if (!template) {
     throw new NotFoundError('Campaign template not found');
+  }
+
+  // Validate template has content
+  if (!template.body || template.body.trim() === '') {
+    throw new ValidationError('Campaign template has no body content');
   }
 
   // Track usage
@@ -1335,6 +1417,16 @@ export const trackOpen = async (req: Request, res: Response) => {
   const { trackEmailOpen } = await import('../services/campaignAnalytics.service');
 
   try {
+    // Verify lead belongs to user's organization to prevent cross-tenant manipulation
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, organizationId: req.user!.organizationId },
+      select: { id: true },
+    });
+    if (!lead) {
+      res.status(404).json({ success: false, message: 'Lead not found' });
+      return;
+    }
+
     await trackEmailOpen(id, leadId, messageId, req.user!.organizationId);
 
     res.json({
@@ -1361,6 +1453,16 @@ export const trackClick = async (req: Request, res: Response) => {
   const { trackEmailClick } = await import('../services/campaignAnalytics.service');
 
   try {
+    // Verify lead belongs to user's organization to prevent cross-tenant manipulation
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, organizationId: req.user!.organizationId },
+      select: { id: true },
+    });
+    if (!lead) {
+      res.status(404).json({ success: false, message: 'Lead not found' });
+      return;
+    }
+
     await trackEmailClick(id, leadId, messageId, url, req.user!.organizationId);
 
     res.json({
@@ -1387,6 +1489,16 @@ export const trackConversionEvent = async (req: Request, res: Response) => {
   const { trackConversion } = await import('../services/campaignAnalytics.service');
 
   try {
+    // Verify lead belongs to user's organization to prevent cross-tenant manipulation
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, organizationId: req.user!.organizationId },
+      select: { id: true },
+    });
+    if (!lead) {
+      res.status(404).json({ success: false, message: 'Lead not found' });
+      return;
+    }
+
     await trackConversion(id, leadId, req.user!.organizationId, value);
 
     res.json({
@@ -1500,7 +1612,7 @@ export const compareCampaignsEndpoint = async (req: Request, res: Response) => {
   }
 
   try {
-    const comparison = await compareCampaigns(validIds);
+    const comparison = await compareCampaigns(validIds, req.user!.organizationId);
 
     res.json({
       success: true,

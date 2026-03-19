@@ -616,7 +616,7 @@ export const campaignsApi = {
     return response.data
   },
 
-  sendCampaign: async (id: string, options?: { leadIds?: string[], filters?: Record<string, unknown> }) => {
+  sendCampaign: async (id: string, options?: { leadIds?: string[], filters?: Record<string, unknown>, confirmLargeSend?: boolean }) => {
     const response = await api.post(`/campaigns/${id}/send`, options || {})
     return response.data
   },
@@ -843,6 +843,11 @@ export interface CreateTaskData {
 export const tasksApi = {
   getTasks: async (params?: TasksQuery) => {
     const response = await api.get('/tasks', { params })
+    return response.data
+  },
+
+  getTaskStats: async () => {
+    const response = await api.get('/tasks/stats')
     return response.data
   },
 
@@ -1410,6 +1415,22 @@ export const messagesApi = {
     return response.data
   },
 
+  // Batch operations (#39)
+  batchStar: async (messageIds: string[], starred: boolean) => {
+    const response = await api.post('/messages/batch-star', { messageIds, starred })
+    return response.data
+  },
+
+  batchArchive: async (messageIds: string[], archived: boolean) => {
+    const response = await api.post('/messages/batch-archive', { messageIds, archived })
+    return response.data
+  },
+
+  batchDelete: async (messageIds: string[]) => {
+    const response = await api.post('/messages/batch-delete', { messageIds })
+    return response.data
+  },
+
   getStats: async (params?: { leadId?: string; type?: string }) => {
     const response = await api.get('/messages/stats', { params: params || {} })
     return response.data
@@ -1450,6 +1471,11 @@ export const templatesApi = {
 
   deleteEmailTemplate: async (id: string) => {
     const response = await api.delete(`/email-templates/${id}`)
+    return response.data
+  },
+
+  duplicateEmailTemplate: async (id: string) => {
+    const response = await api.post(`/email-templates/${id}/duplicate`)
     return response.data
   },
 
@@ -1791,32 +1817,36 @@ export interface AppointmentsQuery {
 }
 
 export interface CreateAppointmentData {
-  leadId: string
+  leadId?: string
   title: string
   description?: string
-  type: 'viewing' | 'consultation' | 'inspection' | 'meeting' | 'follow_up' | 'other'
-  scheduledAt: string
-  duration?: number
+  type: 'CALL' | 'MEETING' | 'DEMO' | 'CONSULTATION' | 'FOLLOW_UP'
+  startTime: string
+  endTime: string
   location?: string
+  meetingUrl?: string
   notes?: string
-  reminders?: {
-    method: 'email' | 'sms'
-    minutesBefore: number
+  attendees?: {
+    email: string
+    name: string
+    confirmed?: boolean
   }[]
 }
 
 export interface UpdateAppointmentData {
   title?: string
   description?: string
-  type?: 'viewing' | 'consultation' | 'inspection' | 'meeting' | 'follow_up' | 'other'
-  scheduledAt?: string
-  duration?: number
+  type?: 'CALL' | 'MEETING' | 'DEMO' | 'CONSULTATION' | 'FOLLOW_UP'
+  startTime?: string
+  endTime?: string
   location?: string
+  meetingUrl?: string
   notes?: string
-  status?: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
-  reminders?: {
-    method: 'email' | 'sms'
-    minutesBefore: number
+  status?: 'SCHEDULED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+  attendees?: {
+    email: string
+    name: string
+    confirmed?: boolean
   }[]
 }
 

@@ -1,11 +1,12 @@
 import { logger } from '@/lib/logger'
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
-import { getUserItem, setUserItem } from '@/lib/userStorage'
+import { setUserItem } from '@/lib/userStorage'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Mail,
+  MessageSquare,
   FileText,
   Phone,
   Send,
@@ -27,13 +28,13 @@ import {
   AlertDialogTitle
 } from '@/components/ui/Dialog'
 import { useToast } from '@/hooks/useToast'
+import { useInboxState } from '@/hooks/useInboxState'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { messagesApi, leadsApi, aiApi, messageTemplatesApi } from '@/lib/api'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
-import type { ApiSendResponse } from '@/types'
+import { useSocketEvent } from '@/hooks/useSocket'
 import {
-  ChannelSidebar,
-  ThreadList,
+  ContactList,
   ConversationView,
   ComposeModal,
   FilterModal,
@@ -43,72 +44,75 @@ import {
   FALLBACK_QUICK_REPLIES,
   INBOX_PAGE_SIZE,
 } from './inbox'
-import type { Thread, InboxLead, InboxFilters, Message } from './inbox'
+import type { Contact, InboxLead, Message } from './inbox'
 
 const CommunicationInbox = () => {
-  const [selectedChannel, setSelectedChannel] = useState<'all' | 'email' | 'sms' | 'call'>('all')
-  const [selectedFolder, setSelectedFolder] = useState<'inbox' | 'unread' | 'starred' | 'snoozed' | 'archived' | 'trash'>('inbox')
-  const [threads, setThreads] = useState<Thread[]>([])
-  const [selectedThread, setSelectedThread] = useState<Thread | null>(null)
-  const [replyText, setReplyText] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [showSignatureEditor, setShowSignatureEditor] = useState(false)
+  // M1: All UI state extracted into useInboxState hook
+  const state = useInboxState()
+  const {
+    folderFilter, setFolderFilter,
+    contacts, setContacts,
+    selectedContact, setSelectedContact,
+    searchQuery, setSearchQuery,
+    inboxPage, setInboxPage,
+    showFilters, setShowFilters,
+    filters, setFilters,
+    hasActiveFilters,
+    replyChannel, setReplyChannel,
+    replyText, setReplyText,
+    emailSubject, setEmailSubject,
+    showTemplates, setShowTemplates,
+    showQuickReplies, setShowQuickReplies,
+    showEmojiPicker, setShowEmojiPicker,
+    showMoreMenu, setShowMoreMenu,
+    showComposeModal, setShowComposeModal,
+    composeType, setComposeType,
+    composeTo, setComposeTo,
+    composeSubject, setComposeSubject,
+    composeBody, setComposeBody,
+    composeLeadId, setComposeLeadId,
+    resetCompose,
+    showAIComposer, setShowAIComposer,
+    setShowEnhanceMode,
+    enhancedMessage, setEnhancedMessage,
+    showBeforeAfter, setShowBeforeAfter,
+    showReplaceWarning, setShowReplaceWarning,
+    enhanceTone, setEnhanceTone,
+    enhancingMessage, setEnhancingMessage,
+    showAttachmentModal, setShowAttachmentModal,
+    pendingAttachments, setPendingAttachments,
+    showForwardDialog, setShowForwardDialog,
+    forwardEmail, setForwardEmail,
+    bulkSelectMode, setBulkSelectMode,
+    selectedContactIds, setSelectedContactIds,
+    showDeleteConfirm, setShowDeleteConfirm,
+    contactToDelete, setContactToDelete,
+    showSignatureEditor, setShowSignatureEditor,
+    signature, setSignature,
+    editingSignature, setEditingSignature,
+    autoAppendSignature, setAutoAppendSignature,
+    timersRef,
+    selectedContactIdRef,
+  } = state
   const userId = useAuthStore(s => s.user?.id)
-  const [signature, setSignature] = useState(() => {
-    return getUserItem(userId, 'emailSignature') || '\n\n---\nBest regards,\nYour Name\nCompany Name\nyour.email@company.com'
-  })
-  const [editingSignature, setEditingSignature] = useState(signature)
-  const [autoAppendSignature, setAutoAppendSignature] = useState(() => {
-    return getUserItem(userId, 'autoAppendSignature') === 'true'
-  })
-  const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState<InboxFilters>({
-    dateFrom: '',
-    dateTo: '',
-    onlyUnread: false,
-    onlyStarred: false,
-    hasAttachment: false,
-    sender: ''
-  })
-  const [showComposeModal, setShowComposeModal] = useState(false)
-  const [composeType, setComposeType] = useState<'email' | 'sms' | 'call'>('sms')
-  const [composeTo, setComposeTo] = useState('')
-  const [composeSubject, setComposeSubject] = useState('')
-  const [composeBody, setComposeBody] = useState('')
-  const [composeLeadId, setComposeLeadId] = useState<string>('')
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
-  const [showAttachmentModal, setShowAttachmentModal] = useState(false)
-  const [, setPendingAttachments] = useState<File[]>([])
-  const [bulkSelectMode, setBulkSelectMode] = useState(false)
-  const [selectedThreadIds, setSelectedThreadIds] = useState<Set<number>>(new Set())
-  const [showQuickReplies, setShowQuickReplies] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [threadToDelete, setThreadToDelete] = useState<number | null>(null)
-  const [inboxPage, setInboxPage] = useState(1)
-  const [showAIComposer, setShowAIComposer] = useState(false)
-  const [, setShowEnhanceMode] = useState(false)
-  const [enhancedMessage, setEnhancedMessage] = useState('')
-  const [showBeforeAfter, setShowBeforeAfter] = useState(false)
-  const [showReplaceWarning, setShowReplaceWarning] = useState(false)
-  const [enhanceTone, setEnhanceTone] = useState('professional')
-  const [enhancingMessage, setEnhancingMessage] = useState(false)
-  const [emailSubject, setEmailSubject] = useState('')
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
-  useEffect(() => () => { timersRef.current.forEach(clearTimeout) }, [])
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
   // ─── Data Fetching ────────────────────────────────────────────
-  const { data: threadsData, isLoading: loading, isFetching, refetch: refetchMessages } = useQuery({
-    queryKey: ['communication-threads', searchQuery, inboxPage],
+  const { data: contactsData, isLoading: loading, isFetching, refetch: refetchMessages } = useQuery({
+    queryKey: ['communication-contacts', searchQuery, inboxPage, folderFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = { page: inboxPage, limit: INBOX_PAGE_SIZE }
       if (searchQuery.trim()) params.search = searchQuery.trim()
+      if (folderFilter === 'archived' || folderFilter === 'trash') {
+        params.folder = folderFilter
+      }
+      // M7: Push starred/snoozed filtering to backend
+      if (folderFilter === 'starred') params.starred = 'true'
+      if (folderFilter === 'snoozed') params.snoozed = 'true'
       const response = await messagesApi.getMessages(params)
-      const threadsData = response?.data?.threads || response?.threads || response
-      return (threadsData && Array.isArray(threadsData)) ? threadsData as Thread[] : []
+      const contactsList = response?.data?.contacts || []
+      return Array.isArray(contactsList) ? contactsList as Contact[] : []
     },
     staleTime: 30_000,
     refetchInterval: 30_000,
@@ -161,91 +165,150 @@ const CommunicationInbox = () => {
     }
   }, [templatesData, quickRepliesData, queryClient])
 
-  // Track selectedThread id in a ref to avoid stale closures
-  const selectedThreadIdRef = useRef<number | null>(null)
+  // Sync query data to local contacts state
   useEffect(() => {
-    selectedThreadIdRef.current = selectedThread?.id ?? null
-  }, [selectedThread])
-
-  // Sync query data to local threads state
-  useEffect(() => {
-    if (threadsData) {
-      setThreads(threadsData)
-      const currentId = selectedThreadIdRef.current
+    if (contactsData) {
+      setContacts(contactsData)
+      const currentId = selectedContactIdRef.current
       if (currentId !== null) {
-        const updated = threadsData.find((t: Thread) => t.id === currentId)
-        if (updated) setSelectedThread(updated)
-      } else if (threadsData.length > 0) {
-        setSelectedThread(threadsData[0])
+        const updated = contactsData.find((c: Contact) => c.id === currentId)
+        if (updated) setSelectedContact(updated)
+      } else if (contactsData.length > 0) {
+        setSelectedContact(contactsData[0])
       }
     }
-  }, [threadsData])
+  }, [contactsData])
+
+  // Set default reply channel when contact changes
+  useEffect(() => {
+    if (selectedContact) {
+      const replyChannels = selectedContact.channels.filter(c => c === 'email' || c === 'sms') as string[]
+      if (replyChannels.length > 0) {
+        if (replyChannels.includes(selectedContact.lastChannel)) {
+          setReplyChannel(selectedContact.lastChannel as 'email' | 'sms')
+        } else {
+          setReplyChannel(replyChannels[0] as 'email' | 'sms')
+        }
+      }
+    }
+  }, [selectedContact?.id])
+
+  // ─── Real-time WebSocket: refetch on incoming messages ────────
+  const handleIncomingMessage = useCallback(() => {
+    refetchMessages()
+  }, [refetchMessages])
+  useSocketEvent('message:incoming', handleIncomingMessage)
+
+  // ─── Draft Autosave ───────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedContact) return
+    const key = `draft_${selectedContact.id}`
+    if (replyText) {
+      const timer = setTimeout(() => {
+        try { localStorage.setItem(key, replyText) } catch { /* storage full */ }
+      }, 1000)
+      return () => clearTimeout(timer)
+    } else {
+      localStorage.removeItem(key)
+    }
+  }, [replyText, selectedContact])
+
+  // Restore draft when contact changes
+  useEffect(() => {
+    if (!selectedContact) return
+    const draft = localStorage.getItem(`draft_${selectedContact.id}`)
+    if (draft) setReplyText(draft)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedContact?.id])
 
   const templates = (templatesData && templatesData.length > 0) ? templatesData : FALLBACK_TEMPLATES
   const quickReplies = (quickRepliesData && quickRepliesData.length > 0) ? quickRepliesData : FALLBACK_QUICK_REPLIES
 
-  // ─── Filtered Threads ─────────────────────────────────────────
-  const filteredThreads = threads.filter((thread: Thread) => {
-    if (selectedFolder === 'unread' && thread.unread === 0) return false
-    if (selectedFolder === 'starred' && !thread.messages.some(m => m.starred)) return false
-    if (selectedFolder === 'snoozed' && !thread.messages.some(m => m.snoozed)) return false
-    if (selectedFolder === 'archived' && !thread.messages.some(m => m.archived)) return false
-    if (selectedFolder === 'trash' && !thread.messages.some(m => m.trashed)) return false
+  // ─── Filtered Contacts ─────────────────────────────────────────
+  const filteredContacts = contacts.filter((contact: Contact) => {
+    const allMessages = Object.values(contact.threads).flatMap(t => t.messages)
 
-    const matchesChannel = selectedChannel === 'all' || thread.type === selectedChannel
-    const matchesSearch = thread.contact.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         thread.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    if (folderFilter === 'unread' && contact.totalUnread === 0) return false
+    if (folderFilter === 'starred' && !allMessages.some(m => m.starred)) return false
+    if (folderFilter === 'snoozed' && !allMessages.some(m => m.snoozed && m.snoozed > Date.now())) return false
+    if (folderFilter === 'archived' || folderFilter === 'trash') return true
+
+    // Exclude snoozed contacts from inbox if still snoozed
+    if (folderFilter === 'inbox' && allMessages.some(m => m.snoozed && m.snoozed > Date.now())) return false
+
+    const matchesSearch = !searchQuery ||
+      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
     
-    if (filters.onlyUnread && thread.unread === 0) return false
-    if (filters.onlyStarred && !thread.messages.some(m => m.starred)) return false
-    if (filters.hasAttachment && !thread.messages.some(m => m.hasAttachment)) return false
-    if (filters.sender && !thread.contact.toLowerCase().includes(filters.sender.toLowerCase())) return false
+    if (filters.onlyUnread && contact.totalUnread === 0) return false
+    if (filters.onlyStarred && !allMessages.some(m => m.starred)) return false
+    if (filters.hasAttachment && !allMessages.some(m => m.hasAttachment)) return false
+    if (filters.sender && !contact.name.toLowerCase().includes(filters.sender.toLowerCase())) return false
     if (filters.dateFrom) {
-      const threadDate = new Date(thread.messages[thread.messages.length - 1]?.timestamp || 0)
-      if (threadDate < new Date(filters.dateFrom)) return false
+      const contactDate = new Date(contact.lastMessageAt)
+      const fromDate = new Date(filters.dateFrom + 'T00:00:00')
+      if (contactDate < fromDate) return false
     }
     if (filters.dateTo) {
-      const threadDate = new Date(thread.messages[thread.messages.length - 1]?.timestamp || 0)
-      if (threadDate > new Date(filters.dateTo)) return false
+      const contactDate = new Date(contact.lastMessageAt)
+      const toDate = new Date(filters.dateTo + 'T23:59:59')
+      if (contactDate > toDate) return false
     }
 
-    return matchesChannel && matchesSearch
+    return matchesSearch
   }).sort((a, b) => {
-    const aStarred = a.messages.some(m => m.starred)
-    const bStarred = b.messages.some(m => m.starred)
+    const aStarred = Object.values(a.threads).flatMap(t => t.messages).some(m => m.starred)
+    const bStarred = Object.values(b.threads).flatMap(t => t.messages).some(m => m.starred)
     if (aStarred && !bStarred) return -1
     if (!aStarred && bStarred) return 1
     return 0
   })
 
-  const hasActiveFilters = filters.onlyUnread || filters.onlyStarred || filters.hasAttachment || !!filters.sender
+  // Helper: get all message IDs for a contact
+  const getAllMessageIds = (contact: Contact): string[] => {
+    return Object.values(contact.threads)
+      .flatMap(t => t.messages)
+      .map(m => String(m.id))
+      .filter(id => id && id !== 'undefined' && id !== 'null')
+  }
 
-  // ─── Thread Actions ───────────────────────────────────────────
-  const handleSelectThread = async (thread: Thread, autoMarkRead = true) => {
-    setSelectedThread(thread)
-    if (autoMarkRead && thread.unread > 0) {
+  // ─── Contact Actions ───────────────────────────────────────────
+  const handleSelectContact = async (contact: Contact, autoMarkRead = true) => {
+    setSelectedContact(contact)
+    setReplyText('')
+    setEmailSubject('')
+    setShowAIComposer(false)
+    setShowBeforeAfter(false)
+    if (autoMarkRead && contact.totalUnread > 0) {
       try {
-        const unreadMessageIds = thread.messages
+        const unreadIds = Object.values(contact.threads)
+          .flatMap(t => t.messages)
           .filter(m => m.unread && m.id)
           .map(m => String(m.id))
           .filter(id => id && id !== 'undefined' && id !== 'null')
-        
-        setThreads(prev => prev.map(t => 
-          t.id === thread.id 
-            ? { ...t, unread: 0, messages: t.messages.map(m => ({ ...m, unread: false })) } 
-            : t
+
+        setContacts(prev => prev.map(c =>
+          c.id === contact.id
+            ? {
+              ...c,
+              totalUnread: 0,
+              threads: Object.fromEntries(
+                Object.entries(c.threads).map(([ch, t]) => [ch, {
+                  ...t,
+                  unread: 0,
+                  messages: t.messages.map(m => ({ ...m, unread: false }))
+                }])
+              )
+            }
+            : c
         ))
-        
-        if (unreadMessageIds.length > 0) {
-          await messagesApi.markAsRead({ messageIds: unreadMessageIds })
+
+        if (unreadIds.length > 0) {
+          await messagesApi.markAsRead({ messageIds: unreadIds })
         }
       } catch (error: unknown) {
-        logger.error('Error marking thread as read:', error)
-        setThreads(prev => prev.map(t => 
-          t.id === thread.id 
-            ? { ...t, unread: thread.unread, messages: thread.messages } 
-            : t
-        ))
+        logger.error('Error marking contact as read:', error)
+        setContacts(prev => prev.map(c => c.id === contact.id ? contact : c))
         const axiosError = error as { response?: { data?: { error?: string } }; message?: string }
         toast.error(`Failed to mark as read: ${axiosError.response?.data?.error || axiosError.message || 'Unknown error'}`)
       }
@@ -253,24 +316,30 @@ const CommunicationInbox = () => {
   }
 
   const handleMarkUnread = async () => {
-    if (!selectedThread) return
+    if (!selectedContact) return
     try {
-      const inboundMessageIds = selectedThread.messages
+      const inboundIds = Object.values(selectedContact.threads)
+        .flatMap(t => t.messages)
         .filter(m => m.direction === 'INBOUND')
         .map(m => String(m.id))
-      if (inboundMessageIds.length > 0) {
-        await messagesApi.markAsUnread({ messageIds: inboundMessageIds })
+      if (inboundIds.length > 0) {
+        await messagesApi.markAsUnread({ messageIds: inboundIds })
       }
-      setThreads(prev => prev.map(t => 
-        t.id === selectedThread.id 
-          ? { ...t, unread: inboundMessageIds.length, messages: t.messages.map(m => ({ ...m, unread: m.direction === 'INBOUND' })) } 
-          : t
+      setContacts(prev => prev.map(c =>
+        c.id === selectedContact.id
+          ? {
+            ...c,
+            totalUnread: inboundIds.length,
+            threads: Object.fromEntries(
+              Object.entries(c.threads).map(([ch, t]) => [ch, {
+                ...t,
+                unread: t.messages.filter(m => m.direction === 'INBOUND').length,
+                messages: t.messages.map(m => ({ ...m, unread: m.direction === 'INBOUND' }))
+              }])
+            )
+          }
+          : c
       ))
-      setSelectedThread(prev => prev ? {
-        ...prev,
-        unread: inboundMessageIds.length,
-        messages: prev.messages.map(m => ({ ...m, unread: m.direction === 'INBOUND' }))
-      } : null)
       toast.success('Marked as unread')
     } catch (error) {
       logger.error('Failed to mark as unread:', error)
@@ -279,20 +348,30 @@ const CommunicationInbox = () => {
   }
 
   const handleMarkRead = async () => {
-    if (!selectedThread) return
+    if (!selectedContact) return
     try {
-      const unreadMessageIds = selectedThread.messages.filter(m => m.unread).map(m => String(m.id))
-      if (unreadMessageIds.length > 0) {
-        await messagesApi.markAsRead({ messageIds: unreadMessageIds })
+      const unreadIds = Object.values(selectedContact.threads)
+        .flatMap(t => t.messages)
+        .filter(m => m.unread)
+        .map(m => String(m.id))
+      if (unreadIds.length > 0) {
+        await messagesApi.markAsRead({ messageIds: unreadIds })
       }
-      setThreads(prev => prev.map(t => 
-        t.id === selectedThread.id 
-          ? { ...t, unread: 0, messages: t.messages.map(m => ({ ...m, unread: false })) } 
-          : t
+      setContacts(prev => prev.map(c =>
+        c.id === selectedContact.id
+          ? {
+            ...c,
+            totalUnread: 0,
+            threads: Object.fromEntries(
+              Object.entries(c.threads).map(([ch, t]) => [ch, {
+                ...t,
+                unread: 0,
+                messages: t.messages.map(m => ({ ...m, unread: false }))
+              }])
+            )
+          }
+          : c
       ))
-      setSelectedThread(prev => prev ? {
-        ...prev, unread: 0, messages: prev.messages.map(m => ({ ...m, unread: false }))
-      } : null)
       toast.success('Marked as read')
     } catch (error) {
       logger.error('Failed to mark as read:', error)
@@ -300,97 +379,145 @@ const CommunicationInbox = () => {
     }
   }
 
-  const toggleStarThread = async (threadId: number) => {
-    const thread = threads.find(t => t.id === threadId)
-    if (!thread) return
-    const isStarred = thread.messages.some(m => m.starred)
-    const previousThreads = [...threads]
-    setThreads(prev => prev.map(t => 
-      t.id === threadId 
-        ? { ...t, messages: t.messages.map(m => ({ ...m, starred: !isStarred })) } 
-        : t
+  const toggleStarContact = async (contactId: string | number) => {
+    const contact = contacts.find(c => c.id === contactId)
+    if (!contact) return
+    const allMsgs = Object.values(contact.threads).flatMap(t => t.messages)
+    const isStarred = allMsgs.some(m => m.starred)
+    const previousContacts = [...contacts]
+    setContacts(prev => prev.map(c =>
+      c.id === contactId
+        ? {
+          ...c,
+          threads: Object.fromEntries(
+            Object.entries(c.threads).map(([ch, t]) => [ch, {
+              ...t,
+              messages: t.messages.map(m => ({ ...m, starred: !isStarred }))
+            }])
+          )
+        }
+        : c
     ))
     try {
-      await Promise.all(thread.messages.map(m => messagesApi.starMessage(String(m.id), !isStarred)))
+      await messagesApi.batchStar(allMsgs.map(m => String(m.id)), !isStarred)
       toast.success(isStarred ? 'Removed star' : 'Starred')
     } catch {
-      setThreads(previousThreads)
+      setContacts(previousContacts)
       toast.error('Failed to update star status')
     }
   }
 
-  const archiveThread = async (threadId: number) => {
-    const thread = threads.find(t => t.id === threadId)
-    const previousThreads = [...threads]
-    setThreads(prev => prev.map(t => t.id === threadId ? { ...t, messages: t.messages.map(m => ({ ...m, archived: true })) } : t))
-    setSelectedThread(null)
-    if (thread) {
-      try {
-        await Promise.all(thread.messages.map(m => messagesApi.archiveMessage(String(m.id), true)))
-        toast.success('Thread archived')
-      } catch {
-        setThreads(previousThreads)
-        toast.error('Failed to archive thread')
-      }
+  const archiveContact = async (contactId: string | number) => {
+    const contact = contacts.find(c => c.id === contactId)
+    if (!contact) return
+    const previousContacts = [...contacts]
+    const allMsgIds = getAllMessageIds(contact)
+    setContacts(prev => prev.map(c =>
+      c.id === contactId
+        ? {
+          ...c,
+          threads: Object.fromEntries(
+            Object.entries(c.threads).map(([ch, t]) => [ch, {
+              ...t,
+              messages: t.messages.map(m => ({ ...m, archived: true }))
+            }])
+          )
+        }
+        : c
+    ))
+    setSelectedContact(null)
+    try {
+      await messagesApi.batchArchive(allMsgIds, true)
+      toast.success('Conversation archived')
+    } catch {
+      setContacts(previousContacts)
+      toast.error('Failed to archive conversation')
     }
   }
 
-  const trashThread = (threadId: number) => {
-    setThreadToDelete(threadId)
+  const trashContact = (contactId: string | number) => {
+    setContactToDelete(contactId)
     setShowDeleteConfirm(true)
   }
 
-  const confirmTrashThread = async () => {
-    if (threadToDelete) {
-      const thread = threads.find(t => t.id === threadToDelete)
-      const previousThreads = [...threads]
-      setThreads(prev => prev.map(t => t.id === threadToDelete ? { ...t, messages: t.messages.map(m => ({ ...m, trashed: true })) } : t))
-      setSelectedThread(null)
-      if (thread) {
+  const confirmTrashContact = async () => {
+    if (contactToDelete !== null) {
+      const contact = contacts.find(c => c.id === contactToDelete)
+      if (contact) {
+        const previousContacts = [...contacts]
+        const allMsgIds = getAllMessageIds(contact)
+        setContacts(prev => prev.map(c =>
+          c.id === contactToDelete
+            ? {
+              ...c,
+              threads: Object.fromEntries(
+                Object.entries(c.threads).map(([ch, t]) => [ch, {
+                  ...t,
+                  messages: t.messages.map(m => ({ ...m, trashed: true }))
+                }])
+              )
+            }
+            : c
+        ))
+        setSelectedContact(null)
         try {
-          await Promise.all(thread.messages.map(m => messagesApi.deleteMessage(String(m.id))))
+          await messagesApi.batchDelete(allMsgIds)
           toast.success('Moved to trash')
         } catch {
-          setThreads(previousThreads)
+          setContacts(previousContacts)
           toast.error('Failed to move to trash')
         }
       }
     }
     setShowDeleteConfirm(false)
-    setThreadToDelete(null)
+    setContactToDelete(null)
   }
 
-  const snoozeThread = async (threadId: number, minutes = 60) => {
-    const thread = threads.find(t => t.id === threadId)
+  const snoozeContact = async (contactId: string | number, minutes = 60) => {
+    const contact = contacts.find(c => c.id === contactId)
+    if (!contact) return
     const snoozeUntil = Date.now() + minutes * 60 * 1000
-    setThreads(prev => prev.map(t => t.id === threadId ? { ...t, messages: t.messages.map(m => ({ ...m, snoozed: snoozeUntil })) } : t))
-    toast.success('Thread snoozed')
-    if (thread) {
-      try {
-        const snoozedUntilISO = new Date(snoozeUntil).toISOString()
-        await Promise.all(thread.messages.map(m => messagesApi.snoozeMessage(String(m.id), snoozedUntilISO)))
-      } catch (error) {
-        logger.error('Failed to snooze message:', error)
-      }
+    const previousContacts = [...contacts]
+    setContacts(prev => prev.map(c =>
+      c.id === contactId
+        ? {
+          ...c,
+          threads: Object.fromEntries(
+            Object.entries(c.threads).map(([ch, t]) => [ch, {
+              ...t,
+              messages: t.messages.map(m => ({ ...m, snoozed: snoozeUntil }))
+            }])
+          )
+        }
+        : c
+    ))
+    try {
+      const snoozedUntilISO = new Date(snoozeUntil).toISOString()
+      const allMsgs = Object.values(contact.threads).flatMap(t => t.messages)
+      await Promise.all(allMsgs.map(m => messagesApi.snoozeMessage(String(m.id), snoozedUntilISO)))
+      toast.success('Conversation snoozed')
+    } catch (error) {
+      logger.error('Failed to snooze:', error)
+      setContacts(previousContacts)
+      toast.error('Failed to snooze conversation')
     }
   }
 
   // ─── Reply / Compose Actions ──────────────────────────────────
   const insertTemplate = (templateContent: string) => {
     const personalizedContent = templateContent
-      .replace(/\{\{contact\}\}/g, selectedThread?.contact || 'there')
-      .replace(/\{contact\}/g, selectedThread?.contact || 'there')
+      .replace(/\{\{contact\}\}/g, selectedContact?.name || 'there')
+      .replace(/\{contact\}/g, selectedContact?.name || 'there')
     setReplyText(personalizedContent)
     setShowTemplates(false)
     toast.success('Template inserted')
   }
 
   const insertQuickReply = async (text: string) => {
-    if (!selectedThread) return
+    if (!selectedContact) return
     setReplyText(text)
     setShowQuickReplies(false)
-    const t = setTimeout(() => { handleSendReply() }, 100)
-    timersRef.current.push(t)
+    await handleSendReply(text)
   }
 
   const insertEmoji = (emoji: string) => {
@@ -398,30 +525,95 @@ const CommunicationInbox = () => {
     setShowEmojiPicker(false)
   }
 
-  const handleSendReply = async () => {
-    if (!replyText.trim() || !selectedThread) return
+  const handleSendReply = async (textOverride?: string) => {
+    const text = textOverride ?? replyText
+    if (!text.trim() || !selectedContact) return
     try {
-      const messageBody = autoAppendSignature && selectedThread.type === 'email' 
-        ? replyText + signature 
-        : replyText
-      const firstMsg = selectedThread.messages[0]
-      const replyTo = firstMsg.direction === 'INBOUND' ? firstMsg.from : firstMsg.to
+      const messageBody = autoAppendSignature && replyChannel === 'email' 
+        ? text + signature 
+        : text
 
-      if (selectedThread.type === 'email') {
-        await messagesApi.sendEmail({ to: replyTo, subject: selectedThread.subject, body: messageBody, threadId: selectedThread.id })
-      } else if (selectedThread.type === 'sms') {
-        await messagesApi.sendSMS({ to: replyTo, body: messageBody, threadId: selectedThread.id })
+      // Determine reply-to address from the active channel thread
+      let replyTo = ''
+      const channelThread = selectedContact.threads[replyChannel]
+      if (channelThread?.messages.length) {
+        const lastInbound = [...channelThread.messages].reverse().find(m => m.direction === 'INBOUND')
+        replyTo = lastInbound?.from || channelThread.messages[0].to
+      } else if (replyChannel === 'email' && selectedContact.lead?.email) {
+        replyTo = selectedContact.lead.email
+      } else if (replyChannel === 'sms' && selectedContact.lead?.phone) {
+        replyTo = selectedContact.lead.phone
+      } else {
+        const anyThread = Object.values(selectedContact.threads)[0]
+        const lastMsg = anyThread?.messages[anyThread.messages.length - 1]
+        replyTo = lastMsg?.direction === 'INBOUND' ? lastMsg.from : lastMsg?.to || ''
+      }
+
+      if (!replyTo) {
+        toast.error('No reply address found for this contact')
+        return
+      }
+
+      if (replyChannel === 'email') {
+        let attachmentData: Array<{ filename: string; content: string; contentType: string }> | undefined
+        if (pendingAttachments.length > 0) {
+          attachmentData = await Promise.all(
+            pendingAttachments.map(async (file) => {
+              const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader()
+                reader.onload = () => resolve((reader.result as string).split(',')[1])
+                reader.readAsDataURL(file)
+              })
+              return { filename: file.name, content: base64, contentType: file.type }
+            })
+          )
+        }
+        const emailThread = selectedContact.threads.email
+        const subject = emailSubject || emailThread?.messages.find(m => m.subject)?.subject
+        await messagesApi.sendEmail({ to: replyTo, subject, body: messageBody, leadId: selectedContact.leadId || undefined, attachments: attachmentData })
+      } else if (replyChannel === 'sms') {
+        await messagesApi.sendSMS({ to: replyTo, body: messageBody, leadId: selectedContact.leadId || undefined })
       }
 
       const newMessage: Message = {
-        id: Date.now(), threadId: selectedThread.id, type: selectedThread.type,
-        from: 'you@company.com', to: replyTo, contact: selectedThread.contact,
-        subject: selectedThread.subject, body: messageBody, timestamp: 'Just now',
-        date: new Date().toLocaleString(), unread: false, starred: false, status: 'sent'
+        id: Date.now(), type: replyChannel, direction: 'OUTBOUND',
+        from: 'you@company.com', to: replyTo, contact: selectedContact.name,
+        subject: replyChannel === 'email' ? emailSubject : undefined, body: messageBody,
+        timestamp: new Date().toISOString(), date: new Date().toLocaleString(),
+        unread: false, starred: false, status: 'sent'
       }
-      setThreads(prev => prev.map(t => t.id === selectedThread.id ? { ...t, messages: [...t.messages, newMessage], lastMessage: newMessage.body, timestamp: 'Just now' } : t))
+
+      setContacts(prev => prev.map(c => {
+        if (c.id !== selectedContact.id) return c
+        const updatedThreads = { ...c.threads }
+        const ch = replyChannel
+        if (updatedThreads[ch]) {
+          updatedThreads[ch] = {
+            ...updatedThreads[ch],
+            messages: [...updatedThreads[ch].messages, newMessage],
+            lastMessage: newMessage.body.substring(0, 100),
+            lastMessageAt: newMessage.timestamp,
+          }
+        } else {
+          updatedThreads[ch] = {
+            messages: [newMessage], unread: 0,
+            lastMessage: newMessage.body.substring(0, 100),
+            lastMessageAt: newMessage.timestamp,
+          }
+        }
+        return {
+          ...c, threads: updatedThreads,
+          lastMessage: newMessage.body.substring(0, 100),
+          lastMessageAt: newMessage.timestamp,
+          lastChannel: ch,
+          channels: [...new Set([...c.channels, ch])],
+        }
+      }))
+
       toast.success('Reply sent successfully')
       setReplyText('')
+      setEmailSubject('')
+      setPendingAttachments([])
       const t2 = setTimeout(async () => { await refetchMessages() }, 500)
       timersRef.current.push(t2)
     } catch (error) {
@@ -432,17 +624,27 @@ const CommunicationInbox = () => {
 
   const handleForward = async () => {
     setShowMoreMenu(false)
-    if (!selectedThread) { toast.error('No message selected to forward'); return }
-    const forwardTo = window.prompt('Enter email address to forward to:')
-    if (!forwardTo || !forwardTo.trim()) return
+    if (!selectedContact) { toast.error('No message selected to forward'); return }
+    setForwardEmail('')
+    setShowForwardDialog(true)
+  }
+
+  const handleForwardConfirm = async () => {
+    if (!forwardEmail.trim() || !selectedContact) return
+    setShowForwardDialog(false)
     try {
-      const lastMsg = selectedThread.messages[selectedThread.messages.length - 1]
+      const allMsgs = Object.values(selectedContact.threads).flatMap(t => t.messages)
+      const lastMsg = allMsgs[allMsgs.length - 1]
+      // Sanitize forwarded body to strip any HTML/script content
+      const rawBody = lastMsg?.body || selectedContact.lastMessage
+      const sanitizedBody = rawBody.replace(/<[^>]*>/g, '').trim()
       await messagesApi.sendEmail({
-        to: forwardTo.trim(),
-        subject: `Fwd: ${lastMsg?.subject || selectedThread.contact}`,
-        body: `---------- Forwarded message ----------\nFrom: ${selectedThread.contact}\n\n${lastMsg?.body || selectedThread.lastMessage}`,
+        to: forwardEmail.trim(),
+        subject: `Fwd: ${lastMsg?.subject || selectedContact.name}`,
+        body: `---------- Forwarded message ----------\nFrom: ${selectedContact.name}\n\n${sanitizedBody}`,
       })
-      toast.success(`Forwarded to ${forwardTo.trim()}`)
+      toast.success(`Forwarded to ${forwardEmail.trim()}`)
+      setForwardEmail('')
     } catch (error) {
       logger.error('Failed to forward message:', error)
       toast.error('Failed to forward message')
@@ -455,24 +657,32 @@ const CommunicationInbox = () => {
     if (!composeTo || !composeBody) { toast.error('Please fill in recipient and message'); return }
     try {
       const messageBody = composeType === 'email' && autoAppendSignature ? composeBody + signature : composeBody
-      let apiResponse: ApiSendResponse | null = null
       if (composeType === 'email') {
-        apiResponse = await messagesApi.sendEmail({ to: composeTo, subject: composeSubject, body: messageBody, leadId: composeLeadId || undefined })
+        // Upload attachments first (#33)
+        let attachmentData: Array<{ filename: string; content: string; contentType: string }> | undefined
+        if (pendingAttachments.length > 0) {
+          attachmentData = await Promise.all(
+            pendingAttachments.map(async (file) => {
+              const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader()
+                reader.onload = () => resolve((reader.result as string).split(',')[1])
+                reader.readAsDataURL(file)
+              })
+              return { filename: file.name, content: base64, contentType: file.type }
+            })
+          )
+        }
+        await messagesApi.sendEmail({ to: composeTo, subject: composeSubject, body: messageBody, leadId: composeLeadId || undefined, attachments: attachmentData })
       } else if (composeType === 'sms') {
-        apiResponse = await messagesApi.sendSMS({ to: composeTo, body: messageBody, leadId: composeLeadId || undefined })
+        await messagesApi.sendSMS({ to: composeTo, body: messageBody, leadId: composeLeadId || undefined })
       } else if (composeType === 'call') {
-        apiResponse = await messagesApi.makeCall({ to: composeTo, notes: messageBody, leadId: composeLeadId || undefined })
+        await messagesApi.makeCall({ to: composeTo, notes: messageBody, leadId: composeLeadId || undefined })
       }
       toast.success('Message sent successfully')
       setShowComposeModal(false)
-      setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeLeadId('')
+      resetCompose(); setPendingAttachments([])
       const t1 = setTimeout(async () => {
         await refetchMessages()
-        if (apiResponse?.data?.threadId || apiResponse?.threadId) {
-          const threadId = apiResponse.data?.threadId || apiResponse.threadId
-          const newThread = threads.find(t => t.id === threadId)
-          if (newThread) setSelectedThread(newThread)
-        }
       }, 500)
       timersRef.current.push(t1)
     } catch (error) {
@@ -553,61 +763,105 @@ const CommunicationInbox = () => {
 
   const handleToggleBulkSelect = () => {
     setBulkSelectMode(!bulkSelectMode)
-    setSelectedThreadIds(new Set())
+    setSelectedContactIds(new Set())
   }
 
-  const handleToggleThreadSelect = (threadId: number) => {
-    setSelectedThreadIds(prev => {
+  const handleToggleContactSelect = (contactId: string | number) => {
+    setSelectedContactIds(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(threadId)) newSet.delete(threadId)
-      else newSet.add(threadId)
+      if (newSet.has(contactId)) newSet.delete(contactId)
+      else newSet.add(contactId)
       return newSet
     })
   }
 
   const handleBulkMarkRead = async () => {
-    if (selectedThreadIds.size === 0) { toast.error('No threads selected'); return }
+    if (selectedContactIds.size === 0) { toast.error('No contacts selected'); return }
     try {
-      const selectedThreadsList = threads.filter(t => selectedThreadIds.has(t.id))
-      const allMessageIds = selectedThreadsList.flatMap(t => t.messages.filter(m => m.unread).map(m => String(m.id)))
+      const selectedContacts = contacts.filter(c => selectedContactIds.has(c.id))
+      const allMessageIds = selectedContacts.flatMap(c =>
+        Object.values(c.threads).flatMap(t => t.messages.filter(m => m.unread).map(m => String(m.id)))
+      )
       if (allMessageIds.length > 0) await messagesApi.markAsRead({ messageIds: allMessageIds })
-      setThreads(prev => prev.map(t => selectedThreadIds.has(t.id) ? { ...t, unread: 0, messages: t.messages.map(m => ({ ...m, unread: false })) } : t))
-      toast.success(`${selectedThreadIds.size} thread(s) marked as read`)
-      setSelectedThreadIds(new Set()); setBulkSelectMode(false)
+      setContacts(prev => prev.map(c =>
+        selectedContactIds.has(c.id)
+          ? {
+            ...c,
+            totalUnread: 0,
+            threads: Object.fromEntries(
+              Object.entries(c.threads).map(([ch, t]) => [ch, {
+                ...t,
+                unread: 0,
+                messages: t.messages.map(m => ({ ...m, unread: false }))
+              }])
+            )
+          }
+          : c
+      ))
+      toast.success(`${selectedContactIds.size} contact(s) marked as read`)
+      setSelectedContactIds(new Set()); setBulkSelectMode(false)
     } catch (error) {
       logger.error('Failed to bulk mark as read:', error)
-      toast.error('Failed to mark threads as read')
+      toast.error('Failed to mark contacts as read')
     }
   }
 
   const handleBulkArchive = async () => {
-    if (selectedThreadIds.size === 0) { toast.error('No threads selected'); return }
-    const previousThreads = [...threads]
-    setThreads(prev => prev.map(t => selectedThreadIds.has(t.id) ? { ...t, messages: t.messages.map(m => ({ ...m, archived: true })) } : t))
+    if (selectedContactIds.size === 0) { toast.error('No contacts selected'); return }
+    const previousContacts = [...contacts]
+    setContacts(prev => prev.map(c =>
+      selectedContactIds.has(c.id)
+        ? {
+          ...c,
+          threads: Object.fromEntries(
+            Object.entries(c.threads).map(([ch, t]) => [ch, {
+              ...t,
+              messages: t.messages.map(m => ({ ...m, archived: true }))
+            }])
+          )
+        }
+        : c
+    ))
     try {
-      const allMessageIds = threads.filter(t => selectedThreadIds.has(t.id)).flatMap(t => t.messages.map(m => String(m.id)))
-      await Promise.all(allMessageIds.map(id => messagesApi.archiveMessage(id, true)))
-      toast.success(`${selectedThreadIds.size} thread(s) archived`)
+      const allMessageIds = contacts
+        .filter(c => selectedContactIds.has(c.id))
+        .flatMap(c => getAllMessageIds(c))
+      await messagesApi.batchArchive(allMessageIds, true)
+      toast.success(`${selectedContactIds.size} contact(s) archived`)
     } catch {
-      setThreads(previousThreads)
-      toast.error('Failed to archive threads')
+      setContacts(previousContacts)
+      toast.error('Failed to archive contacts')
     }
-    setSelectedThreadIds(new Set()); setBulkSelectMode(false)
+    setSelectedContactIds(new Set()); setBulkSelectMode(false)
   }
 
   const handleBulkDelete = async () => {
-    if (selectedThreadIds.size === 0) { toast.error('No threads selected'); return }
-    const previousThreads = [...threads]
-    setThreads(prev => prev.map(t => selectedThreadIds.has(t.id) ? { ...t, messages: t.messages.map(m => ({ ...m, trashed: true })) } : t))
+    if (selectedContactIds.size === 0) { toast.error('No contacts selected'); return }
+    const previousContacts = [...contacts]
+    setContacts(prev => prev.map(c =>
+      selectedContactIds.has(c.id)
+        ? {
+          ...c,
+          threads: Object.fromEntries(
+            Object.entries(c.threads).map(([ch, t]) => [ch, {
+              ...t,
+              messages: t.messages.map(m => ({ ...m, trashed: true }))
+            }])
+          )
+        }
+        : c
+    ))
     try {
-      const allMessageIds = threads.filter(t => selectedThreadIds.has(t.id)).flatMap(t => t.messages.map(m => String(m.id)))
-      await Promise.all(allMessageIds.map(id => messagesApi.deleteMessage(id)))
-      toast.success(`${selectedThreadIds.size} thread(s) moved to trash`)
+      const allMessageIds = contacts
+        .filter(c => selectedContactIds.has(c.id))
+        .flatMap(c => getAllMessageIds(c))
+      await messagesApi.batchDelete(allMessageIds)
+      toast.success(`${selectedContactIds.size} contact(s) moved to trash`)
     } catch {
-      setThreads(previousThreads)
-      toast.error('Failed to delete threads')
+      setContacts(previousContacts)
+      toast.error('Failed to delete contacts')
     }
-    setSelectedThreadIds(new Set()); setBulkSelectMode(false)
+    setSelectedContactIds(new Set()); setBulkSelectMode(false)
   }
 
   // ─── Render ───────────────────────────────────────────────────
@@ -620,16 +874,16 @@ const CommunicationInbox = () => {
           <p className="text-muted-foreground mt-2">Unified inbox for all your communications</p>
         </div>
         <div className="flex gap-2">
-          {bulkSelectMode && selectedThreadIds.size > 0 && (
+          {bulkSelectMode && selectedContactIds.size > 0 && (
             <>
               <Button variant="outline" onClick={handleBulkMarkRead}>
-                <Check className="mr-2 h-4 w-4" />Mark {selectedThreadIds.size} as Read
+                <Check className="mr-2 h-4 w-4" />Mark {selectedContactIds.size} as Read
               </Button>
               <Button variant="outline" onClick={handleBulkArchive}>
-                <Archive className="mr-2 h-4 w-4" />Archive {selectedThreadIds.size}
+                <Archive className="mr-2 h-4 w-4" />Archive {selectedContactIds.size}
               </Button>
               <Button variant="outline" onClick={handleBulkDelete}>
-                <Trash2 className="mr-2 h-4 w-4" />Delete {selectedThreadIds.size}
+                <Trash2 className="mr-2 h-4 w-4" />Delete {selectedContactIds.size}
               </Button>
             </>
           )}
@@ -649,6 +903,7 @@ const CommunicationInbox = () => {
       <div className="flex gap-2 border-b pb-3">
         <Link to="/communication"><Button variant="default" size="sm"><Mail className="mr-2 h-4 w-4" />Inbox</Button></Link>
         <Link to="/communication/templates"><Button variant="outline" size="sm"><FileText className="mr-2 h-4 w-4" />Email Templates</Button></Link>
+        <Link to="/communication/sms-templates"><Button variant="outline" size="sm"><MessageSquare className="mr-2 h-4 w-4" />SMS Templates</Button></Link>
         <Link to="/communication/calls"><Button variant="outline" size="sm"><Phone className="mr-2 h-4 w-4" />Cold Call Hub</Button></Link>
       </div>
 
@@ -658,29 +913,24 @@ const CommunicationInbox = () => {
         <>
           <div className="hidden">Wrapper for loading state</div>
           <div className="grid grid-cols-12 gap-4" style={{ height: 'calc(100vh - 240px)' }}>
-            <ChannelSidebar
-              selectedChannel={selectedChannel}
-              selectedFolder={selectedFolder}
-              threads={threads}
-              onSelectChannel={setSelectedChannel}
-              onSelectFolder={setSelectedFolder}
-            />
-            <ThreadList
-              threads={filteredThreads}
-              selectedThread={selectedThread}
+            <ContactList
+              contacts={filteredContacts}
+              selectedContact={selectedContact}
               searchQuery={searchQuery}
+              folderFilter={folderFilter}
               filters={filters}
               bulkSelectMode={bulkSelectMode}
-              selectedThreadIds={selectedThreadIds}
+              selectedContactIds={selectedContactIds}
               loading={loading}
               isFetching={isFetching}
               inboxPage={inboxPage}
               onSearchChange={setSearchQuery}
-              onSelectThread={handleSelectThread}
+              onSelectContact={handleSelectContact}
+              onFolderChange={setFolderFilter}
               onToggleBulkSelect={handleToggleBulkSelect}
-              onToggleThreadSelect={handleToggleThreadSelect}
-              onToggleStar={toggleStarThread}
-              onSnooze={snoozeThread}
+              onToggleContactSelect={handleToggleContactSelect}
+              onToggleStar={toggleStarContact}
+              onSnooze={snoozeContact}
               onShowFilters={() => setShowFilters(!showFilters)}
               onSetFilter={setFilters}
               onSetPage={setInboxPage}
@@ -689,7 +939,7 @@ const CommunicationInbox = () => {
               hasActiveFilters={hasActiveFilters}
             />
             <ConversationView
-              selectedThread={selectedThread}
+              selectedContact={selectedContact}
               replyText={replyText}
               emailSubject={emailSubject}
               showMoreMenu={showMoreMenu}
@@ -701,16 +951,17 @@ const CommunicationInbox = () => {
               enhancedMessage={enhancedMessage}
               enhanceTone={enhanceTone}
               enhancingMessage={enhancingMessage}
-              selectedChannel={selectedChannel}
+              replyChannel={replyChannel}
               templates={templates}
               quickReplies={quickReplies}
               onReplyTextChange={setReplyText}
               onEmailSubjectChange={setEmailSubject}
+              onReplyChannelChange={setReplyChannel}
               onSendReply={handleSendReply}
-              onToggleStar={toggleStarThread}
-              onArchive={archiveThread}
-              onTrash={trashThread}
-              onSnooze={snoozeThread}
+              onToggleStar={toggleStarContact}
+              onArchive={archiveContact}
+              onTrash={trashContact}
+              onSnooze={snoozeContact}
               onMarkRead={handleMarkRead}
               onMarkUnread={handleMarkUnread}
               onForward={handleForward}
@@ -790,14 +1041,14 @@ const CommunicationInbox = () => {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Thread?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to move this conversation to trash? This action can be undone by restoring from the trash folder.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setShowDeleteConfirm(false); setThreadToDelete(null) }}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmTrashThread} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogCancel onClick={() => { setShowDeleteConfirm(false); setContactToDelete(null) }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmTrashContact} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -814,6 +1065,33 @@ const CommunicationInbox = () => {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowReplaceWarning(false)}>Keep Editing</AlertDialogCancel>
             <AlertDialogAction onClick={() => { setShowReplaceWarning(false); setShowAIComposer(true) }}>Generate Anyway</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Forward Dialog */}
+      <AlertDialog open={showForwardDialog} onOpenChange={setShowForwardDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Forward Message</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter the email address to forward this conversation to.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-6 pb-2">
+            <input
+              type="email"
+              value={forwardEmail}
+              onChange={(e) => setForwardEmail(e.target.value)}
+              placeholder="recipient@example.com"
+              className="w-full px-3 py-2 border rounded-lg text-sm"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleForwardConfirm() }}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowForwardDialog(false); setForwardEmail('') }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleForwardConfirm} disabled={!forwardEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forwardEmail.trim())}>Forward</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -98,6 +98,8 @@ export interface EmailOptions {
     filename: string;
     type?: string;
   }>;
+  cc?: string[];
+  bcc?: string[];
   leadId?: string;
   campaignId?: string;
   userId?: string; // User ID to fetch custom config
@@ -171,6 +173,8 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     from,
     replyTo,
     attachments,
+    cc,
+    bcc,
     leadId,
     campaignId,
     userId,
@@ -256,6 +260,12 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     }
     if (attachments && attachments.length > 0) {
       Object.assign(message, { attachments });
+    }
+    if (cc && cc.length > 0) {
+      Object.assign(message, { cc });
+    }
+    if (bcc && bcc.length > 0) {
+      Object.assign(message, { bcc });
     }
 
     // Custom headers for tracking
@@ -558,15 +568,52 @@ export async function handleWebhookEvent(event: Record<string, unknown>) {
 
       case 'bounce':
       case 'dropped': {
-        await prisma.message.update({
-          where: { id: message.id },
-          data: { status: 'BOUNCED' },
-        });
+        // Distinguish hard bounces (permanent) from soft bounces (temporary)
+        const bounceType = (event.type as string) || '';
+        const isSoftBounce = bounceType === 'blocked' || bounceType === 'deferred' ||
+          String(event.reason || '').toLowerCase().includes('temporarily') ||
+          String(event.status || '').startsWith('4');
 
-        // #102: Add bounced address to suppression list
-        const bouncedEmail = (event.email as string) || message.toAddress;
-        if (bouncedEmail && message.organizationId) {
-          await suppressEmail(bouncedEmail, message.organizationId, 'bounce');
+        if (isSoftBounce) {
+          // Soft bounce: mark as deferred, allow retry
+          const retryCount = ((message.metadata as Record<string, unknown>)?.softBounceRetries as number) || 0;
+          if (retryCount < 3) {
+            await prisma.message.update({
+              where: { id: message.id },
+              data: {
+                status: 'PENDING',
+                metadata: {
+                  ...((message.metadata as Record<string, unknown>) || {}),
+                  softBounceRetries: retryCount + 1,
+                  lastSoftBounce: new Date().toISOString(),
+                  softBounceReason: String(event.reason || bounceType),
+                },
+              },
+            });
+            logger.info({ messageId: message.id, retryCount: retryCount + 1 },
+              '[EMAIL] Soft bounce — queued for retry');
+          } else {
+            // Max retries exceeded, treat as hard bounce
+            await prisma.message.update({
+              where: { id: message.id },
+              data: { status: 'BOUNCED' },
+            });
+            const bouncedEmail = (event.email as string) || message.toAddress;
+            if (bouncedEmail && message.organizationId) {
+              await suppressEmail(bouncedEmail, message.organizationId, 'soft_bounce_max_retries');
+            }
+            logger.warn({ messageId: message.id }, '[EMAIL] Soft bounce max retries reached — suppressed');
+          }
+        } else {
+          // Hard bounce: suppress immediately
+          await prisma.message.update({
+            where: { id: message.id },
+            data: { status: 'BOUNCED' },
+          });
+          const bouncedEmail = (event.email as string) || message.toAddress;
+          if (bouncedEmail && message.organizationId) {
+            await suppressEmail(bouncedEmail, message.organizationId, 'hard_bounce');
+          }
         }
         break;
       }

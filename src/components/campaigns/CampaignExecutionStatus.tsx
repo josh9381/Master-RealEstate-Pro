@@ -53,7 +53,16 @@ export function CampaignExecutionStatus({ campaignId, onComplete }: CampaignExec
         const response = await campaignsApi.getCampaignStats(campaignId);
         const data = response?.data as ExecutionStatusData | undefined;
         if (data) {
-          setStatus(data);
+          setStatus(prev => {
+            // Adjust polling interval: 1s during sending, 5s otherwise
+            const newInterval = data.phase === 'sending' ? 1000 : 5000;
+            const currentInterval = prev?.phase === 'sending' ? 1000 : 5000;
+            if (newInterval !== currentInterval && intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = setInterval(fetchStatus, newInterval);
+            }
+            return data;
+          });
           setError(null);
 
           if ((data.phase === 'completed' || data.phase === 'draft') && !completedRef.current) {

@@ -42,7 +42,7 @@ export const sendSMSSchema = z.object({
 })
 
 export const makeCallSchema = z.object({
-  to: z.string().min(1, 'Phone number is required'),
+  to: z.string().min(1, 'Phone number is required').regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format. Use E.164 format (e.g., +1234567890)'),
   leadId: z.string().optional(),
 })
 
@@ -52,13 +52,16 @@ export const messageQuerySchema = z.object({
   status: z.enum(['PENDING', 'SENT', 'DELIVERED', 'FAILED', 'BOUNCED', 'OPENED', 'CLICKED']).optional(),
   leadId: z.string().cuid().optional(),
   threadId: z.string().optional(),
-  search: z.string().optional(),
+  search: z.string().max(200).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
-  page: z.coerce.number().int().positive().default(1),
+  page: z.coerce.number().int().positive().max(1000).default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
   sortBy: z.enum(['createdAt', 'sentAt', 'readAt']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc')
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  folder: z.enum(['inbox', 'archived', 'trash']).optional(),
+  starred: z.enum(['true', 'false']).optional(),
+  snoozed: z.enum(['true', 'false']).optional(),
 })
 
 /**
@@ -72,7 +75,7 @@ export const markAsReadSchema = z.object({
  * Validator for replying to a message
  */
 export const replyToMessageSchema = z.object({
-  body: z.string().min(1, 'Reply body is required'),
+  body: z.string().min(1, 'Reply body is required').max(50000, 'Reply body is too long (max 50,000 characters)'),
   attachments: z.array(z.object({
     filename: z.string(),
     content: z.string(),
@@ -92,4 +95,21 @@ export const messageIdSchema = z.object({
  */
 export const threadIdSchema = z.object({
   threadId: z.string().min(1, 'Thread ID is required')
+})
+
+/**
+ * Validator for batch star/archive operations
+ */
+export const batchStarSchema = z.object({
+  messageIds: z.array(z.string().min(1)).min(1, 'At least one message ID is required').max(500, 'Maximum 500 messages per batch'),
+  starred: z.boolean()
+})
+
+export const batchArchiveSchema = z.object({
+  messageIds: z.array(z.string().min(1)).min(1, 'At least one message ID is required').max(500, 'Maximum 500 messages per batch'),
+  archived: z.boolean()
+})
+
+export const batchDeleteSchema = z.object({
+  messageIds: z.array(z.string().min(1)).min(1, 'At least one message ID is required').max(500, 'Maximum 500 messages per batch')
 })

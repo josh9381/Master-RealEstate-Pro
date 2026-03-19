@@ -66,6 +66,7 @@ interface CampaignExecutionOptions {
     status?: string[];
     tags?: string[];
     minScore?: number;
+    source?: string[];
   };
 }
 
@@ -160,16 +161,21 @@ export async function executeCampaign(
       }
       
       // Store deferred sends in CampaignLead metadata for the scheduler to pick up
-      for (const group of deferredGroups) {
-        await prisma.campaignLead.updateMany({
-          where: {
-            campaignId,
-            leadId: { in: group.leadIds },
-          },
-          data: {
-            metadata: { scheduledSendAt: group.sendAt.toISOString(), optimizationStrategy },
-          },
-        });
+      // Use a transaction to ensure all deferred groups are stored atomically
+      if (deferredGroups.length > 0) {
+        await prisma.$transaction(
+          deferredGroups.map((group) =>
+            prisma.campaignLead.updateMany({
+              where: {
+                campaignId,
+                leadId: { in: group.leadIds },
+              },
+              data: {
+                metadata: { scheduledSendAt: group.sendAt.toISOString(), optimizationStrategy },
+              },
+            })
+          )
+        );
       }
       
       // Filter leads for immediate sending only
@@ -205,13 +211,19 @@ export async function executeCampaign(
       throw new Error(`Campaign type ${campaign.type} not supported`);
     }
 
-    // Update campaign metrics
+    // Update campaign metrics and spent
+    const unitCost = campaign.type === 'EMAIL' ? 0.01 : campaign.type === 'SMS' ? 0.10 : 0.50;
+    const spentAmount = result.success * unitCost;
+
     await prisma.campaign.update({
       where: { id: campaignId },
       data: {
         sent: { increment: result.success },
+        spent: { increment: spentAmount },
         status: 'ACTIVE',
         startDate: campaign.startDate || new Date(),
+        lastSentAt: new Date(),
+        audience: leads.length,
       },
     });
 
@@ -312,6 +324,22 @@ async function getTargetLeads(
     if (filters.minScore !== undefined) {
       where.score = { gte: filters.minScore };
     }
+
+    if (filters.source && filters.source.length > 0) {
+      where.source = { in: filters.source };
+    }
+  }
+
+  // Safety check: require at least one audience selection criterion
+  // to prevent accidentally sending to the entire organization
+  const hasAudienceCriteria = tagIds.length > 0 ||
+    (filters?.status && filters.status.length > 0) ||
+    filters?.minScore !== undefined ||
+    (filters?.source && filters.source.length > 0);
+
+  if (!hasAudienceCriteria) {
+    logger.warn('[CAMPAIGN] No audience criteria specified — refusing to send to all org leads');
+    return [];
   }
 
   // Get leads

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { formatRate } from '@/lib/metricsCalculator'
@@ -100,7 +100,40 @@ const CallCenter = () => {
   const queryClient = useQueryClient()
   const [selectedLead, setSelectedLead] = useState<QueueLead | null>(null)
   const [callNotes, setCallNotes] = useState('')
-  const [callStartTime, setCallStartTime] = useState<number | null>(null)
+  const [callStartTime, setCallStartTime] = useState<number | null>(() => {
+    const stored = sessionStorage.getItem('callCenter_startTime')
+    return stored ? Number(stored) : null
+  })
+  const [callElapsed, setCallElapsed] = useState(0)
+  const [callActive, setCallActive] = useState(() => sessionStorage.getItem('callCenter_active') === 'true')
+
+  // Restore selected lead from session on mount
+  useEffect(() => {
+    const storedLeadId = sessionStorage.getItem('callCenter_leadId')
+    if (storedLeadId && !selectedLead) {
+      const lead = queue.find(l => l.id === storedLeadId)
+      if (lead) setSelectedLead(lead)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Live call timer
+  useEffect(() => {
+    if (!callActive || !callStartTime) {
+      setCallElapsed(0)
+      return
+    }
+    const tick = () => setCallElapsed(Math.round((Date.now() - callStartTime) / 1000))
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [callActive, callStartTime])
+
+  const formatTimer = useCallback((secs: number) => {
+    const m = Math.floor(secs / 60)
+    const s = secs % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }, [])
 
   // Smart call queue
   const { data: queueData, isLoading: queueLoading } = useQuery({
@@ -159,18 +192,30 @@ const CallCenter = () => {
     setSelectedLead(lead)
     setCallNotes('')
     setCallStartTime(null)
+    handleEndCall()
   }
 
   const handleStartCall = () => {
     if (!selectedLead?.phone) return
-    setCallStartTime(Date.now())
-    // Open phone dialer
-    window.location.href = `tel:${selectedLead.phone}`
+    const now = Date.now()
+    setCallStartTime(now)
+    setCallActive(true)
+    sessionStorage.setItem('callCenter_startTime', String(now))
+    sessionStorage.setItem('callCenter_active', 'true')
+    sessionStorage.setItem('callCenter_leadId', selectedLead.id)
   }
+
+  const handleEndCall = useCallback(() => {
+    setCallActive(false)
+    sessionStorage.removeItem('callCenter_startTime')
+    sessionStorage.removeItem('callCenter_active')
+    sessionStorage.removeItem('callCenter_leadId')
+  }, [])
 
   const handleDisposition = (outcome: string) => {
     if (!selectedLead) return
     const duration = callStartTime ? Math.round((Date.now() - callStartTime) / 1000) : undefined
+    handleEndCall()
     logCallMutation.mutate({
       leadId: selectedLead.id,
       phoneNumber: selectedLead.phone || '',
@@ -355,10 +400,17 @@ const CallCenter = () => {
                         <User className="h-4 w-4 mr-1" />
                         Full Profile
                       </Button>
-                      <Button size="sm" onClick={handleStartCall} disabled={!selectedLead.phone}>
-                        <Phone className="h-4 w-4 mr-1" />
-                        Call {selectedLead.phone || 'No phone'}
-                      </Button>
+                      {callActive ? (
+                        <Button size="sm" variant="destructive" onClick={handleEndCall}>
+                          <PhoneOff className="h-4 w-4 mr-1" />
+                          End Call {formatTimer(callElapsed)}
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={handleStartCall} disabled={!selectedLead.phone}>
+                          <Phone className="h-4 w-4 mr-1" />
+                          Call {selectedLead.phone || 'No phone'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>

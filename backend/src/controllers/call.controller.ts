@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { logger } from '../lib/logger';
 import { pushCallUpdate } from '../config/socket';
 import { calcRate } from '../utils/metricsCalculator';
+import { NotFoundError } from '../middleware/errorHandler';
 
 /**
  * Log a manual call (not Vapi AI)
@@ -20,7 +21,7 @@ export async function logCall(req: Request, res: Response) {
   });
 
   if (!lead) {
-    return res.status(404).json({ success: false, message: 'Lead not found' });
+    throw new NotFoundError('Lead not found');
   }
 
   const call = await prisma.call.create({
@@ -150,7 +151,7 @@ export async function getCall(req: Request, res: Response) {
   });
 
   if (!call) {
-    return res.status(404).json({ success: false, message: 'Call not found' });
+    throw new NotFoundError('Call not found');
   }
 
   res.json({ success: true, data: call });
@@ -171,7 +172,7 @@ export async function updateCall(req: Request, res: Response) {
   });
 
   if (!existing) {
-    return res.status(404).json({ success: false, message: 'Call not found' });
+    throw new NotFoundError('Call not found');
   }
 
   const updateData: Record<string, any> = {};
@@ -206,7 +207,7 @@ export async function deleteCall(req: Request, res: Response) {
   });
 
   if (!existing) {
-    return res.status(404).json({ success: false, message: 'Call not found' });
+    throw new NotFoundError('Call not found');
   }
 
   await prisma.call.delete({ where: { id } });

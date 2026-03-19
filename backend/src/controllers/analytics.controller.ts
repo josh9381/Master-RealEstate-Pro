@@ -273,7 +273,7 @@ export const getCampaignAnalytics = async (req: Request, res: Response) => {
       where: whereDate,
       _count: true
     }),
-    calculateCampaignPerformance(organizationId),
+    calculateCampaignPerformance(organizationId, Object.keys(dateFilter).length > 0 ? dateFilter : undefined),
     prisma.campaign.findMany({
       where: whereDate,
       take: 10,
@@ -287,7 +287,9 @@ export const getCampaignAnalytics = async (req: Request, res: Response) => {
         opened: true,
         clicked: true,
         converted: true,
-        revenue: true
+        revenue: true,
+        roi: true,
+        spent: true
       }
     })
   ])
@@ -491,8 +493,11 @@ async function calculateLeadConversionRate(organizationId: string, dateFilter?: 
 }
 
 // Helper: Calculate campaign performance
-async function calculateCampaignPerformance(organizationId: string) {
-  const where = { organizationId }
+async function calculateCampaignPerformance(organizationId: string, dateFilter?: Record<string, any>) {
+  const where: Record<string, any> = { organizationId }
+  if (dateFilter && Object.keys(dateFilter).length > 0) {
+    where.createdAt = dateFilter
+  }
   const aggregate = await prisma.campaign.aggregate({
     where,
     _sum: {

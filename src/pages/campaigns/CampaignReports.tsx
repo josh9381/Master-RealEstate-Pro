@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, TrendingUp, Users, Mail, MousePointer, RefreshCw, Download, Send, Eye } from 'lucide-react';
+import { TrendingUp, Users, Mail, MousePointer, RefreshCw, Download, Send, Eye, DollarSign, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -14,7 +14,7 @@ import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { DateRangePicker, DateRange, DateRangePreset, computeDateRange } from '@/components/shared/DateRangePicker';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { exportToCSV, campaignExportColumns } from '@/lib/exportService';
-import { calcOpenRate, calcClickRate, calcConversionRate, calcDeliveryRate, calcBounceRate, calcUnsubscribeRate, formatRate, fmtMoney } from '@/lib/metricsCalculator';
+import { calcOpenRate, calcClickRate, calcConversionRate, calcDeliveryRate, calcBounceRate, calcUnsubscribeRate, calcROI, formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import {
   Table,
   TableBody,
@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/Table';
-import type { EnrichedCampaign } from '@/types';
+import type { Campaign, EnrichedCampaign } from '@/types';
 import {
   LineChart,
   Line,
@@ -44,19 +44,369 @@ const TYPE_DISPLAY: Record<string, string> = {
   SOCIAL: 'Social',
 };
 
-// ─── Overview Tab (from CampaignAnalytics) ────────────────────────────────────
+/** Benchmark constants for real estate industry */
+const BENCHMARKS = {
+  openRate: 22.5,   // 20-25% industry average
+  clickRate: 3.5,   // 2-5% target
+  conversionRate: 1.5,
+};
+
+/** Color a rate relative to its benchmark */
+function benchmarkColor(rate: number, benchmark: number): string {
+  if (rate >= benchmark * 1.1) return 'text-green-600';
+  if (rate >= benchmark * 0.9) return 'text-foreground';
+  return 'text-red-600';
+}
+
+// ─── Shared types ─────────────────────────────────────────────────────────────
+
+interface AnalyticsPerformance {
+  totalSent: number;
+  totalDelivered: number;
+  totalOpened: number;
+  totalClicked: number;
+  totalConverted: number;
+  deliveryRate: number;
+  openRate: number;
+  clickRate: number;
+  conversionRate: number;
+  totalRevenue: number;
+  totalSpent: number;
+  averageROI: number;
+}
+
+interface TopCampaign {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  sent: number;
+  opened: number;
+  clicked: number;
+  converted: number;
+  revenue: number;
+  roi: number;
+  spent: number;
+}
+
+interface MonthlyDataPoint {
+  month: string;
+  date?: string;
+  sent: number;
+  opened: number;
+  clicked: number;
+  converted: number;
+}
+
+interface HourlyDataPoint {
+  hour: number;
+  label: string;
+  opens: number;
+  clicks: number;
+  total: number;
+}
+
+const ITEMS_PER_PAGE = 10;
+
+// ─── Shared Reusable Components ───────────────────────────────────────────────
+
+interface MetricCardProps {
+  title: string | ReactNode;
+  icon: LucideIcon;
+  value: string;
+  subtitle: string;
+  valueClassName?: string;
+}
+
+function MetricCard({ title, icon: Icon, value, subtitle, valueClassName }: MetricCardProps) {
+  return (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+          {title}
+        </CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className={`text-2xl font-bold ${valueClassName ?? ''}`}>{value}</div>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface ReportToolbarProps {
+  datePreset: DateRangePreset;
+  onDateChange: (range: DateRange, preset: DateRangePreset) => void;
+  onRefresh: () => void;
+  onExport: () => void;
+  isRefreshing?: boolean;
+  exportLabel?: string;
+}
+
+function ReportToolbar({ datePreset, onDateChange, onRefresh, onExport, isRefreshing, exportLabel = 'Export Data' }: ReportToolbarProps) {
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <DateRangePicker value={datePreset} onChange={onDateChange} />
+      <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
+        <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+        Refresh
+      </Button>
+      <Button size="sm" onClick={onExport}>
+        <Download className="h-4 w-4 mr-2" />
+        {exportLabel}
+      </Button>
+    </div>
+  );
+}
+
+interface TrendLineConfig {
+  dataKey: string;
+  stroke: string;
+  name?: string;
+}
+
+interface PerformanceTrendChartProps {
+  title: string;
+  description: string;
+  data: Record<string, unknown>[];
+  lines: TrendLineConfig[];
+  height?: number;
+  emptyMessage?: string;
+}
+
+function PerformanceTrendChart({ title, description, data, lines, height = 350, emptyMessage = 'No performance data yet' }: PerformanceTrendChartProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {data.length > 0 ? (
+          <ResponsiveContainer width="100%" height={height}>
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {lines.map((line) => (
+                <Line key={line.dataKey} type="monotone" dataKey={line.dataKey} stroke={line.stroke} strokeWidth={2} name={line.name} />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className={`flex items-center justify-center text-muted-foreground`} style={{ height }}>
+            {emptyMessage}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface NoEngagementStateProps {
+  icon: LucideIcon;
+  title: string;
+  message: string;
+}
+
+function NoEngagementState({ icon: Icon, title, message }: NoEngagementStateProps) {
+  return (
+    <Card className="py-6">
+      <CardContent className="flex flex-col items-center justify-center text-center">
+        <Icon className="h-10 w-10 text-muted-foreground mb-3" />
+        <h3 className="text-lg font-semibold mb-1">{title}</h3>
+        <p className="text-muted-foreground max-w-md">{message}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface LeaderboardCardProps {
+  title: string;
+  description: string;
+  indicatorColor: string;
+  items: { id: string; name: string; type: string; sent: number; opened: number; clicked: number }[];
+  rateCalc: (item: { sent: number; opened: number; clicked: number }) => number;
+  valueColor: string;
+  emptyMessage?: string;
+  onItemClick: (id: string) => void;
+}
+
+function LeaderboardCard({ title, description, indicatorColor, items, rateCalc, valueColor, emptyMessage = 'No campaigns found', onItemClick }: LeaderboardCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {title}
+          <span className={`inline-block h-3 w-3 rounded-full ${indicatorColor}`} title={`${title} indicator`} />
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => onItemClick(item.id)}>
+              <div>
+                <p className="font-medium">{item.name}</p>
+                <Badge variant="secondary" className="mt-1">{item.type}</Badge>
+              </div>
+              <span className={`text-2xl font-bold ${valueColor}`}>
+                {formatRate(rateCalc(item))}%
+              </span>
+            </div>
+          ))}
+          {items.length === 0 && <p className="text-center text-muted-foreground py-4">{emptyMessage}</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface StatCellProps {
+  label: string;
+  value: string | number;
+  rate?: string;
+  rateColor?: string;
+  large?: boolean;
+  colSpan?: number;
+}
+
+function StatCell({ label, value, rate, rateColor, large = true, colSpan }: StatCellProps) {
+  return (
+    <div className={colSpan ? `col-span-${colSpan}` : undefined}>
+      <p className="text-sm text-muted-foreground mb-1">{label}</p>
+      <p className={large ? 'text-2xl font-bold' : 'text-lg font-semibold'}>{typeof value === 'number' ? value.toLocaleString() : value}</p>
+      {rate && <p className={`text-xs ${rateColor ?? 'text-muted-foreground'}`}>{rate}</p>}
+    </div>
+  );
+}
+
+function CampaignDetailCard({ campaign, onNavigate }: { campaign: EnrichedCampaign; onNavigate: (id: string) => void }) {
+  return (
+    <div className="p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10">
+            <Mail className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h4 className="font-semibold">{campaign.name}</h4>
+            <Badge variant="secondary">{campaign.type}</Badge>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => onNavigate(campaign.id)}>
+          View Full Report
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCell label="Sent" value={campaign.sent ?? 0} />
+        <StatCell label="Delivered" value={campaign.delivered ?? 0} rate={`${formatRate(calcDeliveryRate(campaign.delivered ?? 0, campaign.sent))}%`} rateColor="text-green-600" />
+        <StatCell label="Opened" value={campaign.opened ?? 0} rate={`${formatRate(calcOpenRate(campaign.opened ?? 0, campaign.sent))}%`} rateColor="text-blue-600" />
+        <StatCell label="Clicked" value={campaign.clicked ?? 0} rate={`${formatRate(calcClickRate(campaign.clicked ?? 0, campaign.sent))}%`} rateColor="text-purple-600" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+        <StatCell label="Bounced" value={campaign.bounced ?? 0} rate={`${formatRate(calcBounceRate(campaign.bounced ?? 0, campaign.sent))}%`} rateColor="text-red-600" large={false} />
+        <StatCell label="Unsubscribed" value={campaign.unsubscribed ?? 0} rate={`${formatRate(calcUnsubscribeRate(campaign.unsubscribed ?? 0, campaign.sent), 2)}%`} large={false} />
+        <StatCell label="Revenue Generated" value={fmtMoney(campaign.revenue ?? 0)} large={false} colSpan={2} />
+      </div>
+    </div>
+  );
+}
+
+interface FunnelStageData {
+  stage: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
+function FunnelBar({ stage, count, percentage, color }: FunnelStageData) {
+  const widthPct = count > 0 ? Math.max(Math.min(percentage, 100), 2) : 0;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <div className={`h-3 w-3 rounded-full ${color}`} />
+          <span className="font-medium">{stage}</span>
+        </div>
+        <span className="text-sm text-muted-foreground">
+          {count.toLocaleString()} ({formatRate(percentage, 1)}%)
+        </span>
+      </div>
+      <div className="w-full bg-secondary rounded-full h-4">
+        <div className={`h-4 rounded-full ${color}`} style={{ width: `${widthPct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+interface PaginationControlsProps {
+  totalItems: number;
+  page: number;
+  totalPages: number;
+  showAll: boolean;
+  onToggleShowAll: () => void;
+  onPageChange: (page: number) => void;
+}
+
+function PaginationControls({ totalItems, page, totalPages, showAll, onToggleShowAll, onPageChange }: PaginationControlsProps) {
+  if (totalItems <= ITEMS_PER_PAGE) return null;
+  return (
+    <div className="flex items-center justify-between pt-4 border-t">
+      <Button variant="outline" size="sm" onClick={onToggleShowAll}>
+        {showAll ? 'Show paginated' : `Show all ${totalItems}`}
+      </Button>
+      {!showAll && (
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(Math.max(1, page - 1))}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(Math.min(totalPages, page + 1))}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabButton({ id, label, active, onClick }: { id: string; label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      role="tab"
+      aria-selected={active}
+      aria-controls={`panel-${id}`}
+      id={`tab-${id}`}
+      onClick={onClick}
+      className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+        active
+          ? 'border-primary text-primary'
+          : 'border-transparent text-muted-foreground hover:text-foreground'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ─── Overview Tab ─────────────────────────────────────────────────────────────
 
 function OverviewTab() {
+  const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPreset = (searchParams.get('range') as DateRangePreset) || '30d';
-  const dateRangeRef = useRef<DateRange>(computeDateRange(initialPreset));
+  const [dateRange, setDateRange] = useState<DateRange>(computeDateRange(initialPreset));
   const navigate = useNavigate();
 
   const { data: campaignData = null, isLoading: loading, isError: campaignError, error: campaignErrorObj, refetch } = useQuery({
-    queryKey: ['campaign-analytics'],
+    queryKey: ['campaign-analytics', dateRange.startDate, dateRange.endDate],
     queryFn: async () => {
       const [campaignResult, monthlyResult, hourlyResult] = await Promise.allSettled([
-        analyticsApi.getCampaignAnalytics(dateRangeRef.current),
+        analyticsApi.getCampaignAnalytics(dateRange),
         analyticsApi.getMonthlyPerformance({ months: 12 }),
         analyticsApi.getHourlyEngagement({ days: 90 }),
       ]);
@@ -75,20 +425,19 @@ function OverviewTab() {
   const { data: allCampaignsData } = useQuery({
     queryKey: ['campaigns-for-reports'],
     queryFn: async () => {
-      const response = await campaignsApi.getCampaigns({});
+      const response = await campaignsApi.getCampaigns({ limit: 1000 });
       return response.data?.campaigns || [];
     },
     enabled: !loading && (!campaignData?.topCampaigns || campaignData.topCampaigns.length === 0),
   });
 
   const handleDateChange = (range: DateRange, preset: DateRangePreset) => {
-    dateRangeRef.current = range;
+    setDateRange(range);
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
       next.set('range', preset);
       return next;
     });
-    refetch();
   };
 
   if (loading) {
@@ -104,119 +453,105 @@ function OverviewTab() {
     );
   }
 
-  const performance = campaignData?.performance || {};
-  const totalCampaigns = campaignData?.total ?? 0;
-  const topCampaigns = campaignData?.topCampaigns || [];
-  const campaigns = topCampaigns.length > 0 ? topCampaigns : (allCampaignsData || topCampaigns);
+  const performance: AnalyticsPerformance = campaignData?.performance || {} as AnalyticsPerformance;
+  const totalCampaigns: number = campaignData?.total ?? 0;
+  const topCampaigns: TopCampaign[] = campaignData?.topCampaigns || [];
+  const campaigns: TopCampaign[] = topCampaigns.length > 0 ? topCampaigns : (allCampaignsData || []);
 
-  const campaignPerformance = (campaignData?.dailyStats || []).map((d: Record<string, unknown>) => ({
-    date: (d.month as string) || (d.date as string),
-    sent: (d.sent as number) ?? 0,
-    opened: (d.opened as number) ?? 0,
-    clicked: (d.clicked as number) ?? 0,
-    converted: (d.converted as number) ?? 0,
+  const campaignPerformance = (campaignData?.dailyStats || []).map((d: MonthlyDataPoint) => ({
+    date: d.month || d.date,
+    sent: d.sent ?? 0,
+    opened: d.opened ?? 0,
+    clicked: d.clicked ?? 0,
+    converted: d.converted ?? 0,
   }));
 
-  const hourlyPerformance = (campaignData?.hourlyStats || []).map((h: Record<string, unknown>) => ({
-    hour: (h.label as string) || (h.hour as string),
-    openRate: (h.openRate as number) ?? (h.opens as number) ?? 0,
-    clicks: (h.clicks as number) ?? 0,
+  // Fix #1: compute actual open rate per hour (% share of total opens) instead of raw counts
+  const hourlyStats: HourlyDataPoint[] = campaignData?.hourlyStats || [];
+  const totalHourlyOpens = hourlyStats.reduce((sum: number, h: HourlyDataPoint) => sum + (h.opens ?? 0), 0);
+  const hourlyPerformance = hourlyStats.map((h: HourlyDataPoint) => ({
+    hour: h.label || String(h.hour),
+    openRate: totalHourlyOpens > 0 ? Math.round(((h.opens ?? 0) / totalHourlyOpens) * 1000) / 10 : 0,
+    clicks: h.clicks ?? 0,
   }));
+
+  const hasEngagement = (performance.totalOpened ?? 0) > 0 || (performance.totalClicked ?? 0) > 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end gap-2">
-        <DateRangePicker value={initialPreset} onChange={handleDateChange} />
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-        <Button size="sm" onClick={() => {
-          if (campaigns.length > 0) {
-            exportToCSV(campaigns, campaignExportColumns, { filename: `campaign-analytics-${new Date().toISOString().split('T')[0]}` });
+      <ReportToolbar
+        datePreset={initialPreset}
+        onDateChange={handleDateChange}
+        onRefresh={() => refetch()}
+        onExport={() => {
+          if (campaigns.length === 0) {
+            toast.error('No campaign data to export');
+            return;
           }
-        }}>Export Data</Button>
-      </div>
+          exportToCSV(campaigns, campaignExportColumns, { filename: `campaign-analytics-${new Date().toISOString().split('T')[0]}` });
+          toast.success('Analytics exported successfully');
+        }}
+      />
 
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
-            <Send className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(performance.totalSent ?? 0).toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">{totalCampaigns} campaigns</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Open Rate
-              <HelpTooltip text="Percentage of delivered emails that were opened. Industry average is 20–25% for real estate." />
-            </CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{performance.openRate ?? 0}%</div>
-            <p className="text-xs text-muted-foreground">{(performance.totalOpened ?? 0).toLocaleString()} opened</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Click Rate
-              <HelpTooltip text="Percentage of opened emails where a link was clicked. A good click rate is 2–5%." />
-            </CardTitle>
-            <MousePointer className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{performance.clickRate ?? 0}%</div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{performance.conversionRate ?? 0}%</div>
-            <p className="text-xs text-muted-foreground">From campaign data</p>
-          </CardContent>
-        </Card>
+      {/* Key Metrics — 5 cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <MetricCard
+          title="Total Sent"
+          icon={Send}
+          value={(performance.totalSent ?? 0).toLocaleString()}
+          subtitle={`${totalCampaigns} campaigns`}
+        />
+        <MetricCard
+          title={<>Open Rate<HelpTooltip text="Percentage of sent emails that were opened. Industry average is 20–25% for real estate." /></>}
+          icon={Eye}
+          value={`${performance.openRate ?? 0}%`}
+          valueClassName={benchmarkColor(performance.openRate ?? 0, BENCHMARKS.openRate)}
+          subtitle={`${(performance.totalOpened ?? 0).toLocaleString()} opened${(performance.openRate ?? 0) >= BENCHMARKS.openRate ? ' · Above avg' : ' · Below avg'}`}
+        />
+        <MetricCard
+          title={<>Click Rate<HelpTooltip text="Percentage of sent emails where a link was clicked. A good click rate is 2–5%." /></>}
+          icon={MousePointer}
+          value={`${performance.clickRate ?? 0}%`}
+          valueClassName={benchmarkColor(performance.clickRate ?? 0, BENCHMARKS.clickRate)}
+          subtitle={`${(performance.totalClicked ?? 0).toLocaleString()} clicked${(performance.clickRate ?? 0) >= BENCHMARKS.clickRate ? ' · Above avg' : ' · Below avg'}`}
+        />
+        <MetricCard
+          title="Conversion Rate"
+          icon={Users}
+          value={`${performance.conversionRate ?? 0}%`}
+          subtitle={`${(performance.totalConverted ?? 0).toLocaleString()} converted`}
+        />
+        <MetricCard
+          title="Revenue"
+          icon={DollarSign}
+          value={fmtMoney(performance.totalRevenue ?? 0)}
+          subtitle={`Avg ROI: ${performance.averageROI ?? 0}%`}
+        />
       </div>
 
       {totalCampaigns === 0 && <AnalyticsEmptyState variant="campaigns" />}
 
+      {totalCampaigns > 0 && !hasEngagement && (
+        <NoEngagementState
+          icon={Eye}
+          title="No engagement data yet"
+          message="Your campaigns have been sent but no opens or clicks have been recorded yet. Check back soon!"
+        />
+      )}
+
       {/* Performance Trend */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Campaign Performance Trend</CardTitle>
-          <CardDescription>Sent, opened, clicked, and converted over time</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {campaignPerformance.length > 0 ? (
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={campaignPerformance}>
-                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="sent" stroke="#8b5cf6" strokeWidth={2} />
-                <Line type="monotone" dataKey="opened" stroke="#3b82f6" strokeWidth={2} />
-                <Line type="monotone" dataKey="clicked" stroke="#10b981" strokeWidth={2} />
-                <Line type="monotone" dataKey="converted" stroke="#f59e0b" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[350px] text-muted-foreground">
-              No campaign performance data yet
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <PerformanceTrendChart
+        title="Campaign Performance Trend"
+        description="Sent, opened, clicked, and converted over time"
+        data={campaignPerformance}
+        lines={[
+          { dataKey: 'sent', stroke: '#8b5cf6' },
+          { dataKey: 'opened', stroke: '#3b82f6' },
+          { dataKey: 'clicked', stroke: '#10b981' },
+          { dataKey: 'converted', stroke: '#f59e0b' },
+        ]}
+        emptyMessage="No campaign performance data yet"
+      />
 
       {/* Campaign Comparison Table */}
       <Card>
@@ -240,24 +575,29 @@ function OverviewTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.map((campaign: Record<string, unknown>) => {
-                  const sent = (campaign.sent as number) ?? 0;
-                  const opened = (campaign.opened as number) ?? 0;
-                  const clicked = (campaign.clicked as number) ?? 0;
-                  const converted = (campaign.converted as number) ?? 0;
-                  const openRate = formatRate(calcOpenRate(opened, sent));
-                  const clickRate = formatRate(calcClickRate(clicked, sent));
-                  const convRate = formatRate(calcConversionRate(converted, sent));
+                {campaigns.map((campaign: TopCampaign) => {
+                  const sent = campaign.sent ?? 0;
+                  const opened = campaign.opened ?? 0;
+                  const clicked = campaign.clicked ?? 0;
+                  const converted = campaign.converted ?? 0;
+                  const openRateVal = formatRate(calcOpenRate(opened, sent));
+                  const clickRateVal = formatRate(calcClickRate(clicked, sent));
+                  const convRateVal = formatRate(calcConversionRate(converted, sent));
+                  const roiValue = calcROI(campaign.revenue ?? 0, campaign.spent ?? 0);
                   return (
-                    <TableRow key={campaign.id as string} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
-                      <TableCell className="font-medium">{campaign.name as string}</TableCell>
-                      <TableCell><Badge variant="outline">{campaign.type as string}</Badge></TableCell>
+                    <TableRow key={campaign.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
+                      <TableCell className="font-medium">{campaign.name}</TableCell>
+                      <TableCell><Badge variant="outline">{TYPE_DISPLAY[campaign.type?.toUpperCase()] || campaign.type}</Badge></TableCell>
                       <TableCell>{sent.toLocaleString()}</TableCell>
-                      <TableCell>{openRate}%</TableCell>
-                      <TableCell>{clickRate}%</TableCell>
-                      <TableCell>{convRate}%</TableCell>
-                      <TableCell>{fmtMoney((campaign.revenue as number) ?? 0)}</TableCell>
-                      <TableCell><Badge variant="success">{formatRate((campaign.roi as number) ?? 0)}%</Badge></TableCell>
+                      <TableCell>{openRateVal}%</TableCell>
+                      <TableCell>{clickRateVal}%</TableCell>
+                      <TableCell>{convRateVal}%</TableCell>
+                      <TableCell>{fmtMoney(campaign.revenue ?? 0)}</TableCell>
+                      <TableCell>
+                        <Badge variant={roiValue > 0 ? 'success' : 'secondary'}>
+                          {formatRate(roiValue)}%
+                        </Badge>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -276,7 +616,7 @@ function OverviewTab() {
         <Card>
           <CardHeader>
             <CardTitle>Best Time to Send</CardTitle>
-            <CardDescription>Open rates by time of day</CardDescription>
+            <CardDescription>Share of email opens by time of day (%)</CardDescription>
           </CardHeader>
           <CardContent>
             {hourlyPerformance.length > 0 ? (
@@ -284,8 +624,8 @@ function OverviewTab() {
                 <BarChart data={hourlyPerformance}>
                   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                   <XAxis dataKey="hour" />
-                  <YAxis />
-                  <Tooltip />
+                  <YAxis domain={[0, 'auto']} tickFormatter={(v: number) => `${v}%`} />
+                  <Tooltip formatter={(value: number) => [`${value}%`, 'Open Share']} />
                   <Bar dataKey="openRate" fill="hsl(var(--primary))" />
                 </BarChart>
               </ResponsiveContainer>
@@ -305,14 +645,14 @@ function OverviewTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topCampaigns.length > 0 ? topCampaigns.slice(0, 4).map((campaign: Record<string, unknown>, index: number) => {
-                const sent = (campaign.sent as number) ?? 0;
-                const opened = (campaign.opened as number) ?? 0;
-                const clicked = (campaign.clicked as number) ?? 0;
+              {topCampaigns.length > 0 ? topCampaigns.slice(0, 4).map((campaign: TopCampaign) => {
+                const sent = campaign.sent ?? 0;
+                const opened = campaign.opened ?? 0;
+                const clicked = campaign.clicked ?? 0;
                 return (
-                <div key={index} className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
+                <div key={campaign.id} className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium truncate">{(campaign.name as string) || (campaign.subject as string) || 'Campaign'}</p>
+                    <p className="text-sm font-medium truncate">{campaign.name || 'Campaign'}</p>
                     <Badge variant="outline">{formatRate(calcOpenRate(opened, sent))}%</Badge>
                   </div>
                   <div className="flex items-center space-x-4 text-xs text-muted-foreground">
@@ -334,31 +674,44 @@ function OverviewTab() {
   );
 }
 
-// ─── Detailed Reports Tab (from CampaignReports) ────────────────────────────
+// ─── Detailed Reports Tab ─────────────────────────────────────────────────────
 
 function DetailedReportsTab() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [showAllCampaigns, setShowAllCampaigns] = useState(false);
+  const [page, setPage] = useState(1);
+  const [dateRange, setDateRange] = useState<DateRange>(computeDateRange('30d'));
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
 
   const { data: reportData, isFetching: isLoading, refetch: loadReports } = useQuery({
-    queryKey: ['campaignReports'],
+    queryKey: ['campaignReports', dateRange.startDate, dateRange.endDate],
     queryFn: async () => {
-      const response = await campaignsApi.getCampaigns();
-      const allCampaigns = response.data?.campaigns || response.campaigns || [];
+      const response = await campaignsApi.getCampaigns({ limit: 1000 });
+      const allCampaigns: Campaign[] = response.data?.campaigns || response.campaigns || [];
 
-      const enrichedCampaigns: EnrichedCampaign[] = allCampaigns.map((c: Record<string, unknown>) => {
-        const sent = (c.recipientCount as number) ?? (c.sent as number) ?? 0;
-        const delivered = (c.delivered as number) ?? 0;
-        const opened = (c.opens as number) ?? (c.opened as number) ?? 0;
-        const clicked = (c.clicks as number) ?? (c.clicked as number) ?? 0;
-        const bounced = (c.bounced as number) ?? 0;
-        const unsubscribed = (c.unsubscribed as number) ?? 0;
-        const revenue = (c.revenue as number) ?? 0;
+      // Filter by date range
+      const rangeStart = new Date(dateRange.startDate);
+      const rangeEnd = new Date(dateRange.endDate);
+      rangeEnd.setHours(23, 59, 59, 999);
+
+      const filteredCampaigns = allCampaigns.filter((c: Campaign) => {
+        const created = new Date(c.createdAt || '');
+        return created >= rangeStart && created <= rangeEnd;
+      });
+
+      const enrichedCampaigns: EnrichedCampaign[] = filteredCampaigns.map((c: Campaign) => {
+        const sent = c.recipientCount ?? c.sent ?? 0;
+        const delivered = c.delivered ?? 0;
+        const opened = c.opened ?? 0;
+        const clicked = c.clicked ?? 0;
+        const bounced = c.bounced ?? 0;
+        const unsubscribed = c.unsubscribed ?? 0;
+        const revenue = c.revenue ?? 0;
         return {
           ...c,
-          id: c.id as string,
-          name: c.name as string,
+          id: c.id,
+          name: c.name,
           type: TYPE_DISPLAY[((c.type as string) || '').toUpperCase()] || (c.type as string) || 'Unknown',
           sent, delivered, opened, clicked, bounced, unsubscribed, revenue,
         };
@@ -370,13 +723,29 @@ function DetailedReportsTab() {
       const totalClicked = enrichedCampaigns.reduce((sum: number, c) => sum + c.clicked, 0);
       const totalRevenue = enrichedCampaigns.reduce((sum: number, c) => sum + c.revenue, 0);
 
-      const trend = [...enrichedCampaigns]
+      // Group trends by date → aggregate campaigns on same day
+      const trendMap = new Map<string, { date: string; sent: number; delivered: number; opened: number; clicked: number }>();
+      enrichedCampaigns
         .filter((c) => c.sent > 0)
         .sort((a, b) => new Date(a.createdAt || '').getTime() - new Date(b.createdAt || '').getTime())
-        .map((c) => ({
-          date: new Date(c.createdAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          sent: c.sent, delivered: c.delivered, opened: c.opened, clicked: c.clicked,
-        }));
+        .forEach((c) => {
+          const dateKey = new Date(c.createdAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          const existing = trendMap.get(dateKey);
+          if (existing) {
+            existing.sent += c.sent;
+            existing.delivered += c.delivered;
+            existing.opened += c.opened;
+            existing.clicked += c.clicked;
+          } else {
+            trendMap.set(dateKey, {
+              date: dateKey,
+              sent: c.sent,
+              delivered: c.delivered,
+              opened: c.opened,
+              clicked: c.clicked,
+            });
+          }
+        });
 
       return {
         campaigns: enrichedCampaigns,
@@ -387,13 +756,40 @@ function DetailedReportsTab() {
           clickRate: calcClickRate(totalClicked, totalSent),
           revenue: totalRevenue,
         },
-        performanceData: trend,
+        performanceData: Array.from(trendMap.values()),
       };
     },
   });
+
   const campaigns = reportData?.campaigns ?? [];
   const stats = reportData?.stats ?? { totalSent: 0, deliveryRate: 0, openRate: 0, clickRate: 0, revenue: 0 };
   const performanceData = reportData?.performanceData ?? [];
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(campaigns.length / ITEMS_PER_PAGE));
+  const paginatedCampaigns = useMemo(() => {
+    if (showAllCampaigns) return campaigns;
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    return campaigns.slice(start, start + ITEMS_PER_PAGE);
+  }, [campaigns, page, showAllCampaigns]);
+
+  // Sorted copies for leaderboards — no in-place mutation
+  const topByOpenRate = useMemo(() =>
+    [...campaigns].sort((a, b) => calcOpenRate(b.opened, b.sent) - calcOpenRate(a.opened, a.sent)).slice(0, 3),
+    [campaigns]
+  );
+  const topByClickRate = useMemo(() =>
+    [...campaigns].sort((a, b) => calcClickRate(b.clicked, b.sent) - calcClickRate(a.clicked, a.sent)).slice(0, 3),
+    [campaigns]
+  );
+
+  const handleDateChange = (range: DateRange, preset: DateRangePreset) => {
+    setDateRange(range);
+    setDatePreset(preset);
+    setPage(1);
+  };
+
+  const hasEngagement = stats.openRate > 0 || stats.clickRate > 0;
 
   if (isLoading) {
     return <LoadingSkeleton rows={5} showChart />;
@@ -401,113 +797,89 @@ function DetailedReportsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end gap-2">
-        <Button onClick={() => loadReports()} disabled={isLoading} variant="outline" size="sm">
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => {
+      <ReportToolbar
+        datePreset={datePreset}
+        onDateChange={handleDateChange}
+        onRefresh={() => loadReports()}
+        isRefreshing={isLoading}
+        exportLabel="Export CSV"
+        onExport={() => {
           if (campaigns.length === 0) { toast.error('No data to export'); return; }
           exportToCSV(campaigns, campaignExportColumns, {
             filename: `campaign-reports-${new Date().toISOString().split('T')[0]}`,
           });
           toast.success('Report exported successfully');
-        }}>
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
-      </div>
+        }}
+      />
 
-      {/* Overall Stats */}
+      {/* Overall Stats — with benchmark color coding */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Across all campaigns</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatRate(stats.deliveryRate, 1)}%</div>
-            <p className="text-xs text-muted-foreground">Successfully delivered</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatRate(stats.openRate, 1)}%</div>
-            <p className="text-xs text-muted-foreground">Campaign opens</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
-            <MousePointer className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatRate(stats.clickRate, 1)}%</div>
-            <p className="text-xs text-muted-foreground">Click-through rate</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{fmtMoney(stats.revenue)}</div>
-            <p className="text-xs text-muted-foreground">From {campaigns.length} campaigns</p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Total Sent"
+          icon={Mail}
+          value={stats.totalSent.toLocaleString()}
+          subtitle={`${campaigns.length} campaigns in range`}
+        />
+        <MetricCard
+          title="Delivery Rate"
+          icon={TrendingUp}
+          value={`${formatRate(stats.deliveryRate, 1)}%`}
+          subtitle="Successfully delivered"
+        />
+        <MetricCard
+          title={<>Open Rate<HelpTooltip text="Percentage of sent emails that were opened. Industry average is 20–25%." /></>}
+          icon={Eye}
+          value={`${formatRate(stats.openRate, 1)}%`}
+          valueClassName={benchmarkColor(stats.openRate, BENCHMARKS.openRate)}
+          subtitle={`${stats.openRate >= BENCHMARKS.openRate ? 'Above' : 'Below'} industry avg (${BENCHMARKS.openRate}%)`}
+        />
+        <MetricCard
+          title={<>Click Rate<HelpTooltip text="Percentage of sent emails where a link was clicked. A good click rate is 2–5%." /></>}
+          icon={MousePointer}
+          value={`${formatRate(stats.clickRate, 1)}%`}
+          valueClassName={benchmarkColor(stats.clickRate, BENCHMARKS.clickRate)}
+          subtitle={`${stats.clickRate >= BENCHMARKS.clickRate ? 'Above' : 'Below'} target (${BENCHMARKS.clickRate}%)`}
+        />
+        <MetricCard
+          title="Revenue"
+          icon={DollarSign}
+          value={fmtMoney(stats.revenue)}
+          subtitle={`From ${campaigns.length} campaigns`}
+        />
       </div>
 
       {stats.totalSent === 0 && (
-        <Card className="py-8">
-          <CardContent className="flex flex-col items-center justify-center text-center">
-            <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No campaign data yet</h3>
-            <p className="text-muted-foreground max-w-md">
-              Send your first campaign to see performance metrics, delivery rates, and engagement analytics here.
-            </p>
-          </CardContent>
-        </Card>
+        <NoEngagementState
+          icon={Mail}
+          title="No campaign data in this range"
+          message="No campaigns were found for the selected date range. Try expanding the range or send your first campaign to see metrics here."
+        />
       )}
 
-      {/* Performance Trends */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Campaign Performance Over Time</CardTitle>
-          <CardDescription>Delivery, open, and click trends</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={performanceData}>
-              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="sent" stroke="#3b82f6" name="Sent" />
-              <Line type="monotone" dataKey="delivered" stroke="#10b981" name="Delivered" />
-              <Line type="monotone" dataKey="opened" stroke="#f59e0b" name="Opened" />
-              <Line type="monotone" dataKey="clicked" stroke="#8b5cf6" name="Clicked" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {stats.totalSent > 0 && !hasEngagement && (
+        <NoEngagementState
+          icon={Eye}
+          title="Waiting for engagement"
+          message="Campaigns have been sent but no opens or clicks recorded yet. Data usually appears within a few hours."
+        />
+      )}
 
-      {/* Campaign Detail Cards */}
+      {/* Performance Trends — aggregated by date */}
+      <PerformanceTrendChart
+        title="Campaign Performance Over Time"
+        description="Delivery, open, and click trends (aggregated by date)"
+        data={performanceData}
+        height={300}
+        lines={[
+          { dataKey: 'sent', stroke: '#3b82f6', name: 'Sent' },
+          { dataKey: 'delivered', stroke: '#10b981', name: 'Delivered' },
+          { dataKey: 'opened', stroke: '#f59e0b', name: 'Opened' },
+          { dataKey: 'clicked', stroke: '#8b5cf6', name: 'Clicked' },
+        ]}
+        emptyMessage="No performance data for this range"
+      />
+
+      {/* Campaign Detail Cards with Pagination */}
       <Card>
         <CardHeader>
           <CardTitle>Campaign Performance Details</CardTitle>
@@ -515,80 +887,17 @@ function DetailedReportsTab() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(showAllCampaigns ? campaigns : campaigns.slice(0, 5)).map((campaign) => (
-              <div key={campaign.id} className="p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10">
-                      <Mail className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">{campaign.name}</h4>
-                      <Badge variant="secondary">{campaign.type}</Badge>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
-                    View Full Report
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Sent</p>
-                    <p className="text-2xl font-bold">{(campaign.sent ?? 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Delivered</p>
-                    <p className="text-2xl font-bold">{(campaign.delivered ?? 0).toLocaleString()}</p>
-                    <p className="text-xs text-green-600">
-                      {formatRate(calcDeliveryRate(campaign.delivered ?? 0, campaign.sent))}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Opened</p>
-                    <p className="text-2xl font-bold">{(campaign.opened ?? 0).toLocaleString()}</p>
-                    <p className="text-xs text-blue-600">
-                      {formatRate(calcOpenRate(campaign.opened ?? 0, campaign.sent))}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Clicked</p>
-                    <p className="text-2xl font-bold">{(campaign.clicked ?? 0).toLocaleString()}</p>
-                    <p className="text-xs text-purple-600">
-                      {formatRate(calcClickRate(campaign.clicked ?? 0, campaign.sent))}%
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Bounced</p>
-                    <p className="text-lg font-semibold">{campaign.bounced ?? 0}</p>
-                    <p className="text-xs text-red-600">
-                      {formatRate(calcBounceRate(campaign.bounced ?? 0, campaign.sent))}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Unsubscribed</p>
-                    <p className="text-lg font-semibold">{campaign.unsubscribed ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatRate(calcUnsubscribeRate(campaign.unsubscribed ?? 0, campaign.sent), 2)}%
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground mb-1">Revenue Generated</p>
-                    <p className="text-lg font-semibold">{fmtMoney((campaign.revenue ?? 0) as number)}</p>
-                  </div>
-                </div>
-              </div>
+            {paginatedCampaigns.map((campaign) => (
+              <CampaignDetailCard key={campaign.id} campaign={campaign} onNavigate={(id) => navigate(`/campaigns/${id}`)} />
             ))}
-            {campaigns.length > 5 && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowAllCampaigns(!showAllCampaigns)}
-              >
-                {showAllCampaigns ? `Show less` : `Show all ${campaigns.length} campaigns`}
-              </Button>
-            )}
+            <PaginationControls
+              totalItems={campaigns.length}
+              page={page}
+              totalPages={totalPages}
+              showAll={showAllCampaigns}
+              onToggleShowAll={() => setShowAllCampaigns(!showAllCampaigns)}
+              onPageChange={setPage}
+            />
           </div>
         </CardContent>
       </Card>
@@ -602,96 +911,47 @@ function DetailedReportsTab() {
         <CardContent>
           <div className="space-y-4">
             {(() => {
-              const totalSent = campaigns.reduce((sum, c) => sum + (c.sent ?? 0), 0);
-              const totalDelivered = campaigns.reduce((sum, c) => sum + (c.delivered ?? 0), 0);
-              const totalOpened = campaigns.reduce((sum, c) => sum + (c.opened ?? 0), 0);
-              const totalClicked = campaigns.reduce((sum, c) => sum + (c.clicked ?? 0), 0);
-              const totalConverted = campaigns.reduce((sum, c) => sum + ((c.converted ?? c.conversions ?? 0) as number), 0);
-              return [
-                { stage: 'Sent', count: totalSent, percentage: 100, color: 'bg-blue-500' },
-                { stage: 'Delivered', count: totalDelivered, percentage: calcDeliveryRate(totalDelivered, totalSent), color: 'bg-green-500' },
-                { stage: 'Opened', count: totalOpened, percentage: calcOpenRate(totalOpened, totalSent), color: 'bg-orange-500' },
-                { stage: 'Clicked', count: totalClicked, percentage: calcClickRate(totalClicked, totalSent), color: 'bg-purple-500' },
-                { stage: 'Converted', count: totalConverted, percentage: calcConversionRate(totalConverted, totalSent), color: 'bg-pink-500' },
-              ].map((stage) => (
-                <div key={stage.stage}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className={`h-3 w-3 rounded-full ${stage.color}`} />
-                      <span className="font-medium">{stage.stage}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {stage.count.toLocaleString()} ({formatRate(stage.percentage, 1)}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-4">
-                    <div className={`h-4 rounded-full ${stage.color}`} style={{ width: `${Math.max(stage.count > 0 ? Math.min(stage.percentage, 100) : 0, stage.count > 0 ? 2 : 0)}%` }} />
-                  </div>
-                </div>
-              ));
+              const totals = campaigns.reduce((acc, c) => {
+                acc.sent += c.sent ?? 0;
+                acc.delivered += c.delivered ?? 0;
+                acc.opened += c.opened ?? 0;
+                acc.clicked += c.clicked ?? 0;
+                acc.converted += (c.converted ?? c.conversions ?? 0) as number;
+                return acc;
+              }, { sent: 0, delivered: 0, opened: 0, clicked: 0, converted: 0 });
+              const stages: FunnelStageData[] = [
+                { stage: 'Sent', count: totals.sent, percentage: 100, color: 'bg-blue-500' },
+                { stage: 'Delivered', count: totals.delivered, percentage: calcDeliveryRate(totals.delivered, totals.sent), color: 'bg-green-500' },
+                { stage: 'Opened', count: totals.opened, percentage: calcOpenRate(totals.opened, totals.sent), color: 'bg-orange-500' },
+                { stage: 'Clicked', count: totals.clicked, percentage: calcClickRate(totals.clicked, totals.sent), color: 'bg-purple-500' },
+                { stage: 'Converted', count: totals.converted, percentage: calcConversionRate(totals.converted, totals.sent), color: 'bg-pink-500' },
+              ];
+              return stages.map((s) => <FunnelBar key={s.stage} {...s} />);
             })()}
           </div>
         </CardContent>
       </Card>
 
-      {/* Best Performing */}
+      {/* Best Performing leaderboards */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Best Open Rate
-              <span className="inline-block h-3 w-3 rounded-full bg-green-600" title="Open rate indicator" />
-            </CardTitle>
-            <CardDescription>Campaigns with highest engagement</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {campaigns
-                .sort((a, b) => calcOpenRate(b.opened, b.sent) - calcOpenRate(a.opened, a.sent))
-                .slice(0, 3)
-                .map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <Badge variant="secondary" className="mt-1">{item.type}</Badge>
-                    </div>
-                    <span className="text-2xl font-bold text-green-600">
-                      {formatRate(calcOpenRate(item.opened, item.sent))}%
-                    </span>
-                  </div>
-                ))}
-              {campaigns.length === 0 && <p className="text-center text-muted-foreground py-4">No campaigns found</p>}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Best Click Rate
-              <span className="inline-block h-3 w-3 rounded-full bg-purple-600" title="Click rate indicator" />
-            </CardTitle>
-            <CardDescription>Campaigns driving most clicks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {campaigns
-                .sort((a, b) => calcClickRate(b.clicked, b.sent) - calcClickRate(a.clicked, a.sent))
-                .slice(0, 3)
-                .map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <Badge variant="secondary" className="mt-1">{item.type}</Badge>
-                    </div>
-                    <span className="text-2xl font-bold text-purple-600">
-                      {formatRate(calcClickRate(item.clicked, item.sent))}%
-                    </span>
-                  </div>
-                ))}
-              {campaigns.length === 0 && <p className="text-center text-muted-foreground py-4">No campaigns found</p>}
-            </div>
-          </CardContent>
-        </Card>
+        <LeaderboardCard
+          title="Best Open Rate"
+          description="Campaigns with highest engagement"
+          indicatorColor="bg-green-600"
+          items={topByOpenRate}
+          rateCalc={(item) => calcOpenRate(item.opened, item.sent)}
+          valueColor="text-green-600"
+          onItemClick={(id) => navigate(`/campaigns/${id}`)}
+        />
+        <LeaderboardCard
+          title="Best Click Rate"
+          description="Campaigns driving most clicks"
+          indicatorColor="bg-purple-600"
+          items={topByClickRate}
+          rateCalc={(item) => calcClickRate(item.clicked, item.sent)}
+          valueColor="text-purple-600"
+          onItemClick={(id) => navigate(`/campaigns/${id}`)}
+        />
       </div>
     </div>
   );
@@ -713,31 +973,18 @@ const CampaignReports = () => {
         </p>
       </div>
 
-      {/* Tab Switcher */}
-      <div className="flex border-b">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'overview'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab('detailed')}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'detailed'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Detailed Reports
-        </button>
+      <div className="flex border-b" role="tablist" aria-label="Report views">
+        <TabButton id="overview" label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
+        <TabButton id="detailed" label="Detailed Reports" active={activeTab === 'detailed'} onClick={() => setActiveTab('detailed')} />
       </div>
 
-      {activeTab === 'overview' ? <OverviewTab /> : <DetailedReportsTab />}
+      <div
+        role="tabpanel"
+        id={`panel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+      >
+        {activeTab === 'overview' ? <OverviewTab /> : <DetailedReportsTab />}
+      </div>
     </div>
   );
 };

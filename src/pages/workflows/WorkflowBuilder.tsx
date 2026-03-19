@@ -1,6 +1,10 @@
+<<<<<<< Updated upstream
 import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+=======
+import { useState, useEffect } from 'react';
+>>>>>>> Stashed changes
 import { 
   Workflow, Play, Plus, TrendingUp, Save, TestTube2, 
   CheckCircle2, XCircle, Activity, Download, Upload,
@@ -208,7 +212,10 @@ const WorkflowBuilder = () => {
   const [activeExecutions, setActiveExecutions] = useState<number>(0);
   const [interactionMode, setInteractionMode] = useState<'click' | 'drag'>('drag');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+<<<<<<< Updated upstream
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+=======
+>>>>>>> Stashed changes
 
   // Retry & failure notification settings
   const [maxRetries, setMaxRetries] = useState(3);
@@ -355,10 +362,17 @@ const WorkflowBuilder = () => {
   const addNodeFromComponent = (component: WorkflowComponent) => {
     const newNode: WorkflowNodeData = {
       id: `node-${Date.now()}`,
+<<<<<<< Updated upstream
       type: component.type,
       label: component.label,
       description: component.description,
       config: component.config || {}
+=======
+      type,
+      label,
+      config: {},
+      position: { x: 100, y: nodes.length * 120 + 100 }
+>>>>>>> Stashed changes
     };
     setNodes([...nodes, newNode]);
     toast.success(`Added ${component.label} to workflow`);
@@ -586,6 +600,39 @@ const WorkflowBuilder = () => {
     setShowTemplates(false);
   };
 
+<<<<<<< Updated upstream
+=======
+  // Drag and drop handlers
+  const handleDragStart = (item: DraggableItem) => {
+    setDraggedItem(item);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    
+    if (draggedItem) {
+      addNode(draggedItem.type, draggedItem.label);
+      setDraggedItem(null);
+    }
+  };
+
+  const toggleInteractionMode = () => {
+    const newMode = interactionMode === 'click' ? 'drag' : 'click';
+    setInteractionMode(newMode);
+    toast.info(`Switched to ${newMode} mode`);
+  };
+
+>>>>>>> Stashed changes
   return (
     <div className="space-y-6">
       {/* Header with Actions */}
@@ -993,6 +1040,7 @@ const WorkflowBuilder = () => {
                     </ul>
                   </div>
                 </div>
+<<<<<<< Updated upstream
               </div>
             )}
             <WorkflowCanvas
@@ -1009,6 +1057,94 @@ const WorkflowBuilder = () => {
               mode={interactionMode}
               onTemplateSelect={importTemplate}
             />
+=======
+              ) : (
+                <div className="space-y-4">
+                  {nodes.map((node, index) => (
+                    <div key={node.id} className="space-y-2">
+                      <Card 
+                        className={`cursor-pointer transition-all ${
+                          selectedNode?.id === node.id ? 'border-primary bg-primary/5 shadow-md' : ''
+                        } ${
+                          workflowStatus === 'running' ? 'hover:shadow-lg' : ''
+                        }`}
+                        onClick={() => setSelectedNode(node)}
+                      >
+                        <CardHeader className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`relative p-2 rounded-lg ${
+                                node.type === 'trigger' ? 'bg-blue-100 text-blue-600' :
+                                node.type === 'action' ? 'bg-green-100 text-green-600' :
+                                node.type === 'condition' ? 'bg-yellow-100 text-yellow-600' :
+                                'bg-purple-100 text-purple-600'
+                              }`}>
+                                {node.type === 'trigger' && <Zap className="h-4 w-4" />}
+                                {node.type === 'action' && <Settings className="h-4 w-4" />}
+                                {node.type === 'condition' && <GitBranch className="h-4 w-4" />}
+                                {node.type === 'delay' && <Clock className="h-4 w-4" />}
+                                {/* Running indicator on node icon */}
+                                {workflowStatus === 'running' && (
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium">{node.label}</p>
+                                <p className="text-xs text-muted-foreground capitalize">{node.type}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                Step {index + 1}
+                              </Badge>
+                              {workflowStatus === 'running' && (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                                  <Activity className="h-3 w-3 mr-1" />
+                                  Live
+                                </Badge>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeNode(node.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                      {index < nodes.length - 1 && (
+                        <div className="flex flex-col items-center py-2">
+                          {/* Enhanced Connection Line */}
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-0.5 h-4 bg-gradient-to-b from-primary/60 to-primary/20" />
+                            <div className="relative">
+                              <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
+                                <ArrowRight className="h-4 w-4 text-primary rotate-90" />
+                              </div>
+                              {/* Animated pulse for running workflows */}
+                              {workflowStatus === 'running' && (
+                                <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping" />
+                              )}
+                            </div>
+                            <div className="w-0.5 h-4 bg-gradient-to-b from-primary/20 to-primary/60" />
+                          </div>
+                          {/* Step connector label */}
+                          <span className="text-xs text-muted-foreground font-medium">
+                            Then
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+>>>>>>> Stashed changes
           </CardContent>
         </Card>
 
@@ -1214,9 +1350,19 @@ const WorkflowBuilder = () => {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Execution Logs</CardTitle>
+<<<<<<< Updated upstream
                 <CardDescription>Per-step execution history for recent runs</CardDescription>
               </div>
               <div className="flex gap-2">
+=======
+                <CardDescription>Recent workflow execution history</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+>>>>>>> Stashed changes
                 <Button variant="ghost" size="sm" onClick={() => setShowLogsPanel(false)}>
                   Close
                 </Button>
@@ -1224,6 +1370,7 @@ const WorkflowBuilder = () => {
             </div>
           </CardHeader>
           <CardContent>
+<<<<<<< Updated upstream
             {executionLogs.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">No executions recorded yet.</p>
             ) : (
@@ -1250,6 +1397,17 @@ const WorkflowBuilder = () => {
                         {log.duration > 0 && <Badge variant="outline">{log.duration}s</Badge>}
                         <span>{new Date(log.timestamp).toLocaleString()}</span>
                       </div>
+=======
+            <div className="space-y-3">
+              {executionLogs.map((log) => (
+                <div key={log.id} className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {log.status === 'success' && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      {log.status === 'failed' && <XCircle className="h-4 w-4 text-red-600" />}
+                      {log.status === 'running' && <Activity className="h-4 w-4 text-blue-600 animate-pulse" />}
+                      <span className="font-medium capitalize">{log.status}</span>
+>>>>>>> Stashed changes
                     </div>
 
                     {/* Per-step detail */}
@@ -1296,9 +1454,21 @@ const WorkflowBuilder = () => {
                       </div>
                     )}
                   </div>
+<<<<<<< Updated upstream
                 ))}
               </div>
             )}
+=======
+                  <p className="text-sm text-muted-foreground mb-1">{log.details}</p>
+                  <p className="text-xs text-muted-foreground">{log.timestamp}</p>
+                </div>
+              ))}
+            </div>
+            <Button variant="outline" className="w-full mt-4">
+              <Terminal className="h-4 w-4 mr-2" />
+              View Full Debug Console
+            </Button>
+>>>>>>> Stashed changes
           </CardContent>
         </Card>
       )}

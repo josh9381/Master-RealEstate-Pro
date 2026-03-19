@@ -19,7 +19,7 @@ export const createTaskSchema = z.object({
   dueDate: z.string().datetime('Invalid date format'),
   priority: taskPrioritySchema.optional(),
   status: taskStatusSchema.optional(),
-  assignedToId: z.string().min(1, 'Assigned user ID is required'),
+  assignedToId: z.string().min(1, 'Assigned user ID is required').optional(),
   leadId: z.string().optional().nullable(),
 });
 

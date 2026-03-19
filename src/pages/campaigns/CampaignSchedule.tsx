@@ -26,6 +26,8 @@ interface CampaignRecord {
   opened?: number;
   clicked?: number;
   isRecurring?: boolean;
+  frequency?: string;
+  nextSendAt?: string;
   scheduledDate?: string;
   scheduledTime?: string;
   sentDate?: string;
@@ -52,14 +54,16 @@ const CampaignSchedule = () => {
   const [newScheduleDate, setNewScheduleDate] = useState('');
   const [confirmAction, setConfirmAction] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
   const [newScheduleTime, setNewScheduleTime] = useState('');
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   const { data: campaignData, isFetching: isLoading, refetch: loadCampaigns } = useQuery({
     queryKey: ['campaignSchedule'],
     queryFn: async () => {
       // Server-side filtering: fetch only the statuses we need
-      const [scheduledRes, completedRes] = await Promise.all([
+      const [scheduledRes, completedRes, activeRecurringRes] = await Promise.all([
         campaignsApi.getCampaigns({ status: 'SCHEDULED,PAUSED', sortBy: 'startDate', sortOrder: 'asc', limit: 50 }),
         campaignsApi.getCampaigns({ status: 'COMPLETED', sortBy: 'updatedAt', sortOrder: 'desc', limit: 5 }),
+        campaignsApi.getCampaigns({ status: 'ACTIVE', sortBy: 'startDate', sortOrder: 'asc', limit: 50 }),
       ]);
 
       const scheduledRaw: CampaignRecord[] = (scheduledRes.data?.campaigns || []).filter(
@@ -89,10 +93,14 @@ const CampaignSchedule = () => {
         clicked: c.clicked || 0,
       }));
 
-      // Recurring campaigns from the scheduled results
-      const recurring = scheduledRaw.filter((c: CampaignRecord) => 
+      // Recurring campaigns: from scheduled results + active recurring results
+      const activeRecurringRaw: CampaignRecord[] = (activeRecurringRes.data?.campaigns || []).filter(
+        (c: CampaignRecord) => c.type !== 'SOCIAL' && c.type !== 'PHONE' && c.isRecurring === true
+      );
+      const scheduledRecurring = scheduledRaw.filter((c: CampaignRecord) => 
         c.isRecurring === true
       );
+      const recurring = [...scheduledRecurring, ...activeRecurringRaw];
 
       // Calculate stats
       const totalRecipients = scheduled.reduce((sum: number, c: CampaignRecord) => sum + (c.recipients || 0), 0);
@@ -197,6 +205,7 @@ const CampaignSchedule = () => {
     }
 
     try {
+      setIsRescheduling(true);
       // Send ISO string which preserves the local timezone offset
       await campaignsApi.rescheduleCampaign(
         rescheduleModal.campaignId,
@@ -210,6 +219,8 @@ const CampaignSchedule = () => {
     } catch (error: unknown) {
       logger.error('Error rescheduling campaign:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to reschedule campaign');
+    } finally {
+      setIsRescheduling(false);
     }
   };
 
@@ -355,7 +366,7 @@ const CampaignSchedule = () => {
                     variant="outline" 
                     size="sm"
                     onClick={() => openRescheduleModal(campaign)}
-                    disabled={isLoading}
+                    disabled={isRescheduling}
                   >
                     Reschedule
                   </Button>
@@ -407,10 +418,22 @@ const CampaignSchedule = () => {
                       <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-1">
                         <Badge variant="secondary">{schedule.type}</Badge>
                         <span>•</span>
-                        <span>{Number(schedule.recipients || 0)} recipients</span>
+                        <Badge variant={schedule.status === 'ACTIVE' ? 'default' : 'outline'}>{schedule.status}</Badge>
+                        {schedule.frequency && (
+                          <>
+                            <span>•</span>
+                            <span className="capitalize">{schedule.frequency as string}</span>
+                          </>
+                        )}
+                        <span>•</span>
+                        <span>{Number(schedule.recipients || schedule.audience || 0)} recipients</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Next send: {new Date(schedule.scheduledDate || schedule.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        Next send: {schedule.nextSendAt
+                          ? new Date(schedule.nextSendAt as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                          : schedule.startDate
+                            ? new Date(schedule.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : 'Not scheduled'}
                       </p>
                     </div>
                   </div>
@@ -559,15 +582,15 @@ const CampaignSchedule = () => {
             <Button 
               variant="outline" 
               onClick={closeRescheduleModal}
-              disabled={isLoading}
+              disabled={isRescheduling}
             >
               Cancel
             </Button>
             <Button 
               onClick={handleReschedule}
-              disabled={isLoading}
+              disabled={isRescheduling}
             >
-              {isLoading ? 'Rescheduling...' : 'Confirm Reschedule'}
+              {isRescheduling ? 'Rescheduling...' : 'Confirm Reschedule'}
             </Button>
           </DialogFooter>
         </DialogContent>

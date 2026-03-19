@@ -22,7 +22,7 @@ import { Campaign } from '@/types'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useToast } from '@/hooks/useToast'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
-import { campaignsApi } from '@/lib/api'
+import { campaignsApi, CampaignsQuery } from '@/lib/api'
 import { exportToCSV, campaignExportColumns } from '@/lib/exportService'
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
 import { calcROI, calcOpenRate, calcClickRate, formatRate, calcRate, calcProgress, fmtMoney } from '@/lib/metricsCalculator'
@@ -93,21 +93,18 @@ function CampaignsList() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showRowMenu])
 
-  // Fetch campaigns from API
+  // Fetch campaigns from API with server-side pagination
   const { data: campaignsResponse, isLoading, isError } = useQuery({
-    queryKey: ['campaigns', debouncedSearch],
+    queryKey: ['campaigns', debouncedSearch, activeTab, typeFilter, currentPage],
     queryFn: async () => {
       try {
-        const params: { 
-          search?: string; 
-          status?: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED';
-          type?: 'EMAIL' | 'SMS' | 'PHONE';
-        } = {}
+        const params: CampaignsQuery = {
+          page: currentPage,
+          limit: pageSize,
+        }
         if (debouncedSearch) params.search = debouncedSearch
-        // Don't send status filter to API - we'll filter client-side for better UX
-        // if (activeTab !== 'all') {
-        //   params.status = activeTab.toUpperCase() as 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'COMPLETED'
-        // }
+        if (activeTab !== 'all') params.status = activeTab
+        if (typeFilter !== 'all') params.type = typeFilter as CampaignsQuery['type']
         
         const response = await campaignsApi.getCampaigns(params)
         return response.data
@@ -120,12 +117,32 @@ function CampaignsList() {
     refetchOnWindowFocus: false,
   })
 
+  // Separate query for dashboard stats (lightweight, no pagination needed)
+  const { data: statsResponse } = useQuery({
+    queryKey: ['campaigns-stats-all', typeFilter],
+    queryFn: async () => {
+      const params: CampaignsQuery = { page: 1, limit: 1000 }
+      if (typeFilter !== 'all') params.type = typeFilter as CampaignsQuery['type']
+      const response = await campaignsApi.getCampaigns(params)
+      return response.data
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+
   const campaigns = useMemo(() => {
     if (campaignsResponse?.campaigns && campaignsResponse.campaigns.length > 0) {
       return campaignsResponse.campaigns as Campaign[]
     }
     return []
   }, [campaignsResponse])
+
+  const allCampaignsForStats = useMemo(() => {
+    if (statsResponse?.campaigns && statsResponse.campaigns.length > 0) {
+      return statsResponse.campaigns as Campaign[]
+    }
+    return campaigns
+  }, [statsResponse, campaigns])
 
 
 
@@ -154,10 +171,19 @@ function CampaignsList() {
     },
   })
 
-  // Send campaign mutation
+  // Send campaign mutation (with large campaign confirmation support)
   const sendCampaignMutation = useMutation({
-    mutationFn: (id: string) => campaignsApi.sendCampaign(id),
-    onSuccess: () => {
+    mutationFn: ({ id, confirmLargeSend }: { id: string; confirmLargeSend?: boolean }) =>
+      campaignsApi.sendCampaign(id, { confirmLargeSend }),
+    onSuccess: (data, variables) => {
+      if (data?.requiresConfirmation) {
+        // Large campaign - ask user to confirm
+        const confirmed = window.confirm(data.message);
+        if (confirmed) {
+          sendCampaignMutation.mutate({ id: variables.id, confirmLargeSend: true });
+        }
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
       toast.success('Campaign sent successfully')
       setShowRowMenu(null)
@@ -182,32 +208,21 @@ function CampaignsList() {
 
 
 
-  // Filter campaigns
-  const filteredCampaigns = useMemo(() => {
-    const filtered = campaigns.filter(campaign => {
-      const matchesSearch = campaign.name.toLowerCase().includes(debouncedSearch.toLowerCase())
-      const matchesTab = activeTab === 'all' || campaign.status.toUpperCase() === activeTab.toUpperCase()
-      const matchesType = typeFilter === 'all' || (campaign.type || '').toUpperCase() === typeFilter
-      return matchesSearch && matchesTab && matchesType
-    })
-    return filtered
-  }, [campaigns, debouncedSearch, activeTab, typeFilter])
+  // Server-side pagination: campaigns are already filtered by the API
+  const filteredCampaigns = campaigns
 
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredCampaigns.length / pageSize))
-  const paginatedCampaigns = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredCampaigns.slice(start, start + pageSize)
-  }, [filteredCampaigns, currentPage, pageSize])
+  // Use server-side pagination info
+  const totalPages = campaignsResponse?.pagination?.totalPages || Math.max(1, Math.ceil(campaigns.length / pageSize))
+  const paginatedCampaigns = campaigns // Already paginated by server
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, activeTab, typeFilter])
+  }, [debouncedSearch, activeTab, typeFilter])
 
-  // Calculate statistics — V2-V4: filter by typeFilter
+  // Calculate statistics — use full dataset for accurate stats
   const stats = useMemo(() => {
-    const base = typeFilter === 'all' ? campaigns : campaigns.filter(c => (c.type || '').toUpperCase() === typeFilter)
+    const base = typeFilter === 'all' ? allCampaignsForStats : allCampaignsForStats.filter(c => (c.type || '').toUpperCase() === typeFilter)
     const activeCampaigns = base.filter(c => c.status === 'ACTIVE')
     const totalSent = base.reduce((sum, c) => sum + (c.sent ?? 0), 0)
     const totalRevenue = base.reduce((sum, c) => sum + (c.revenue ?? 0), 0)
@@ -222,13 +237,13 @@ function CampaignsList() {
       totalBudget: base.reduce((sum, c) => sum + (c.budget ?? 0), 0),
       totalSpent
     }
-  }, [campaigns, typeFilter])
+  }, [allCampaignsForStats, typeFilter])
 
-  // Performance by type — V4: filter by typeFilter
+  // Performance by type — use full dataset
   const performanceByType = useMemo(() => {
     const types = typeFilter === 'all' ? ['EMAIL', 'SMS', 'PHONE', 'SOCIAL'] : [typeFilter]
     return types.map(type => {
-      const typeCampaigns = campaigns.filter(c => (c.type || '').toUpperCase() === type)
+      const typeCampaigns = allCampaignsForStats.filter(c => (c.type || '').toUpperCase() === type)
       const revenue = typeCampaigns.reduce((sum, c) => sum + (c.revenue ?? 0), 0)
       const spent = typeCampaigns.reduce((sum, c) => sum + (c.spent ?? 0), 0)
       return {
@@ -239,7 +254,7 @@ function CampaignsList() {
         roi: calcROI(revenue, spent)
       }
     })
-  }, [campaigns, typeFilter])
+  }, [allCampaignsForStats, typeFilter])
 
   // Calendar data
   // getStatusVariant imported from @/lib/campaignUtils
@@ -393,7 +408,7 @@ function CampaignsList() {
     },
     onPause: (id) => pauseCampaignMutation.mutate(id),
     onResume: (id) => resumeCampaignMutation.mutate(id),
-    onSend: (id) => sendCampaignMutation.mutate(id),
+    onSend: (id) => sendCampaignMutation.mutate({ id }),
     onArchive: (id) => archiveCampaignMutation.mutate(id),
     onUnarchive: (id) => unarchiveCampaignMutation.mutate(id),
     onChangeStatus: (id) => {
@@ -433,7 +448,7 @@ function CampaignsList() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <CampaignsSubNav campaigns={campaigns} typeFilter={typeFilter} onTypeFilterChange={setTypeFilter} />
+        <CampaignsSubNav campaigns={allCampaignsForStats} typeFilter={typeFilter} onTypeFilterChange={setTypeFilter} />
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-destructive font-medium">Failed to load campaigns</p>
@@ -447,7 +462,7 @@ function CampaignsList() {
   return (
     <div className="space-y-6">
       {/* Sub Navigation */}
-      <CampaignsSubNav campaigns={campaigns} typeFilter={typeFilter} onTypeFilterChange={setTypeFilter} />
+      <CampaignsSubNav campaigns={allCampaignsForStats} typeFilter={typeFilter} onTypeFilterChange={setTypeFilter} />
 
 
 
@@ -611,7 +626,7 @@ function CampaignsList() {
 
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="text-lg">ROI by Campaign Type</CardTitle>
+            <CardTitle className="text-lg">Revenue by Campaign Type</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -621,16 +636,16 @@ function CampaignsList() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ type, roi }) => `${type}: ${roi}%`}
+                  label={({ type, revenue }) => `${type}: ${fmtMoney(revenue)}`}
                   outerRadius={100}
                   fill="#8884d8"
-                  dataKey="roi"
+                  dataKey="revenue"
                 >
                   {performanceByType.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: number) => fmtMoney(value)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -803,7 +818,7 @@ function CampaignsList() {
                         <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.clicked ?? 0).toLocaleString() : '—'}</td>
                         <td className="py-2 text-right text-sm">{campaign.sent ? (campaign.converted ?? 0).toLocaleString() : '—'}</td>
                         <td className="py-2 text-right text-sm">{campaign.sent ? fmtMoney(campaign.revenue ?? 0) : '—'}</td>
-                        <td className="py-2 text-right text-sm font-medium">{campaign.sent ? `${formatRate(Number(campaign.roi) || 0)}%` : 'N/A'}</td>
+                        <td className="py-2 text-right text-sm font-medium">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</td>
                       </tr>
                     )
                   })}
@@ -908,7 +923,7 @@ function CampaignsList() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">ROI</p>
-                    <p className="text-2xl font-bold">{campaign.sent ? `${formatRate(Number(campaign.roi) || 0)}%` : 'N/A'}</p>
+                    <p className="text-2xl font-bold">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</p>
                     <p className="text-xs text-muted-foreground">
                       {fmtMoney(campaign.revenue ?? 0)} revenue
                     </p>
@@ -1020,7 +1035,7 @@ function CampaignsList() {
                   <div className="pt-2 border-t">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">ROI</span>
-                      <span className="text-lg font-bold text-green-600">{campaign.sent ? `${formatRate(Number(campaign.roi) || 0)}%` : 'N/A'}</span>
+                      <span className="text-lg font-bold text-green-600">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</span>
                     </div>
                     <p className="text-xs text-muted-foreground text-right">
                       {fmtMoney(campaign.revenue ?? 0)} revenue
@@ -1214,13 +1229,13 @@ function CampaignsList() {
                 <p className="text-xs text-muted-foreground mt-1">Drive sales with special offers</p>
               </div>
             </Link>
-            <Link to="/campaigns/create?type=SMS&template=event">
+            <Link to="/campaigns/create?type=SMS&template=open-house">
               <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
                 <div className="rounded-full bg-purple-100 p-2.5 w-fit mb-3">
                   <CalendarIcon className="h-5 w-5 text-purple-600" />
                 </div>
-                <p className="font-medium">Event Invite</p>
-                <p className="text-xs text-muted-foreground mt-1">Invite to webinars & events</p>
+                <p className="font-medium">Open House Invite</p>
+                <p className="text-xs text-muted-foreground mt-1">Invite leads to open houses via SMS</p>
               </div>
             </Link>
             <Link to="/campaigns/create?type=EMAIL&template=survey">

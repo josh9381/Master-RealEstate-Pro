@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger'
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, Users, Video, Loader2, MapPin, Trash2, Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -20,15 +20,14 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
 const EVENT_TYPES = [
-  { value: 'meeting', label: 'Meeting' },
-  { value: 'viewing', label: 'Property Viewing' },
-  { value: 'consultation', label: 'Consultation' },
-  { value: 'inspection', label: 'Inspection' },
-  { value: 'follow_up', label: 'Follow Up' },
-  { value: 'other', label: 'Other' },
+  { value: 'MEETING', label: 'Meeting' },
+  { value: 'CALL', label: 'Call' },
+  { value: 'DEMO', label: 'Demo / Viewing' },
+  { value: 'CONSULTATION', label: 'Consultation' },
+  { value: 'FOLLOW_UP', label: 'Follow Up' },
 ] as const
 
-type EventType = 'viewing' | 'consultation' | 'inspection' | 'meeting' | 'follow_up' | 'other'
+type EventType = 'CALL' | 'MEETING' | 'DEMO' | 'CONSULTATION' | 'FOLLOW_UP'
 
 interface CalendarEvent {
   id: string
@@ -58,7 +57,7 @@ export default function CalendarPage() {
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
-    type: 'meeting' as EventType,
+    type: 'MEETING' as EventType,
     date: '',
     time: '09:00',
     duration: 60,
@@ -118,21 +117,24 @@ export default function CalendarPage() {
   const events: CalendarEvent[] = useMemo(() => {
     const appts = appointmentsResponse?.data?.appointments || appointmentsResponse?.appointments || appointmentsResponse || []
     if (!Array.isArray(appts)) return []
-    return appts.map((appt: { id?: string; _id?: string; scheduledAt?: string; date?: string; startTime?: string; title?: string; type?: string; description?: string; location?: string; duration?: number; leadId?: string; status?: string }) => {
-      const date = new Date(appt.scheduledAt || appt.date || appt.startTime || new Date())
+    return appts
+      .filter((appt: { status?: string }) => appt.status !== 'CANCELLED')
+      .map((appt: { id?: string; _id?: string; startTime?: string; endTime?: string; scheduledAt?: string; date?: string; title?: string; type?: string; description?: string; location?: string; duration?: number; leadId?: string; status?: string }) => {
+      const date = new Date(appt.startTime || appt.scheduledAt || appt.date || new Date())
+      const duration = appt.duration || (appt.startTime && appt.endTime ? Math.round((new Date(appt.endTime).getTime() - new Date(appt.startTime).getTime()) / 60000) : 60)
       return {
         id: appt.id || appt._id || '',
         title: appt.title || 'Appointment',
         time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        type: appt.type || 'meeting',
+        type: appt.type || 'MEETING',
         day: date.getMonth() === currentDate.getMonth() && date.getFullYear() === currentDate.getFullYear() ? date.getDate() : -1,
         date,
         description: appt.description || '',
         location: appt.location || '',
-        duration: appt.duration || 60,
-        scheduledAt: appt.scheduledAt || appt.date || '',
+        duration,
+        scheduledAt: appt.startTime || appt.scheduledAt || appt.date || '',
         leadId: appt.leadId || '',
-        status: appt.status || 'scheduled',
+        status: appt.status || 'SCHEDULED',
       }
     })
   }, [appointmentsResponse, currentDate])
@@ -195,7 +197,7 @@ export default function CalendarPage() {
     setEventForm({
       title: '',
       description: '',
-      type: prefilledType || 'meeting',
+      type: prefilledType || 'MEETING',
       date: d.toISOString().split('T')[0],
       time: '09:00',
       duration: 60,
@@ -236,15 +238,16 @@ export default function CalendarPage() {
       return
     }
 
-    const scheduledAt = new Date(`${eventForm.date}T${eventForm.time || '09:00'}:00`).toISOString()
+    const startTime = new Date(`${eventForm.date}T${eventForm.time || '09:00'}:00`).toISOString()
+    const endTime = new Date(new Date(`${eventForm.date}T${eventForm.time || '09:00'}:00`).getTime() + (eventForm.duration || 60) * 60000).toISOString()
 
     if (editingEvent) {
       const updateData: UpdateAppointmentData = {
         title: eventForm.title.trim(),
         description: eventForm.description.trim() || undefined,
         type: eventForm.type,
-        scheduledAt,
-        duration: eventForm.duration,
+        startTime,
+        endTime,
         location: eventForm.location.trim() || undefined,
       }
       updateMutation.mutate({ id: editingEvent.id, data: updateData })
@@ -253,10 +256,10 @@ export default function CalendarPage() {
         title: eventForm.title.trim(),
         description: eventForm.description.trim() || undefined,
         type: eventForm.type,
-        scheduledAt,
-        duration: eventForm.duration,
+        startTime,
+        endTime,
         location: eventForm.location.trim() || undefined,
-        leadId: eventForm.leadId || '',
+        leadId: eventForm.leadId || undefined,
       }
       createMutation.mutate(createData)
     }
@@ -325,10 +328,11 @@ export default function CalendarPage() {
 
   const getEventColor = (type: string) => {
     switch (type) {
-      case 'meeting': return 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
-      case 'viewing': return 'bg-green-500/10 text-green-700 dark:text-green-400'
-      case 'consultation': return 'bg-purple-500/10 text-purple-700 dark:text-purple-400'
-      case 'follow_up': return 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
+      case 'MEETING': return 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+      case 'DEMO': return 'bg-green-500/10 text-green-700 dark:text-green-400'
+      case 'CONSULTATION': return 'bg-purple-500/10 text-purple-700 dark:text-purple-400'
+      case 'FOLLOW_UP': return 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
+      case 'CALL': return 'bg-teal-500/10 text-teal-700 dark:text-teal-400'
       default: return 'bg-primary/10 text-primary'
     }
   }
@@ -479,7 +483,7 @@ export default function CalendarPage() {
 
               {/* Time slots */}
               {HOURS.map(hour => (
-                <>
+                <React.Fragment key={hour}>
                   <div key={`hour-${hour}`} className="bg-card p-1 text-xs text-muted-foreground text-right pr-2 h-12 border-r">
                     {formatHour(hour)}
                   </div>
@@ -507,7 +511,7 @@ export default function CalendarPage() {
                       </div>
                     )
                   })}
-                </>
+                </React.Fragment>
               ))}
             </div>
           </div>
@@ -560,7 +564,10 @@ export default function CalendarPage() {
             {events.length === 0 && (
               <p className="text-sm text-muted-foreground">No events this month</p>
             )}
-            {events.slice(0, 5).map(event => (
+            {events
+              .filter(e => e.date >= new Date())
+              .sort((a, b) => a.date.getTime() - b.date.getTime())
+              .slice(0, 5).map(event => (
               <div
                 key={event.id}
                 className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer"
@@ -591,19 +598,19 @@ export default function CalendarPage() {
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
           <div className="space-y-2">
-            <Button className="w-full justify-start" variant="outline" onClick={() => openCreateModal(undefined, 'meeting')}>
+            <Button className="w-full justify-start" variant="outline" onClick={() => openCreateModal(undefined, 'MEETING')}>
               <Users className="h-4 w-4 mr-2" />
               Schedule Team Meeting
             </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => openCreateModal(undefined, 'viewing')}>
+            <Button className="w-full justify-start" variant="outline" onClick={() => openCreateModal(undefined, 'DEMO')}>
               <CalendarIcon className="h-4 w-4 mr-2" />
               Book Property Viewing
             </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => openCreateModal(undefined, 'consultation')}>
+            <Button className="w-full justify-start" variant="outline" onClick={() => openCreateModal(undefined, 'CONSULTATION')}>
               <Video className="h-4 w-4 mr-2" />
               Create Video Call
             </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => openCreateModal(undefined, 'follow_up')}>
+            <Button className="w-full justify-start" variant="outline" onClick={() => openCreateModal(undefined, 'FOLLOW_UP')}>
               <Clock className="h-4 w-4 mr-2" />
               Set Follow-up
             </Button>

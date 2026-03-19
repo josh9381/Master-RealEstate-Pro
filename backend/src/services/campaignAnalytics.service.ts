@@ -137,7 +137,7 @@ export async function updateCampaignMetrics(campaignId: string): Promise<void> {
 }
 
 /**
- * Track email open event
+ * Track email open event (idempotent — deduplicated per campaign+lead+message)
  */
 export async function trackEmailOpen(
   campaignId: string,
@@ -145,6 +145,18 @@ export async function trackEmailOpen(
   messageId: string,
   organizationId: string
 ): Promise<void> {
+  // Idempotency: skip if this open was already tracked
+  const existing = await prisma.activity.findFirst({
+    where: {
+      type: 'EMAIL_OPENED',
+      campaignId,
+      leadId,
+      metadata: { path: ['messageId'], equals: messageId },
+    },
+    select: { id: true },
+  })
+  if (existing) return
+
   // Create activity
   await prisma.activity.create({
     data: {
@@ -187,7 +199,7 @@ export async function trackEmailOpen(
 }
 
 /**
- * Track email click event
+ * Track email click event (idempotent — deduplicated per campaign+lead+message+url)
  */
 export async function trackEmailClick(
   campaignId: string,
@@ -196,6 +208,18 @@ export async function trackEmailClick(
   url: string,
   organizationId: string
 ): Promise<void> {
+  // Idempotency: skip if this exact click was already tracked
+  const existing = await prisma.activity.findFirst({
+    where: {
+      type: 'EMAIL_CLICKED',
+      campaignId,
+      leadId,
+      metadata: { path: ['messageId'], equals: messageId },
+    },
+    select: { id: true },
+  })
+  if (existing) return
+
   // Create activity
   await prisma.activity.create({
     data: {
@@ -441,10 +465,14 @@ export async function getCampaignTimeSeries(
  * Get campaign comparison metrics
  */
 export async function compareCampaigns(
-  campaignIds: string[]
+  campaignIds: string[],
+  organizationId?: string
 ): Promise<Array<{ campaignId: string; name: string; metrics: CampaignMetrics }>> {
+  const where: Record<string, unknown> = { id: { in: campaignIds } }
+  if (organizationId) where.organizationId = organizationId
+
   const campaigns = await prisma.campaign.findMany({
-    where: { id: { in: campaignIds } },
+    where,
     select: {
       id: true,
       name: true,

@@ -77,6 +77,7 @@ const PeriodComparison = lazyWithRetry(() => import('./pages/analytics/PeriodCom
 // Communication (lazy loaded)
 const CommunicationInbox = lazyWithRetry(() => import('./pages/communication/CommunicationInbox'))
 const EmailTemplatesLibrary = lazyWithRetry(() => import('./pages/communication/EmailTemplatesLibrary'))
+const SMSTemplatesLibrary = lazyWithRetry(() => import('./pages/communication/SMSTemplatesLibrary'))
 const CallCenter = lazyWithRetry(() => import('./pages/communication/CallCenter'))
 const SocialMediaDashboard = lazyWithRetry(() => import('./pages/communication/SocialMediaDashboard'))
 const NewsletterManagement = lazyWithRetry(() => import('./pages/communication/NewsletterManagement'))
@@ -217,6 +218,7 @@ function App() {
         <Route path="/communication" element={<Navigate to="/communication/inbox" replace />} />
         <Route path="/communication/inbox" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Inbox"><CommunicationInbox /></PageErrorBoundary></Suspense>} />
         <Route path="/communication/templates" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Templates"><EmailTemplatesLibrary /></PageErrorBoundary></Suspense>} />
+        <Route path="/communication/sms-templates" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="SMS Templates"><SMSTemplatesLibrary /></PageErrorBoundary></Suspense>} />
         <Route path="/communication/calls" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Cold Call Hub"><CallCenter /></PageErrorBoundary></Suspense>} />
         <Route path="/communication/social" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Social Media"><SocialMediaDashboard /></PageErrorBoundary></Suspense>} />
         <Route path="/communication/newsletter" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Newsletter"><NewsletterManagement /></PageErrorBoundary></Suspense>} />

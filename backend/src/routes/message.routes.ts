@@ -12,8 +12,9 @@ import {
   messageQuerySchema,
   markAsReadSchema,
   replyToMessageSchema,
-  messageIdSchema,
-  threadIdSchema,
+  batchStarSchema,
+  batchArchiveSchema,
+  batchDeleteSchema,
 } from '../validators/message.validator'
 import {
   getMessages,
@@ -33,6 +34,9 @@ import {
   starMessage,
   archiveMessage,
   snoozeMessage,
+  batchStarMessages,
+  batchArchiveMessages,
+  batchDeleteMessages,
 } from '../controllers/message.controller'
 
 const router = Router()
@@ -52,10 +56,11 @@ const ALLOWED_EXTENSIONS = new Set([
 ])
 
 // Attachment upload multer config (#99, #100)
-// Uses disk storage instead of memory storage for large files
+// Uses disk storage with persistent path
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads/attachments')
 const attachmentUpload = multer({
   storage: multer.diskStorage({
-    destination: '/tmp/uploads',
+    destination: UPLOAD_DIR,
     filename: (_req, file, cb) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
       cb(null, uniqueSuffix + path.extname(file.originalname))
@@ -203,6 +208,7 @@ router.get(
  */
 router.post(
   '/:id/reply',
+  messageSendLimiter,
   validateBody(replyToMessageSchema),
   asyncHandler(replyToMessage)
 )
@@ -244,20 +250,34 @@ router.post(
  * @desc    Star/unstar a message
  * @access  Private
  */
-router.patch('/:id/star', asyncHandler(starMessage))
+router.patch('/:id/star',
+  asyncHandler(starMessage))
+
+router.patch('/:id/archive',
+  asyncHandler(archiveMessage))
+
+router.patch('/:id/snooze',
+  asyncHandler(snoozeMessage))
 
 /**
- * @route   PATCH /api/messages/:id/archive
- * @desc    Archive/unarchive a message
+ * @route   POST /api/messages/batch-star
+ * @desc    Batch star/unstar messages (#39)
  * @access  Private
  */
-router.patch('/:id/archive', asyncHandler(archiveMessage))
+router.post('/batch-star', messageSendLimiter, validateBody(batchStarSchema), asyncHandler(batchStarMessages))
 
 /**
- * @route   PATCH /api/messages/:id/snooze
- * @desc    Snooze/unsnooze a message
+ * @route   POST /api/messages/batch-archive
+ * @desc    Batch archive/unarchive messages (#39)
  * @access  Private
  */
-router.patch('/:id/snooze', asyncHandler(snoozeMessage))
+router.post('/batch-archive', messageSendLimiter, validateBody(batchArchiveSchema), asyncHandler(batchArchiveMessages))
+
+/**
+ * @route   POST /api/messages/batch-delete
+ * @desc    Batch delete messages (#39)
+ * @access  Private
+ */
+router.post('/batch-delete', messageSendLimiter, validateBody(batchDeleteSchema), asyncHandler(batchDeleteMessages))
 
 export default router

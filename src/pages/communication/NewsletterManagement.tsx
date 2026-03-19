@@ -124,10 +124,10 @@ const NewsletterManagement = () => {
               <CardDescription>Manage scheduled and sent newsletters</CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" disabled>
                 Filter
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" disabled>
                 Sort
               </Button>
             </div>
@@ -135,7 +135,14 @@ const NewsletterManagement = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {newsletters.map((newsletter) => (
+            {newsletters.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Mail className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm font-medium">No newsletters yet</p>
+                <p className="text-xs mt-1">Create your first newsletter to get started.</p>
+              </div>
+            ) : (
+            newsletters.map((newsletter) => (
               <div key={newsletter.id} className="p-4 border rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3 flex-1">
@@ -211,9 +218,8 @@ const NewsletterManagement = () => {
                         </Button>
                       </>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => {
-                      toast.success(`Deleted "${newsletter.name}"`);  
-                      refetch();
+                    <Button variant="ghost" size="sm" disabled title="Newsletter management coming soon" onClick={() => {
+                      toast.info('Delete is not available yet');
                     }}>
                       Delete
                     </Button>
@@ -243,78 +249,23 @@ const NewsletterManagement = () => {
                   </div>
                 )}
               </div>
-            ))}
+            ))
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Create Newsletter */}
-      <Card>
+      <Card className="border-dashed opacity-60">
         <CardHeader>
           <CardTitle>Create New Newsletter</CardTitle>
-          <CardDescription>Set up your newsletter campaign</CardDescription>
+          <CardDescription>Newsletter creation is coming soon. Design templates, manage subscribers, and schedule sends.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Newsletter Name</label>
-              <input
-                type="text"
-                placeholder="e.g., Weekly Digest"
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Template</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>Basic Newsletter</option>
-                <option>Product Update</option>
-                <option>Company News</option>
-                <option>Event Announcement</option>
-                <option>Custom Template</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Subject Line</label>
-            <input
-              type="text"
-              placeholder="Enter your email subject"
-              className="w-full px-3 py-2 border rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Preview Text</label>
-            <input
-              type="text"
-              placeholder="This appears after the subject line"
-              className="w-full px-3 py-2 border rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Subscriber List</label>
-            <select className="w-full px-3 py-2 border rounded-lg" multiple>
-              <option>All Subscribers</option>
-              <option>Active Users (18,900)</option>
-              <option>Premium Members (5,667)</option>
-              <option>Newsletter Only (12,345)</option>
-            </select>
-            <p className="text-xs text-muted-foreground mt-1">Hold Ctrl/Cmd to select multiple</p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Send Date</label>
-              <input type="date" className="w-full px-3 py-2 border rounded-lg" />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Send Time</label>
-              <input type="time" className="w-full px-3 py-2 border rounded-lg" />
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            <Button disabled title="Newsletter management coming soon">Continue to Design</Button>
-            <Button variant="outline" disabled>Save Draft</Button>
-          </div>
+        <CardContent>
+          <Button disabled>
+            <Mail className="h-4 w-4 mr-2" />
+            Coming Soon
+          </Button>
         </CardContent>
       </Card>
 

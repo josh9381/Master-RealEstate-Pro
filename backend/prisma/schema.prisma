@@ -430,6 +430,7 @@ model Message {
   spamComplaintAt DateTime?
   starred         Boolean          @default(false)
   archived        Boolean          @default(false)
+  trashedAt       DateTime?
   snoozedUntil    DateTime?
   organizationId  String
   lead            Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
