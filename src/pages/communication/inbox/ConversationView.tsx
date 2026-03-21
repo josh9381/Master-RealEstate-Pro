@@ -24,6 +24,7 @@ import {
   RefreshCw,
   ChevronDown,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -122,7 +123,7 @@ export const ConversationView = ({
   enhanceTone,
   enhancingMessage,
   replyChannel,
-  templates,
+  templates: _templates,
   quickReplies,
   onReplyTextChange,
   onEmailSubjectChange,
@@ -143,7 +144,7 @@ export const ConversationView = ({
   onShowAIComposer,
   onShowAttachmentModal,
   onShowSignatureEditor,
-  onInsertTemplate,
+  onInsertTemplate: _onInsertTemplate,
   onInsertQuickReply,
   onInsertEmoji,
   onGenerateClick,
@@ -153,6 +154,7 @@ export const ConversationView = ({
   onEnhanceToneChange,
   onMessageGenerated,
 }: ConversationViewProps) => {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<ChannelTab>('all')
   const [showChannelPicker, setShowChannelPicker] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -167,8 +169,7 @@ export const ConversationView = ({
       const t = setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
       return () => clearTimeout(t)
     }
-  }, [selectedContact?.id, activeTab])
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   if (!selectedContact) {
     return (
       <Card className="col-span-8 flex flex-col overflow-hidden">
@@ -568,14 +569,27 @@ export const ConversationView = ({
                 <FileText className="mr-2 h-4 w-4" /> Templates
               </Button>
               {showTemplates && (
-                <Card className="absolute bottom-full left-0 mb-2 w-64 z-10 shadow-lg">
+                <Card className="absolute bottom-full left-0 mb-2 w-56 z-10 shadow-lg">
                   <CardContent className="p-2">
                     <div className="space-y-1">
-                      {templates.map((template) => (
-                        <Button key={template.id} variant="ghost" size="sm" className="w-full justify-start text-left" onClick={() => onInsertTemplate(template.content)}>
-                          {template.name}
-                        </Button>
-                      ))}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-left gap-2"
+                        onClick={() => { onShowTemplates(false); navigate('/communication/templates') }}
+                      >
+                        <Mail className="h-4 w-4 text-blue-500" />
+                        Email Templates
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-left gap-2"
+                        onClick={() => { onShowTemplates(false); navigate('/communication/sms-templates') }}
+                      >
+                        <MessageSquare className="h-4 w-4 text-green-500" />
+                        SMS Templates
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

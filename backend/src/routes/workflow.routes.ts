@@ -136,4 +136,48 @@ router.post('/:id/trigger', workflowTriggerLimiter, asyncHandler(triggerWorkflow
  */
 router.post('/trigger-for-lead', workflowTriggerLimiter, asyncHandler(triggerWorkflowsForLead))
 
+/**
+ * @route   POST /api/workflows/webhook/:id
+ * @desc    Webhook trigger endpoint for external callers
+ * @access  Private (authenticated)
+ */
+router.post('/webhook/:id', workflowTriggerLimiter, asyncHandler(async (req: import('express').Request, res: import('express').Response) => {
+  const { prisma } = await import('../config/database')
+  const { manualTriggerWorkflow } = await import('../services/workflow.service')
+  const { id } = req.params
+  const { leadId } = req.body
+
+  const workflow = await prisma.workflow.findFirst({
+    where: {
+      id,
+      organizationId: req.user!.organizationId,
+      triggerType: 'WEBHOOK',
+      isActive: true,
+    },
+  })
+
+  if (!workflow) {
+    res.status(404).json({ success: false, message: 'Active webhook workflow not found' })
+    return
+  }
+
+  if (leadId) {
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, organizationId: req.user!.organizationId },
+    })
+    if (!lead) {
+      res.status(404).json({ success: false, message: 'Lead not found' })
+      return
+    }
+  }
+
+  const executionId = await manualTriggerWorkflow(id, leadId)
+
+  res.json({
+    success: true,
+    data: { executionId },
+    message: 'Webhook workflow triggered successfully',
+  })
+}))
+
 export default router

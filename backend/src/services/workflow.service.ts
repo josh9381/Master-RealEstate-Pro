@@ -1134,9 +1134,35 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
 
     case 'ADD_TO_CAMPAIGN':
       if (!leadId) throw new Error('Lead ID required for ADD_TO_CAMPAIGN action');
-      // This would require campaign recipient management
-      // For now, just log the action
-      logger.info(`Adding lead ${leadId} to campaign ${action.config.campaignId}`);
+      if (!action.config.campaignId) {
+        logger.warn('[Workflow] No campaignId configured for ADD_TO_CAMPAIGN action, skipping');
+        break;
+      }
+      // Add lead to campaign via CampaignLead model
+      const campaignLead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { organizationId: true },
+      });
+      if (!campaignLead) {
+        logger.warn(`[Workflow] Lead ${leadId} not found for ADD_TO_CAMPAIGN`);
+        break;
+      }
+      await prisma.campaignLead.upsert({
+        where: {
+          campaignId_leadId: {
+            campaignId: action.config.campaignId as string,
+            leadId: leadId,
+          },
+        },
+        create: {
+          campaignId: action.config.campaignId as string,
+          leadId: leadId,
+          organizationId: campaignLead.organizationId,
+          status: 'PENDING',
+        },
+        update: {},
+      });
+      logger.info(`[Workflow] Added lead ${leadId} to campaign ${action.config.campaignId}`);
       break;
 
     case 'SEND_EMAIL':
@@ -1214,8 +1240,37 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
           },
         });
         logger.info(`[Workflow] Notification created for user ${notifLead.assignedToId} re: lead ${leadId}`);
+      } else if (notifLead) {
+        // Lead has no assigned user — notify organization admins as fallback
+        const notifOrgId = organizationId || notifLead.organizationId;
+        if (notifOrgId) {
+          const admins = await prisma.user.findMany({
+            where: { organizationId: notifOrgId, role: { in: ['ADMIN', 'MANAGER'] } },
+            select: { id: true },
+            take: 5,
+          });
+          for (const admin of admins) {
+            await prisma.notification.create({
+              data: {
+                userId: admin.id,
+                organizationId: notifOrgId,
+                title: action.config.title || 'Workflow Notification (Unassigned Lead)',
+                message: replaceVariables(
+                  action.config.message || action.config.body || 'You have a new workflow notification for an unassigned lead.',
+                  notifLead,
+                  metadata
+                ),
+                type: action.config.type || 'WORKFLOW',
+                read: false,
+              },
+            });
+          }
+          logger.info(`[Workflow] Notification sent to ${admins.length} admin(s) for unassigned lead ${leadId}`);
+        } else {
+          logger.warn(`[Workflow] Lead ${leadId} has no assignedTo and no organization, skipping SEND_NOTIFICATION`);
+        }
       } else {
-        logger.warn(`[Workflow] Lead ${leadId} has no assignedTo, skipping SEND_NOTIFICATION`);
+        logger.warn(`[Workflow] Lead ${leadId} not found, skipping SEND_NOTIFICATION`);
       }
       break;
 
@@ -1226,6 +1281,24 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
         logger.warn('[Workflow] No URL configured for WEBHOOK action, skipping');
         break;
       }
+      // SSRF protection: block private/internal IP ranges and localhost
+      try {
+        const parsedUrl = new URL(webhookUrl as string);
+        const hostname = parsedUrl.hostname.toLowerCase();
+        const blockedPatterns = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.', '10.', '192.168.', 'metadata.google'];
+        const isBlocked = blockedPatterns.some(p => hostname.startsWith(p)) ||
+          hostname.startsWith('172.') && (() => {
+            const second = parseInt(hostname.split('.')[1], 10);
+            return second >= 16 && second <= 31;
+          })();
+        if (isBlocked || !['http:', 'https:'].includes(parsedUrl.protocol)) {
+          logger.warn(`[Workflow] SSRF blocked: webhook URL ${webhookUrl} targets a restricted address`);
+          break;
+        }
+      } catch {
+        logger.warn(`[Workflow] Invalid webhook URL: ${webhookUrl}`);
+        break;
+      }
       try {
         const webhookPayload = {
           event: 'workflow_trigger',
@@ -1234,11 +1307,22 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
           timestamp: new Date().toISOString(),
           data: action.config.payload || action.config.data || {},
         };
-        const webhookResponse = await fetch(webhookUrl, {
-          method: action.config.method || 'POST',
+        // Parse headers if they are stored as a JSON string  
+        let parsedHeaders: Record<string, string> = {};
+        if (typeof action.config.headers === 'string' && action.config.headers.trim()) {
+          try {
+            parsedHeaders = JSON.parse(action.config.headers);
+          } catch {
+            logger.warn(`[Workflow] Invalid JSON in webhook headers: ${action.config.headers}`);
+          }
+        } else if (typeof action.config.headers === 'object' && action.config.headers) {
+          parsedHeaders = action.config.headers as Record<string, string>;
+        }
+        const webhookResponse = await fetch(webhookUrl as string, {
+          method: (action.config.method as string) || 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(action.config.headers || {}),
+            ...parsedHeaders,
           },
           body: JSON.stringify(webhookPayload),
           signal: AbortSignal.timeout(10000), // 10s timeout
@@ -1405,6 +1489,7 @@ export async function recoverDelayedWorkflowActions(): Promise<number> {
         workflowId: true,
         leadId: true,
         metadata: true,
+        workflow: { select: { organizationId: true } },
       },
       take: 200,
     });
@@ -1419,16 +1504,13 @@ export async function recoverDelayedWorkflowActions(): Promise<number> {
       if (!Array.isArray(actions) || actions.length === 0) continue;
 
       // Get the workflow's organizationId
-      const workflow = await prisma.workflow.findUnique({
-        where: { id: exec.workflowId },
-        select: { organizationId: true },
-      });
+      const orgId = (exec as any).workflow?.organizationId;
 
       if (scheduledFor <= now) {
         // Already past due — execute immediately
         logger.info(`[Workflow Recovery] Executing ${actions.length} overdue delayed actions for execution ${exec.id}`);
         try {
-          await executeActionSequence(actions, exec.leadId || undefined, meta, workflow?.organizationId, false, exec.id);
+          await executeActionSequence(actions, exec.leadId || undefined, meta, orgId, false, exec.id);
           recovered++;
         } catch (err) {
           logger.error(`[Workflow Recovery] Failed to execute overdue actions for ${exec.id}:`, err);
@@ -1437,7 +1519,7 @@ export async function recoverDelayedWorkflowActions(): Promise<number> {
         // Still in the future — reschedule via setTimeout
         const remainingMs = scheduledFor.getTime() - now.getTime();
         logger.info(`[Workflow Recovery] Rescheduling ${actions.length} actions for execution ${exec.id} (${Math.round(remainingMs / 60000)}min from now)`);
-        scheduleDelayedActions(actions, remainingMs, exec.leadId || undefined, meta, workflow?.organizationId, exec.id);
+        scheduleDelayedActions(actions, remainingMs, exec.leadId || undefined, meta, orgId, exec.id);
         recovered++;
       }
     }

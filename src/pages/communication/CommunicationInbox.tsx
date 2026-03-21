@@ -5,13 +5,9 @@ import { useAuthStore } from '@/store/authStore'
 import { setUserItem } from '@/lib/userStorage'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Mail,
-  MessageSquare,
-  FileText,
   Phone,
   Send,
   Check,
-  CheckCheck,
   Archive,
   Trash2,
   RefreshCw,
@@ -177,6 +173,7 @@ const CommunicationInbox = () => {
         setSelectedContact(contactsData[0])
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactsData])
 
   // Set default reply channel when contact changes
@@ -191,6 +188,7 @@ const CommunicationInbox = () => {
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact?.id])
 
   // ─── Real-time WebSocket: refetch on incoming messages ────────
@@ -890,21 +888,15 @@ const CommunicationInbox = () => {
           <Button variant="outline" onClick={() => refetchMessages()} disabled={refreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />Refresh
           </Button>
-          <Button variant="outline" onClick={handleMarkAllAsRead} title="Mark all messages as read">
-            <CheckCheck className="mr-2 h-4 w-4" />Mark All Read
-          </Button>
+          <Link to="/communication/calls">
+            <Button variant="outline">
+              <Phone className="mr-2 h-4 w-4" />Cold Call Hub
+            </Button>
+          </Link>
           <Button onClick={() => setShowComposeModal(true)}>
             <Send className="mr-2 h-4 w-4" />Compose New
           </Button>
         </div>
-      </div>
-
-      {/* Sub-Navigation */}
-      <div className="flex gap-2 border-b pb-3">
-        <Link to="/communication"><Button variant="default" size="sm"><Mail className="mr-2 h-4 w-4" />Inbox</Button></Link>
-        <Link to="/communication/templates"><Button variant="outline" size="sm"><FileText className="mr-2 h-4 w-4" />Email Templates</Button></Link>
-        <Link to="/communication/sms-templates"><Button variant="outline" size="sm"><MessageSquare className="mr-2 h-4 w-4" />SMS Templates</Button></Link>
-        <Link to="/communication/calls"><Button variant="outline" size="sm"><Phone className="mr-2 h-4 w-4" />Cold Call Hub</Button></Link>
       </div>
 
       {loading ? (
@@ -935,6 +927,7 @@ const CommunicationInbox = () => {
               onSetPage={setInboxPage}
               onCompose={() => setShowComposeModal(true)}
               onRefresh={() => refetchMessages()}
+              onMarkAllRead={handleMarkAllAsRead}
               hasActiveFilters={hasActiveFilters}
             />
             <ConversationView
@@ -1019,11 +1012,16 @@ const CommunicationInbox = () => {
           composeBody={composeBody}
           composeLeadId={composeLeadId}
           leads={leads}
+          templates={templates}
           onTypeChange={setComposeType}
           onToChange={setComposeTo}
           onSubjectChange={setComposeSubject}
           onBodyChange={setComposeBody}
           onLeadChange={handleComposeLeadChange}
+          onEnhance={async (body, tone) => {
+            const result = await aiApi.enhanceMessage({ message: body, tone })
+            return result.data.enhanced
+          }}
           onSend={handleSendCompose}
           onClose={() => setShowComposeModal(false)}
         />

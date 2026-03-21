@@ -11,12 +11,16 @@ interface WorkflowCanvasProps {
   onNodeDelete?: (nodeId: string) => void;
   onNodeEdit?: (node: WorkflowNodeData) => void;
   onNodeMove?: (nodeId: string, position: { x: number; y: number }) => void;
+  onNodeDuplicate?: (nodeId: string) => void;
+  onNodeMoveUp?: (nodeId: string) => void;
+  onNodeMoveDown?: (nodeId: string) => void;
   isDraggingOver?: boolean;
   onDrop?: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDragLeave?: () => void;
   mode?: 'click' | 'drag';
   onTemplateSelect?: (templateName: string) => void;
+  deleteConfirmNodeId?: string | null;
 }
 
 export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
@@ -26,12 +30,16 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   onNodeDelete,
   onNodeEdit,
   onNodeMove,
+  onNodeDuplicate,
+  onNodeMoveUp,
+  onNodeMoveDown,
   isDraggingOver = false,
   onDrop,
   onDragOver,
   onDragLeave,
   mode = 'drag',
   onTemplateSelect,
+  deleteConfirmNodeId,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
@@ -185,6 +193,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         window.removeEventListener('mouseup', handleMouseUp);
       };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggedNodeId, isPanning, dragOffset, panStart, zoom]);
 
   // Auto-position nodes that don't have positions
@@ -196,6 +205,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         onNodeMove(node.id, { x, y });
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length]);
 
   const getCursor = () => {
@@ -210,18 +220,22 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       ref={canvasRef}
       className={`
         relative min-h-[600px] rounded-lg border-2 overflow-hidden
+        ${mode === 'drag' ? '' : 'min-h-0'}
         ${isDraggingOver ? 'border-primary bg-primary/5' : mode === 'drag' ? 'border-blue-300 dark:border-blue-700' : 'border-green-300 dark:border-green-700'}
         transition-colors duration-200
         ${mode === 'click' ? 'overflow-y-auto' : ''}
       `}
+      role="application"
+      aria-label={`Workflow canvas with ${nodes.length} node${nodes.length !== 1 ? 's' : ''}. ${mode === 'drag' ? 'Drag mode active.' : 'Click mode active.'}`}
+      tabIndex={0}
       style={{
         cursor: mode === 'click' ? 'default' : getCursor(),
         background: mode === 'click' 
-          ? 'white'
+          ? 'var(--background, white)'
           : `
-            linear-gradient(90deg, rgba(200, 200, 200, 0.1) 1px, transparent 1px),
-            linear-gradient(rgba(200, 200, 200, 0.1) 1px, transparent 1px),
-            rgba(240, 248, 255, 1)
+            linear-gradient(90deg, var(--grid-color, rgba(200, 200, 200, 0.1)) 1px, transparent 1px),
+            linear-gradient(var(--grid-color, rgba(200, 200, 200, 0.1)) 1px, transparent 1px),
+            var(--background, rgba(240, 248, 255, 1))
           `,
         backgroundSize: mode === 'click' ? 'auto' : `${20 * zoom}px ${20 * zoom}px`,
         backgroundPosition: mode === 'click' ? 'auto' : `${canvasOffset.x}px ${canvasOffset.y}px`,
@@ -294,16 +308,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 {/* Tips */}
                 <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
                   {mode === 'drag' ? (
-                    <>
-                      <div className="flex items-center gap-1">
-                        <kbd className="px-2 py-1 bg-gray-100 rounded border">Space</kbd>
-                        <span>+ Drag to pan</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <kbd className="px-2 py-1 bg-gray-100 rounded border">Scroll</kbd>
-                        <span>to zoom</span>
-                      </div>
-                    </>
+                    <span>Drag components from the sidebar onto the canvas</span>
                   ) : (
                     <div className="flex items-center gap-1">
                       <Sparkles className="h-3 w-3" />
@@ -327,7 +332,13 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   onSelect={onNodeSelect}
                   onDelete={onNodeDelete}
                   onEdit={onNodeEdit}
+                  onDuplicate={onNodeDuplicate}
+                  onMoveUp={onNodeMoveUp}
+                  onMoveDown={onNodeMoveDown}
                   isDraggable={false}
+                  showDeleteConfirm={deleteConfirmNodeId === node.id}
+                  isFirst={index === 0}
+                  isLast={index === nodes.length - 1}
                 />
               </div>
               {index < nodes.length - 1 && (
@@ -365,42 +376,63 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               const x1 = (node.position?.x || 0) + 150; // Center of node
               const y1 = (node.position?.y || 0) + 70; // Bottom of node
               const x2 = (nextNode.position?.x || 0) + 150;
-              const y2 = (nextNode.position?.y || 0) + 20; // Top of node
+              const y2 = (nextNode.position?.y || 0) + 10; // Top of node
 
-              // Create curved connection like n8n
-              const midY = (y1 + y2) / 2;
-              const path = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+              // Create curved connection with adaptive control points
+              const dy = Math.abs(y2 - y1);
+              const curvature = Math.min(dy * 0.5, 80);
+              const cpY1 = y1 + curvature;
+              const cpY2 = y2 - curvature;
+              const path = `M ${x1} ${y1} C ${x1} ${cpY1}, ${x2} ${cpY2}, ${x2} ${y2}`;
+
+              const isConditionEdge = node.type === 'condition';
+              const lineColor = isConditionEdge ? 'rgb(234, 179, 8)' : 'rgb(99, 102, 241)';
+              const glowColor = isConditionEdge ? 'rgba(234, 179, 8, 0.2)' : 'rgba(99, 102, 241, 0.2)';
 
               return (
                 <g key={`${node.id}-${nextNode.id}`}>
                   {/* Glow effect */}
                   <path
                     d={path}
-                    stroke="rgba(99, 102, 241, 0.2)"
+                    stroke={glowColor}
                     strokeWidth="8"
                     fill="none"
                   />
                   {/* Main line */}
                   <path
                     d={path}
-                    stroke="rgb(99, 102, 241)"
+                    stroke={lineColor}
                     strokeWidth="2"
                     fill="none"
-                    markerEnd="url(#arrowhead)"
+                    strokeDasharray={isConditionEdge ? '6 3' : 'none'}
+                    markerEnd={isConditionEdge ? 'url(#arrowhead-condition)' : 'url(#arrowhead)'}
                   />
                   {/* Connection dot at start */}
                   <circle
                     cx={x1}
                     cy={y1}
                     r="4"
-                    fill="rgb(99, 102, 241)"
+                    fill={lineColor}
                     stroke="white"
                     strokeWidth="2"
                   />
+                  {/* Condition label */}
+                  {isConditionEdge && (
+                    <text
+                      x={(x1 + x2) / 2}
+                      y={(y1 + y2) / 2 - 8}
+                      textAnchor="middle"
+                      fontSize="10"
+                      fill={lineColor}
+                      fontWeight="600"
+                    >
+                      {node.config?.operator === 'equals' ? '= match' : 'if true'}
+                    </text>
+                  )}
                 </g>
               );
             })}
-            {/* Arrow marker definition */}
+            {/* Arrow marker definitions */}
             <defs>
               <marker
                 id="arrowhead"
@@ -413,6 +445,19 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 <polygon
                   points="0 0, 10 3, 0 6"
                   fill="rgb(99, 102, 241)"
+                />
+              </marker>
+              <marker
+                id="arrowhead-condition"
+                markerWidth="10"
+                markerHeight="10"
+                refX="9"
+                refY="3"
+                orient="auto"
+              >
+                <polygon
+                  points="0 0, 10 3, 0 6"
+                  fill="rgb(234, 179, 8)"
                 />
               </marker>
             </defs>
@@ -438,7 +483,9 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   onSelect={mode === 'drag' ? onNodeSelect : undefined}
                   onDelete={onNodeDelete}
                   onEdit={mode === 'drag' ? onNodeEdit : undefined}
+                  onDuplicate={onNodeDuplicate}
                   isDraggable
+                  showDeleteConfirm={deleteConfirmNodeId === node.id}
                 />
               </div>
             </div>
@@ -503,7 +550,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
       {/* Mini-Map - Only show in Drag Mode with nodes */}
       {mode === 'drag' && nodes.length > 0 && (
-        <div className="absolute bottom-4 left-4 z-20">
+        <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2">
           <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-lg">
             <CardContent className="p-2">
               <div className="text-xs font-semibold mb-2 text-muted-foreground">Mini-Map</div>
@@ -548,17 +595,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
-
-      {/* Instructions */}
-      {nodes.length > 0 && mode === 'drag' && (
-        <div className="absolute bottom-4 left-4 z-20 bg-white dark:bg-gray-800 rounded-md px-3 py-2 text-xs border shadow-sm">
-          <div className="space-y-1">
-            <div><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Space</kbd> + Drag to pan</div>
-            <div><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Scroll</kbd> to zoom</div>
-            <div>Drag nodes to reposition</div>
-          </div>
         </div>
       )}
     </div>

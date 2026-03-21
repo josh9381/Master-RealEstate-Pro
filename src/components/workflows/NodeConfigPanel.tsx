@@ -19,13 +19,65 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
   onClose,
 }) => {
   const [config, setConfig] = useState<Record<string, unknown>>(node.config || {});
+  const [nodeLabel, setNodeLabel] = useState(node.label);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const updateConfig = (key: string, value: unknown) => {
     setConfig(prev => ({ ...prev, [key]: value }));
+    // Clear validation errors as user fills in fields
+    if (validationErrors.length > 0) setValidationErrors([]);
+  };
+
+  const validateConfig = (): string[] => {
+    const errors: string[] = [];
+    
+    if (!nodeLabel.trim()) {
+      errors.push('Node label is required');
+    }
+
+    if (node.type === 'action') {
+      const actionType = ((config.actionType as string) || '').toLowerCase();
+      if (actionType.includes('email')) {
+        if (!config.subject) errors.push('Email subject is required');
+      }
+      if (actionType.includes('sms')) {
+        if (!config.message) errors.push('SMS message is required');
+      }
+      if (actionType.includes('tag') && !actionType.includes('remove')) {
+        if (!config.tagName) errors.push('Tag name is required');
+      }
+      if (actionType.includes('webhook')) {
+        if (!config.url) errors.push('Webhook URL is required');
+      }
+    }
+
+    if (node.type === 'condition') {
+      const conditionType = config.conditionType as string;
+      if (conditionType === 'lead_field' && !config.field) {
+        errors.push('Select a field to check');
+      }
+    }
+
+    if (node.type === 'delay') {
+      const delayMode = config.delayMode as string;
+      if (delayMode === 'schedule' && !config.scheduledFor) {
+        errors.push('Schedule date/time is required');
+      }
+      if (delayMode !== 'schedule' && (!config.duration || (config.duration as number) < 1)) {
+        errors.push('Duration must be at least 1');
+      }
+    }
+
+    return errors;
   };
 
   const handleSave = () => {
-    onSave(node.id, config);
+    const errors = validateConfig();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    onSave(node.id, { ...config, _nodeLabel: nodeLabel });
   };
 
   const renderConfigFields = () => {
@@ -44,7 +96,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
   };
 
   const renderTriggerConfig = () => {
-    const triggerType = node.label.toLowerCase();
+    const triggerType = ((config.triggerType as string) || '').toLowerCase();
 
     if (triggerType.includes('status')) {
       return (
@@ -53,7 +105,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Label htmlFor="from-status">From Status (Optional)</Label>
             <select
               id="from-status"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
               value={config.fromStatus as string || ''}
               onChange={(e) => updateConfig('fromStatus', e.target.value)}
             >
@@ -70,7 +122,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Label htmlFor="to-status">To Status</Label>
             <select
               id="to-status"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
               value={config.toStatus as string || ''}
               onChange={(e) => updateConfig('toStatus', e.target.value)}
             >
@@ -94,7 +146,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Label htmlFor="threshold-type">Threshold Type</Label>
             <select
               id="threshold-type"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
               value={config.thresholdType as string || 'above'}
               onChange={(e) => updateConfig('thresholdType', e.target.value)}
             >
@@ -128,8 +180,9 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               placeholder="0 9 * * *"
               value={config.schedule as string || ''}
               onChange={(e) => updateConfig('schedule', e.target.value)}
+              aria-describedby="schedule-help"
             />
-            <p className="text-xs text-muted-foreground">
+            <p id="schedule-help" className="text-xs text-muted-foreground">
               Example: "0 9 * * *" = Every day at 9 AM
             </p>
           </div>
@@ -137,7 +190,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Label htmlFor="timezone">Timezone</Label>
             <select
               id="timezone"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
               value={config.timezone as string || 'UTC'}
               onChange={(e) => updateConfig('timezone', e.target.value)}
             >
@@ -166,7 +219,96 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
       );
     }
 
-    return null;
+    if (triggerType.includes('tag')) {
+      return (
+        <div className="space-y-2">
+          <Label htmlFor="tag-name-trigger">Tag Name (Optional)</Label>
+          <Input
+            id="tag-name-trigger"
+            placeholder="Leave empty to match any tag"
+            value={config.tagName as string || ''}
+            onChange={(e) => updateConfig('tagName', e.target.value)}
+            aria-describedby="tag-trigger-help"
+          />
+          <p id="tag-trigger-help" className="text-xs text-muted-foreground">
+            Specify a tag name to trigger only when that specific tag is added. Leave empty to trigger on any tag.
+          </p>
+        </div>
+      );
+    }
+
+    if (triggerType.includes('campaign')) {
+      return (
+        <div className="space-y-2">
+          <Label htmlFor="campaign-id-trigger">Campaign ID (Optional)</Label>
+          <Input
+            id="campaign-id-trigger"
+            placeholder="Leave empty to match any campaign"
+            value={config.campaignId as string || ''}
+            onChange={(e) => updateConfig('campaignId', e.target.value)}
+            aria-describedby="campaign-trigger-help"
+          />
+          <p id="campaign-trigger-help" className="text-xs text-muted-foreground">
+            Specify a campaign ID to trigger only when that campaign completes. Leave empty for any campaign.
+          </p>
+        </div>
+      );
+    }
+
+    if (triggerType.includes('assigned')) {
+      return (
+        <div className="space-y-3">
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-sm">
+            <strong>Lead Assigned Trigger</strong> — This workflow will run when a lead is assigned to a team member.
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assigned-to">Assigned To (Optional)</Label>
+            <Input
+              id="assigned-to"
+              placeholder="Leave empty to match any assignment"
+              value={config.assignedTo as string || ''}
+              onChange={(e) => updateConfig('assignedTo', e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Optionally filter to only trigger when assigned to a specific user ID.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (triggerType.includes('created')) {
+      return (
+        <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-sm">
+          <strong>Lead Created Trigger</strong> — This workflow will automatically run whenever a new lead is added to the system. No additional configuration needed.
+        </div>
+      );
+    }
+
+    if (triggerType.includes('manual')) {
+      return (
+        <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-sm">
+          <strong>Manual Trigger</strong> — This workflow will only run when manually triggered by a user. No automatic triggering.
+        </div>
+      );
+    }
+
+    if (triggerType.includes('email') || triggerType.includes('opened')) {
+      return (
+        <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-sm">
+          <strong>Email Opened Trigger</strong> — This workflow triggers when a lead opens an email sent through the system.
+        </div>
+      );
+    }
+
+    // Fallback for unknown trigger types
+    return (
+      <div className="p-3 bg-gray-50 dark:bg-gray-950/30 rounded-lg text-sm">
+        <p className="text-muted-foreground">
+          This trigger type will start the workflow automatically when the event occurs. No additional configuration needed.
+        </p>
+      </div>
+    );
   };
 
   const renderConditionConfig = () => {
@@ -179,7 +321,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           <Label htmlFor="conditionType">Condition Type</Label>
           <select
             id="conditionType"
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
             value={conditionType}
             onChange={(e) => updateConfig('conditionType', e.target.value)}
           >
@@ -197,7 +339,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               <Label htmlFor="field">Field to Check</Label>
               <select
                 id="field"
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
                 value={config.field as string || ''}
                 onChange={(e) => updateConfig('field', e.target.value)}
               >
@@ -217,7 +359,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               <Label htmlFor="operator">Operator</Label>
               <select
                 id="operator"
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
                 value={config.operator as string || 'equals'}
                 onChange={(e) => updateConfig('operator', e.target.value)}
               >
@@ -310,7 +452,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 <Label htmlFor="elapsedUnit">Unit</Label>
                 <select
                   id="elapsedUnit"
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
                   value={config.elapsedUnit as string || 'hours'}
                   onChange={(e) => updateConfig('elapsedUnit', e.target.value)}
                 >
@@ -324,7 +466,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               <Label htmlFor="sinceEvent">Since Event</Label>
               <select
                 id="sinceEvent"
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
                 value={config.sinceEvent as string || 'workflow_start'}
                 onChange={(e) => updateConfig('sinceEvent', e.target.value)}
               >
@@ -341,7 +483,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           <Label htmlFor="matchType">Logic (for multiple conditions)</Label>
           <select
             id="matchType"
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
             value={config.matchType as string || 'ALL'}
             onChange={(e) => updateConfig('matchType', e.target.value)}
           >
@@ -354,7 +496,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
   };
 
   const renderActionConfig = () => {
-    const actionType = node.label.toLowerCase();
+    const actionType = ((config.actionType as string) || '').toLowerCase();
 
     if (actionType.includes('email')) {
       return (
@@ -376,8 +518,9 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   .replace(/\[LastName\]/gi, '{{lead.lastName}}');
                 updateConfig('subject', value);
               }}
+              aria-describedby="subject-help"
             />
-            <p className="text-xs text-muted-foreground">
+            <p id="subject-help" className="text-xs text-muted-foreground">
               💡 Type [FirstName] or [LastName] to personalize the subject
             </p>
           </div>
@@ -429,13 +572,14 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           <Label htmlFor="message">SMS Message</Label>
           <textarea
             id="message"
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
             placeholder="Enter SMS message (max 160 characters)"
             maxLength={160}
             value={config.message as string || ''}
             onChange={(e) => updateConfig('message', e.target.value)}
+            aria-describedby="sms-char-count"
           />
-          <p className="text-xs text-muted-foreground">
+          <p id="sms-char-count" className="text-xs text-muted-foreground">
             {(config.message as string || '').length}/160 characters
           </p>
         </div>
@@ -443,6 +587,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
     }
 
     if (actionType.includes('tag')) {
+      const isRemoveTag = actionType.includes('remove');
       return (
         <>
           <div className="space-y-2">
@@ -454,29 +599,39 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               onChange={(e) => updateConfig('tagName', e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="tag-color">Tag Color</Label>
-            <Input
-              id="tag-color"
-              type="color"
-              value={config.tagColor as string || '#3B82F6'}
-              onChange={(e) => updateConfig('tagColor', e.target.value)}
-            />
-          </div>
+          {!isRemoveTag && (
+            <div className="space-y-2">
+              <Label htmlFor="tag-color">Tag Color</Label>
+              <Input
+                id="tag-color"
+                type="color"
+                value={config.tagColor as string || '#3B82F6'}
+                onChange={(e) => updateConfig('tagColor', e.target.value)}
+              />
+            </div>
+          )}
         </>
       );
     }
 
-    if (actionType.includes('update')) {
+    if (actionType.includes('update') && !actionType.includes('score')) {
       return (
         <>
           <div className="space-y-2">
             <Label htmlFor="update-field">Field to Update</Label>
             <select
               id="update-field"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
               value={config.updateField as string || ''}
-              onChange={(e) => updateConfig('updateField', e.target.value)}
+              onChange={(e) => {
+                const field = e.target.value;
+                updateConfig('updateField', field);
+                // Sync `updates` object for backend compatibility
+                const currentValue = config.updateValue as string || '';
+                if (field) {
+                  updateConfig('updates', { [field]: currentValue });
+                }
+              }}
             >
               <option value="">Select field</option>
               <option value="status">Status</option>
@@ -490,7 +645,15 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               id="update-value"
               placeholder="Enter new value"
               value={config.updateValue as string || ''}
-              onChange={(e) => updateConfig('updateValue', e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                updateConfig('updateValue', value);
+                // Sync `updates` object for backend compatibility
+                const field = config.updateField as string;
+                if (field) {
+                  updateConfig('updates', { [field]: value });
+                }
+              }}
             />
           </div>
         </>
@@ -505,18 +668,18 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Input
               id="task-title"
               placeholder="Enter task title"
-              value={config.taskTitle as string || ''}
-              onChange={(e) => updateConfig('taskTitle', e.target.value)}
+              value={config.title as string || config.taskTitle as string || ''}
+              onChange={(e) => updateConfig('title', e.target.value)}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="task-description">Description</Label>
             <textarea
               id="task-description"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
               placeholder="Enter task description"
-              value={config.taskDescription as string || ''}
-              onChange={(e) => updateConfig('taskDescription', e.target.value)}
+              value={config.description as string || config.taskDescription as string || ''}
+              onChange={(e) => updateConfig('description', e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -524,20 +687,204 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Input
               id="task-due-date"
               type="date"
-              value={config.taskDueDate as string || ''}
-              onChange={(e) => updateConfig('taskDueDate', e.target.value)}
+              value={config.dueDate as string || config.taskDueDate as string || ''}
+              onChange={(e) => updateConfig('dueDate', e.target.value)}
             />
           </div>
         </>
       );
     }
 
-    return null;
+    if (actionType.includes('assign')) {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="assign-user">Assign To</Label>
+            <Input
+              id="assign-user"
+              placeholder="Enter user ID or email"
+              value={config.userId as string || ''}
+              onChange={(e) => updateConfig('userId', e.target.value)}
+              aria-describedby="assign-help"
+            />
+            <p id="assign-help" className="text-xs text-muted-foreground">
+              Enter the user ID or email of the team member to assign the lead to
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assign-strategy">Assignment Strategy</Label>
+            <select
+              id="assign-strategy"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
+              value={config.strategy as string || 'specific'}
+              onChange={(e) => updateConfig('strategy', e.target.value)}
+            >
+              <option value="specific">Specific User</option>
+              <option value="round_robin">Round Robin</option>
+              <option value="least_busy">Least Busy</option>
+            </select>
+          </div>
+        </>
+      );
+    }
+
+    if (actionType.includes('notification') || actionType.includes('notify')) {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="notification-title">Notification Title</Label>
+            <Input
+              id="notification-title"
+              placeholder="e.g., Hot Lead Alert"
+              value={config.title as string || ''}
+              onChange={(e) => updateConfig('title', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notification-message">Message</Label>
+            <textarea
+              id="notification-message"
+              className="w-full p-2 border rounded-md min-h-[80px] bg-background text-foreground dark:border-gray-600"
+              placeholder="Enter notification message..."
+              value={config.message as string || ''}
+              onChange={(e) => updateConfig('message', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notification-channel">Channel</Label>
+            <select
+              id="notification-channel"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
+              value={config.channel as string || 'in_app'}
+              onChange={(e) => updateConfig('channel', e.target.value)}
+            >
+              <option value="in_app">In-App</option>
+              <option value="email">Email</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+        </>
+      );
+    }
+
+    if (actionType.includes('campaign')) {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="campaign-id">Campaign ID</Label>
+            <Input
+              id="campaign-id"
+              placeholder="Enter campaign ID"
+              value={config.campaignId as string || ''}
+              onChange={(e) => updateConfig('campaignId', e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              The lead will be added to this campaign automatically
+            </p>
+          </div>
+        </>
+      );
+    }
+
+    if (actionType.includes('score')) {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="score-change">Score Change</Label>
+            <Input
+              id="score-change"
+              type="number"
+              placeholder="e.g., 10 or -5"
+              value={config.scoreChange as number || ''}
+              onChange={(e) => updateConfig('scoreChange', parseInt(e.target.value) || 0)}
+              aria-describedby="score-help"
+            />
+            <p id="score-help" className="text-xs text-muted-foreground">
+              Positive to increase score, negative to decrease
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="score-reason">Reason (optional)</Label>
+            <Input
+              id="score-reason"
+              placeholder="e.g., Opened email, Attended showing"
+              value={config.reason as string || ''}
+              onChange={(e) => updateConfig('reason', e.target.value)}
+            />
+          </div>
+        </>
+      );
+    }
+
+    if (actionType.includes('webhook')) {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="webhook-url">Webhook URL</Label>
+            <Input
+              id="webhook-url"
+              placeholder="https://example.com/webhook"
+              value={config.url as string || ''}
+              onChange={(e) => updateConfig('url', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="webhook-method">HTTP Method</Label>
+            <select
+              id="webhook-method"
+              className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
+              value={config.method as string || 'POST'}
+              onChange={(e) => updateConfig('method', e.target.value)}
+            >
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="PATCH">PATCH</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="webhook-headers">Headers (JSON, optional)</Label>
+            <textarea
+              id="webhook-headers"
+              className="w-full p-2 border rounded-md font-mono text-xs min-h-[60px]"
+              placeholder='{"Authorization": "Bearer xxx"}'
+              value={config.headers as string || ''}
+              onChange={(e) => updateConfig('headers', e.target.value)}
+            />
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg text-sm">
+        <p className="font-medium text-yellow-800 dark:text-yellow-200">No configuration available</p>
+        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+          This action type does not have specific settings to configure.
+        </p>
+      </div>
+    );
   };
 
   const renderDelayConfig = () => {
     const isScheduleMode = node.label.toLowerCase().includes('schedule') || config.delayMode === 'schedule';
     const delayMode = (config.delayMode as string) || (isScheduleMode ? 'schedule' : 'relative');
+
+    // Normalize legacy duration-only config (e.g., { duration: 3600 } seconds) to { duration, unit }
+    const currentDuration = config.duration as number || 1;
+    const currentUnit = config.unit as string;
+    if (delayMode === 'relative' && !currentUnit && currentDuration > 60) {
+      // Legacy seconds-based config — auto-convert
+      if (currentDuration % 86400 === 0) {
+        updateConfig('duration', currentDuration / 86400);
+        updateConfig('unit', 'days');
+      } else if (currentDuration % 3600 === 0) {
+        updateConfig('duration', currentDuration / 3600);
+        updateConfig('unit', 'hours');
+      } else if (currentDuration % 60 === 0) {
+        updateConfig('duration', currentDuration / 60);
+        updateConfig('unit', 'minutes');
+      }
+    }
 
     return (
       <>
@@ -546,7 +893,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           <Label htmlFor="delayMode">Delay Type</Label>
           <select
             id="delayMode"
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
             value={delayMode}
             onChange={(e) => updateConfig('delayMode', e.target.value)}
           >
@@ -571,7 +918,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               <Label htmlFor="unit">Unit</Label>
               <select
                 id="unit"
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground dark:border-gray-600"
                 value={config.unit as string || 'minutes'}
                 onChange={(e) => updateConfig('unit', e.target.value)}
               >
@@ -620,13 +967,23 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           <Label htmlFor="node-label">Node Label</Label>
           <Input
             id="node-label"
-            value={node.label}
-            disabled
-            className="bg-muted"
+            value={nodeLabel}
+            onChange={(e) => setNodeLabel(e.target.value)}
           />
         </div>
 
         {renderConfigFields()}
+
+        {/* Validation Errors */}
+        {validationErrors.length > 0 && (
+          <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+            <ul className="text-xs text-red-700 dark:text-red-300 space-y-1">
+              {validationErrors.map((err, i) => (
+                <li key={i}>• {err}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="flex gap-2 pt-4">
           <Button onClick={handleSave} className="flex-1">

@@ -1,17 +1,13 @@
-<<<<<<< Updated upstream
 import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-=======
-import { useState, useEffect } from 'react';
->>>>>>> Stashed changes
 import { 
   Workflow, Play, Plus, TrendingUp, Save, TestTube2, 
   CheckCircle2, XCircle, Activity, Download, Upload,
   Copy, Zap, Mail, MessageSquare, Clock,
   Calendar, FileText, ChevronDown, ChevronRight,
   ArrowRight, Filter, Terminal, GripVertical, MousePointer2, X,
-  AlertCircle
+  AlertCircle, Undo2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -20,11 +16,13 @@ import { Input } from '@/components/ui/Input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { useToast } from '@/hooks/useToast';
 import { workflowsApi } from '@/lib/api';
+import { Link, useNavigate } from 'react-router-dom';
 import { WorkflowCanvas } from '@/components/workflows/WorkflowCanvas';
 import { WorkflowNodeData } from '@/components/workflows/WorkflowNode';
 import { WorkflowComponentLibrary, WorkflowComponent } from '@/components/workflows/WorkflowComponentLibrary';
 import { NodeConfigPanel } from '@/components/workflows/NodeConfigPanel';
 import { ModalErrorBoundary } from '@/components/ModalErrorBoundary';
+import { WorkflowsTabNav } from '@/components/workflows/WorkflowsTabNav';
 import type { WorkflowAction, WorkflowExecution } from '@/types';
 
 interface ExecutionStep {
@@ -71,9 +69,9 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'email',
     workflow: '1. Trigger: New lead created → 2. Wait 1 hour → 3. Send welcome email',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'New Lead Created', config: {} },
-      { id: 'delay-1', type: 'delay', label: 'Wait 1 hour', config: { duration: 3600 } },
-      { id: 'action-1', type: 'action', label: 'Send Welcome Email', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'New Lead Created', config: { triggerType: 'LEAD_CREATED' } },
+      { id: 'delay-1', type: 'delay', label: 'Wait 1 hour', config: { duration: 1, unit: 'hours' } },
+      { id: 'action-1', type: 'action', label: 'Send Welcome Email', config: { actionType: 'SEND_EMAIL' } },
     ],
   },
   {
@@ -84,10 +82,10 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'lead',
     workflow: '1. Trigger: Lead activity → 2. Check score > 80 → 3. Add hot tag → 4. Notify team',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'Lead Activity', config: {} },
-      { id: 'condition-1', type: 'condition', label: 'Check Lead Score > 80', config: {} },
-      { id: 'action-1', type: 'action', label: 'Add Hot Lead Tag', config: {} },
-      { id: 'action-2', type: 'action', label: 'Notify Sales Team', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'Lead Activity', config: { triggerType: 'LEAD_STATUS_CHANGED' } },
+      { id: 'condition-1', type: 'condition', label: 'Check Lead Score > 80', config: { conditionType: 'lead_field', field: 'score', operator: 'greater_than', value: 80 } },
+      { id: 'action-1', type: 'action', label: 'Add Hot Lead Tag', config: { actionType: 'ADD_TAG' } },
+      { id: 'action-2', type: 'action', label: 'Notify Sales Team', config: { actionType: 'SEND_NOTIFICATION' } },
     ],
   },
   {
@@ -98,11 +96,11 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'email',
     workflow: '1. Viewing complete → 2. Wait 2 hours → 3. Feedback email → 4. Wait 2 days → 5. Create task',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'Property Viewing Complete', config: {} },
-      { id: 'delay-1', type: 'delay', label: 'Wait 2 hours', config: { duration: 7200 } },
-      { id: 'action-1', type: 'action', label: 'Send Feedback Email', config: {} },
-      { id: 'delay-2', type: 'delay', label: 'Wait 2 days', config: { duration: 172800 } },
-      { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'Property Viewing Complete', config: { triggerType: 'LEAD_STATUS_CHANGED' } },
+      { id: 'delay-1', type: 'delay', label: 'Wait 2 hours', config: { duration: 2, unit: 'hours' } },
+      { id: 'action-1', type: 'action', label: 'Send Feedback Email', config: { actionType: 'SEND_EMAIL' } },
+      { id: 'delay-2', type: 'delay', label: 'Wait 2 days', config: { duration: 2, unit: 'days' } },
+      { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: { actionType: 'CREATE_TASK' } },
     ],
   },
   {
@@ -113,9 +111,9 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'task',
     workflow: '1. Lead status changed → 2. If qualified → 3. Assign to sales rep',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'Lead Status Changed', config: {} },
-      { id: 'condition-1', type: 'condition', label: 'If Status = Qualified', config: {} },
-      { id: 'action-1', type: 'action', label: 'Assign to Sales Rep', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'Lead Status Changed', config: { triggerType: 'LEAD_STATUS_CHANGED' } },
+      { id: 'condition-1', type: 'condition', label: 'If Status = Qualified', config: { conditionType: 'lead_field', field: 'status', operator: 'equals', value: 'qualified' } },
+      { id: 'action-1', type: 'action', label: 'Assign to Sales Rep', config: { actionType: 'ASSIGN_LEAD' } },
     ],
   },
   {
@@ -126,10 +124,10 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'sms',
     workflow: '1. Lead opts in → 2. Send welcome SMS → 3. Wait 3 days → 4. Send value SMS',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'Lead Opts In', config: {} },
-      { id: 'action-1', type: 'action', label: 'Send Welcome SMS', config: {} },
-      { id: 'delay-1', type: 'delay', label: 'Wait 3 days', config: { duration: 259200 } },
-      { id: 'action-2', type: 'action', label: 'Send Value SMS', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'Lead Opts In', config: { triggerType: 'TAG_ADDED' } },
+      { id: 'action-1', type: 'action', label: 'Send Welcome SMS', config: { actionType: 'SEND_SMS' } },
+      { id: 'delay-1', type: 'delay', label: 'Wait 3 days', config: { duration: 3, unit: 'days' } },
+      { id: 'action-2', type: 'action', label: 'Send Value SMS', config: { actionType: 'SEND_SMS' } },
     ],
   },
   {
@@ -140,10 +138,10 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'email',
     workflow: '1. No activity 30 days → 2. Re-engagement email → 3. Wait 7 days → 4. Check if engaged',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'No Activity 30 Days', config: {} },
-      { id: 'action-1', type: 'action', label: 'Send Re-engagement Email', config: {} },
-      { id: 'delay-1', type: 'delay', label: 'Wait 7 days', config: { duration: 604800 } },
-      { id: 'condition-1', type: 'condition', label: 'Check if Engaged', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'No Activity 30 Days', config: { triggerType: 'TIME_BASED' } },
+      { id: 'action-1', type: 'action', label: 'Send Re-engagement Email', config: { actionType: 'SEND_EMAIL' } },
+      { id: 'delay-1', type: 'delay', label: 'Wait 7 days', config: { duration: 7, unit: 'days' } },
+      { id: 'condition-1', type: 'condition', label: 'Check if Engaged', config: { conditionType: 'email_opened' } },
     ],
   },
   {
@@ -154,9 +152,9 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'task',
     workflow: '1. Viewing completed → 2. Thank you email → 3. Create follow-up task',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'Viewing Completed', config: {} },
-      { id: 'action-1', type: 'action', label: 'Send Thank You Email', config: {} },
-      { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'Viewing Completed', config: { triggerType: 'LEAD_STATUS_CHANGED' } },
+      { id: 'action-1', type: 'action', label: 'Send Thank You Email', config: { actionType: 'SEND_EMAIL' } },
+      { id: 'action-2', type: 'action', label: 'Create Follow-up Task', config: { actionType: 'CREATE_TASK' } },
     ],
   },
   {
@@ -167,11 +165,11 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'task',
     workflow: '1. Contract stage change → 2. Check milestone → 3. Notify team → 4. Create reminder → 5. Update CRM',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'Contract Stage Change', config: {} },
-      { id: 'condition-1', type: 'condition', label: 'Check Milestone Type', config: {} },
-      { id: 'action-1', type: 'action', label: 'Notify Team', config: {} },
-      { id: 'action-2', type: 'action', label: 'Create Reminder Task', config: {} },
-      { id: 'action-3', type: 'action', label: 'Update CRM', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'Contract Stage Change', config: { triggerType: 'LEAD_STATUS_CHANGED' } },
+      { id: 'condition-1', type: 'condition', label: 'Check Milestone Type', config: { conditionType: 'lead_field' } },
+      { id: 'action-1', type: 'action', label: 'Notify Team', config: { actionType: 'SEND_NOTIFICATION' } },
+      { id: 'action-2', type: 'action', label: 'Create Reminder Task', config: { actionType: 'CREATE_TASK' } },
+      { id: 'action-3', type: 'action', label: 'Update CRM', config: { actionType: 'UPDATE_LEAD' } },
     ],
   },
   {
@@ -182,16 +180,17 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     category: 'lead',
     workflow: '1. New lead → 2. Check budget & timeline → 3. Add qualified tag → 4. Assign to agent',
     nodes: [
-      { id: 'trigger-1', type: 'trigger', label: 'New Lead', config: {} },
-      { id: 'condition-1', type: 'condition', label: 'Check Budget & Timeline', config: {} },
-      { id: 'action-1', type: 'action', label: 'Add Qualified Tag', config: {} },
-      { id: 'action-2', type: 'action', label: 'Assign to Agent', config: {} },
+      { id: 'trigger-1', type: 'trigger', label: 'New Lead', config: { triggerType: 'LEAD_CREATED' } },
+      { id: 'condition-1', type: 'condition', label: 'Check Budget & Timeline', config: { conditionType: 'lead_field' } },
+      { id: 'action-1', type: 'action', label: 'Add Qualified Tag', config: { actionType: 'ADD_TAG' } },
+      { id: 'action-2', type: 'action', label: 'Assign to Agent', config: { actionType: 'ASSIGN_LEAD' } },
     ],
   },
 ];
 
 const WorkflowBuilder = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [workflowName, setWorkflowName] = useState('New Workflow');
   const [nodes, setNodes] = useState<WorkflowNodeData[]>([]);
   const [selectedNode, setSelectedNode] = useState<WorkflowNodeData | null>(null);
@@ -205,21 +204,47 @@ const WorkflowBuilder = () => {
   const [templateFilter, setTemplateFilter] = useState('all');
   const [isTestRunning, setIsTestRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [testInput, setTestInput] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [pendingTemplateName, setPendingTemplateName] = useState<string | null>(null);
   const deleteConfirmTimerRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => { clearTimeout(deleteConfirmTimerRef.current) }, []);
   const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'active' | 'paused' | 'running'>('idle');
   const [activeExecutions, setActiveExecutions] = useState<number>(0);
   const [interactionMode, setInteractionMode] = useState<'click' | 'drag'>('drag');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-<<<<<<< Updated upstream
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-=======
->>>>>>> Stashed changes
 
   // Retry & failure notification settings
   const [maxRetries, setMaxRetries] = useState(3);
   const [notifyOnFailure, setNotifyOnFailure] = useState(true);
+
+  // Undo stack for node deletions
+  const [undoStack, setUndoStack] = useState<{ nodes: WorkflowNodeData[]; label: string }[]>([]);
+
+  // Track unsaved changes for beforeunload warning
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const initialNodesRef = useRef<string>('');
+
+  // Mark dirty when nodes or name change after initial load
+  useEffect(() => {
+    const serialized = JSON.stringify(nodes.map(n => ({ id: n.id, type: n.type, label: n.label, config: n.config })));
+    if (initialNodesRef.current === '') {
+      initialNodesRef.current = serialized;
+    } else if (serialized !== initialNodesRef.current) {
+      setHasUnsavedChanges(true);
+    }
+  }, [nodes]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedChanges]);
 
   // Execution logs
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
@@ -262,17 +287,33 @@ const WorkflowBuilder = () => {
           });
         }
 
-        // Add action nodes with proper spacing
-        if (workflow.actions && Array.isArray(workflow.actions)) {
-          workflow.actions.forEach((action: WorkflowAction, index: number) => {
+        // Add action nodes with proper spacing and correct node types
+        // Backend stores actions as { conditions: [], actions: [...] } or as flat array
+        const rawActions = workflow.actions;
+        const actionsList = Array.isArray(rawActions) 
+          ? rawActions 
+          : (rawActions?.actions || rawActions?.steps || []);
+        
+        if (actionsList && Array.isArray(actionsList)) {
+          actionsList.forEach((action: WorkflowAction, index: number) => {
             const actionType = action.type || 'action';
-            const actionLabel = actionType.replace(/_/g, ' ')
+            
+            // Determine the correct node type based on action type
+            let nodeType: 'action' | 'delay' | 'condition' = 'action';
+            if (actionType === 'DELAY') {
+              nodeType = 'delay';
+            } else if (actionType === 'CONDITION') {
+              nodeType = 'condition';
+            }
+
+            // Use the saved label if available, otherwise generate from type
+            const actionLabel = String((action.config as Record<string, unknown>)?.label || '') || actionType.replace(/_/g, ' ')
               .toLowerCase()
               .replace(/\b\w/g, (l: string) => l.toUpperCase());
 
             reconstructedNodes.push({
               id: String(action.id || `action-${index}`),
-              type: 'action',
+              type: nodeType,
               label: actionLabel,
               description: String(action.description || ''),
               config: (action.config || {}) as Record<string, unknown>,
@@ -290,6 +331,16 @@ const WorkflowBuilder = () => {
     enabled: !!workflowId,
   });
 
+  // Fetch workflow analytics when editing existing workflow
+  const { data: analyticsData } = useQuery({
+    queryKey: ['workflowAnalytics', workflowId],
+    queryFn: async () => {
+      const response = await workflowsApi.getAnalytics(workflowId!);
+      return response?.data || response;
+    },
+    enabled: !!workflowId,
+  });
+
   // Kick off initial polling when workflow ID is present
   useEffect(() => {
     if (workflowId) {
@@ -297,16 +348,16 @@ const WorkflowBuilder = () => {
     }
   }, [workflowId]);
 
-  // Poll workflow status every 5 seconds
+  // Poll workflow status every 5 seconds only when logs or metrics panel is visible
   useEffect(() => {
-    if (!workflowId) return;
+    if (!workflowId || (!showLogsPanel && !showMetricsPanel)) return;
 
     const interval = setInterval(() => {
       fetchWorkflowStatus(workflowId);
-    }, 5000); // Poll every 5 seconds
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [workflowId]);
+  }, [workflowId, showLogsPanel, showMetricsPanel]);
 
   const fetchWorkflowStatus = async (workflowId: string) => {
     try {
@@ -315,42 +366,50 @@ const WorkflowBuilder = () => {
         workflowsApi.getExecutions(workflowId, { page: 1, limit: 10 })
       ]);
 
-      // Update workflow status
-      if (workflowData) {
-        setWorkflowStatus(workflowData.isActive ? 'active' : 'idle');
+      // Update workflow status (response is { success, data: { workflow } })
+      const workflow = workflowData?.data?.workflow || workflowData?.workflow || workflowData;
+      if (workflow) {
+        setWorkflowStatus(workflow.isActive ? 'active' : 'idle');
       }
 
       // Check for running executions and populate logs
-      if (executionsData?.executions) {
-        const runningCount = executionsData.executions.filter(
+      // Response is { success, data: { executions, pagination } }
+      const executionsList = executionsData?.data?.executions || executionsData?.executions;
+      if (executionsList) {
+        const runningCount = executionsList.filter(
           (exec: WorkflowExecution) => exec.status === 'IN_PROGRESS' || exec.status === 'RUNNING'
         ).length;
         setActiveExecutions(runningCount);
         if (runningCount > 0) {
           setWorkflowStatus('running');
         }
-        setExecutionLogs(executionsData.executions.map((exec: any) => ({
-          id: exec.id,
-          timestamp: exec.startedAt || new Date().toISOString(),
-          status: exec.status === 'COMPLETED' || exec.status === 'SUCCESS' ? 'success' : exec.status === 'FAILED' ? 'failed' : exec.status === 'IN_PROGRESS' || exec.status === 'RUNNING' ? 'running' : 'info',
-          error: exec.error || undefined,
-          leadName: exec.lead ? `${exec.lead.firstName || ''} ${exec.lead.lastName || ''}`.trim() : undefined,
-          leadEmail: exec.lead?.email,
-          duration: exec.completedAt ? Math.round((new Date(exec.completedAt).getTime() - new Date(exec.startedAt).getTime()) / 1000) : 0,
-          steps: (exec.steps || []).map((step: any) => ({
+        setExecutionLogs(executionsList.map((exec: Record<string, unknown>) => {
+          const execStatus = exec.status as string;
+          const execLead = exec.lead as Record<string, string> | undefined;
+          const execSteps = (exec.steps || []) as Record<string, unknown>[];
+          return {
+          id: exec.id as string,
+          timestamp: (exec.startedAt as string) || new Date().toISOString(),
+          status: execStatus === 'COMPLETED' || execStatus === 'SUCCESS' ? 'success' as const : execStatus === 'FAILED' ? 'failed' as const : execStatus === 'IN_PROGRESS' || execStatus === 'RUNNING' ? 'running' as const : 'info' as const,
+          error: (exec.error as string) || undefined,
+          leadName: execLead ? `${execLead.firstName || ''} ${execLead.lastName || ''}`.trim() : undefined,
+          leadEmail: execLead?.email,
+          duration: exec.completedAt ? Math.round((new Date(exec.completedAt as string).getTime() - new Date(exec.startedAt as string).getTime()) / 1000) : 0,
+          steps: execSteps.map((step: Record<string, unknown>) => ({
             id: step.id,
             stepIndex: step.stepIndex,
-            actionType: step.actionType,
-            actionLabel: step.actionLabel,
-            status: step.status,
-            error: step.error,
-            retryCount: step.retryCount || 0,
-            durationMs: step.durationMs,
-            branchTaken: step.branchTaken,
-            startedAt: step.startedAt,
-            completedAt: step.completedAt,
+            actionType: step.actionType as string,
+            actionLabel: step.actionLabel as string,
+            status: step.status as ExecutionStep['status'],
+            error: step.error as string,
+            retryCount: (step.retryCount as number) || 0,
+            durationMs: step.durationMs as number,
+            branchTaken: step.branchTaken as string,
+            startedAt: step.startedAt as string,
+            completedAt: step.completedAt as string,
           })),
-        })));
+          }
+        }));
       }
     } catch (error) {
       logger.error('Failed to fetch workflow status:', error);
@@ -362,20 +421,44 @@ const WorkflowBuilder = () => {
   const addNodeFromComponent = (component: WorkflowComponent) => {
     const newNode: WorkflowNodeData = {
       id: `node-${Date.now()}`,
-<<<<<<< Updated upstream
       type: component.type,
       label: component.label,
       description: component.description,
       config: component.config || {}
-=======
-      type,
-      label,
-      config: {},
-      position: { x: 100, y: nodes.length * 120 + 100 }
->>>>>>> Stashed changes
     };
     setNodes([...nodes, newNode]);
-    toast.success(`Added ${component.label} to workflow`);
+    // Auto-open config panel for the newly added node
+    setSelectedNode(newNode);
+    setShowConfigPanel(true);
+    toast.success(`Added ${component.label} — configure it now`);
+  };
+
+  const handleDuplicateNode = (nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    const duplicated: WorkflowNodeData = {
+      ...node,
+      id: `node-${Date.now()}`,
+      label: `${node.label} (copy)`,
+      position: node.position ? { x: node.position.x + 40, y: node.position.y + 40 } : undefined,
+    };
+    // Insert right after the original node
+    const idx = nodes.indexOf(node);
+    const updated = [...nodes];
+    updated.splice(idx + 1, 0, duplicated);
+    setNodes(updated);
+    toast.success(`Duplicated "${node.label}"`);
+  };
+
+  const handleMoveNode = (nodeId: string, direction: 'up' | 'down') => {
+    const idx = nodes.findIndex(n => n.id === nodeId);
+    if (idx < 0) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === nodes.length - 1) return;
+    const updated = [...nodes];
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    [updated[idx], updated[swapIdx]] = [updated[swapIdx], updated[idx]];
+    setNodes(updated);
   };
 
   const handleComponentSelect = (component: WorkflowComponent) => {
@@ -482,6 +565,7 @@ const WorkflowBuilder = () => {
     } else {
       setValidationErrors([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes]);
 
   const handleNodeSelect = (node: WorkflowNodeData) => {
@@ -491,22 +575,34 @@ const WorkflowBuilder = () => {
 
   const handleNodeDelete = (nodeId: string) => {
     if (showDeleteConfirm === nodeId) {
-      // Second click confirms deletion
+      // Confirmed — push current state to undo stack, then delete
+      const deletedNode = nodes.find(n => n.id === nodeId);
+      setUndoStack(prev => [...prev.slice(-9), { nodes: [...nodes], label: deletedNode?.label || 'node' }]);
       setNodes(nodes.filter(n => n.id !== nodeId));
       if (selectedNode?.id === nodeId) {
         setSelectedNode(null);
         setShowConfigPanel(false);
       }
       setShowDeleteConfirm(null);
-      toast.success('Node removed from workflow');
-    } else {
-      // First click shows confirmation
-      setShowDeleteConfirm(nodeId);
-      toast.warning('Click delete again to confirm removal');
-      // Auto-reset confirmation after 3 seconds
       clearTimeout(deleteConfirmTimerRef.current);
-      deleteConfirmTimerRef.current = setTimeout(() => setShowDeleteConfirm(null), 3000);
+      toast.success('Node removed — click Undo to restore');
+    } else {
+      // Show inline confirmation badge on the node
+      setShowDeleteConfirm(nodeId);
+      clearTimeout(deleteConfirmTimerRef.current);
+      deleteConfirmTimerRef.current = setTimeout(() => setShowDeleteConfirm(null), 4000);
     }
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) {
+      toast.info('Nothing to undo');
+      return;
+    }
+    const last = undoStack[undoStack.length - 1];
+    setNodes(last.nodes);
+    setUndoStack(prev => prev.slice(0, -1));
+    toast.success(`Undo: restored "${last.label}"`);
   };
 
   const handleNodeEdit = (node: WorkflowNodeData) => {
@@ -515,8 +611,9 @@ const WorkflowBuilder = () => {
   };
 
   const handleConfigSave = (nodeId: string, config: Record<string, unknown>) => {
+    const { _nodeLabel, ...restConfig } = config;
     setNodes(nodes.map(n => 
-      n.id === nodeId ? { ...n, config } : n
+      n.id === nodeId ? { ...n, config: restConfig, ...(typeof _nodeLabel === 'string' ? { label: _nodeLabel } : {}) } : n
     ));
     setShowConfigPanel(false);
     toast.success('Node configuration saved');
@@ -529,18 +626,37 @@ const WorkflowBuilder = () => {
       const triggerNode = nodes.find(n => n.type === 'trigger');
       const actionNodes = nodes.filter(n => n.type !== 'trigger');
 
+      // Validate action nodes have proper actionType configured
+      const unconfiguredActions = actionNodes.filter(n => n.type === 'action' && !n.config?.actionType);
+      if (unconfiguredActions.length > 0) {
+        toast.error(`${unconfiguredActions.length} action node(s) missing configuration. Please configure all action nodes before saving.`);
+        setIsSaving(false);
+        return;
+      }
+
       const workflowData = {
         name: workflowName,
         description: `Workflow with ${nodes.length} nodes`,
-        triggerType: triggerNode?.config?.triggerType || triggerNode?.label?.toLowerCase().replace(/\s+/g, '_') || 'manual',
+        triggerType: triggerNode?.config?.triggerType || 'MANUAL',
         triggerData: triggerNode?.config || {},
-        actions: actionNodes.map(n => ({
-          type: n.type,
-          config: {
-            ...n.config,
-            label: n.label
+        actions: actionNodes.map(n => {
+          // Map node types to proper action types
+          let actionType: string;
+          if (n.type === 'delay') {
+            actionType = 'DELAY';
+          } else if (n.type === 'condition') {
+            actionType = 'CONDITION';
+          } else {
+            actionType = (n.config?.actionType as string) || 'UNKNOWN';
           }
-        })),
+          return {
+            type: actionType,
+            config: {
+              ...n.config,
+              label: n.label
+            }
+          };
+        }),
         nodes: nodes,
         maxRetries,
         notifyOnFailure,
@@ -558,6 +674,8 @@ const WorkflowBuilder = () => {
         await workflowsApi.createWorkflow(workflowData);
         toast.success('Workflow created successfully');
       }
+      setHasUnsavedChanges(false);
+      initialNodesRef.current = JSON.stringify(nodes.map(n => ({ id: n.id, type: n.type, label: n.label, config: n.config })));
     } catch (error) {
       logger.error('Failed to save workflow:', error);
       toast.error('Failed to save workflow');
@@ -575,7 +693,7 @@ const WorkflowBuilder = () => {
       const workflowId = urlParams.get('id');
       
       if (workflowId) {
-        await workflowsApi.testWorkflow(workflowId);
+        await workflowsApi.testWorkflow(workflowId, testInput ? { leadIdentifier: testInput } : undefined);
         toast.success('Test completed successfully');
       } else {
         toast.warning('Please save the workflow before testing');
@@ -591,6 +709,11 @@ const WorkflowBuilder = () => {
   const importTemplate = (templateName: string) => {
     const template = WORKFLOW_TEMPLATES.find(t => t.name === templateName);
     if (template) {
+      if (nodes.length > 0) {
+        setPendingTemplateName(templateName);
+        setShowImportConfirm(true);
+        return;
+      }
       setNodes(template.nodes);
       setWorkflowName(template.name);
       toast.success(`Imported ${template.nodes.length} nodes from "${templateName}"`);
@@ -600,41 +723,51 @@ const WorkflowBuilder = () => {
     setShowTemplates(false);
   };
 
-<<<<<<< Updated upstream
-=======
-  // Drag and drop handlers
-  const handleDragStart = (item: DraggableItem) => {
-    setDraggedItem(item);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDraggingOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(false);
-    
-    if (draggedItem) {
-      addNode(draggedItem.type, draggedItem.label);
-      setDraggedItem(null);
+  const confirmImportTemplate = () => {
+    if (!pendingTemplateName) return;
+    const template = WORKFLOW_TEMPLATES.find(t => t.name === pendingTemplateName);
+    if (template) {
+      setNodes(template.nodes);
+      setWorkflowName(template.name);
+      toast.success(`Imported ${template.nodes.length} nodes from "${pendingTemplateName}"`);
     }
+    setShowImportConfirm(false);
+    setPendingTemplateName(null);
+    setShowTemplates(false);
   };
 
-  const toggleInteractionMode = () => {
-    const newMode = interactionMode === 'click' ? 'drag' : 'click';
-    setInteractionMode(newMode);
-    toast.info(`Switched to ${newMode} mode`);
-  };
-
->>>>>>> Stashed changes
   return (
     <div className="space-y-6">
+      {/* Import Template Confirmation Dialog */}
+      <Dialog open={showImportConfirm} onOpenChange={setShowImportConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Template?</DialogTitle>
+            <DialogDescription>
+              Importing &ldquo;{pendingTemplateName}&rdquo; will replace your current {nodes.length} node(s). This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => { setShowImportConfirm(false); setPendingTemplateName(null); }}>
+              Cancel
+            </Button>
+            <Button onClick={confirmImportTemplate}>
+              Import Template
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Breadcrumb Navigation */}
+      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link to="/workflows" className="hover:text-foreground transition-colors">Workflows</Link>
+        <ChevronRight className="h-4 w-4" />
+        <span className="text-foreground font-medium">{workflowId ? workflowName : 'New Workflow'}</span>
+      </nav>
+
+      {/* Sub-Navigation Tabs */}
+      <WorkflowsTabNav />
+
       {/* Header with Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -643,7 +776,9 @@ const WorkflowBuilder = () => {
               <Input
                 value={workflowName}
                 onChange={(e) => setWorkflowName(e.target.value)}
-                className="text-2xl font-bold border-none p-0 h-auto focus-visible:ring-0"
+                className="text-2xl font-bold p-1 h-auto focus-visible:ring-1 border border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:border-primary bg-transparent hover:bg-muted/50"
+                placeholder="Enter workflow name"
+                aria-label="Workflow name"
               />
               {/* Live Status Indicator */}
               <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg border">
@@ -671,13 +806,24 @@ const WorkflowBuilder = () => {
             <Upload className="h-4 w-4 mr-2" />
             Templates
           </Button>
-          <Button variant="outline" onClick={runTest} disabled={isTestRunning}>
+          <Button
+            variant="outline"
+            onClick={runTest}
+            disabled={isTestRunning || !workflowId}
+            title={!workflowId ? 'Save the workflow first to enable testing' : 'Run a test execution'}
+          >
             <TestTube2 className="h-4 w-4 mr-2" />
-            {isTestRunning ? 'Running...' : 'Test Run'}
+            {isTestRunning ? 'Running...' : !workflowId ? 'Save First to Test' : 'Test Run'}
           </Button>
-          <Button onClick={saveWorkflow} disabled={isSaving}>
+          <Button onClick={saveWorkflow} disabled={isSaving} className="relative">
             <Save className={`h-4 w-4 mr-2 ${isSaving ? 'animate-spin' : ''}`} />
             {isSaving ? 'Saving...' : 'Save Workflow'}
+            {hasUnsavedChanges && !isSaving && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+              </span>
+            )}
           </Button>
         </div>
       </div>
@@ -700,27 +846,27 @@ const WorkflowBuilder = () => {
             <div className="grid gap-4 md:grid-cols-4 mb-6">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Total Executions</p>
-                <p className="text-2xl font-bold">0</p>
-                <p className="text-xs text-muted-foreground">No data yet</p>
+                <p className="text-2xl font-bold">{analyticsData?.totalExecutions ?? 0}</p>
+                <p className="text-xs text-muted-foreground">{analyticsData?.totalExecutions ? 'All time' : 'No data yet'}</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Success Rate</p>
-                <p className="text-2xl font-bold">—</p>
-                <p className="text-xs text-muted-foreground">No data yet</p>
+                <p className="text-2xl font-bold">{analyticsData?.successRate != null ? `${Math.round(analyticsData.successRate)}%` : '—'}</p>
+                <p className="text-xs text-muted-foreground">{analyticsData?.successRate != null ? (analyticsData.successRate >= 95 ? 'Excellent!' : 'Based on all runs') : 'No data yet'}</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Avg Duration</p>
-                <p className="text-2xl font-bold">—</p>
-                <p className="text-xs text-muted-foreground">No data yet</p>
+                <p className="text-2xl font-bold">{analyticsData?.avgDuration != null ? `${Math.round(analyticsData.avgDuration)}s` : '—'}</p>
+                <p className="text-xs text-muted-foreground">{analyticsData?.avgDuration != null ? 'Per execution' : 'No data yet'}</p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Time Saved</p>
-                <p className="text-2xl font-bold">—</p>
-                <p className="text-xs text-muted-foreground">No data yet</p>
+                <p className="text-sm text-muted-foreground">Active Runs</p>
+                <p className="text-2xl font-bold">{activeExecutions}</p>
+                <p className="text-xs text-muted-foreground">{activeExecutions > 0 ? 'Running now' : 'None active'}</p>
               </div>
             </div>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">No execution data yet. Metrics will appear as workflows run.</p>
+              <p className="text-sm text-muted-foreground">{analyticsData?.totalExecutions ? 'View execution logs below for detailed step-by-step data.' : 'No execution data yet. Metrics will appear as workflows run.'}</p>
             </div>
           </CardContent>
         </Card>
@@ -761,7 +907,7 @@ const WorkflowBuilder = () => {
               <select
                 value={templateFilter}
                 onChange={(e) => setTemplateFilter(e.target.value)}
-                className="px-3 py-2 border rounded-md text-sm bg-background"
+                className="px-3 py-2 border rounded-md text-sm bg-background text-foreground dark:border-gray-600"
               >
                 <option value="all">All Templates</option>
                 <option value="email">Email</option>
@@ -789,7 +935,7 @@ const WorkflowBuilder = () => {
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                         <template.icon className="h-5 w-5 text-primary" />
                       </div>
-                      <Badge variant="secondary" className="text-xs">{template.uses} uses</Badge>
+                      <Badge variant="secondary" className="text-xs capitalize">{template.category}</Badge>
                     </div>
                     <CardTitle className="text-sm leading-tight">{template.name}</CardTitle>
                     <CardDescription className="text-xs mt-1 mb-2">{template.desc}</CardDescription>
@@ -860,8 +1006,8 @@ const WorkflowBuilder = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No executions yet</p>
+            <div className="text-2xl font-bold">{analyticsData?.totalExecutions ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{analyticsData?.totalExecutions ? `${analyticsData.totalExecutions} total` : 'No executions yet'}</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow">
@@ -872,8 +1018,8 @@ const WorkflowBuilder = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">—</div>
-            <p className="text-xs text-muted-foreground">No data yet</p>
+            <div className="text-2xl font-bold">{analyticsData?.successRate != null ? `${Math.round(analyticsData.successRate)}%` : '—'}</div>
+            <p className="text-xs text-muted-foreground">{analyticsData?.successRate != null ? (analyticsData.successRate >= 95 ? 'Excellent!' : 'Based on all runs') : 'No data yet'}</p>
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={() => setShowLogsPanel(!showLogsPanel)}>
@@ -1022,10 +1168,51 @@ const WorkflowBuilder = () => {
                     Auto-Arrange
                   </Button>
                 )}
+                {undoStack.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUndo}
+                    title="Undo last deletion"
+                    className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950"
+                  >
+                    <Undo2 className="h-4 w-4 mr-2" />
+                    Undo
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent>
+            {/* Unconfigured Nodes Summary */}
+            {(() => {
+              const unconfigured = nodes.filter(n => {
+                if (!n.config) return true;
+                const meaningful = Object.entries(n.config).filter(([key, val]) => {
+                  if (key === 'triggerType' || key === 'actionType' || key === 'conditionType' || key === 'delayMode' || key === 'label' || key === '_nodeLabel') return false;
+                  if (val === '' || val === null || val === undefined) return false;
+                  return true;
+                });
+                return meaningful.length === 0;
+              });
+              if (unconfigured.length === 0) return null;
+              return (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                        {unconfigured.length} node{unconfigured.length > 1 ? 's' : ''} need{unconfigured.length === 1 ? 's' : ''} configuration
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                        {unconfigured.map(n => n.label).join(', ')}
+                        {' — '}click a node to configure it
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             {/* Validation Warnings */}
             {validationErrors.length > 0 && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1040,7 +1227,6 @@ const WorkflowBuilder = () => {
                     </ul>
                   </div>
                 </div>
-<<<<<<< Updated upstream
               </div>
             )}
             <WorkflowCanvas
@@ -1050,101 +1236,17 @@ const WorkflowBuilder = () => {
               onNodeDelete={handleNodeDelete}
               onNodeEdit={handleNodeEdit}
               onNodeMove={handleNodeMove}
+              onNodeDuplicate={handleDuplicateNode}
+              onNodeMoveUp={(id) => handleMoveNode(id, 'up')}
+              onNodeMoveDown={(id) => handleMoveNode(id, 'down')}
               isDraggingOver={isDraggingOver}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               mode={interactionMode}
               onTemplateSelect={importTemplate}
+              deleteConfirmNodeId={showDeleteConfirm}
             />
-=======
-              ) : (
-                <div className="space-y-4">
-                  {nodes.map((node, index) => (
-                    <div key={node.id} className="space-y-2">
-                      <Card 
-                        className={`cursor-pointer transition-all ${
-                          selectedNode?.id === node.id ? 'border-primary bg-primary/5 shadow-md' : ''
-                        } ${
-                          workflowStatus === 'running' ? 'hover:shadow-lg' : ''
-                        }`}
-                        onClick={() => setSelectedNode(node)}
-                      >
-                        <CardHeader className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`relative p-2 rounded-lg ${
-                                node.type === 'trigger' ? 'bg-blue-100 text-blue-600' :
-                                node.type === 'action' ? 'bg-green-100 text-green-600' :
-                                node.type === 'condition' ? 'bg-yellow-100 text-yellow-600' :
-                                'bg-purple-100 text-purple-600'
-                              }`}>
-                                {node.type === 'trigger' && <Zap className="h-4 w-4" />}
-                                {node.type === 'action' && <Settings className="h-4 w-4" />}
-                                {node.type === 'condition' && <GitBranch className="h-4 w-4" />}
-                                {node.type === 'delay' && <Clock className="h-4 w-4" />}
-                                {/* Running indicator on node icon */}
-                                {workflowStatus === 'running' && (
-                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-medium">{node.label}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{node.type}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                Step {index + 1}
-                              </Badge>
-                              {workflowStatus === 'running' && (
-                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
-                                  <Activity className="h-3 w-3 mr-1" />
-                                  Live
-                                </Badge>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeNode(node.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                      {index < nodes.length - 1 && (
-                        <div className="flex flex-col items-center py-2">
-                          {/* Enhanced Connection Line */}
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="w-0.5 h-4 bg-gradient-to-b from-primary/60 to-primary/20" />
-                            <div className="relative">
-                              <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
-                                <ArrowRight className="h-4 w-4 text-primary rotate-90" />
-                              </div>
-                              {/* Animated pulse for running workflows */}
-                              {workflowStatus === 'running' && (
-                                <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping" />
-                              )}
-                            </div>
-                            <div className="w-0.5 h-4 bg-gradient-to-b from-primary/20 to-primary/60" />
-                          </div>
-                          {/* Step connector label */}
-                          <span className="text-xs text-muted-foreground font-medium">
-                            Then
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
->>>>>>> Stashed changes
           </CardContent>
         </Card>
 
@@ -1160,10 +1262,10 @@ const WorkflowBuilder = () => {
                   <MousePointer2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                 )}
                 <div>
-                  <h4 className={`text-sm font-semibold mb-1 ${interactionMode === 'drag' ? 'text-blue-900' : 'text-green-900'}`}>
+                  <h4 className={`text-sm font-semibold mb-1 ${interactionMode === 'drag' ? 'text-blue-900 dark:text-blue-200' : 'text-green-900 dark:text-green-200'}`}>
                     {interactionMode === 'drag' ? '🎯 Drag & Drop Mode Active' : '✨ Click Mode Active'}
                   </h4>
-                  <p className={`text-xs leading-relaxed ${interactionMode === 'drag' ? 'text-blue-700' : 'text-green-700'}`}>
+                  <p className={`text-xs leading-relaxed ${interactionMode === 'drag' ? 'text-blue-700 dark:text-blue-300' : 'text-green-700 dark:text-green-300'}`}>
                     {interactionMode === 'drag' 
                       ? 'Drag components from below onto the canvas. You can also drag nodes to reposition them and click to configure.'
                       : 'Simply click any component below to instantly add it to your workflow! The component library stays open for quick building.'}
@@ -1190,7 +1292,7 @@ const WorkflowBuilder = () => {
           )}
 
           {/* Component Library */}
-          {showComponentLibrary && !showConfigPanel && (
+          {showComponentLibrary && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1220,7 +1322,7 @@ const WorkflowBuilder = () => {
           )}
 
           {/* Show Component Library Toggle */}
-          {!showComponentLibrary && !showConfigPanel && (
+          {!showComponentLibrary && (
             <Button
               onClick={() => setShowComponentLibrary(true)}
               className="w-full"
@@ -1248,7 +1350,7 @@ const WorkflowBuilder = () => {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Test with Sample Data</label>
-                  <Input placeholder="Lead ID or Email" />
+                  <Input placeholder="Lead ID or Email" value={testInput} onChange={(e) => setTestInput(e.target.value)} />
                 </div>
                 <Button 
                   className="w-full" 
@@ -1271,14 +1373,20 @@ const WorkflowBuilder = () => {
                   <Button variant="outline" size="sm" className="w-full" onClick={async () => {
                     try {
                       const duplicatedNodes = nodes.map(n => ({ ...n, id: `${n.id}-copy-${Date.now()}` }))
-                      const triggerNodes = duplicatedNodes.filter(n => n.type === 'trigger')
-                      const conditionNodes = duplicatedNodes.filter(n => n.type === 'condition')
-                      const actionNodes = duplicatedNodes.filter(n => n.type === 'action')
+                      const triggerNode = duplicatedNodes.find(n => n.type === 'trigger')
+                      const actionNodes = duplicatedNodes.filter(n => n.type !== 'trigger')
                       const workflowData = {
                         name: `${workflowName} (Copy)`,
-                        trigger: triggerNodes.length > 0 ? { type: triggerNodes[0].type, config: { ...triggerNodes[0].config, label: triggerNodes[0].label } } : { type: 'manual', config: {} },
-                        conditions: conditionNodes.map(n => ({ field: n.label, operator: 'equals', value: '', ...n.config })),
-                        actions: actionNodes.map(n => ({ type: n.type, config: { ...n.config, label: n.label } })),
+                        description: `Duplicated workflow with ${duplicatedNodes.length} nodes`,
+                        triggerType: triggerNode?.config?.triggerType || 'MANUAL',
+                        triggerData: triggerNode?.config || {},
+                        actions: actionNodes.map(n => {
+                          let actionType: string;
+                          if (n.type === 'delay') actionType = 'DELAY';
+                          else if (n.type === 'condition') actionType = 'CONDITION';
+                          else actionType = (n.config?.actionType as string) || 'UNKNOWN';
+                          return { type: actionType, config: { ...n.config, label: n.label } };
+                        }),
                         nodes: duplicatedNodes,
                         status: 'draft' as const
                       }
@@ -1286,7 +1394,7 @@ const WorkflowBuilder = () => {
                       const newId = response?.data?.id || response?.id
                       toast.success('Workflow duplicated successfully')
                       if (newId) {
-                        window.location.search = `?id=${newId}`
+                        navigate(`/workflows/builder?id=${newId}`);
                       }
                     } catch (error) {
                       logger.error('Failed to duplicate workflow:', error)
@@ -1297,7 +1405,24 @@ const WorkflowBuilder = () => {
                     Duplicate Workflow
                   </Button>
                   <Button variant="outline" size="sm" className="w-full" onClick={() => {
-                    const exportData = { name: workflowName, nodes, status: workflowStatus, totalNodes: nodes.length, exportedAt: new Date().toISOString() }
+                    const triggerNode = nodes.find(n => n.type === 'trigger');
+                    const actionNodes = nodes.filter(n => n.type !== 'trigger');
+                    const exportData = {
+                      name: workflowName,
+                      triggerType: triggerNode?.config?.triggerType || 'MANUAL',
+                      triggerData: triggerNode?.config || {},
+                      actions: actionNodes.map(n => {
+                        let actionType: string;
+                        if (n.type === 'delay') actionType = 'DELAY';
+                        else if (n.type === 'condition') actionType = 'CONDITION';
+                        else actionType = (n.config?.actionType as string) || 'UNKNOWN';
+                        return { type: actionType, config: { ...n.config, label: n.label } };
+                      }),
+                      nodes,
+                      status: workflowStatus,
+                      totalNodes: nodes.length,
+                      exportedAt: new Date().toISOString()
+                    }
                     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
                     const url = URL.createObjectURL(blob)
                     const a = document.createElement('a')
@@ -1350,19 +1475,9 @@ const WorkflowBuilder = () => {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Execution Logs</CardTitle>
-<<<<<<< Updated upstream
                 <CardDescription>Per-step execution history for recent runs</CardDescription>
               </div>
               <div className="flex gap-2">
-=======
-                <CardDescription>Recent workflow execution history</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
->>>>>>> Stashed changes
                 <Button variant="ghost" size="sm" onClick={() => setShowLogsPanel(false)}>
                   Close
                 </Button>
@@ -1370,7 +1485,6 @@ const WorkflowBuilder = () => {
             </div>
           </CardHeader>
           <CardContent>
-<<<<<<< Updated upstream
             {executionLogs.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">No executions recorded yet.</p>
             ) : (
@@ -1397,17 +1511,6 @@ const WorkflowBuilder = () => {
                         {log.duration > 0 && <Badge variant="outline">{log.duration}s</Badge>}
                         <span>{new Date(log.timestamp).toLocaleString()}</span>
                       </div>
-=======
-            <div className="space-y-3">
-              {executionLogs.map((log) => (
-                <div key={log.id} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {log.status === 'success' && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                      {log.status === 'failed' && <XCircle className="h-4 w-4 text-red-600" />}
-                      {log.status === 'running' && <Activity className="h-4 w-4 text-blue-600 animate-pulse" />}
-                      <span className="font-medium capitalize">{log.status}</span>
->>>>>>> Stashed changes
                     </div>
 
                     {/* Per-step detail */}
@@ -1454,21 +1557,9 @@ const WorkflowBuilder = () => {
                       </div>
                     )}
                   </div>
-<<<<<<< Updated upstream
                 ))}
               </div>
             )}
-=======
-                  <p className="text-sm text-muted-foreground mb-1">{log.details}</p>
-                  <p className="text-xs text-muted-foreground">{log.timestamp}</p>
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" className="w-full mt-4">
-              <Terminal className="h-4 w-4 mr-2" />
-              View Full Debug Console
-            </Button>
->>>>>>> Stashed changes
           </CardContent>
         </Card>
       )}

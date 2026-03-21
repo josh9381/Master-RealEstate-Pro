@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger'
-import { FileText, RefreshCw, Mail, MessageSquare, Phone, Eye, Plus, Type, X, Zap, CheckCircle2, ChevronLeft, ChevronRight, Settings, ChevronDown } from 'lucide-react';
+import { FileText, RefreshCw, Mail, MessageSquare, Phone, Eye, Plus, X, Zap, CheckCircle2, ChevronLeft, ChevronRight, Settings, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';

@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Zap, Plus, Clock, Target, CheckCircle, X, Edit2, Trash2, Pause, Play, Filter as FilterIcon, ArrowUpDown, Download, RefreshCw, Mail, Bell, TrendingUp } from 'lucide-react';
+import { Zap, Plus, Clock, Target, CheckCircle, X, Edit2, Trash2, Pause, Play, Filter as FilterIcon, ArrowUpDown, Download, RefreshCw, Mail, Bell, TrendingUp, Search } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from '@/hooks/useToast';
 import { workflowsApi } from '@/lib/api';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { WorkflowsTabNav } from '@/components/workflows/WorkflowsTabNav';
 import type { AutomationRule, RawWorkflow, WorkflowAction } from '@/types';
 import { formatRate } from '@/lib/metricsCalculator';
 
@@ -56,6 +57,7 @@ const AutomationRules = () => {
     'SCORE_THRESHOLD': 'Score Threshold',
     'TAG_ADDED': 'Tag Added',
     'MANUAL': 'Manual',
+    'WEBHOOK': 'Webhook',
   };
   const actionLabelsMap: Record<string, string> = {
     'SEND_EMAIL': 'Send Email',
@@ -107,11 +109,13 @@ const AutomationRules = () => {
 
       const stats = statsResponse?.data ? {
         activeWorkflows: statsResponse.data.activeWorkflows || 0,
+        totalWorkflows: (statsResponse.data.activeWorkflows || 0) + (statsResponse.data.inactiveWorkflows || 0),
         totalExecutions: statsResponse.data.totalExecutions || 0,
         successRate: statsResponse.data.successRate || 0,
-        timeSaved: Math.round((statsResponse.data.successfulExecutions || 0) * 0.05)
+        timeSaved: Math.round((statsResponse.data.successfulExecutions || 0) * 3 / 60) // ~3 min per automated execution
       } : {
         activeWorkflows: 0,
+        totalWorkflows: 0,
         totalExecutions: 0,
         successRate: 0,
         timeSaved: 0
@@ -124,13 +128,27 @@ const AutomationRules = () => {
   // Local override for client-side sorting / optimistic inserts (cleared on refetch)
   const [automationRulesLocal, setAutomationRulesLocal] = useState<AutomationRule[] | null>(null);
   const automationRules = automationRulesLocal ?? rulesData?.automationRules ?? [];
-  const stats = rulesData?.stats ?? { activeWorkflows: 0, totalExecutions: 0, successRate: 0, timeSaved: 0 };
+  const stats = rulesData?.stats ?? { activeWorkflows: 0, totalWorkflows: 0, totalExecutions: 0, successRate: 0, timeSaved: 0 };
 
-  // Clear local override when query data changes (refetch completes)
+  // Re-apply sort when query data changes (refetch completes)
   useEffect(() => {
-    setAutomationRulesLocal(null);
-  }, [rulesData]);
-
+    if (sortBy !== 'name' && rulesData?.automationRules) {
+      // Preserve current sort order after refetch
+      const sorted = [...rulesData.automationRules].sort((a, b) => {
+        if (sortBy === 'executions') {
+          return (b.executions || 0) - (a.executions || 0);
+        } else {
+          if (a.lastRun === 'Never' && b.lastRun === 'Never') return 0;
+          if (a.lastRun === 'Never') return 1;
+          if (b.lastRun === 'Never') return -1;
+          return String(b.lastRun).localeCompare(String(a.lastRun));
+        }
+      });
+      setAutomationRulesLocal(sorted);
+    } else {
+      setAutomationRulesLocal(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRefresh = () => {
     setRefreshing(true);
     refetch().finally(() => setRefreshing(false));
@@ -155,6 +173,11 @@ const AutomationRules = () => {
   };
 
   const deleteRule = async (ruleId: number | string) => {
+    const rule = automationRules.find(r => r.id === ruleId);
+    if (rule?.status === 'active') {
+      toast.error('Cannot delete an active rule. Please pause it first.');
+      return;
+    }
     setDeleteRuleId(ruleId);
     setShowDeleteConfirm(true);
   };
@@ -204,10 +227,19 @@ const AutomationRules = () => {
       const actionLabel = bulkAction === 'activate' ? 'activated' : bulkAction === 'pause' ? 'paused' : 'deleted';
       
       if (bulkAction === 'delete') {
-        // Delete selected workflows
-        await Promise.all(
-          selectedRules.map(ruleId => workflowsApi.deleteWorkflow(ruleId.toString()))
-        );
+        // Filter out active workflows before deletion
+        const activeIds = automationRules
+          .filter(r => selectedRules.includes(r.id) && r.status === 'active')
+          .map(r => r.id);
+        const deletableIds = selectedRules.filter(id => !activeIds.includes(id));
+        if (activeIds.length > 0) {
+          toast.warning(`${activeIds.length} active workflow(s) must be paused before deletion. Deleting ${deletableIds.length} paused workflow(s).`);
+        }
+        if (deletableIds.length > 0) {
+          await Promise.all(
+            deletableIds.map(ruleId => workflowsApi.deleteWorkflow(ruleId.toString()))
+          );
+        }
       } else {
         // Activate or pause workflows
         const isActive = bulkAction === 'activate';
@@ -249,6 +281,7 @@ const AutomationRules = () => {
         'SCORE_THRESHOLD': 'Score Threshold',
         'TAG_ADDED': 'Tag Added',
         'MANUAL': 'Manual',
+        'WEBHOOK': 'Webhook',
       };
       const actionLabels: Record<string, string> = {
         'SEND_EMAIL': 'Send Email',
@@ -265,8 +298,9 @@ const AutomationRules = () => {
         name: newRuleName,
         description: newRuleDescription || 'No description',
         triggerType: newRuleTrigger,
+        triggerData: {},
         actions: [{ type: newRuleAction, config: {} }],
-        isActive: true,
+        isActive: false,
       };
       
       await workflowsApi.createWorkflow(newRuleData);
@@ -277,13 +311,13 @@ const AutomationRules = () => {
         description: newRuleDescription || 'No description',
         trigger: triggerLabels[newRuleTrigger] || newRuleTrigger,
         actions: [actionLabels[newRuleAction] || newRuleAction],
-        status: 'active' as const,
+        status: 'paused' as const,
         executions: 0,
         lastRun: 'Never',
       };
       
       setAutomationRulesLocal([...automationRules, newRule]);
-      toast.success('Rule created successfully');
+      toast.success('Rule created (paused). Review and activate when ready.');
       setShowCreateModal(false);
       setNewRuleName('');
       setNewRuleDescription('');
@@ -299,23 +333,22 @@ const AutomationRules = () => {
     }
   };
 
+  const templateConfigs: Record<string, { trigger: string; action: string; description: string }> = {
+    'lead nurturing': { trigger: 'LEAD_CREATED', action: 'SEND_EMAIL', description: 'Automatically nurture leads with email sequences' },
+    'task assignment': { trigger: 'LEAD_STATUS_CHANGED', action: 'CREATE_TASK', description: 'Assign tasks based on lead status or activity' },
+    'email notifications': { trigger: 'LEAD_CREATED', action: 'SEND_EMAIL', description: 'Send alerts when specific events occur' },
+    'lead scoring': { trigger: 'SCORE_THRESHOLD', action: 'SEND_EMAIL', description: 'Update lead scores based on engagement' },
+    'follow-up reminders': { trigger: 'LEAD_STATUS_CHANGED', action: 'CREATE_TASK', description: 'Create reminders for inactive leads' },
+    'status updates': { trigger: 'LEAD_STATUS_CHANGED', action: 'SEND_EMAIL', description: 'Auto-update status based on criteria' },
+  };
+
   const applyTemplate = (templateName: string) => {
+    const config = templateConfigs[templateName.toLowerCase()] || { trigger: 'LEAD_CREATED', action: 'SEND_EMAIL', description: '' };
     setShowCreateModal(true);
     setNewRuleName(templateName);
-    // Set sensible defaults based on template name
-    if (templateName.toLowerCase().includes('welcome') || templateName.toLowerCase().includes('new lead')) {
-      setNewRuleTrigger('LEAD_CREATED');
-      setNewRuleAction('SEND_EMAIL');
-    } else if (templateName.toLowerCase().includes('follow')) {
-      setNewRuleTrigger('LEAD_STATUS_CHANGED');
-      setNewRuleAction('CREATE_TASK');
-    } else if (templateName.toLowerCase().includes('score') || templateName.toLowerCase().includes('hot')) {
-      setNewRuleTrigger('SCORE_THRESHOLD');
-      setNewRuleAction('SEND_EMAIL');
-    } else {
-      setNewRuleTrigger('LEAD_CREATED');
-      setNewRuleAction('SEND_EMAIL');
-    }
+    setNewRuleDescription(config.description);
+    setNewRuleTrigger(config.trigger);
+    setNewRuleAction(config.action);
     toast.success(`Applied template: ${templateName}`);
   };
 
@@ -413,7 +446,7 @@ const AutomationRules = () => {
               <div>
                 <label className="text-sm font-medium mb-2 block">Trigger</label>
                 <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   value={newRuleTrigger}
                   onChange={(e) => setNewRuleTrigger(e.target.value)}
                 >
@@ -426,12 +459,13 @@ const AutomationRules = () => {
                   <option value="SCORE_THRESHOLD">Score Threshold</option>
                   <option value="TAG_ADDED">Tag Added</option>
                   <option value="MANUAL">Manual Trigger</option>
+                  <option value="WEBHOOK">Webhook</option>
                 </select>
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Action</label>
                 <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   value={newRuleAction}
                   onChange={(e) => setNewRuleAction(e.target.value)}
                 >
@@ -473,6 +507,9 @@ const AutomationRules = () => {
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-md">
+              <Zap className="h-5 w-5 text-white" />
+            </div>
             <h1 className="text-3xl font-bold">Automation Rules</h1>
             <Badge variant="outline" className="text-xs">Smart Automation</Badge>
           </div>
@@ -489,23 +526,29 @@ const AutomationRules = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button onClick={() => setShowCreateModal(true)} className="shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
             <Plus className="h-4 w-4 mr-2" />
             Create Rule
           </Button>
         </div>
       </div>
 
+      {/* Sub-Navigation Tabs */}
+      <WorkflowsTabNav />
+
       {/* Search Bar */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <Input
-              placeholder="Search workflows by name or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search workflows by name or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
             {searchQuery && (
               <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}>
                 <X className="h-4 w-4 mr-1" />
@@ -552,63 +595,66 @@ const AutomationRules = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-green-500 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Rules</CardTitle>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Rules</CardTitle>
+            <div className="p-2.5 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md">
+              <Zap className="h-5 w-5 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeWorkflows}</div>
-            <p className="text-xs text-green-600 dark:text-green-400 font-medium">Running now</p>
-            <div className="mt-2 h-1 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-full bg-green-600 animate-pulse" style={{ width: '100%' }} />
+            <div className="text-3xl font-bold bg-gradient-to-br from-green-600 to-green-800 bg-clip-text text-transparent">{stats.activeWorkflows}</div>
+            <p className="text-xs text-green-600 dark:text-green-400 font-semibold mt-1">Running now</p>
+            <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
+              <div 
+                className={`h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-500 rounded-full${stats.activeWorkflows > 0 ? ' animate-pulse' : ''}`}
+                style={{ width: `${stats.totalWorkflows > 0 ? (stats.activeWorkflows / stats.totalWorkflows) * 100 : 0}%` }}
+              />
             </div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Executions Today</CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Executions</CardTitle>
+            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">
+              <Target className="h-5 w-5 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalExecutions.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total executions</p>
+            <div className="text-3xl font-bold bg-gradient-to-br from-blue-600 to-blue-800 bg-clip-text text-transparent">{stats.totalExecutions.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total executions</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50/50 to-transparent dark:from-emerald-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
-              <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</CardTitle>
+            <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-md">
+              <CheckCircle className="h-5 w-5 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatRate(stats.successRate)}%</div>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            <div className="text-3xl font-bold bg-gradient-to-br from-emerald-600 to-emerald-800 bg-clip-text text-transparent">{formatRate(stats.successRate)}%</div>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
               {stats.successRate >= 95 ? 'Excellent!' : stats.successRate >= 80 ? 'Good' : 'Needs attention'}
             </p>
-            <div className="mt-2 h-1 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
               <div 
-                className="h-full bg-emerald-600 transition-all"
+                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500 rounded-full"
                 style={{ width: `${stats.successRate}%` }}
               />
             </div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Time Saved</CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Est. Time Saved</CardTitle>
+            <div className="p-2.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md">
+              <Clock className="h-5 w-5 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.timeSaved}h</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-3xl font-bold bg-gradient-to-br from-purple-600 to-purple-800 bg-clip-text text-transparent">~{stats.timeSaved}h</div>
+            <p className="text-xs text-muted-foreground mt-1">Based on ~3 min per automation</p>
           </CardContent>
         </Card>
       </div>
@@ -625,10 +671,20 @@ const AutomationRules = () => {
               <Button variant="outline" size="sm" onClick={handleFilter}>
                 <FilterIcon className="h-4 w-4 mr-2" />
                 Filter
+                {filterStatus !== 'all' && (
+                  <Badge variant="default" className="ml-1.5 h-5 px-1.5 text-xs">
+                    {filterStatus}
+                  </Badge>
+                )}
               </Button>
               <Button variant="outline" size="sm" onClick={handleSort}>
                 <ArrowUpDown className="h-4 w-4 mr-2" />
                 Sort
+                {sortBy !== 'name' && (
+                  <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
+                    {sortBy === 'executions' ? 'Runs' : 'Recent'}
+                  </Badge>
+                )}
               </Button>
             </div>
           </div>
@@ -715,9 +771,13 @@ const AutomationRules = () => {
                 type="checkbox"
                 checked={selectedRules.length === automationRules.length && automationRules.length > 0}
                 onChange={toggleSelectAll}
-                className="h-4 w-4"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer accent-primary"
               />
-              <label className="text-sm font-medium">Select All</label>
+              <label className="text-sm font-medium">
+                {filterStatus !== 'all'
+                  ? `Select all ${filteredRules.length} visible rules`
+                  : `Select all (${automationRules.length})`}
+              </label>
             </div>
           )}
 
@@ -758,33 +818,33 @@ const AutomationRules = () => {
                       type="checkbox"
                       checked={selectedRules.includes(rule.id)}
                       onChange={() => toggleSelectRule(rule.id)}
-                      className="h-4 w-4 mt-1"
+                      className="h-4 w-4 mt-1 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer accent-primary"
                     />
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                      <h4 className="font-semibold">{rule.name}</h4>
-                      <Badge variant={rule.status === 'active' ? 'default' : 'secondary'}>
-                        {rule.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">{rule.description}</p>
-                    <div className="flex items-center space-x-4 text-sm">
-                      <div className="flex items-center space-x-1">
-                        <Target className="h-4 w-4 text-blue-600" />
-                        <span className="text-muted-foreground">Trigger:</span>
-                        <span className="font-medium">{rule.trigger}</span>
+                        <h4 className="font-semibold">{rule.name}</h4>
+                        <Badge variant={rule.status === 'active' ? 'default' : 'secondary'}>
+                          {rule.status}
+                        </Badge>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Zap className="h-4 w-4 text-green-600" />
-                        <span className="text-muted-foreground">Actions:</span>
-                        <span className="font-medium">{rule.actions.join(', ')}</span>
+                      <p className="text-sm text-muted-foreground mb-3">{rule.description}</p>
+                      <div className="flex items-center space-x-4 text-sm">
+                        <div className="flex items-center space-x-1">
+                          <Target className="h-4 w-4 text-blue-600" />
+                          <span className="text-muted-foreground">Trigger:</span>
+                          <span className="font-medium">{rule.trigger}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Zap className="h-4 w-4 text-green-600" />
+                          <span className="text-muted-foreground">Actions:</span>
+                          <span className="font-medium">{rule.actions.join(', ')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
+                        <span>{rule.executions} executions</span>
+                        <span>Last run: {rule.lastRun}</span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
-                      <span>{rule.executions} executions</span>
-                      <span>Last run: {rule.lastRun}</span>
-                    </div>
-                  </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     <Button 
@@ -816,6 +876,8 @@ const AutomationRules = () => {
                       variant="ghost" 
                       size="sm"
                       onClick={() => deleteRule(rule.id)}
+                      aria-label={`Delete ${rule.name}`}
+                      title="Delete rule"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -891,6 +953,7 @@ const AutomationRules = () => {
               <div
                 key={template.name}
                 className="group p-5 border rounded-lg cursor-pointer hover:border-primary hover:shadow-lg transition-all bg-white dark:bg-gray-800"
+                onClick={() => applyTemplate(template.name)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className={`p-2.5 ${{
@@ -911,7 +974,7 @@ const AutomationRules = () => {
                   }[template.color] || 'text-gray-600 dark:text-gray-400'}`} />
                   </div>
                   <Badge variant="secondary" className="text-xs">
-                    {template.uses} uses
+                    Template
                   </Badge>
                 </div>
                 <h4 className="font-semibold mb-2 group-hover:text-primary transition-colors">{template.name}</h4>
@@ -942,10 +1005,14 @@ const AutomationRules = () => {
             {[
               { name: 'Lead Created', description: 'When a new lead is added', icon: Plus },
               { name: 'Status Changed', description: 'When lead status is updated', icon: Target },
-              { name: 'Email Opened', description: 'When recipient opens email', icon: CheckCircle },
-              { name: 'Link Clicked', description: 'When link in email is clicked', icon: Zap },
-              { name: 'Form Submitted', description: 'When web form is submitted', icon: CheckCircle },
+              { name: 'Email Opened', description: 'When recipient opens email', icon: Mail },
+              { name: 'Score Threshold', description: 'When lead score crosses a threshold', icon: TrendingUp },
+              { name: 'Tag Added', description: 'When a tag is added to a lead', icon: CheckCircle },
+              { name: 'Lead Assigned', description: 'When a lead is assigned to a user', icon: Zap },
+              { name: 'Campaign Completed', description: 'When a campaign finishes', icon: Target },
               { name: 'Schedule', description: 'At specific date/time or interval', icon: Clock },
+              { name: 'Manual', description: 'Triggered manually by a user', icon: Zap },
+              { name: 'Webhook', description: 'Triggered by an external HTTP request', icon: Bell },
             ].map((trigger) => (
               <div key={trigger.name} className="flex items-start space-x-3 p-3 border rounded-lg">
                 <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-blue-100">
@@ -970,18 +1037,34 @@ const AutomationRules = () => {
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2">
             {[
-              { name: 'Send Email', description: 'Send an email to lead or team member' },
-              { name: 'Create Task', description: 'Create a new task with details' },
-              { name: 'Assign User', description: 'Assign lead to a team member' },
-              { name: 'Update Status', description: 'Change lead status' },
-              { name: 'Add Tag', description: 'Add a tag to the lead' },
-              { name: 'Update Score', description: 'Modify lead score' },
-              { name: 'Send Notification', description: 'Send in-app notification' },
-              { name: 'Webhook', description: 'Trigger external webhook' },
+              { name: 'Send Email', description: 'Send an email to lead or team member', icon: Mail, color: 'blue' },
+              { name: 'Create Task', description: 'Create a new task with details', icon: CheckCircle, color: 'green' },
+              { name: 'Assign User', description: 'Assign lead to a team member', icon: Target, color: 'purple' },
+              { name: 'Update Status', description: 'Change lead status', icon: TrendingUp, color: 'orange' },
+              { name: 'Add Tag', description: 'Add a tag to the lead', icon: Plus, color: 'pink' },
+              { name: 'Update Score', description: 'Modify lead score', icon: TrendingUp, color: 'indigo' },
+              { name: 'Send Notification', description: 'Send in-app notification', icon: Bell, color: 'yellow' },
+              { name: 'Webhook', description: 'Trigger external webhook', icon: Zap, color: 'green' },
             ].map((action) => (
               <div key={action.name} className="flex items-start space-x-3 p-3 border rounded-lg">
-                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-green-100">
-                  <Zap className="h-5 w-5 text-green-600" />
+                <div className={`flex items-center justify-center h-10 w-10 rounded-lg ${{
+                  blue: 'bg-blue-100 dark:bg-blue-900',
+                  green: 'bg-green-100 dark:bg-green-900',
+                  purple: 'bg-purple-100 dark:bg-purple-900',
+                  orange: 'bg-orange-100 dark:bg-orange-900',
+                  pink: 'bg-pink-100 dark:bg-pink-900',
+                  indigo: 'bg-indigo-100 dark:bg-indigo-900',
+                  yellow: 'bg-yellow-100 dark:bg-yellow-900',
+                }[action.color] || 'bg-green-100 dark:bg-green-900'}`}>
+                  <action.icon className={`h-5 w-5 ${{
+                    blue: 'text-blue-600 dark:text-blue-400',
+                    green: 'text-green-600 dark:text-green-400',
+                    purple: 'text-purple-600 dark:text-purple-400',
+                    orange: 'text-orange-600 dark:text-orange-400',
+                    pink: 'text-pink-600 dark:text-pink-400',
+                    indigo: 'text-indigo-600 dark:text-indigo-400',
+                    yellow: 'text-yellow-600 dark:text-yellow-400',
+                  }[action.color] || 'text-green-600 dark:text-green-400'}`} />
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm">{action.name}</h4>
@@ -1000,9 +1083,39 @@ const AutomationRules = () => {
           <CardDescription>Latest automation rule activity</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-24 text-muted-foreground">
-            No execution data yet. Executions will appear here as your automation rules run.
-          </div>
+          {automationRules.length > 0 ? (
+            <div className="space-y-3">
+              {automationRules
+                .filter(r => r.lastRun && r.lastRun !== 'Never')
+                .sort((a, b) => new Date(b.lastRun).getTime() - new Date(a.lastRun).getTime())
+                .slice(0, 5)
+                .map(rule => (
+                  <div key={rule.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${rule.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <div>
+                        <p className="text-sm font-medium">{rule.name}</p>
+                        <p className="text-xs text-muted-foreground">{rule.trigger} → {rule.actions.join(', ')}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">{rule.lastRun}</p>
+                      <p className="text-xs text-muted-foreground">{rule.executions} executions</p>
+                    </div>
+                  </div>
+                ))
+              }
+              {automationRules.filter(r => r.lastRun && r.lastRun !== 'Never').length === 0 && (
+                <div className="flex items-center justify-center h-24 text-muted-foreground">
+                  No execution data yet. Executions will appear here as your automation rules run.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-24 text-muted-foreground">
+              No execution data yet. Executions will appear here as your automation rules run.
+            </div>
+          )}
         </CardContent>
       </Card>
         </>

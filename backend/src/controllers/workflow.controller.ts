@@ -93,7 +93,8 @@ export const createWorkflow = async (req: Request, res: Response) => {
       description,
       triggerType,
       triggerData: triggerData || {},
-      actions,
+      // Store actions in the format the execution engine expects: { conditions: [], actions: [...] }
+      actions: { conditions: [], actions: Array.isArray(actions) ? actions : [] },
       isActive: isActive !== undefined ? isActive : false, // Default to false if not specified
       maxRetries: maxRetries != null ? Math.min(Math.max(Number(maxRetries), 1), 3) : 3,
       notifyOnFailure: notifyOnFailure !== undefined ? Boolean(notifyOnFailure) : true,
@@ -133,7 +134,8 @@ export const updateWorkflow = async (req: Request, res: Response) => {
       ...(description !== undefined && { description }),
       ...(triggerType && { triggerType }),
       ...(triggerData !== undefined && { triggerData }),
-      ...(actions && { actions }),
+      // Store actions in the format the execution engine expects: { conditions: [], actions: [...] }
+      ...(actions && { actions: { conditions: [], actions: Array.isArray(actions) ? actions : [] } }),
       ...(isActive !== undefined && { isActive }),
       ...(maxRetries != null && { maxRetries: Math.min(Math.max(Number(maxRetries), 1), 3) }),
       ...(notifyOnFailure !== undefined && { notifyOnFailure: Boolean(notifyOnFailure) }),
@@ -309,6 +311,10 @@ export const getWorkflowExecutions = async (req: Request, res: Response) => {
       orderBy: { startedAt: 'desc' },
       skip,
       take: limitNum,
+      include: {
+        steps: { orderBy: { stepIndex: 'asc' } },
+        lead: { select: { firstName: true, lastName: true, email: true } },
+      },
     }),
     prisma.workflowExecution.count({ where: { workflowId: id } }),
   ])

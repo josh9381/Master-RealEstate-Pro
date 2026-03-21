@@ -30,7 +30,7 @@ const navigation = [
   { name: 'AI Hub', href: '/ai', icon: Brain },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Communications', href: '/communication/inbox', icon: MessageSquare },
-  { name: 'Automation', href: '/workflows', icon: Zap },
+  { name: 'Automations', href: '/workflows', icon: Zap },
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Help', href: '/help', icon: HelpCircle },
 ]
@@ -47,6 +47,7 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { user, logout, isAdmin: _isAdmin, isManager: _isManager, getSubscriptionTier } = useAuthStore()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 

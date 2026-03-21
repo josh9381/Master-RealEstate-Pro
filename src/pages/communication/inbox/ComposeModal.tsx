@@ -4,10 +4,14 @@ import {
   MessageSquare,
   Phone,
   Send,
+  FileText,
+  Sparkles,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { AIComposer } from '@/components/ai/AIComposer'
+import { ModalErrorBoundary } from '@/components/ModalErrorBoundary'
 import { calculateSMSSegments } from '@/utils/smsSegments'
 import type { InboxLead } from './types'
 
@@ -21,11 +25,13 @@ interface ComposeModalProps {
   composeBody: string
   composeLeadId: string
   leads: InboxLead[]
+  templates: { id: string; name: string; content: string }[]
   onTypeChange: (type: 'email' | 'sms' | 'call') => void
   onToChange: (to: string) => void
   onSubjectChange: (subject: string) => void
   onBodyChange: (body: string) => void
   onLeadChange: (leadId: string) => void
+  onEnhance: (body: string, tone: string) => Promise<string>
   onSend: () => void
   onClose: () => void
 }
@@ -37,15 +43,20 @@ export const ComposeModal = ({
   composeBody,
   composeLeadId,
   leads,
+  templates,
   onTypeChange,
   onToChange,
   onSubjectChange,
   onBodyChange,
   onLeadChange,
+  onEnhance,
   onSend,
   onClose,
 }: ComposeModalProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [showAIComposer, setShowAIComposer] = useState(false)
+  const [enhancing, setEnhancing] = useState(false)
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {}
@@ -69,6 +80,31 @@ export const ComposeModal = ({
   const handleSend = () => {
     if (validate()) onSend()
   }
+
+  const handleMessageGenerated = (message: string, subject?: string) => {
+    onBodyChange(message)
+    if (subject && composeType === 'email') onSubjectChange(subject)
+    setShowAIComposer(false)
+  }
+
+  const handleEnhance = async () => {
+    if (composeBody.length < 10) return
+    setEnhancing(true)
+    try {
+      const enhanced = await onEnhance(composeBody, 'professional')
+      onBodyChange(enhanced)
+    } finally {
+      setEnhancing(false)
+    }
+  }
+
+  // Filter templates by type: email templates for email, SMS templates for sms
+  const filteredTemplates = templates.filter(t => {
+    // Templates with short content (< 300 chars) are likely SMS templates
+    if (composeType === 'sms') return t.content.length < 300
+    if (composeType === 'email') return t.content.length >= 50
+    return true
+  })
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="compose-dialog-title" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
@@ -143,6 +179,69 @@ export const ComposeModal = ({
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Message</label>
+
+              {/* AI & Template toolbar */}
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant={composeBody.length > 10 ? 'outline' : 'default'}
+                  onClick={() => setShowAIComposer(true)}
+                  type="button"
+                >
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Generate with AI
+                </Button>
+                <Button
+                  size="sm"
+                  variant={composeBody.length > 10 ? 'default' : 'outline'}
+                  onClick={handleEnhance}
+                  disabled={composeBody.length < 10 || enhancing}
+                  type="button"
+                >
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" /> {enhancing ? 'Enhancing...' : 'Enhance with AI'}
+                </Button>
+                <div className="relative">
+                  <Button size="sm" variant="outline" onClick={() => setShowTemplates(!showTemplates)} type="button">
+                    <FileText className="mr-1.5 h-3.5 w-3.5" /> Templates
+                  </Button>
+                  {showTemplates && (
+                    <Card className="absolute bottom-full left-0 mb-2 w-64 z-20 shadow-lg max-h-48 overflow-y-auto">
+                      <CardContent className="p-2">
+                        {filteredTemplates.length > 0 ? (
+                          <div className="space-y-1">
+                            {filteredTemplates.map((template) => (
+                              <Button
+                                key={template.id}
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start text-left text-xs"
+                                onClick={() => { onBodyChange(template.content); setShowTemplates(false) }}
+                              >
+                                {template.name}
+                              </Button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground p-2">No templates for this type</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+
+              {/* AI Composer */}
+              {showAIComposer && composeType !== 'call' && (
+                <ModalErrorBoundary>
+                  <AIComposer
+                    leadId={composeLeadId || ''}
+                    conversationId=""
+                    messageType={composeType}
+                    onMessageGenerated={handleMessageGenerated}
+                    onClose={() => setShowAIComposer(false)}
+                  />
+                </ModalErrorBoundary>
+              )}
+
               <textarea
                 value={composeBody}
                 onChange={(e) => { onBodyChange(e.target.value); setErrors(prev => ({ ...prev, body: '' })) }}

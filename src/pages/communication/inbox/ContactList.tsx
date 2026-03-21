@@ -45,6 +45,7 @@ interface ContactListProps {
   onSetPage: (page: number | ((p: number) => number)) => void
   onCompose: () => void
   onRefresh: () => void
+  onMarkAllRead: () => void
   hasActiveFilters: boolean
 }
 
@@ -89,6 +90,7 @@ export const ContactList = ({
   onSetPage,
   onCompose,
   onRefresh,
+  onMarkAllRead,
   hasActiveFilters,
 }: ContactListProps) => {
   return (
@@ -123,6 +125,15 @@ export const ContactList = ({
               className="h-8 w-8 p-0"
             >
               <CheckCheck className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onMarkAllRead}
+              title="Mark all messages as read"
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <CheckCheck className="h-3.5 w-3.5 mr-1" />Mark all read
             </Button>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

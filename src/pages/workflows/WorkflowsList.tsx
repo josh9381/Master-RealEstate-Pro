@@ -1,11 +1,12 @@
 import { logger } from '@/lib/logger'
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Workflow as WorkflowIcon, Plus, Play, Pause, Edit, Trash2, BarChart3, RefreshCw, LayoutGrid, LayoutList, ChevronRight } from 'lucide-react';
+import { Workflow as WorkflowIcon, Plus, Play, Pause, Edit, Trash2, BarChart3, RefreshCw, LayoutGrid, LayoutList, ChevronRight, Search, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -13,6 +14,7 @@ import { workflowsApi } from '@/lib/api';
 import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { WorkflowsTabNav } from '@/components/workflows/WorkflowsTabNav';
 import type { WorkflowAction, WorkflowExecution, WorkflowTriggerData } from '@/types';
 
 interface Workflow {
@@ -48,6 +50,7 @@ const WorkflowsList = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [analyticsWorkflow, setAnalyticsWorkflow] = useState<Workflow | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data, isLoading: loading, refetch } = useQuery({
     queryKey: ['workflows'],
@@ -77,6 +80,12 @@ const WorkflowsList = () => {
   });
 
   const workflows = data?.workflows ?? [];
+  const filteredWorkflows = searchQuery
+    ? workflows.filter(w =>
+        w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (w.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : workflows;
   const stats = data?.stats ?? {
     totalWorkflows: 0,
     activeWorkflows: 0,
@@ -141,10 +150,25 @@ const WorkflowsList = () => {
     }
   };
 
-  const viewAnalytics = (workflowId: string) => {
+  const viewAnalytics = async (workflowId: string) => {
     const workflow = workflows.find(w => w.id === workflowId);
     if (workflow) {
       setAnalyticsWorkflow(workflow);
+      // Fetch fresh analytics data for this workflow
+      try {
+        const analytics = await workflowsApi.getAnalytics(workflowId);
+        const data = analytics?.data || analytics;
+        if (data) {
+          setAnalyticsWorkflow(prev => prev ? {
+            ...prev,
+            executions: data.totalExecutions ?? prev.executions,
+            successRate: data.successRate ?? prev.successRate,
+            lastRunAt: data.lastRunAt ?? prev.lastRunAt,
+          } : prev);
+        }
+      } catch {
+        // Fall back to existing data silently
+      }
     }
   };
 
@@ -202,10 +226,38 @@ const WorkflowsList = () => {
         </div>
       </div>
 
+      {/* Sub-Navigation Tabs */}
+      <WorkflowsTabNav />
+
       {loading ? (
         <LoadingSkeleton rows={4} />
       ) : (
         <>
+      {/* Search Bar */}
+      {workflows.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search workflows by name or description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              {searchQuery && (
+                <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}>
+                  <X className="h-4 w-4 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Tips Banner */}
       {workflows.length === 0 && (
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
@@ -314,7 +366,7 @@ const WorkflowsList = () => {
       </div>
 
       {/* Workflows List/Grid */}
-      {workflows.length === 0 ? (
+      {filteredWorkflows.length === 0 ? (
         <Card className="p-12 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
           <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
             <div className="p-6 bg-primary/10 rounded-full mb-6">
@@ -345,16 +397,15 @@ const WorkflowsList = () => {
                   <p className="text-xs text-muted-foreground">Choose from pre-built automation rules</p>
                 </div>
               </Link>
-              <div className="block" title="Documentation coming soon">
-                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left opacity-60 cursor-default h-full">
+              <Link to="/workflows/builder" className="block">
+                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
                   <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-3">
                     <ChevronRight className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <h4 className="font-semibold mb-1">Follow a Guide</h4>
-                  <p className="text-xs text-muted-foreground">Step-by-step workflow creation tutorial</p>
-                  <Badge variant="secondary" className="mt-2 text-xs">Coming Soon</Badge>
+                  <p className="text-xs text-muted-foreground">Open the builder with starter templates</p>
                 </div>
-              </div>
+              </Link>
             </div>
             
             <Link to="/workflows/builder">
@@ -367,7 +418,7 @@ const WorkflowsList = () => {
         </Card>
       ) : viewMode === 'list' ? (
         <div className="space-y-4">
-          {workflows.map((workflow) => (
+          {filteredWorkflows.map((workflow) => (
             <Card key={workflow.id} className="hover:shadow-xl hover:border-primary/50 transition-all duration-300 bg-gradient-to-r from-background to-muted/20">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -413,9 +464,9 @@ const WorkflowsList = () => {
                           <p className="text-sm font-medium">{workflow.executions}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Success Rate</p>
+                          <p className="text-xs text-muted-foreground">Last Run</p>
                           <p className="text-sm font-medium">
-                            {workflow.successRate !== null ? `${formatRate(workflow.successRate, 1)}%` : 'N/A'}
+                            {workflow.lastRunAt ? new Date(workflow.lastRunAt).toLocaleDateString() : 'Never'}
                           </p>
                         </div>
                       </div>
@@ -482,6 +533,7 @@ const WorkflowsList = () => {
                           onClick={() => deleteWorkflow(workflow.id)}
                           disabled={workflow.isActive}
                           title={workflow.isActive ? 'Pause workflow before deleting' : 'Delete workflow'}
+                          aria-label={`Delete ${workflow.name}`}
                           className="hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400 disabled:opacity-50"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -496,7 +548,7 @@ const WorkflowsList = () => {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {workflows.map((workflow) => (
+          {filteredWorkflows.map((workflow) => (
             <Card key={workflow.id} className="hover:shadow-xl hover:border-primary/50 transition-all duration-300 bg-gradient-to-br from-background to-muted/20">
               <CardContent className="p-6">
                 <div className="space-y-4">
@@ -543,9 +595,9 @@ const WorkflowsList = () => {
                       <p className="font-medium">{workflow.executions}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Success Rate</p>
+                      <p className="text-xs text-muted-foreground">Last Run</p>
                       <p className="font-medium">
-                        {workflow.successRate !== null ? `${formatRate(workflow.successRate, 1)}%` : 'N/A'}
+                        {workflow.lastRunAt ? new Date(workflow.lastRunAt).toLocaleDateString() : 'Never'}
                       </p>
                     </div>
                   </div>
@@ -602,6 +654,7 @@ const WorkflowsList = () => {
                         variant="outline" 
                         size="sm"
                         onClick={() => viewAnalytics(workflow.id)}
+                        aria-label={`View analytics for ${workflow.name}`}
                       >
                         <BarChart3 className="h-4 w-4" />
                       </Button>
@@ -611,6 +664,7 @@ const WorkflowsList = () => {
                         onClick={() => deleteWorkflow(workflow.id)}
                         disabled={workflow.isActive}
                         title={workflow.isActive ? 'Pause workflow before deleting' : 'Delete workflow'}
+                        aria-label={`Delete ${workflow.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -1,9 +1,12 @@
 import {
   Filter, Mail, MessageSquare, UserPlus, Tag, Clock, Bell,
-  UserCircle, BarChart, Calendar, FileText, Send, Shield, Star, Globe
+  UserCircle, BarChart, Calendar, FileText, Send, Shield, Star, Globe,
+  Users, Zap, Hash, TrendingUp, MousePointer, Search
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
+import { useState } from 'react';
 
 export type ComponentCategory = 'triggers' | 'conditions' | 'actions' | 'utilities';
 
@@ -31,6 +34,7 @@ const triggers: WorkflowComponent[] = [
     label: 'Lead Created',
     description: 'Triggers when a new lead is added to the system',
     icon: UserPlus,
+    config: { triggerType: 'LEAD_CREATED' },
   },
   {
     id: 'lead-status-changed',
@@ -39,6 +43,7 @@ const triggers: WorkflowComponent[] = [
     label: 'Lead Status Changed',
     description: 'Triggers when lead status changes (e.g., New → Qualified)',
     icon: BarChart,
+    config: { triggerType: 'LEAD_STATUS_CHANGED' },
   },
   {
     id: 'email-opened',
@@ -47,6 +52,7 @@ const triggers: WorkflowComponent[] = [
     label: 'Email Opened',
     description: 'Triggers when a lead opens an email',
     icon: Mail,
+    config: { triggerType: 'EMAIL_OPENED' },
   },
   {
     id: 'score-threshold',
@@ -55,6 +61,7 @@ const triggers: WorkflowComponent[] = [
     label: 'Score Threshold',
     description: 'Triggers when lead score crosses a threshold',
     icon: Star,
+    config: { triggerType: 'SCORE_THRESHOLD' },
   },
   {
     id: 'time-based',
@@ -63,6 +70,7 @@ const triggers: WorkflowComponent[] = [
     label: 'Time-Based',
     description: 'Triggers at scheduled times (daily, weekly, etc.)',
     icon: Clock,
+    config: { triggerType: 'TIME_BASED' },
   },
   {
     id: 'webhook',
@@ -71,6 +79,43 @@ const triggers: WorkflowComponent[] = [
     label: 'Webhook',
     description: 'Triggered by an external HTTP request',
     icon: Globe,
+    config: { triggerType: 'WEBHOOK' },
+  },
+  {
+    id: 'lead-assigned',
+    type: 'trigger',
+    category: 'triggers',
+    label: 'Lead Assigned',
+    description: 'Triggers when a lead is assigned to a team member',
+    icon: Users,
+    config: { triggerType: 'LEAD_ASSIGNED' },
+  },
+  {
+    id: 'campaign-completed',
+    type: 'trigger',
+    category: 'triggers',
+    label: 'Campaign Completed',
+    description: 'Triggers when a campaign finishes execution',
+    icon: Zap,
+    config: { triggerType: 'CAMPAIGN_COMPLETED' },
+  },
+  {
+    id: 'tag-added',
+    type: 'trigger',
+    category: 'triggers',
+    label: 'Tag Added',
+    description: 'Triggers when a tag is added to a lead',
+    icon: Hash,
+    config: { triggerType: 'TAG_ADDED' },
+  },
+  {
+    id: 'manual',
+    type: 'trigger',
+    category: 'triggers',
+    label: 'Manual Trigger',
+    description: 'Manually triggered by a user',
+    icon: MousePointer,
+    config: { triggerType: 'MANUAL' },
   },
 ];
 
@@ -85,7 +130,7 @@ const conditions: WorkflowComponent[] = [
     config: { conditionType: 'lead_field' },
   },
   {
-    id: 'email-opened',
+    id: 'condition-email-opened',
     type: 'condition',
     category: 'conditions',
     label: 'Email Opened',
@@ -121,6 +166,7 @@ const actions: WorkflowComponent[] = [
     label: 'Send Email',
     description: 'Send an email to the lead',
     icon: Mail,
+    config: { actionType: 'SEND_EMAIL' },
   },
   {
     id: 'send-sms',
@@ -129,6 +175,7 @@ const actions: WorkflowComponent[] = [
     label: 'Send SMS',
     description: 'Send an SMS message to the lead',
     icon: MessageSquare,
+    config: { actionType: 'SEND_SMS' },
   },
   {
     id: 'update-lead',
@@ -137,6 +184,7 @@ const actions: WorkflowComponent[] = [
     label: 'Update Lead',
     description: 'Update lead fields (status, score, etc.)',
     icon: UserCircle,
+    config: { actionType: 'UPDATE_LEAD' },
   },
   {
     id: 'add-tag',
@@ -145,6 +193,7 @@ const actions: WorkflowComponent[] = [
     label: 'Add Tag',
     description: 'Add a tag to the lead',
     icon: Tag,
+    config: { actionType: 'ADD_TAG' },
   },
   {
     id: 'create-task',
@@ -153,6 +202,7 @@ const actions: WorkflowComponent[] = [
     label: 'Create Task',
     description: 'Create a follow-up task',
     icon: FileText,
+    config: { actionType: 'CREATE_TASK' },
   },
   {
     id: 'assign-lead',
@@ -161,6 +211,7 @@ const actions: WorkflowComponent[] = [
     label: 'Assign Lead',
     description: 'Assign lead to a team member',
     icon: UserPlus,
+    config: { actionType: 'ASSIGN_LEAD' },
   },
   {
     id: 'send-notification',
@@ -169,6 +220,7 @@ const actions: WorkflowComponent[] = [
     label: 'Send Notification',
     description: 'Send notification to team members',
     icon: Bell,
+    config: { actionType: 'SEND_NOTIFICATION' },
   },
   {
     id: 'add-to-campaign',
@@ -177,6 +229,34 @@ const actions: WorkflowComponent[] = [
     label: 'Add to Campaign',
     description: 'Add lead to a marketing campaign',
     icon: Send,
+    config: { actionType: 'ADD_TO_CAMPAIGN' },
+  },
+  {
+    id: 'remove-tag',
+    type: 'action',
+    category: 'actions',
+    label: 'Remove Tag',
+    description: 'Remove a tag from the lead',
+    icon: Tag,
+    config: { actionType: 'REMOVE_TAG' },
+  },
+  {
+    id: 'update-score',
+    type: 'action',
+    category: 'actions',
+    label: 'Update Score',
+    description: 'Update the lead score by a set amount',
+    icon: TrendingUp,
+    config: { actionType: 'UPDATE_SCORE' },
+  },
+  {
+    id: 'webhook-action',
+    type: 'action',
+    category: 'actions',
+    label: 'Webhook',
+    description: 'Send data to an external webhook URL',
+    icon: Globe,
+    config: { actionType: 'WEBHOOK' },
   },
 ];
 
@@ -234,6 +314,8 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
   onComponentDragStart,
   mode = 'click',
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
   const handleClick = (component: WorkflowComponent) => {
     // Only trigger select in click mode, not in drag mode
     if (mode === 'click' && onComponentSelect) {
@@ -254,14 +336,21 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/json', JSON.stringify(component));
     
-    // Create a custom drag image
+    // Create a custom drag image and clean it up after drag ends
     const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
     dragImage.style.opacity = '0.8';
-    document.body.appendChild(dragImage);
     dragImage.style.position = 'absolute';
     dragImage.style.top = '-1000px';
+    document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, 0, 0);
-    setTimeout(() => document.body.removeChild(dragImage), 0);
+    
+    const cleanup = () => {
+      if (dragImage.parentNode) {
+        dragImage.parentNode.removeChild(dragImage);
+      }
+      e.currentTarget?.removeEventListener('dragend', cleanup);
+    };
+    e.currentTarget.addEventListener('dragend', cleanup);
     
     if (onComponentDragStart) {
       onComponentDragStart(component);
@@ -269,15 +358,33 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
   };
 
   return (
-    <div className="h-[calc(100vh-12rem)] overflow-y-auto">
+    <div className="max-h-[calc(100vh-20rem)] overflow-y-auto">
+      {/* Search */}
+      <div className="relative mb-4 pr-4">
+        <Input
+          placeholder="Search components..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 h-9 text-sm"
+        />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      </div>
+
       <div className="space-y-6 pr-4">
-        {(Object.keys(allComponents) as ComponentCategory[]).map((category) => (
+        {(Object.keys(allComponents) as ComponentCategory[]).map((category) => {
+          const filteredComponents = allComponents[category].filter(c => {
+            if (!searchQuery) return true;
+            const q = searchQuery.toLowerCase();
+            return c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+          });
+          if (filteredComponents.length === 0) return null;
+          return (
           <div key={category}>
             <div className="mb-3">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="text-sm font-semibold">{categoryLabels[category]}</h3>
                 <Badge className={`text-xs ${categoryColors[category]}`}>
-                  {allComponents[category].length}
+                  {filteredComponents.length}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -286,7 +393,7 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
             </div>
 
             <div className="space-y-2">
-              {allComponents[category].map((component) => {
+              {filteredComponents.map((component) => {
                 const Icon = component.icon;
                 return (
                   <Card
@@ -322,7 +429,18 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
+        {searchQuery && (Object.keys(allComponents) as ComponentCategory[]).every(cat => 
+          allComponents[cat].filter(c => {
+            const q = searchQuery.toLowerCase();
+            return c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+          }).length === 0
+        ) && (
+          <div className="text-center py-6 text-muted-foreground text-sm">
+            No components match &ldquo;{searchQuery}&rdquo;
+          </div>
+        )}
       </div>
     </div>
   );
