@@ -32,7 +32,8 @@ function Login() {
     if (searchParams.get('reason') === 'idle') {
       toast.warning('Session expired', 'You were logged out due to inactivity. Please sign in again.')
     }
-  }, [searchParams, toast])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -68,28 +68,5 @@ test.describe('09 - Workflows & Automation', () => {
     console.log('  ✅ Workflow builder loaded');
   });
 
-  test('Automation rules page', async ({ page }) => {
-    console.log('\n🧪 TEST: Automation rules');
-    await navigateTo(page, '/workflows/automation', 'Automation Rules');
-    await verifyPageLoaded(page);
-    await screenshot(page, '09-automation-rules');
 
-    await clickAllTabs(page);
-
-    // Try "Create Rule" button
-    const createBtn = page.locator('button').filter({ hasText: /create|new|add/i }).first();
-    if (await createBtn.isVisible().catch(() => false)) {
-      await createBtn.click();
-      await screenshot(page, '09-automation-create-modal');
-      console.log('  ✅ Create automation rule modal opened');
-      await page.keyboard.press('Escape');
-    }
-
-    // Check for rule toggle switches
-    const toggles = page.locator('input[type="checkbox"]:visible, [role="switch"]:visible, [class*="toggle" i]:visible');
-    const toggleCount = await toggles.count();
-    console.log(`  🔀 Found ${toggleCount} toggle switches`);
-
-    console.log('  ✅ Automation rules loaded');
-  });
 });

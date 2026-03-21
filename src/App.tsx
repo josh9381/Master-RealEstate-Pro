@@ -85,7 +85,6 @@ const NewsletterManagement = lazyWithRetry(() => import('./pages/communication/N
 // Workflows (lazy loaded)
 const WorkflowsList = lazyWithRetry(() => import('./pages/workflows/WorkflowsList'))
 const WorkflowBuilder = lazyWithRetry(() => import('./pages/workflows/WorkflowBuilder'))
-const AutomationRules = lazyWithRetry(() => import('./pages/workflows/AutomationRules'))
 
 // Settings (lazy loaded)
 const SettingsHub = lazyWithRetry(() => import('./pages/settings/SettingsHub'))
@@ -226,7 +225,6 @@ function App() {
         {/* Workflows */}
         <Route path="/workflows" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Workflows"><WorkflowsList /></PageErrorBoundary></Suspense>} />
         <Route path="/workflows/builder" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Workflow Builder"><WorkflowBuilder /></PageErrorBoundary></Suspense>} />
-        <Route path="/workflows/automation" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Automation Rules"><AutomationRules /></PageErrorBoundary></Suspense>} />
         
         {/* Settings */}
         <Route path="/settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Settings"><SettingsHub /></PageErrorBoundary></Suspense>} />

@@ -14,7 +14,6 @@ import { workflowsApi } from '@/lib/api';
 import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
-import { WorkflowsTabNav } from '@/components/workflows/WorkflowsTabNav';
 import type { WorkflowAction, WorkflowExecution, WorkflowTriggerData } from '@/types';
 
 interface Workflow {
@@ -86,7 +85,9 @@ const WorkflowsList = () => {
         (w.description || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
     : workflows;
-  const stats = data?.stats ?? {
+  
+  // Derive stats from workflow data to ensure consistency between stat cards and individual workflow cards
+  const apiStats = data?.stats ?? {
     totalWorkflows: 0,
     activeWorkflows: 0,
     inactiveWorkflows: 0,
@@ -94,6 +95,18 @@ const WorkflowsList = () => {
     successfulExecutions: 0,
     failedExecutions: 0,
     successRate: 0,
+  };
+  const derivedTotalExecutions = workflows.reduce((sum, w) => sum + (w.executions || 0), 0);
+  const stats = {
+    ...apiStats,
+    totalWorkflows: workflows.length || apiStats.totalWorkflows,
+    activeWorkflows: workflows.filter(w => w.isActive).length || apiStats.activeWorkflows,
+    inactiveWorkflows: workflows.filter(w => !w.isActive).length || apiStats.inactiveWorkflows,
+    // Use the sum of per-workflow counters so stats match what's shown on each card
+    totalExecutions: derivedTotalExecutions || apiStats.totalExecutions,
+    successfulExecutions: apiStats.successfulExecutions,
+    failedExecutions: apiStats.failedExecutions,
+    successRate: apiStats.successRate,
   };
 
   const handleRefresh = () => {
@@ -164,10 +177,12 @@ const WorkflowsList = () => {
             executions: data.totalExecutions ?? prev.executions,
             successRate: data.successRate ?? prev.successRate,
             lastRunAt: data.lastRunAt ?? prev.lastRunAt,
+            workflowExecutions: data.recentExecutions ?? prev.workflowExecutions,
           } : prev);
         }
-      } catch {
-        // Fall back to existing data silently
+      } catch (error) {
+        logger.error('Failed to fetch analytics:', error);
+        toast.error('Could not refresh analytics data');
       }
     }
   };
@@ -225,9 +240,6 @@ const WorkflowsList = () => {
           </FeatureGate>
         </div>
       </div>
-
-      {/* Sub-Navigation Tabs */}
-      <WorkflowsTabNav />
 
       {loading ? (
         <LoadingSkeleton rows={4} />
@@ -378,7 +390,7 @@ const WorkflowsList = () => {
             </p>
             
             {/* Quick Start Options */}
-            <div className="grid gap-4 md:grid-cols-3 w-full mb-8">
+            <div className="grid gap-4 md:grid-cols-2 w-full mb-8">
               <Link to="/workflows/builder" className="block">
                 <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
                   <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-3">
@@ -388,22 +400,14 @@ const WorkflowsList = () => {
                   <p className="text-xs text-muted-foreground">Build a custom workflow tailored to your needs</p>
                 </div>
               </Link>
-              <Link to="/workflows/automation" className="block">
-                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
-                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-3">
-                    <WorkflowIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <h4 className="font-semibold mb-1">Use a Template</h4>
-                  <p className="text-xs text-muted-foreground">Choose from pre-built automation rules</p>
-                </div>
-              </Link>
-              <Link to="/workflows/builder" className="block">
+
+              <Link to="/workflows/builder?templates=true" className="block">
                 <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
                   <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-3">
                     <ChevronRight className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
-                  <h4 className="font-semibold mb-1">Follow a Guide</h4>
-                  <p className="text-xs text-muted-foreground">Open the builder with starter templates</p>
+                  <h4 className="font-semibold mb-1">Start from a Template</h4>
+                  <p className="text-xs text-muted-foreground">Choose from pre-built workflow templates</p>
                 </div>
               </Link>
             </div>
@@ -622,31 +626,29 @@ const WorkflowsList = () => {
                   )}
 
                   <div className="flex flex-col gap-2 pt-2 border-t">
-                    {workflow.isActive ? (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full"
-                        onClick={() => toggleWorkflowStatus(workflow.id)}
-                      >
-                        <Pause className="h-4 w-4 mr-2" />
-                        Pause
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full"
-                        onClick={() => toggleWorkflowStatus(workflow.id)}
-                      >
-                        <Play className="h-4 w-4 mr-2" />
-                        Activate
-                      </Button>
-                    )}
                     <div className="flex gap-2">
+                      {workflow.isActive ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => toggleWorkflowStatus(workflow.id)}
+                        >
+                          <Pause className="h-4 w-4 mr-1" />
+                          Pause
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => toggleWorkflowStatus(workflow.id)}
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          Activate
+                        </Button>
+                      )}
                       <Link to={`/workflows/builder?id=${workflow.id}`} className="flex-1">
                         <Button variant="outline" size="sm" className="w-full">
-                          <Edit className="h-4 w-4 mr-2" />
+                          <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
                       </Link>

@@ -170,6 +170,8 @@ export const ConversationView = ({
       return () => clearTimeout(t)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedContact])
+
   if (!selectedContact) {
     return (
       <Card className="col-span-8 flex flex-col overflow-hidden">

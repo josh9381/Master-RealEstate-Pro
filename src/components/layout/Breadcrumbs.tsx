@@ -44,7 +44,6 @@ const LABEL_MAP: Record<string, string> = {
   newsletters: 'Newsletters',
   workflows: 'Workflows',
   builder: 'Builder',
-  'automation-rules': 'Automation Rules',
   settings: 'Settings',
   profile: 'Profile',
   business: 'Business',

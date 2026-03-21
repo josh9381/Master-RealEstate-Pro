@@ -46,7 +46,6 @@ const TITLE_MAP: Record<string, string> = {
   '/communication/social-media': 'Social Media',
   '/communication/newsletters': 'Newsletters',
   '/workflows': 'Workflows',
-  '/workflows/automation-rules': 'Automation Rules',
   '/settings': 'Settings',
   '/settings/profile': 'Profile',
   '/settings/business': 'Business',

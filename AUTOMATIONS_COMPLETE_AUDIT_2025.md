@@ -1,4 +1,4 @@
-# Automations Tab — Complete Audit (March 2025)
+ # Automations Tab — Complete Audit (March 2025)
 
 **Scope:** Full-stack audit of the Automations tab — frontend pages, components, backend API/services, database schema, user experience, accessibility, security, and end-to-end user journeys.  
 **Focus Areas:** User experience, data integrity, backend correctness, and production readiness.  

@@ -373,18 +373,6 @@ export interface ApiSendResponse {
   threadId?: string | number
 }
 
-// Automation rule (client-side mapped from workflow API)
-export interface AutomationRule {
-  id: number | string
-  name: string
-  description: string
-  trigger: string
-  actions: string[]
-  status: 'active' | 'paused'
-  executions: number
-  lastRun: string
-}
-
 // Raw workflow from API response
 export interface RawWorkflow {
   id: string | number

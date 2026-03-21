@@ -1,14 +1,12 @@
 import {
   Filter, Mail, MessageSquare, UserPlus, Tag, Clock, Bell,
   UserCircle, BarChart, Calendar, FileText, Send, Shield, Star, Globe,
-  Users, Zap, Hash, TrendingUp, MousePointer, Search
+  Users, Zap, Hash, TrendingUp, MousePointer, Search, GripVertical, Check
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
-export type ComponentCategory = 'triggers' | 'conditions' | 'actions' | 'utilities';
+export type ComponentCategory = 'all' | 'triggers' | 'conditions' | 'actions' | 'utilities';
 
 export interface WorkflowComponent {
   id: string;
@@ -281,32 +279,33 @@ const utilities: WorkflowComponent[] = [
   },
 ];
 
-const allComponents: Record<ComponentCategory, WorkflowComponent[]> = {
-  triggers,
-  conditions,
-  actions,
-  utilities,
+const allComponentsList: WorkflowComponent[] = [
+  ...triggers,
+  ...conditions,
+  ...actions,
+  ...utilities,
+];
+
+const categoryFilters: { key: ComponentCategory; label: string; color: string; activeColor: string; count: number }[] = [
+  { key: 'all', label: 'All', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', activeColor: 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900', count: allComponentsList.length },
+  { key: 'triggers', label: 'Triggers', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300', activeColor: 'bg-blue-600 text-white', count: triggers.length },
+  { key: 'conditions', label: 'Conditions', color: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300', activeColor: 'bg-yellow-500 text-white', count: conditions.length },
+  { key: 'actions', label: 'Actions', color: 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300', activeColor: 'bg-green-600 text-white', count: actions.length },
+  { key: 'utilities', label: 'Utilities', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300', activeColor: 'bg-purple-600 text-white', count: utilities.length },
+];
+
+const categoryBorderColor: Record<string, string> = {
+  triggers: 'border-l-blue-500',
+  conditions: 'border-l-yellow-500',
+  actions: 'border-l-green-500',
+  utilities: 'border-l-purple-500',
 };
 
-const categoryLabels: Record<ComponentCategory, string> = {
-  triggers: 'Triggers',
-  conditions: 'Conditions',
-  actions: 'Actions',
-  utilities: 'Utilities',
-};
-
-const categoryDescriptions: Record<ComponentCategory, string> = {
-  triggers: 'Start your workflow based on specific events',
-  conditions: 'Control flow with conditional logic',
-  actions: 'Perform actions on leads and data',
-  utilities: 'Time delays and scheduling',
-};
-
-const categoryColors: Record<ComponentCategory, string> = {
-  triggers: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  conditions: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  actions: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  utilities: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+const categoryIconBg: Record<string, string> = {
+  triggers: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
+  conditions: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300',
+  actions: 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300',
+  utilities: 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
 };
 
 export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> = ({
@@ -315,15 +314,17 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
   mode = 'click',
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<ComponentCategory>('all');
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+  const addedTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const handleClick = (component: WorkflowComponent) => {
-    // Only trigger select in click mode, not in drag mode
-    if (mode === 'click' && onComponentSelect) {
+    if (onComponentSelect) {
       onComponentSelect(component);
-    } else if (mode === 'drag') {
-      // In drag mode - use drag & drop instead of clicking
-    } else {
-      // onComponentSelect is not defined
+      // Flash "added" feedback
+      setJustAdded(component.id);
+      clearTimeout(addedTimer.current);
+      addedTimer.current = setTimeout(() => setJustAdded(null), 1200);
     }
   };
 
@@ -336,107 +337,145 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/json', JSON.stringify(component));
     
-    // Create a custom drag image and clean it up after drag ends
     const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
     dragImage.style.opacity = '0.8';
     dragImage.style.position = 'absolute';
     dragImage.style.top = '-1000px';
+    dragImage.style.left = '-1000px';
     document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, 0, 0);
     
-    const cleanup = () => {
+    requestAnimationFrame(() => {
       if (dragImage.parentNode) {
         dragImage.parentNode.removeChild(dragImage);
       }
-      e.currentTarget?.removeEventListener('dragend', cleanup);
-    };
-    e.currentTarget.addEventListener('dragend', cleanup);
+    });
     
     if (onComponentDragStart) {
       onComponentDragStart(component);
     }
   };
 
+  // Filter + search
+  const filteredComponents = allComponentsList.filter(c => {
+    const matchesFilter = activeFilter === 'all' || c.category === activeFilter;
+    if (!matchesFilter) return false;
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+  });
+
   return (
     <div className="max-h-[calc(100vh-20rem)] overflow-y-auto">
       {/* Search */}
-      <div className="relative mb-4 pr-4">
+      <div className="relative mb-3">
         <Input
           placeholder="Search components..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 h-9 text-sm"
+          className="pl-9 h-8 text-sm"
         />
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
       </div>
 
-      <div className="space-y-6 pr-4">
-        {(Object.keys(allComponents) as ComponentCategory[]).map((category) => {
-          const filteredComponents = allComponents[category].filter(c => {
-            if (!searchQuery) return true;
-            const q = searchQuery.toLowerCase();
-            return c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
-          });
-          if (filteredComponents.length === 0) return null;
+      {/* Category Filter Chips */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {categoryFilters.map(f => {
+          const isActive = activeFilter === f.key;
+          const matchCount = f.key === 'all'
+            ? allComponentsList.filter(c => {
+                if (!searchQuery) return true;
+                const q = searchQuery.toLowerCase();
+                return c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+              }).length
+            : allComponentsList.filter(c => {
+                if (c.category !== f.key) return false;
+                if (!searchQuery) return true;
+                const q = searchQuery.toLowerCase();
+                return c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+              }).length;
           return (
-          <div key={category}>
-            <div className="mb-3">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-sm font-semibold">{categoryLabels[category]}</h3>
-                <Badge className={`text-xs ${categoryColors[category]}`}>
-                  {filteredComponents.length}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {categoryDescriptions[category]}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              {filteredComponents.map((component) => {
-                const Icon = component.icon;
-                return (
-                  <Card
-                    key={component.id}
-                    className={`
-                      hover:shadow-md transition-all duration-200
-                      ${mode === 'drag' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer hover:bg-accent'}
-                    `}
-                    draggable={mode === 'drag'}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleClick(component);
-                    }}
-                    onDragStart={(e) => handleDragStart(e, component)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-md bg-background">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium leading-none mb-1">
-                            {component.label}
-                          </h4>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {component.description}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
+            <button
+              key={f.key}
+              onClick={() => setActiveFilter(f.key)}
+              className={`
+                inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
+                transition-all duration-150 border
+                ${isActive
+                  ? `${f.activeColor} border-transparent shadow-sm`
+                  : `${f.color} border-transparent hover:border-gray-300 dark:hover:border-gray-600`
+                }
+              `}
+            >
+              {f.label}
+              <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+                {matchCount}
+              </span>
+            </button>
           );
         })}
-        {searchQuery && (Object.keys(allComponents) as ComponentCategory[]).every(cat => 
-          allComponents[cat].filter(c => {
-            const q = searchQuery.toLowerCase();
-            return c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
-          }).length === 0
-        ) && (
+      </div>
+
+      {/* Component List */}
+      <div className="space-y-1">
+        {filteredComponents.map((component) => {
+          const Icon = component.icon;
+          const isAdded = justAdded === component.id;
+          const borderColor = categoryBorderColor[component.category] || 'border-l-gray-400';
+          const iconBg = categoryIconBg[component.category] || 'bg-gray-100 text-gray-600';
+
+          return (
+            <div
+              key={component.id}
+              className={`
+                flex items-center gap-2 px-2 py-2 rounded-md border-l-[3px]
+                transition-all duration-200 group
+                ${borderColor}
+                ${isAdded
+                  ? 'bg-green-50 dark:bg-green-950/30 border border-l-[3px] border-green-300 dark:border-green-700'
+                  : 'bg-background hover:bg-accent/50 border border-l-[3px] border-transparent hover:border-gray-200 dark:hover:border-gray-700'
+                }
+                ${mode === 'drag' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
+              `}
+              draggable={mode === 'drag'}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClick(component);
+              }}
+              onDragStart={(e) => handleDragStart(e, component)}
+              title={component.description}
+            >
+              {/* Drag grip (drag mode only) */}
+              {mode === 'drag' && (
+                <GripVertical className="h-3 w-3 text-muted-foreground/40 group-hover:text-muted-foreground/70 flex-shrink-0" />
+              )}
+
+              {/* Icon */}
+              <div className={`p-1.5 rounded ${iconBg} flex-shrink-0`}>
+                <Icon className="h-3.5 w-3.5" />
+              </div>
+
+              {/* Label + description */}
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-medium leading-tight truncate">
+                  {component.label}
+                </h4>
+                <p className="text-[10px] text-muted-foreground leading-tight truncate">
+                  {component.description}
+                </p>
+              </div>
+
+              {/* Added feedback */}
+              {isAdded && (
+                <div className="flex-shrink-0">
+                  <Check className="h-3.5 w-3.5 text-green-600" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {filteredComponents.length === 0 && (
           <div className="text-center py-6 text-muted-foreground text-sm">
             No components match &ldquo;{searchQuery}&rdquo;
           </div>

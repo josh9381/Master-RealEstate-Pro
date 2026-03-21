@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, ZoomIn, ZoomOut, Maximize2, Workflow, Mail, TrendingUp, Calendar, Sparkles } from 'lucide-react';
 import { WorkflowNode, WorkflowNodeData } from './WorkflowNode';
 import { Button } from '@/components/ui/Button';
@@ -50,6 +50,14 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [zoom, setZoom] = useState(1);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
 
+  // Distinguish click from drag: track mouse-down position and movement
+  const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
+  const didDragNode = useRef(false);
+  const DRAG_THRESHOLD = 5; // pixels before a click becomes a drag
+
+  // Track whether auto-positioning has already run for the current set of nodes
+  const autoPositionedCount = useRef(0);
+
   // Handle space bar for panning (only when not typing in an input/textarea)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -65,10 +73,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
-      }
       if (e.code === 'Space') {
         e.preventDefault();
         setIsSpacePressed(false);
@@ -76,12 +80,20 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       }
     };
 
+    // If window loses focus while space is pressed, reset the state
+    const handleBlur = () => {
+      setIsSpacePressed(false);
+      setIsPanning(false);
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
     };
   }, [isSpacePressed]);
 
@@ -118,21 +130,29 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     if (!node) return;
 
     e.stopPropagation();
+    // Don't start dragging immediately — wait until the mouse moves beyond threshold
+    mouseDownPos.current = { x: e.clientX, y: e.clientY };
+    didDragNode.current = false;
     setDraggedNodeId(nodeId);
     
     const rect = canvasRef.current?.getBoundingClientRect();
     if (rect) {
       const nodeX = node.position?.x || 0;
       const nodeY = node.position?.y || 0;
+      // Account for canvas pan offset so the node doesn't jump
       setDragOffset({
-        x: (e.clientX - rect.left) / zoom - nodeX,
-        y: (e.clientY - rect.top) / zoom - nodeY,
+        x: (e.clientX - rect.left - canvasOffset.x) / zoom - nodeX,
+        y: (e.clientY - rect.top - canvasOffset.y) / zoom - nodeY,
       });
     }
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0 && (isSpacePressed || e.target === canvasRef.current)) {
+    // Allow panning when space is pressed OR when clicking on the canvas background
+    // Check if the click target is the canvas itself or the inner transform wrapper (not a node)
+    const target = e.target as HTMLElement;
+    const isCanvasBackground = target === canvasRef.current || target.closest('[data-canvas-inner]') === target;
+    if (e.button === 0 && (isSpacePressed || isCanvasBackground)) {
       setIsPanning(true);
       setPanStart({ 
         x: e.clientX - canvasOffset.x, 
@@ -143,10 +163,18 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
   const handleMouseMove = (e: MouseEvent) => {
     if (draggedNodeId && onNodeMove) {
+      // Check drag threshold before actually moving the node
+      if (mouseDownPos.current) {
+        const dx = Math.abs(e.clientX - mouseDownPos.current.x);
+        const dy = Math.abs(e.clientY - mouseDownPos.current.y);
+        if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
+        didDragNode.current = true;
+      }
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const x = (e.clientX - rect.left) / zoom - dragOffset.x;
-        const y = (e.clientY - rect.top) / zoom - dragOffset.y;
+        // Include canvasOffset so nodes track correctly after panning
+        const x = (e.clientX - rect.left - canvasOffset.x) / zoom - dragOffset.x;
+        const y = (e.clientY - rect.top - canvasOffset.y) / zoom - dragOffset.y;
         onNodeMove(draggedNodeId, { x: Math.round(x), y: Math.round(y) });
       }
     } else if (isPanning) {
@@ -158,7 +186,16 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   };
 
   const handleMouseUp = () => {
+    // If user clicked a node without actually dragging, treat it as a select
+    if (draggedNodeId && !didDragNode.current && onNodeSelect) {
+      const node = nodes.find(n => n.id === draggedNodeId);
+      if (node) {
+        onNodeSelect(node);
+      }
+    }
     setDraggedNodeId(null);
+    mouseDownPos.current = null;
+    didDragNode.current = false;
     if (!isSpacePressed) {
       setIsPanning(false);
     }
@@ -172,12 +209,36 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     setZoom(prev => Math.max(prev - 0.1, 0.5));
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     if (mode !== 'drag') return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.05 : 0.05;
-    setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 2));
-  };
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) {
+      setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 2));
+      return;
+    }
+    // Zoom toward cursor position
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    setZoom(prev => {
+      const newZoom = Math.min(Math.max(prev + delta, 0.5), 2);
+      const scale = newZoom / prev;
+      setCanvasOffset(offset => ({
+        x: mouseX - scale * (mouseX - offset.x),
+        y: mouseY - scale * (mouseY - offset.y),
+      }));
+      return newZoom;
+    });
+  }, [mode]);
+
+  // Attach wheel handler via ref to use { passive: false } (React onWheel is passive)
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || mode !== 'drag') return;
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [handleWheel, mode]);
 
   const handleResetView = () => {
     setCanvasOffset({ x: 0, y: 0 });
@@ -196,8 +257,12 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggedNodeId, isPanning, dragOffset, panStart, zoom]);
 
-  // Auto-position nodes that don't have positions
+  // Auto-position nodes that don't have positions — only run when new nodes are added
   useEffect(() => {
+    if (nodes.length <= autoPositionedCount.current) {
+      autoPositionedCount.current = nodes.length;
+      return;
+    }
     nodes.forEach((node, index) => {
       if (!node.position && onNodeMove) {
         const x = 400;
@@ -205,6 +270,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         onNodeMove(node.id, { x, y });
       }
     });
+    autoPositionedCount.current = nodes.length;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length]);
 
@@ -219,8 +285,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     <div
       ref={canvasRef}
       className={`
-        relative min-h-[600px] rounded-lg border-2 overflow-hidden
-        ${mode === 'drag' ? '' : 'min-h-0'}
+        relative h-full rounded-lg border-2 overflow-hidden
         ${isDraggingOver ? 'border-primary bg-primary/5' : mode === 'drag' ? 'border-blue-300 dark:border-blue-700' : 'border-green-300 dark:border-green-700'}
         transition-colors duration-200
         ${mode === 'click' ? 'overflow-y-auto' : ''}
@@ -244,7 +309,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onMouseDown={mode === 'drag' ? handleCanvasMouseDown : undefined}
-      onWheel={handleWheel}
     >
       {nodes.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full py-12 px-6">
@@ -358,11 +422,13 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       ) : (
         /* Drag Mode: n8n-style 2D Canvas */
         <div
-          className="absolute inset-0 pointer-events-none"
+          data-canvas-inner
+          className="absolute inset-0"
           style={{
             transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${zoom})`,
             transformOrigin: '0 0',
             transition: isPanning || draggedNodeId ? 'none' : 'transform 0.1s',
+            pointerEvents: 'none',
           }}
         >
           {/* Connection Lines */}
@@ -373,10 +439,12 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
             {nodes.map((node, index) => {
               if (index >= nodes.length - 1) return null;
               const nextNode = nodes[index + 1];
-              const x1 = (node.position?.x || 0) + 150; // Center of node
-              const y1 = (node.position?.y || 0) + 70; // Bottom of node
-              const x2 = (nextNode.position?.x || 0) + 150;
-              const y2 = (nextNode.position?.y || 0) + 10; // Top of node
+              const nodeWidth = 300;
+              const nodeHeight = 80;
+              const x1 = (node.position?.x || 0) + nodeWidth / 2; // Center of node
+              const y1 = (node.position?.y || 0) + nodeHeight; // Bottom of node
+              const x2 = (nextNode.position?.x || 0) + nodeWidth / 2;
+              const y2 = nextNode.position?.y || 0; // Top of next node
 
               // Create curved connection with adaptive control points
               const dy = Math.abs(y2 - y1);

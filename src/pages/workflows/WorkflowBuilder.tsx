@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Workflow, Play, Plus, TrendingUp, Save, TestTube2, 
+  Workflow, Plus, TrendingUp, Save, TestTube2, 
   CheckCircle2, XCircle, Activity, Download, Upload,
   Copy, Zap, Mail, MessageSquare, Clock,
   Calendar, FileText, ChevronDown, ChevronRight,
@@ -16,13 +16,12 @@ import { Input } from '@/components/ui/Input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { useToast } from '@/hooks/useToast';
 import { workflowsApi } from '@/lib/api';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { WorkflowCanvas } from '@/components/workflows/WorkflowCanvas';
 import { WorkflowNodeData } from '@/components/workflows/WorkflowNode';
 import { WorkflowComponentLibrary, WorkflowComponent } from '@/components/workflows/WorkflowComponentLibrary';
 import { NodeConfigPanel } from '@/components/workflows/NodeConfigPanel';
 import { ModalErrorBoundary } from '@/components/ModalErrorBoundary';
-import { WorkflowsTabNav } from '@/components/workflows/WorkflowsTabNav';
 import type { WorkflowAction, WorkflowExecution } from '@/types';
 
 interface ExecutionStep {
@@ -251,6 +250,14 @@ const WorkflowBuilder = () => {
 
   const urlParams = new URLSearchParams(window.location.search);
   const workflowId = urlParams.get('id');
+  
+  // Open templates modal if linked from WorkflowsList with ?templates=true
+  useEffect(() => {
+    if (urlParams.get('templates') === 'true' && !workflowId) {
+      setShowTemplates(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load workflow data via useQuery when ID is present
   useQuery({
@@ -384,29 +391,29 @@ const WorkflowBuilder = () => {
           setWorkflowStatus('running');
         }
         setExecutionLogs(executionsList.map((exec: Record<string, unknown>) => {
-          const execStatus = exec.status as string;
-          const execLead = exec.lead as Record<string, string> | undefined;
-          const execSteps = (exec.steps || []) as Record<string, unknown>[];
+          const execStatus = (exec.status as string) || '';
+          const execLead = (exec.lead && typeof exec.lead === 'object') ? exec.lead as Record<string, string> : undefined;
+          const execSteps = Array.isArray(exec.steps) ? exec.steps as Record<string, unknown>[] : [];
           return {
-          id: exec.id as string,
+          id: (exec.id as string) || '',
           timestamp: (exec.startedAt as string) || new Date().toISOString(),
           status: execStatus === 'COMPLETED' || execStatus === 'SUCCESS' ? 'success' as const : execStatus === 'FAILED' ? 'failed' as const : execStatus === 'IN_PROGRESS' || execStatus === 'RUNNING' ? 'running' as const : 'info' as const,
           error: (exec.error as string) || undefined,
-          leadName: execLead ? `${execLead.firstName || ''} ${execLead.lastName || ''}`.trim() : undefined,
-          leadEmail: execLead?.email,
-          duration: exec.completedAt ? Math.round((new Date(exec.completedAt as string).getTime() - new Date(exec.startedAt as string).getTime()) / 1000) : 0,
+          leadName: execLead ? `${execLead.firstName || ''} ${execLead.lastName || ''}`.trim() || undefined : undefined,
+          leadEmail: execLead?.email || undefined,
+          duration: exec.completedAt && exec.startedAt ? Math.round((new Date(exec.completedAt as string).getTime() - new Date(exec.startedAt as string).getTime()) / 1000) : 0,
           steps: execSteps.map((step: Record<string, unknown>) => ({
             id: step.id,
             stepIndex: step.stepIndex,
-            actionType: step.actionType as string,
-            actionLabel: step.actionLabel as string,
+            actionType: (step.actionType as string) || 'UNKNOWN',
+            actionLabel: (step.actionLabel as string) || '',
             status: step.status as ExecutionStep['status'],
-            error: step.error as string,
+            error: (step.error as string) || undefined,
             retryCount: (step.retryCount as number) || 0,
-            durationMs: step.durationMs as number,
-            branchTaken: step.branchTaken as string,
-            startedAt: step.startedAt as string,
-            completedAt: step.completedAt as string,
+            durationMs: (step.durationMs as number) || 0,
+            branchTaken: (step.branchTaken as string) || undefined,
+            startedAt: (step.startedAt as string) || '',
+            completedAt: (step.completedAt as string) || undefined,
           })),
           }
         }));
@@ -462,10 +469,7 @@ const WorkflowBuilder = () => {
   };
 
   const handleComponentSelect = (component: WorkflowComponent) => {
-    // Only add when in click mode - in drag mode, components should only be added via drag & drop
-    if (interactionMode === 'click') {
-      addNodeFromComponent(component);
-    }
+    addNodeFromComponent(component);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -525,6 +529,12 @@ const WorkflowBuilder = () => {
       errors.push('Workflow should only have one trigger');
     }
     
+    // Check trigger is configured
+    const unconfiguredTriggers = triggers.filter(n => !n.config?.triggerType);
+    if (unconfiguredTriggers.length > 0) {
+      errors.push('Trigger node needs to be configured');
+    }
+    
     // Check for disconnected nodes (basic check)
     if (nodes.length > 0 && (!nodes[0] || nodes[0]?.type !== 'trigger')) {
       errors.push('Workflow should start with a trigger');
@@ -533,6 +543,24 @@ const WorkflowBuilder = () => {
     // Check for actions without triggers
     if (nodes.length > 0 && triggers.length === 0) {
       errors.push('Cannot have actions without a trigger');
+    }
+    
+    // Check action nodes are configured
+    const unconfiguredActions = nodes.filter(n => n.type === 'action' && !n.config?.actionType);
+    if (unconfiguredActions.length > 0) {
+      errors.push(`${unconfiguredActions.length} action node(s) need configuration`);
+    }
+    
+    // Check delay nodes are configured
+    const unconfiguredDelays = nodes.filter(n => n.type === 'delay' && !n.config?.duration);
+    if (unconfiguredDelays.length > 0) {
+      errors.push(`${unconfiguredDelays.length} delay node(s) need a duration`);
+    }
+    
+    // Check condition nodes are configured
+    const unconfiguredConditions = nodes.filter(n => n.type === 'condition' && !n.config?.conditionType);
+    if (unconfiguredConditions.length > 0) {
+      errors.push(`${unconfiguredConditions.length} condition node(s) need configuration`);
     }
     
     setValidationErrors(errors);
@@ -620,19 +648,17 @@ const WorkflowBuilder = () => {
   };
 
   const saveWorkflow = async () => {
+    // Run full validation and block save if errors exist
+    if (!validateWorkflow()) {
+      toast.error('Please fix validation errors before saving.');
+      return;
+    }
+    
     setIsSaving(true);
     try {
       // Map nodes to the format the backend expects
       const triggerNode = nodes.find(n => n.type === 'trigger');
       const actionNodes = nodes.filter(n => n.type !== 'trigger');
-
-      // Validate action nodes have proper actionType configured
-      const unconfiguredActions = actionNodes.filter(n => n.type === 'action' && !n.config?.actionType);
-      if (unconfiguredActions.length > 0) {
-        toast.error(`${unconfiguredActions.length} action node(s) missing configuration. Please configure all action nodes before saving.`);
-        setIsSaving(false);
-        return;
-      }
 
       const workflowData = {
         name: workflowName,
@@ -693,14 +719,23 @@ const WorkflowBuilder = () => {
       const workflowId = urlParams.get('id');
       
       if (workflowId) {
-        await workflowsApi.testWorkflow(workflowId, testInput ? { leadIdentifier: testInput } : undefined);
-        toast.success('Test completed successfully');
+        const result = await workflowsApi.testWorkflow(workflowId, testInput ? { leadIdentifier: testInput } : undefined);
+        const testData = result?.data || result;
+        if (testData?.executionId) {
+          toast.success('Test completed — check execution logs for details');
+          // Open logs panel and refresh to show the test result
+          setShowLogsPanel(true);
+          fetchWorkflowStatus(workflowId);
+        } else {
+          toast.success('Test completed successfully');
+        }
       } else {
         toast.warning('Please save the workflow before testing');
       }
     } catch (error) {
       logger.error('Failed to test workflow:', error);
-      toast.error('Test execution failed');
+      const message = error instanceof Error ? error.message : 'Test execution failed';
+      toast.error(message);
     } finally {
       setIsTestRunning(false);
     }
@@ -737,7 +772,7 @@ const WorkflowBuilder = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="relative flex flex-col h-[calc(100vh-10rem)]">
       {/* Import Template Confirmation Dialog */}
       <Dialog open={showImportConfirm} onOpenChange={setShowImportConfirm}>
         <DialogContent>
@@ -758,66 +793,59 @@ const WorkflowBuilder = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Breadcrumb Navigation */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link to="/workflows" className="hover:text-foreground transition-colors">Workflows</Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="text-foreground font-medium">{workflowId ? workflowName : 'New Workflow'}</span>
-      </nav>
-
-      {/* Sub-Navigation Tabs */}
-      <WorkflowsTabNav />
-
-      {/* Header with Actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <Input
-                value={workflowName}
-                onChange={(e) => setWorkflowName(e.target.value)}
-                className="text-2xl font-bold p-1 h-auto focus-visible:ring-1 border border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:border-primary bg-transparent hover:bg-muted/50"
-                placeholder="Enter workflow name"
-                aria-label="Workflow name"
-              />
-              {/* Live Status Indicator */}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg border">
-                <div className={`w-2.5 h-2.5 rounded-full ${
-                  workflowStatus === 'running' ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/50' :
-                  workflowStatus === 'active' ? 'bg-blue-500' :
-                  workflowStatus === 'paused' ? 'bg-yellow-500' :
-                  'bg-gray-400'
-                }`} />
-                <span className="text-xs font-semibold uppercase tracking-wide">
-                  {workflowStatus === 'running' ? `Running (${activeExecutions} active)` :
-                   workflowStatus === 'active' ? 'Active' :
-                   workflowStatus === 'paused' ? 'Paused' :
-                   'Not Active'}
-                </span>
-              </div>
-            </div>
-            <p className="text-muted-foreground mt-1">
-              Build automated workflows with visual drag-and-drop
-            </p>
+      {/* Compact Header Bar */}
+      <div className="flex items-center justify-between gap-3 pb-2 flex-shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <Input
+            value={workflowName}
+            onChange={(e) => setWorkflowName(e.target.value)}
+            className="text-lg font-bold p-1 h-auto w-52 focus-visible:ring-1 border border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:border-primary bg-transparent hover:bg-muted/50"
+            placeholder="Workflow name"
+            aria-label="Workflow name"
+          />
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md border flex-shrink-0">
+            <div className={`w-2 h-2 rounded-full ${
+              workflowStatus === 'running' ? 'bg-green-500 animate-pulse' :
+              workflowStatus === 'active' ? 'bg-blue-500' :
+              workflowStatus === 'paused' ? 'bg-yellow-500' :
+              'bg-gray-400'
+            }`} />
+            <span className="text-xs font-semibold uppercase tracking-wide">
+              {workflowStatus === 'running' ? `Running (${activeExecutions})` :
+               workflowStatus === 'active' ? 'Active' :
+               workflowStatus === 'paused' ? 'Paused' :
+               'Draft'}
+            </span>
+          </div>
+          <div className="hidden lg:flex items-center gap-1.5">
+            <Badge variant="secondary" className="text-xs px-1.5 py-0">{nodes.length} nodes</Badge>
+            <Badge variant="secondary" className="text-xs px-1.5 py-0">{analyticsData?.totalExecutions ?? 0} runs</Badge>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowTemplates(!showTemplates)}>
-            <Upload className="h-4 w-4 mr-2" />
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <Button variant={showMetricsPanel ? 'default' : 'ghost'} size="sm" onClick={() => { setShowMetricsPanel(!showMetricsPanel); setShowLogsPanel(false); }} title="Performance Metrics">
+            <TrendingUp className="h-4 w-4" />
+          </Button>
+          <Button variant={showLogsPanel ? 'default' : 'ghost'} size="sm" onClick={() => { setShowLogsPanel(!showLogsPanel); setShowMetricsPanel(false); }} title="Execution Logs">
+            <Activity className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)}>
+            <Upload className="h-4 w-4 mr-1.5" />
             Templates
           </Button>
           <Button
             variant="outline"
+            size="sm"
             onClick={runTest}
             disabled={isTestRunning || !workflowId}
-            title={!workflowId ? 'Save the workflow first to enable testing' : 'Run a test execution'}
+            title={!workflowId ? 'Save first to test' : 'Run a test execution'}
           >
-            <TestTube2 className="h-4 w-4 mr-2" />
-            {isTestRunning ? 'Running...' : !workflowId ? 'Save First to Test' : 'Test Run'}
+            <TestTube2 className="h-4 w-4 mr-1.5" />
+            {isTestRunning ? 'Running...' : 'Test'}
           </Button>
-          <Button onClick={saveWorkflow} disabled={isSaving} className="relative">
-            <Save className={`h-4 w-4 mr-2 ${isSaving ? 'animate-spin' : ''}`} />
-            {isSaving ? 'Saving...' : 'Save Workflow'}
+          <Button size="sm" onClick={saveWorkflow} disabled={isSaving} className="relative">
+            <Save className={`h-4 w-4 mr-1.5 ${isSaving ? 'animate-spin' : ''}`} />
+            {isSaving ? 'Saving...' : 'Save'}
             {hasUnsavedChanges && !isSaving && (
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
@@ -828,48 +856,46 @@ const WorkflowBuilder = () => {
         </div>
       </div>
 
-      {/* Performance Metrics Panel */}
+      {/* Performance Metrics - floating panel */}
       {showMetricsPanel && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Performance Metrics</CardTitle>
-                <CardDescription>Workflow execution analytics</CardDescription>
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setShowMetricsPanel(false)} />
+          <div className="absolute top-12 right-4 z-40 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 rounded-t-xl">
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-primary/10 rounded">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <h3 className="text-sm font-semibold">Performance Metrics</h3>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowMetricsPanel(false)}>
-                Close
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted" onClick={() => setShowMetricsPanel(false)}>
+                <X className="h-3.5 w-3.5" />
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-4 mb-6">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Total Executions</p>
-                <p className="text-2xl font-bold">{analyticsData?.totalExecutions ?? 0}</p>
-                <p className="text-xs text-muted-foreground">{analyticsData?.totalExecutions ? 'All time' : 'No data yet'}</p>
+            <div className="grid grid-cols-2 gap-px bg-border">
+              <div className="bg-white dark:bg-gray-800 p-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Executions</p>
+                <p className="text-xl font-bold mt-0.5">{analyticsData?.totalExecutions ?? 0}</p>
+                <p className="text-[10px] text-muted-foreground">{analyticsData?.totalExecutions ? 'All time' : 'No data yet'}</p>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Success Rate</p>
-                <p className="text-2xl font-bold">{analyticsData?.successRate != null ? `${Math.round(analyticsData.successRate)}%` : '—'}</p>
-                <p className="text-xs text-muted-foreground">{analyticsData?.successRate != null ? (analyticsData.successRate >= 95 ? 'Excellent!' : 'Based on all runs') : 'No data yet'}</p>
+              <div className="bg-white dark:bg-gray-800 p-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Success Rate</p>
+                <p className={`text-xl font-bold mt-0.5 ${analyticsData?.successRate != null && analyticsData.successRate >= 95 ? 'text-green-600' : ''}`}>{analyticsData?.successRate != null ? `${Math.round(analyticsData.successRate)}%` : '—'}</p>
+                <p className="text-[10px] text-muted-foreground">{analyticsData?.successRate != null ? (analyticsData.successRate >= 95 ? 'Excellent' : 'All runs') : 'No data yet'}</p>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Avg Duration</p>
-                <p className="text-2xl font-bold">{analyticsData?.avgDuration != null ? `${Math.round(analyticsData.avgDuration)}s` : '—'}</p>
-                <p className="text-xs text-muted-foreground">{analyticsData?.avgDuration != null ? 'Per execution' : 'No data yet'}</p>
+              <div className="bg-white dark:bg-gray-800 p-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Avg Duration</p>
+                <p className="text-xl font-bold mt-0.5">{analyticsData?.avgDuration != null ? `${Math.round(analyticsData.avgDuration)}s` : '—'}</p>
+                <p className="text-[10px] text-muted-foreground">{analyticsData?.avgDuration != null ? 'Per execution' : 'No data yet'}</p>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Active Runs</p>
-                <p className="text-2xl font-bold">{activeExecutions}</p>
-                <p className="text-xs text-muted-foreground">{activeExecutions > 0 ? 'Running now' : 'None active'}</p>
+              <div className="bg-white dark:bg-gray-800 p-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Active Runs</p>
+                <p className={`text-xl font-bold mt-0.5 ${activeExecutions > 0 ? 'text-blue-600' : ''}`}>{activeExecutions}</p>
+                <p className="text-[10px] text-muted-foreground">{activeExecutions > 0 ? 'Running now' : 'None active'}</p>
               </div>
             </div>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">{analyticsData?.totalExecutions ? 'View execution logs below for detailed step-by-step data.' : 'No execution data yet. Metrics will appear as workflows run.'}</p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </>
       )}
 
       {/* Template Modal */}
@@ -984,159 +1010,53 @@ const WorkflowBuilder = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={() => setShowMetricsPanel(!showMetricsPanel)}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nodes in Workflow</CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Workflow className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{nodes.length}</div>
-            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Click to view metrics</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Executions</CardTitle>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Play className="h-4 w-4 text-green-600 dark:text-green-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analyticsData?.totalExecutions ?? 0}</div>
-            <p className="text-xs text-muted-foreground">{analyticsData?.totalExecutions ? `${analyticsData.totalExecutions} total` : 'No executions yet'}</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
-              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analyticsData?.successRate != null ? `${Math.round(analyticsData.successRate)}%` : '—'}</div>
-            <p className="text-xs text-muted-foreground">{analyticsData?.successRate != null ? (analyticsData.successRate >= 95 ? 'Excellent!' : 'Based on all runs') : 'No data yet'}</p>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={() => setShowLogsPanel(!showLogsPanel)}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Runs</CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Activity className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{executionLogs.length}</div>
-            <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Click to view logs</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Getting Started Guide - Show when no nodes */}
-      {nodes.length === 0 && (
-        <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-indigo-200 dark:border-indigo-800">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                <Workflow className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-2">Let's build your workflow! 🚀</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Choose how you'd like to get started:
-                </p>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <button
-                    onClick={() => setShowTemplates(true)}
-                    className="p-4 bg-white dark:bg-gray-800 rounded-lg border hover:border-primary transition-all text-left group"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Upload className="h-4 w-4 text-primary" />
-                      <span className="font-semibold text-sm">Use a Template</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Start with a pre-built workflow</p>
-                  </button>
-                  <button
-                    onClick={() => setShowComponentLibrary(true)}
-                    className="p-4 bg-white dark:bg-gray-800 rounded-lg border hover:border-primary transition-all text-left group"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Plus className="h-4 w-4 text-primary" />
-                      <span className="font-semibold text-sm">Build from Scratch</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Add components one by one</p>
-                  </button>
-                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Activity className="h-4 w-4 text-primary" />
-                      <span className="font-semibold text-sm">Pro Tip</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Start with a trigger, then add actions</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Retry & Failure Notification Settings */}
-      <Card>
-        <CardContent className="py-3 px-4">
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium whitespace-nowrap">Max Retries:</span>
-              <div className="flex gap-1">
-                {[1, 2, 3].map((n) => (
-                  <Button
-                    key={n}
-                    variant={maxRetries === n ? 'default' : 'outline'}
-                    size="sm"
-                    className="w-8 h-8 p-0"
-                    onClick={() => setMaxRetries(n)}
-                  >
-                    {n}
-                  </Button>
-                ))}
-              </div>
-              <span className="text-xs text-muted-foreground">per action step</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="notifyOnFailure"
-                checked={notifyOnFailure}
-                onChange={(e) => setNotifyOnFailure(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <label htmlFor="notifyOnFailure" className="text-sm font-medium cursor-pointer">
-                Notify on failure
-              </label>
-              <span className="text-xs text-muted-foreground">— get notified when a step fails after all retries</span>
+      {/* Retry & Failure Settings - compact inline bar */}
+      {nodes.length > 0 && (
+        <div className="flex items-center gap-4 text-sm pb-1 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Retries:</span>
+            <div className="flex gap-0.5">
+              {[1, 2, 3].map((n) => (
+                <Button
+                  key={n}
+                  variant={maxRetries === n ? 'default' : 'outline'}
+                  size="sm"
+                  className="w-6 h-6 p-0 text-xs"
+                  onClick={() => setMaxRetries(n)}
+                >
+                  {n}
+                </Button>
+              ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              id="notifyOnFailure"
+              checked={notifyOnFailure}
+              onChange={(e) => setNotifyOnFailure(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-gray-300"
+            />
+            <label htmlFor="notifyOnFailure" className="text-xs text-muted-foreground cursor-pointer">
+              Notify on failure
+            </label>
+          </div>
+        </div>
+      )}
 
       {/* Main Workflow Canvas & Panels */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-3">
         {/* Visual Workflow Canvas */}
-        <Card className="lg:col-span-2 hover:shadow-md transition-shadow">
-          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <Card className="lg:col-span-2 flex flex-col overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex-shrink-0 py-2 px-4">
             <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  <Workflow className="h-5 w-5" />
-                  Workflow Canvas
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {interactionMode === 'drag' ? '🎯 Drag & drop components from the sidebar' : '✨ Click components to add them'}
-                </CardDescription>
-              </div>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Workflow className="h-4 w-4" />
+                Canvas
+                <span className="text-xs font-normal text-muted-foreground">
+                  {interactionMode === 'drag' ? '— drag & drop' : '— click to add'}
+                </span>
+              </CardTitle>
               <div className="flex gap-2">
                 <Button 
                   variant={interactionMode === 'drag' ? 'default' : 'outline'}
@@ -1183,7 +1103,7 @@ const WorkflowBuilder = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 min-h-0 overflow-hidden p-2">
             {/* Unconfigured Nodes Summary */}
             {(() => {
               const unconfigured = nodes.filter(n => {
@@ -1251,29 +1171,7 @@ const WorkflowBuilder = () => {
         </Card>
 
         {/* Right Sidebar - Component Library & Config */}
-        <div className="space-y-6">
-          {/* Mode Toggle Info */}
-          <Card className={interactionMode === 'drag' ? 'bg-blue-50 border-blue-200 border-2' : 'bg-green-50 border-green-200 border-2'}>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                {interactionMode === 'drag' ? (
-                  <GripVertical className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <MousePointer2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                )}
-                <div>
-                  <h4 className={`text-sm font-semibold mb-1 ${interactionMode === 'drag' ? 'text-blue-900 dark:text-blue-200' : 'text-green-900 dark:text-green-200'}`}>
-                    {interactionMode === 'drag' ? '🎯 Drag & Drop Mode Active' : '✨ Click Mode Active'}
-                  </h4>
-                  <p className={`text-xs leading-relaxed ${interactionMode === 'drag' ? 'text-blue-700 dark:text-blue-300' : 'text-green-700 dark:text-green-300'}`}>
-                    {interactionMode === 'drag' 
-                      ? 'Drag components from below onto the canvas. You can also drag nodes to reposition them and click to configure.'
-                      : 'Simply click any component below to instantly add it to your workflow! The component library stays open for quick building.'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="overflow-y-auto space-y-3">
           {/* Node Configuration Panel */}
           {showConfigPanel && selectedNode && (
             <ModalErrorBoundary name="Node Configuration" onClose={() => {
@@ -1468,100 +1366,78 @@ const WorkflowBuilder = () => {
         </div>
       </div>
 
-      {/* Execution Logs Viewer */}
+      {/* Execution Logs - floating panel */}
       {showLogsPanel && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Execution Logs</CardTitle>
-                <CardDescription>Per-step execution history for recent runs</CardDescription>
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setShowLogsPanel(false)} />
+          <div className="absolute top-12 right-4 z-40 w-96 max-h-[60vh] bg-white dark:bg-gray-800 rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 flex flex-col animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="flex items-center justify-between px-3 py-2.5 border-b bg-muted/30 rounded-t-xl flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded">
+                <Activity className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
               </div>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setShowLogsPanel(false)}>
-                  Close
-                </Button>
-              </div>
+              <h3 className="text-sm font-semibold">Execution Logs</h3>
+              {executionLogs.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{executionLogs.length}</Badge>
+              )}
             </div>
-          </CardHeader>
-          <CardContent>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted" onClick={() => setShowLogsPanel(false)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="overflow-y-auto flex-1 p-3">
             {executionLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">No executions recorded yet.</p>
+              <div className="text-center py-6">
+                <Activity className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">No executions recorded yet</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Run a test to see logs here</p>
+              </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {executionLogs.map((log) => (
-                  <div key={log.id} className="border rounded-lg overflow-hidden">
-                    {/* Execution header */}
-                    <div className={`p-3 flex items-center justify-between ${
+                  <div key={log.id} className="border rounded-lg overflow-hidden text-xs">
+                    <div className={`px-2.5 py-1.5 flex items-center justify-between ${
                       log.status === 'success' ? 'bg-green-50 dark:bg-green-950/20' :
                       log.status === 'failed' ? 'bg-red-50 dark:bg-red-950/20' :
                       log.status === 'running' ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-muted/30'
                     }`}>
-                      <div className="flex items-center gap-2">
-                        {log.status === 'success' && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                        {log.status === 'failed' && <XCircle className="h-4 w-4 text-red-600" />}
-                        {log.status === 'running' && <Activity className="h-4 w-4 text-blue-600 animate-pulse" />}
-                        {log.status === 'info' && <Activity className="h-4 w-4 text-muted-foreground" />}
-                        <span className="font-medium text-sm capitalize">{log.status}</span>
+                      <div className="flex items-center gap-1.5">
+                        {log.status === 'success' && <CheckCircle2 className="h-3 w-3 text-green-600" />}
+                        {log.status === 'failed' && <XCircle className="h-3 w-3 text-red-600" />}
+                        {log.status === 'running' && <Activity className="h-3 w-3 text-blue-600 animate-pulse" />}
+                        {log.status === 'info' && <Activity className="h-3 w-3 text-muted-foreground" />}
+                        <span className="font-medium capitalize">{log.status}</span>
                         {log.leadName && (
-                          <span className="text-xs text-muted-foreground">— {log.leadName} {log.leadEmail ? `(${log.leadEmail})` : ''}</span>
+                          <span className="text-muted-foreground truncate max-w-[120px]">— {log.leadName}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {log.duration > 0 && <Badge variant="outline">{log.duration}s</Badge>}
-                        <span>{new Date(log.timestamp).toLocaleString()}</span>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        {log.duration > 0 && <span>{log.duration}s</span>}
                       </div>
                     </div>
-
-                    {/* Per-step detail */}
-                    {log.steps.length > 0 ? (
+                    {log.steps.length > 0 && (
                       <div className="divide-y">
                         {log.steps.map((step) => (
-                          <div key={step.id} className="px-4 py-2 flex items-start gap-3 text-sm">
-                            <div className="pt-0.5 flex-shrink-0">
-                              {step.status === 'SUCCESS' && <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
-                              {step.status === 'FAILED' && <XCircle className="h-3.5 w-3.5 text-red-500" />}
-                              {step.status === 'RUNNING' && <Activity className="h-3.5 w-3.5 text-blue-500 animate-pulse" />}
-                              {step.status === 'PENDING' && <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{step.actionLabel || step.actionType}</span>
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                  {step.actionType}
-                                </Badge>
-                                {step.branchTaken && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                    branch: {step.branchTaken}
-                                  </Badge>
-                                )}
-                                {step.retryCount > 0 && (
-                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                    {step.retryCount} {step.retryCount === 1 ? 'retry' : 'retries'}
-                                  </Badge>
-                                )}
-                              </div>
-                              {step.error && (
-                                <p className="text-xs text-red-600 mt-0.5 truncate">{step.error}</p>
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          <div key={step.id} className="px-2.5 py-1 flex items-center gap-2">
+                            {step.status === 'SUCCESS' && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
+                            {step.status === 'FAILED' && <XCircle className="h-3 w-3 text-red-500 flex-shrink-0" />}
+                            {step.status === 'RUNNING' && <Activity className="h-3 w-3 text-blue-500 animate-pulse flex-shrink-0" />}
+                            {step.status === 'PENDING' && <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                            <span className="truncate">{step.actionLabel || step.actionType}</span>
+                            <span className="text-muted-foreground ml-auto flex-shrink-0">
                               {step.durationMs != null ? `${step.durationMs}ms` : '—'}
                             </span>
                           </div>
                         ))}
-                      </div>
-                    ) : (
-                      <div className="px-4 py-3 text-xs text-muted-foreground">
-                        {log.error ? `Error: ${log.error}` : log.status === 'running' ? 'Execution in progress…' : 'No step details available'}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+        </>
       )}
     </div>
   );

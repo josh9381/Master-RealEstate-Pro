@@ -156,40 +156,24 @@ async function processQueue(): Promise<void> {
 async function executeQueueItem(item: ExecutionQueueItem): Promise<ExecutionResult> {
   const startTime = Date.now();
 
-  try {
-    logger.info(`Executing workflow ${item.workflowId} for lead ${item.leadId || 'N/A'}`);
+  logger.info(`Executing workflow ${item.workflowId} for lead ${item.leadId || 'N/A'}`);
 
-    const executionId = await executeWorkflow(item.workflowId, item.leadId, item.metadata);
+  const executionId = await executeWorkflow(item.workflowId, item.leadId, item.metadata);
 
-    const duration = Date.now() - startTime;
+  const duration = Date.now() - startTime;
 
-    const result: ExecutionResult = {
-      executionId,
-      workflowId: item.workflowId,
-      status: ExecutionStatus.SUCCESS,
-      startedAt: new Date(startTime),
-      completedAt: new Date(),
-      duration,
-    };
+  const result: ExecutionResult = {
+    executionId,
+    workflowId: item.workflowId,
+    status: ExecutionStatus.SUCCESS,
+    startedAt: new Date(startTime),
+    completedAt: new Date(),
+    duration,
+  };
 
-    logger.info(`Workflow ${item.workflowId} completed successfully in ${duration}ms`);
+  logger.info(`Workflow ${item.workflowId} completed successfully in ${duration}ms`);
 
-    return result;
-  } catch (error) {
-    const duration = Date.now() - startTime;
-
-    const result: ExecutionResult = {
-      executionId: 'failed',
-      workflowId: item.workflowId,
-      status: ExecutionStatus.FAILED,
-      startedAt: new Date(startTime),
-      completedAt: new Date(),
-      duration,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-
-    throw error;
-  }
+  return result;
 }
 
 /**
@@ -268,7 +252,7 @@ async function createExecutionLog(data: {
         leadId: data.leadId,
         status: data.status,
         error: data.error,
-        metadata: data.metadata as any,
+        metadata: data.metadata as Record<string, unknown> | undefined,
         startedAt: new Date(),
         completedAt: data.status !== ExecutionStatus.RUNNING ? new Date() : undefined,
       },
@@ -316,19 +300,98 @@ export async function processTimeBasedWorkflows(): Promise<void> {
     },
   });
 
+  const now = new Date();
+
   for (const workflow of timeBasedWorkflows) {
-    const triggerData = workflow.triggerData as { schedule?: string };
+    const triggerData = workflow.triggerData as { schedule?: string; interval?: string; lastTriggeredAt?: string };
     
-    // Simple check - in production, use a proper cron parser
-    if (triggerData?.schedule) {
-      enqueueWorkflow({
-        workflowId: workflow.id,
-        triggerType: WorkflowTrigger.TIME_BASED,
-        metadata: { scheduled: true },
-        priority: 'normal',
-      });
-    }
+    if (!triggerData?.schedule && !triggerData?.interval) continue;
+
+    // Check if this workflow should run now based on its schedule
+    const shouldRun = shouldRunTimeBased(workflow, triggerData, now);
+    if (!shouldRun) continue;
+
+    enqueueWorkflow({
+      workflowId: workflow.id,
+      triggerType: WorkflowTrigger.TIME_BASED,
+      metadata: { scheduled: true, triggeredAt: now.toISOString() },
+      priority: 'normal',
+    });
+
+    // Update lastRunAt to prevent re-triggering on next check
+    await prisma.workflow.update({
+      where: { id: workflow.id },
+      data: { lastRunAt: now },
+    });
   }
+}
+
+/**
+ * Determine if a time-based workflow should run based on its schedule config.
+ * Supports interval-based (e.g. "daily", "hourly", "weekly") and
+ * specific time schedules (e.g. "09:00").
+ */
+function shouldRunTimeBased(
+  workflow: { lastRunAt: Date | null },
+  triggerData: { schedule?: string; interval?: string },
+  now: Date
+): boolean {
+  const lastRun = workflow.lastRunAt;
+
+  // Interval-based: "hourly", "daily", "weekly", or minutes like "30m", "2h"
+  if (triggerData.interval) {
+    if (!lastRun) return true; // Never run before — trigger immediately
+
+    const elapsed = now.getTime() - lastRun.getTime();
+    const intervalMs = parseInterval(triggerData.interval);
+    return elapsed >= intervalMs;
+  }
+
+  // Schedule-based: "HH:MM" format — run once per day at that time
+  if (triggerData.schedule) {
+    const match = triggerData.schedule.match(/^(\d{1,2}):(\d{2})$/);
+    if (match) {
+      const targetHour = parseInt(match[1], 10);
+      const targetMinute = parseInt(match[2], 10);
+      const currentHour = now.getUTCHours();
+      const currentMinute = now.getUTCMinutes();
+
+      // Within the same minute window
+      if (currentHour === targetHour && currentMinute === targetMinute) {
+        // Ensure we haven't already run today
+        if (!lastRun) return true;
+        const lastRunDate = new Date(lastRun);
+        return lastRunDate.getUTCDate() !== now.getUTCDate() ||
+               lastRunDate.getUTCMonth() !== now.getUTCMonth() ||
+               lastRunDate.getUTCFullYear() !== now.getUTCFullYear();
+      }
+    }
+    // Fallback: treat schedule string as an interval
+    return false;
+  }
+
+  return false;
+}
+
+function parseInterval(interval: string): number {
+  const lower = interval.toLowerCase().trim();
+  if (lower === 'hourly') return 60 * 60 * 1000;
+  if (lower === 'daily') return 24 * 60 * 60 * 1000;
+  if (lower === 'weekly') return 7 * 24 * 60 * 60 * 1000;
+
+  // Parse "30m", "2h", "1d" formats
+  const match = lower.match(/^(\d+)\s*(m|min|h|hr|hour|d|day)s?$/);
+  if (match) {
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+    if (unit === 'm' || unit === 'min') return value * 60 * 1000;
+    if (unit === 'h' || unit === 'hr' || unit === 'hour') return value * 60 * 60 * 1000;
+    if (unit === 'd' || unit === 'day') return value * 24 * 60 * 60 * 1000;
+  }
+
+  // Default: 24 hours
+  logger.warn(`[Workflow] Unknown interval format "${interval}", defaulting to daily`);
+  return 24 * 60 * 60 * 1000;
 }
 
 // ===================================
