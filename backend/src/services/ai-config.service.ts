@@ -259,9 +259,25 @@ export async function updateOrgAISettings(
   if (settings.aiBudgetHardLimit !== undefined) updateData.aiBudgetHardLimit = settings.aiBudgetHardLimit
   if (settings.aiBudgetAlertEnabled !== undefined) updateData.aiBudgetAlertEnabled = settings.aiBudgetAlertEnabled
 
-  // Encrypt API key if provided
+  // Validate and encrypt API key if provided
   if (settings.openaiApiKey) {
-    updateData.openaiApiKey = encrypt(settings.openaiApiKey)
+    // Basic format validation: OpenAI keys start with "sk-"
+    const key = settings.openaiApiKey.trim()
+    if (!key.startsWith('sk-') || key.length < 30) {
+      throw new Error('Invalid OpenAI API key format. Keys should start with "sk-" and be at least 30 characters.')
+    }
+
+    // Validate the key works with a lightweight API call
+    try {
+      const testClient = new OpenAI({ apiKey: key })
+      await testClient.models.list({ limit: 1 } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (validationError: unknown) {
+      const msg = validationError instanceof Error ? validationError.message : 'Unknown error'
+      logger.warn(`API key validation failed for org ${organizationId}: ${msg}`)
+      throw new Error('The provided OpenAI API key is invalid or has been revoked. Please check and try again.')
+    }
+
+    updateData.openaiApiKey = encrypt(key)
   }
 
   // Invalidate client cache for this org

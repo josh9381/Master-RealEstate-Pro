@@ -9,8 +9,6 @@ import { aiApi } from '@/lib/api'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { formatRate } from '@/lib/metricsCalculator'
 
-import { useToast } from '@/hooks/useToast'
-
 interface Suggestion {
   id: string
   icon: typeof Mail
@@ -71,16 +69,14 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isUnavailable, setIsUnavailable] = useState(false)
-  const [showAll, setShowAll] = useState(false)
-  const { toast } = useToast()
 
   const wireClickHandler = useCallback((action: string): (() => void) => {
     const lower = action.toLowerCase()
     if ((lower.includes('email') || lower.includes('mail')) && onComposeEmail) return onComposeEmail
     if ((lower.includes('call') || lower.includes('phone')) && onScheduleCall) return onScheduleCall
     if ((lower.includes('demo') || lower.includes('meeting') || lower.includes('calendar')) && onBookDemo) return onBookDemo
-    return () => { toast.info(`Action: ${action}`) }
-  }, [onComposeEmail, onScheduleCall, onBookDemo, toast])
+    return () => {}
+  }, [onComposeEmail, onScheduleCall, onBookDemo])
 
   // Wire fallback suggestions to callback props
   useEffect(() => {
@@ -195,7 +191,7 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {activeSuggestions.slice(0, showAll ? undefined : 3).map((suggestion) => (
+          {activeSuggestions.slice(0, 3).map((suggestion) => (
             <div
               key={suggestion.id}
               className={cn(
@@ -253,8 +249,8 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
             </div>
           ))}
 
-          {!showAll && activeSuggestions.length > 3 && (
-            <Button variant="ghost" size="sm" className="w-full" onClick={() => setShowAll(true)}>
+          {activeSuggestions.length > 3 && (
+            <Button variant="ghost" size="sm" className="w-full">
               Show {activeSuggestions.length - 3} more suggestions
             </Button>
           )}

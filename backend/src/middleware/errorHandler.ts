@@ -68,6 +68,21 @@ export class InternalServerError extends AppError {
 }
 
 /**
+ * Sanitize error messages to prevent leaking sensitive information
+ * like API keys, connection strings, or internal paths.
+ */
+function sanitizeErrorMessage(msg: string): string {
+  if (!msg) return msg;
+  // Redact OpenAI API keys (sk-...)
+  let sanitized = msg.replace(/sk-[a-zA-Z0-9_-]{20,}/g, 'sk-***REDACTED***');
+  // Redact generic API keys/tokens that look like long hex/base64 strings after "key" or "token"
+  sanitized = sanitized.replace(/(api[_-]?key|token|secret|password|authorization)[=: ]["']?[a-zA-Z0-9_\-/.]{16,}["']?/gi, '$1=***REDACTED***');
+  // Redact connection strings
+  sanitized = sanitized.replace(/(postgres|mysql|mongodb|redis):\/\/[^\s,)]+/gi, '$1://***REDACTED***');
+  return sanitized;
+}
+
+/**
  * Global Error Handler Middleware
  */
 export function errorHandler(
@@ -132,8 +147,8 @@ export function errorHandler(
   }
   // Unknown errors
   else {
-    message = process.env.NODE_ENV === 'development' 
-      ? err.message 
+    message = process.env.NODE_ENV === 'development'
+      ? sanitizeErrorMessage(err.message)
       : 'Internal server error';
   }
 
@@ -177,9 +192,9 @@ export function errorHandler(
     response.details = details;
   }
 
-  // Include stack trace in development
+  // Include stack trace in development (sanitized to prevent key leakage)
   if (process.env.NODE_ENV === 'development' && !(err instanceof AppError)) {
-    response.stack = err.stack;
+    response.stack = err.stack ? sanitizeErrorMessage(err.stack) : undefined;
   }
 
   res.status(statusCode).json(response);

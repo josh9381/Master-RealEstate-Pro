@@ -31,7 +31,7 @@ export function AIEmailComposer({
   const [confidenceScore, setConfidenceScore] = useState<number | null>(null)
   const { toast } = useToast()
   const [emailData, setEmailData] = useState({
-    subject: `Following up on our conversation, ${(leadName.split(' ')[0]) || leadName}`,
+    subject: `Following up on our conversation, ${leadName.split(' ')[0]}`,
     body: '',
   })
 

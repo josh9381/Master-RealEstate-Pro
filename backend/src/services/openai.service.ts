@@ -105,7 +105,6 @@ export class OpenAIService {
     this.client = new OpenAI({
       apiKey: apiKey || 'not-configured',
       organization: process.env.OPENAI_ORG_ID,
-      timeout: 30000, // 30s timeout to prevent indefinite hangs
     });
 
     this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -198,7 +197,7 @@ export class OpenAIService {
       const { client, model, config } = await this.resolveClientForOrg(_organizationId, 'chat');
 
       // Convert functions to tools format (OpenAI SDK v4+ requirement)
-      const tools = functions.map((fn: unknown) => ({
+      const tools = functions.map((fn: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
         type: 'function' as const,
         function: fn,
       }));

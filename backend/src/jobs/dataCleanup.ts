@@ -1,6 +1,8 @@
 import { logger } from '../lib/logger'
 import prisma from '../config/database';
 import { acquireLock, releaseLock } from '../utils/distributedLock';
+import { AI_PLAN_LIMITS } from '../config/subscriptions';
+import { SubscriptionTier } from '@prisma/client';
 
 /**
  * Stale Data Cleanup Job
@@ -114,6 +116,46 @@ async function cleanupAIInsights(): Promise<number> {
   return result.count;
 }
 
+/**
+ * Enforce tier-based chat history retention
+ * Deletes chat messages older than the tier's chatHistoryDays limit.
+ * STARTER=7d, PROFESSIONAL=90d, ELITE/TEAM/ENTERPRISE=unlimited
+ */
+async function cleanupChatHistory(): Promise<number> {
+  let totalDeleted = 0;
+
+  try {
+    // Get all organizations with their subscription tier
+    const orgs = await prisma.organization.findMany({
+      select: { id: true, subscriptionTier: true },
+    });
+
+    for (const org of orgs) {
+      const tier = (org.subscriptionTier || 'STARTER') as SubscriptionTier;
+      const retentionDays = AI_PLAN_LIMITS[tier]?.chatHistoryDays;
+
+      // Skip orgs with unlimited retention
+      if (retentionDays === 'unlimited' || !retentionDays) continue;
+
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - retentionDays);
+
+      const result = await prisma.chatMessage.deleteMany({
+        where: {
+          organizationId: org.id,
+          createdAt: { lt: cutoff },
+        },
+      });
+
+      totalDeleted += result.count;
+    }
+  } catch (error) {
+    logger.error('[DataCleanup] Error cleaning up chat history:', error);
+  }
+
+  return totalDeleted;
+}
+
 // ===================================
 // Main Cleanup Runner
 // ===================================
@@ -129,14 +171,15 @@ async function runCleanup(): Promise<void> {
     logger.info('[DataCleanup] Starting stale data cleanup...');
     const start = Date.now();
 
-    const [refreshTokens, resetTokens, loginHistory, insights] = await Promise.all([
+    const [refreshTokens, resetTokens, loginHistory, insights, chatMessages] = await Promise.all([
       cleanupRefreshTokens(),
       cleanupPasswordResetTokens(),
       cleanupLoginHistory(),
       cleanupAIInsights(),
+      cleanupChatHistory(),
     ]);
 
-    const total = refreshTokens + resetTokens + loginHistory + insights;
+    const total = refreshTokens + resetTokens + loginHistory + insights + chatMessages;
     const duration = Date.now() - start;
 
     if (total > 0) {
@@ -145,7 +188,8 @@ async function runCleanup(): Promise<void> {
         `RefreshTokens=${refreshTokens}`,
         `PasswordResetTokens=${resetTokens}`,
         `LoginHistory=${loginHistory}`,
-        `AIInsights=${insights}`
+        `AIInsights=${insights}`,
+        `ChatMessages=${chatMessages}`
       );
     } else {
       logger.info(`[DataCleanup] No stale records found (${duration}ms)`);

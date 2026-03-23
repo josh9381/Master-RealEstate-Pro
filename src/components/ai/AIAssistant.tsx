@@ -35,6 +35,16 @@ interface AIAssistantProps {
   onSuggestionRead?: () => void
 }
 
+/**
+ * Sanitize message content to strip HTML tags and prevent XSS.
+ * React JSX auto-escapes, but this provides defense-in-depth for
+ * any content that might bypass the rendering pipeline.
+ */
+function sanitizeMessageContent(content: string): string {
+  // Strip HTML tags
+  return content.replace(/<[^>]*>/g, '')
+}
+
 export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -97,7 +107,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
     if (isOpen && onSuggestionRead) {
       onSuggestionRead()
     }
-  }, [isOpen])
+  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const suggestions: Suggestion[] = [
     {
@@ -199,8 +209,8 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
         }
 
         // Check if function was used and handle special cases
-        if ((response.data as any).functionUsed) {
-          const functionName = (response.data as any).functionUsed
+        if ((response.data as any).functionUsed) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          const functionName = (response.data as any).functionUsed // eslint-disable-line @typescript-eslint/no-explicit-any
           
           // Parse the response to extract structured data
           try {
@@ -315,7 +325,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
             // Handle lead search/count
             else if ((functionName === 'search_leads' || functionName === 'get_lead_count') && parsedResponse.count !== undefined) {
               if (parsedResponse.leads && parsedResponse.leads.length > 0) {
-                const leadsList = parsedResponse.leads.map((l: any) => 
+                const leadsList = parsedResponse.leads.map((l: any) =>  // eslint-disable-line @typescript-eslint/no-explicit-any
                   `• **${l.name}** - ${l.status} (Score: ${l.score}/100)`
                 ).join('\n')
                 assistantMessage.content = `🔍 Found ${parsedResponse.count} lead${parsedResponse.count !== 1 ? 's' : ''}:\n\n${leadsList}`
@@ -327,7 +337,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
             // Handle at-risk leads
             else if (functionName === 'identify_at_risk_leads' && parsedResponse.success) {
               if (parsedResponse.count > 0) {
-                const riskList = parsedResponse.atRiskLeads.map((l: any) => 
+                const riskList = parsedResponse.atRiskLeads.map((l: any) =>  // eslint-disable-line @typescript-eslint/no-explicit-any
                   `• **${l.name}** - ${l.daysSinceContact} days since contact (Risk: ${Math.round(l.churnRisk)}%)`
                 ).join('\n')
                 assistantMessage.content = `⚠️ Found ${parsedResponse.count} at-risk lead${parsedResponse.count !== 1 ? 's' : ''}:\n\n${riskList}\n\n💡 I recommend reaching out to these leads soon!`
@@ -371,7 +381,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 `Engagement Score: **${eng.score}/100**\n` +
                 `Trend: ${eng.trend}\n\n` +
                 `**Optimal Contact Times:**\n` +
-                eng.optimalTimes.map((t: any) => 
+                eng.optimalTimes.map((t: any) =>  // eslint-disable-line @typescript-eslint/no-explicit-any
                   `• ${t.dayOfWeek} at ${t.hourOfDay}:00 (${Math.round(t.confidence)}% confidence)`
                 ).join('\n')
             }
@@ -383,7 +393,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
 
             // Handle recent activities
             else if (functionName === 'get_recent_activities' && parsedResponse.activities) {
-              const activitiesList = parsedResponse.activities.map((a: any) => 
+              const activitiesList = parsedResponse.activities.map((a: any) =>  // eslint-disable-line @typescript-eslint/no-explicit-any
                 `• **${a.type}** - ${a.description} (${new Date(a.createdAt).toLocaleDateString()})`
               ).join('\n')
               assistantMessage.content = `📋 **Recent Activities** (${parsedResponse.count} total):\n\n${activitiesList}`
@@ -402,7 +412,8 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
             }
             
           } catch (e) {
-            // If parsing fails, keep original message
+            // If JSON parsing fails, use the raw AI response as the message content
+            assistantMessage.content = response.data.message
             logger.error('Failed to parse function response:', e)
           }
         }
@@ -520,13 +531,13 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 )}
               >
                 <p className="text-sm whitespace-pre-line" style={{ lineHeight: '1.6' }}>
-                  {/* Simple markdown-style rendering */}
-                  {message.content.split('\n').map((line, i) => {
+                  {/* Simple markdown-style rendering with HTML sanitization */}
+                  {sanitizeMessageContent(message.content).split('\n').map((line, i, arr) => {
                     // Bold text **text**
-                    const boldProcessed = line.split(/\*\*(.+?)\*\*/).map((part, j) => 
+                    const boldProcessed = line.split(/\*\*(.+?)\*\*/).map((part, j) =>
                       j % 2 === 1 ? <strong key={j}>{part}</strong> : part
                     )
-                    return <span key={i}>{boldProcessed}{i < message.content.split('\n').length - 1 && <br />}</span>
+                    return <span key={i}>{boldProcessed}{i < arr.length - 1 && <br />}</span>
                   })}
                 </p>
                 <p className="mt-1 text-xs opacity-70">

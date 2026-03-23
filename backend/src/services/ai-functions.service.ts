@@ -931,7 +931,47 @@ interface FunctionArgs {
   additionalConfig?: Record<string, any>;
 }
 
+/**
+ * Lists of destructive vs read-only AI functions for safety gates.
+ * Destructive functions require user confirmation before execution.
+ * Admin-only functions require ADMIN or MANAGER role.
+ */
+export const DESTRUCTIVE_FUNCTIONS = new Set([
+  'delete_lead', 'send_email', 'send_sms', 'delete_task',
+  'delete_note', 'delete_tag', 'delete_campaign', 'delete_workflow',
+  'delete_email_template', 'delete_sms_template', 'bulk_delete_leads',
+  'send_campaign', 'disconnect_integration',
+]);
+
+export const ADMIN_ONLY_FUNCTIONS = new Set([
+  'delete_lead', 'bulk_delete_leads', 'bulk_update_leads',
+  'delete_campaign', 'delete_workflow', 'delete_email_template',
+  'delete_sms_template', 'disconnect_integration',
+]);
+
+export const READ_ONLY_FUNCTIONS = new Set([
+  'get_lead_count', 'search_leads', 'get_recent_activities',
+  'get_lead_details', 'get_dashboard_stats', 'get_lead_analytics',
+  'get_conversion_funnel', 'get_campaign_analytics',
+  'predict_conversion', 'get_next_action', 'analyze_engagement',
+  'identify_at_risk_leads',
+]);
+
 export class AIFunctionsService {
+  /**
+   * Check if a function requires user confirmation before execution.
+   */
+  isDestructiveFunction(functionName: string): boolean {
+    return DESTRUCTIVE_FUNCTIONS.has(functionName);
+  }
+
+  /**
+   * Check if a function requires admin/manager role.
+   */
+  isAdminOnlyFunction(functionName: string): boolean {
+    return ADMIN_ONLY_FUNCTIONS.has(functionName);
+  }
+
   // ============================================
   // LEAD CRUD OPERATIONS
   // ============================================
@@ -2976,95 +3016,123 @@ Generate the script:`;
     return email.replace(/Subject:?\s*.+\n*/i, '').trim();
   }
 
+  /**
+   * Sanitize function arguments from AI to prevent stored XSS and
+   * enforce basic type/length constraints.
+   */
+  private sanitizeArgs(args: FunctionArgs): FunctionArgs {
+    const sanitized: FunctionArgs = {}
+    for (const [key, value] of Object.entries(args)) {
+      if (typeof value === 'string') {
+        // Strip HTML tags, limit length, and trim
+        sanitized[key] = value.replace(/<[^>]*>/g, '').substring(0, 10000).trim()
+      } else if (typeof value === 'number') {
+        // Clamp numbers to reasonable range
+        sanitized[key] = Math.max(-1_000_000, Math.min(1_000_000, value))
+      } else if (Array.isArray(value)) {
+        // Limit array size and sanitize string items
+        sanitized[key] = value.slice(0, 100).map(item =>
+          typeof item === 'string' ? item.replace(/<[^>]*>/g, '').substring(0, 5000) : item
+        )
+      } else {
+        sanitized[key] = value
+      }
+    }
+    return sanitized
+  }
+
   async executeFunction(functionName: string, args: FunctionArgs, organizationId: string, userId: string): Promise<string> {
+    // Sanitize all arguments before execution
+    const sanitizedArgs = this.sanitizeArgs(args)
+
     switch (functionName) {
       // Lead CRUD
-      case 'create_lead': return this.createLead(organizationId, userId, args);
-      case 'update_lead': return this.updateLead(organizationId, args);
-      case 'delete_lead': return this.deleteLead(organizationId, args);
-      case 'add_note_to_lead': return this.addNoteToLead(organizationId, userId, args);
-      case 'add_tag_to_lead': return this.addTagToLead(organizationId, args);
-      
+      case 'create_lead': return this.createLead(organizationId, userId, sanitizedArgs);
+      case 'update_lead': return this.updateLead(organizationId, sanitizedArgs);
+      case 'delete_lead': return this.deleteLead(organizationId, sanitizedArgs);
+      case 'add_note_to_lead': return this.addNoteToLead(organizationId, userId, sanitizedArgs);
+      case 'add_tag_to_lead': return this.addTagToLead(organizationId, sanitizedArgs);
+
       // Actions
-      case 'create_activity': return this.createActivity(organizationId, userId, args);
-      case 'send_email': return this.sendEmail(organizationId, userId, args);
-      case 'send_sms': return this.sendSMS(organizationId, userId, args);
-      case 'schedule_appointment': return this.scheduleAppointment(organizationId, userId, args);
-      
+      case 'create_activity': return this.createActivity(organizationId, userId, sanitizedArgs);
+      case 'send_email': return this.sendEmail(organizationId, userId, sanitizedArgs);
+      case 'send_sms': return this.sendSMS(organizationId, userId, sanitizedArgs);
+      case 'schedule_appointment': return this.scheduleAppointment(organizationId, userId, sanitizedArgs);
+
       // Query functions
-      case 'get_lead_count': return this.getLeadCount(organizationId, args);
-      case 'search_leads': return this.searchLeads(organizationId, args);
-      case 'get_recent_activities': return this.getRecentActivities(organizationId, args);
-      case 'get_lead_details': return this.getLeadDetails(organizationId, args);
-      
+      case 'get_lead_count': return this.getLeadCount(organizationId, sanitizedArgs);
+      case 'search_leads': return this.searchLeads(organizationId, sanitizedArgs);
+      case 'get_recent_activities': return this.getRecentActivities(organizationId, sanitizedArgs);
+      case 'get_lead_details': return this.getLeadDetails(organizationId, sanitizedArgs);
+
       // Task Management
-      case 'create_task': return this.createTask(organizationId, userId, args);
-      case 'update_task': return this.updateTask(organizationId, args);
-      case 'delete_task': return this.deleteTask(organizationId, args);
-      case 'complete_task': return this.completeTask(organizationId, args);
-      
+      case 'create_task': return this.createTask(organizationId, userId, sanitizedArgs);
+      case 'update_task': return this.updateTask(organizationId, sanitizedArgs);
+      case 'delete_task': return this.deleteTask(organizationId, sanitizedArgs);
+      case 'complete_task': return this.completeTask(organizationId, sanitizedArgs);
+
       // Appointment Management
-      case 'update_appointment': return this.updateAppointment(organizationId, args);
-      case 'cancel_appointment': return this.cancelAppointment(organizationId, args);
-      case 'confirm_appointment': return this.confirmAppointment(organizationId, args);
-      case 'reschedule_appointment': return this.rescheduleAppointment(organizationId, args);
-      
+      case 'update_appointment': return this.updateAppointment(organizationId, sanitizedArgs);
+      case 'cancel_appointment': return this.cancelAppointment(organizationId, sanitizedArgs);
+      case 'confirm_appointment': return this.confirmAppointment(organizationId, sanitizedArgs);
+      case 'reschedule_appointment': return this.rescheduleAppointment(organizationId, sanitizedArgs);
+
       // Note Management
-      case 'update_note': return this.updateNote(organizationId, args);
-      case 'delete_note': return this.deleteNote(organizationId, args);
-      
+      case 'update_note': return this.updateNote(organizationId, sanitizedArgs);
+      case 'delete_note': return this.deleteNote(organizationId, sanitizedArgs);
+
       // Tag Management
-      case 'create_tag': return this.createTag(organizationId, args);
-      case 'update_tag': return this.updateTag(organizationId, args);
-      case 'delete_tag': return this.deleteTag(organizationId, args);
-      case 'remove_tag_from_lead': return this.removeTagFromLead(organizationId, args);
-      
+      case 'create_tag': return this.createTag(organizationId, sanitizedArgs);
+      case 'update_tag': return this.updateTag(organizationId, sanitizedArgs);
+      case 'delete_tag': return this.deleteTag(organizationId, sanitizedArgs);
+      case 'remove_tag_from_lead': return this.removeTagFromLead(organizationId, sanitizedArgs);
+
       // Campaign Management
-      case 'create_campaign': return this.createCampaign(organizationId, userId, args);
-      case 'update_campaign': return this.updateCampaign(organizationId, args);
-      case 'delete_campaign': return this.deleteCampaign(organizationId, args);
-      case 'pause_campaign': return this.pauseCampaign(organizationId, args);
-      case 'send_campaign': return this.sendCampaign(organizationId, args);
-      case 'duplicate_campaign': return this.duplicateCampaign(organizationId, args);
-      case 'archive_campaign': return this.archiveCampaign(organizationId, args);
-      case 'get_campaign_analytics': return this.getCampaignAnalytics(organizationId, args);
-      
+      case 'create_campaign': return this.createCampaign(organizationId, userId, sanitizedArgs);
+      case 'update_campaign': return this.updateCampaign(organizationId, sanitizedArgs);
+      case 'delete_campaign': return this.deleteCampaign(organizationId, sanitizedArgs);
+      case 'pause_campaign': return this.pauseCampaign(organizationId, sanitizedArgs);
+      case 'send_campaign': return this.sendCampaign(organizationId, sanitizedArgs);
+      case 'duplicate_campaign': return this.duplicateCampaign(organizationId, sanitizedArgs);
+      case 'archive_campaign': return this.archiveCampaign(organizationId, sanitizedArgs);
+      case 'get_campaign_analytics': return this.getCampaignAnalytics(organizationId, sanitizedArgs);
+
       // Workflow Automation
-      case 'create_workflow': return this.createWorkflow(organizationId, userId, args);
-      case 'update_workflow': return this.updateWorkflow(organizationId, args);
-      case 'delete_workflow': return this.deleteWorkflow(organizationId, args);
-      case 'toggle_workflow': return this.toggleWorkflow(organizationId, args);
-      case 'trigger_workflow': return this.triggerWorkflow(organizationId, args);
-      
+      case 'create_workflow': return this.createWorkflow(organizationId, userId, sanitizedArgs);
+      case 'update_workflow': return this.updateWorkflow(organizationId, sanitizedArgs);
+      case 'delete_workflow': return this.deleteWorkflow(organizationId, sanitizedArgs);
+      case 'toggle_workflow': return this.toggleWorkflow(organizationId, sanitizedArgs);
+      case 'trigger_workflow': return this.triggerWorkflow(organizationId, sanitizedArgs);
+
       // Template Management
-      case 'create_email_template': return this.createEmailTemplate(organizationId, userId, args);
-      case 'create_sms_template': return this.createSMSTemplate(organizationId, userId, args);
-      case 'delete_email_template': return this.deleteEmailTemplate(organizationId, args);
-      case 'delete_sms_template': return this.deleteSMSTemplate(organizationId, args);
-      
+      case 'create_email_template': return this.createEmailTemplate(organizationId, userId, sanitizedArgs);
+      case 'create_sms_template': return this.createSMSTemplate(organizationId, userId, sanitizedArgs);
+      case 'delete_email_template': return this.deleteEmailTemplate(organizationId, sanitizedArgs);
+      case 'delete_sms_template': return this.deleteSMSTemplate(organizationId, sanitizedArgs);
+
       // Bulk Operations
-      case 'bulk_update_leads': return this.bulkUpdateLeads(organizationId, args);
-      case 'bulk_delete_leads': return this.bulkDeleteLeads(organizationId, args);
-      
+      case 'bulk_update_leads': return this.bulkUpdateLeads(organizationId, sanitizedArgs);
+      case 'bulk_delete_leads': return this.bulkDeleteLeads(organizationId, sanitizedArgs);
+
       // Analytics & Reporting
-      case 'get_dashboard_stats': return this.getDashboardStats(organizationId, args);
-      case 'get_lead_analytics': return this.getLeadAnalytics(organizationId, args);
-      case 'get_conversion_funnel': return this.getConversionFunnel(organizationId, args);
-      
+      case 'get_dashboard_stats': return this.getDashboardStats(organizationId, sanitizedArgs);
+      case 'get_lead_analytics': return this.getLeadAnalytics(organizationId, sanitizedArgs);
+      case 'get_conversion_funnel': return this.getConversionFunnel(organizationId, sanitizedArgs);
+
       // Integration Management
-      case 'connect_integration': return this.connectIntegration(organizationId, args);
-      case 'disconnect_integration': return this.disconnectIntegration(organizationId, args);
-      case 'sync_integration': return this.syncIntegration(organizationId, args);
-      
+      case 'connect_integration': return this.connectIntegration(organizationId, sanitizedArgs);
+      case 'disconnect_integration': return this.disconnectIntegration(organizationId, sanitizedArgs);
+      case 'sync_integration': return this.syncIntegration(organizationId, sanitizedArgs);
+
       // Lead Status & Intelligence
-      case 'update_lead_status': return this.updateLeadStatus(organizationId, args);
-      case 'compose_email': return this.composeEmail(organizationId, userId, args);
-      case 'compose_sms': return this.composeSMS(organizationId, userId, args);
-      case 'compose_script': return this.composeScript(organizationId, userId, args);
-      case 'predict_conversion': return this.predictConversion(organizationId, args);
-      case 'get_next_action': return this.getNextAction(organizationId, args);
-      case 'analyze_engagement': return this.analyzeEngagement(organizationId, args);
-      case 'identify_at_risk_leads': return this.identifyAtRiskLeads(organizationId, args);
+      case 'update_lead_status': return this.updateLeadStatus(organizationId, sanitizedArgs);
+      case 'compose_email': return this.composeEmail(organizationId, userId, sanitizedArgs);
+      case 'compose_sms': return this.composeSMS(organizationId, userId, sanitizedArgs);
+      case 'compose_script': return this.composeScript(organizationId, userId, sanitizedArgs);
+      case 'predict_conversion': return this.predictConversion(organizationId, sanitizedArgs);
+      case 'get_next_action': return this.getNextAction(organizationId, sanitizedArgs);
+      case 'analyze_engagement': return this.analyzeEngagement(organizationId, sanitizedArgs);
+      case 'identify_at_risk_leads': return this.identifyAtRiskLeads(organizationId, sanitizedArgs);
       
       default: return JSON.stringify({ error: `Unknown function: ${functionName}` });
     }

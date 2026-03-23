@@ -176,7 +176,6 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         conversationId,
         messageType,
         draftMessage: draftMessage || undefined, // Send user's draft if provided
-        topic: topic || undefined, // Send topic if provided
         settings: {
           tone,
           length,

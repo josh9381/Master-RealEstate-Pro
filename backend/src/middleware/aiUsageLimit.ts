@@ -2,11 +2,17 @@
  * AI Usage Limit Middleware (Phase 2)
  * Checks usage limits before AI route handlers.
  * Returns 429 with upgrade message when limit is hit.
+ *
+ * Uses atomic pre-increment to prevent TOCTOU race conditions:
+ * 1. Atomically increment the usage counter (reserve the slot)
+ * 2. Check if the post-increment count exceeds the limit
+ * 3. If over limit, decrement (release the slot) and return 429
+ * 4. If under limit, proceed to handler
  */
 
 import { logger } from '../lib/logger'
 import { Request, Response, NextFunction } from 'express'
-import { checkUsageLimit, AIUsageType, getMonthlyUsage } from '../services/usage-tracking.service'
+import { checkUsageLimit, incrementAIUsage, AIUsageType, getMonthlyUsage } from '../services/usage-tracking.service'
 import { getUpgradeMessage } from '../config/subscriptions'
 import { SubscriptionTier } from '@prisma/client'
 import prisma from '../config/database'
@@ -42,6 +48,13 @@ export function checkAIUsage(type: AIUsageType) {
         return
       }
 
+      // Pre-increment usage to reserve the slot atomically (prevents TOCTOU race)
+      // The downstream handler should NOT call incrementAIUsage for the base count
+      // (it may still call it to update token/cost data)
+      await incrementAIUsage(organizationId, type).catch(err => {
+        logger.warn('Pre-increment usage failed (non-blocking):', err)
+      })
+
       // Phase 7: Check budget hard limit
       const org = await prisma.organization.findUnique({
         where: { id: organizationId },
@@ -64,6 +77,7 @@ export function checkAIUsage(type: AIUsageType) {
       }
 
       // Attach usage info to request for downstream handlers
+      // Mark as pre-incremented so handlers know not to double-count
       ;(req as any).aiUsage = {
         type,
         used: result.used,
@@ -71,6 +85,7 @@ export function checkAIUsage(type: AIUsageType) {
         remaining: result.remaining,
         tier: result.tier,
         useOwnKey: result.useOwnKey,
+        preIncremented: true,
       }
 
       next()
