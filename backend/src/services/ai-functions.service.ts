@@ -931,7 +931,47 @@ interface FunctionArgs {
   additionalConfig?: Record<string, any>;
 }
 
+/**
+ * Lists of destructive vs read-only AI functions for safety gates.
+ * Destructive functions require user confirmation before execution.
+ * Admin-only functions require ADMIN or MANAGER role.
+ */
+export const DESTRUCTIVE_FUNCTIONS = new Set([
+  'delete_lead', 'send_email', 'send_sms', 'delete_task',
+  'delete_note', 'delete_tag', 'delete_campaign', 'delete_workflow',
+  'delete_email_template', 'delete_sms_template', 'bulk_delete_leads',
+  'send_campaign', 'disconnect_integration',
+]);
+
+export const ADMIN_ONLY_FUNCTIONS = new Set([
+  'delete_lead', 'bulk_delete_leads', 'bulk_update_leads',
+  'delete_campaign', 'delete_workflow', 'delete_email_template',
+  'delete_sms_template', 'disconnect_integration',
+]);
+
+export const READ_ONLY_FUNCTIONS = new Set([
+  'get_lead_count', 'search_leads', 'get_recent_activities',
+  'get_lead_details', 'get_dashboard_stats', 'get_lead_analytics',
+  'get_conversion_funnel', 'get_campaign_analytics',
+  'predict_conversion', 'get_next_action', 'analyze_engagement',
+  'identify_at_risk_leads',
+]);
+
 export class AIFunctionsService {
+  /**
+   * Check if a function requires user confirmation before execution.
+   */
+  isDestructiveFunction(functionName: string): boolean {
+    return DESTRUCTIVE_FUNCTIONS.has(functionName);
+  }
+
+  /**
+   * Check if a function requires admin/manager role.
+   */
+  isAdminOnlyFunction(functionName: string): boolean {
+    return ADMIN_ONLY_FUNCTIONS.has(functionName);
+  }
+
   // ============================================
   // LEAD CRUD OPERATIONS
   // ============================================

@@ -57,9 +57,10 @@ export async function incrementAIUsage(
   })
 
   if (!subscription) {
-    // No subscription = free tier; still track usage
-    // Try to find or create a default subscription record
-    logger.warn(`No subscription found for org ${organizationId}, skipping usage tracking`)
+    // No subscription = free tier; log warning but still enforce STARTER limits
+    // Usage is not tracked without a subscription record, but limits are enforced
+    // via checkUsageLimit() which defaults to STARTER tier
+    logger.warn(`No subscription found for org ${organizationId}, usage not tracked (STARTER limits still enforced)`)
     return
   }
 
@@ -194,14 +195,30 @@ export async function checkUsageLimit(
     }
   }
 
-  // Get current usage
+  // Get current usage — if no subscription, fall back to counting chat messages directly
   const usage = await getMonthlyUsage(organizationId)
-  // Enhancements share the content-generation budget — sum both counters
-  const used = type === 'enhancements'
-    ? (usage.contentGenerations || 0) + (usage.enhancements || 0)
-    : type === 'contentGenerations'
+  let used: number
+
+  if (!org?.Subscription?.id && type === 'aiMessages') {
+    // No subscription: count actual chat messages this month for enforcement
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const messageCount = await prisma.chatMessage.count({
+      where: {
+        organizationId,
+        role: 'user',
+        createdAt: { gte: startOfMonth },
+      },
+    })
+    used = messageCount
+  } else {
+    // Enhancements share the content-generation budget — sum both counters
+    used = type === 'enhancements'
       ? (usage.contentGenerations || 0) + (usage.enhancements || 0)
-      : usage[type] || 0
+      : type === 'contentGenerations'
+        ? (usage.contentGenerations || 0) + (usage.enhancements || 0)
+        : usage[type] || 0
+  }
 
   return {
     allowed: used < limitValue,

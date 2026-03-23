@@ -3,7 +3,7 @@ import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { getIntelligenceService } from '../services/intelligence.service'
 import { getOpenAIService, ASSISTANT_TONES, AssistantTone } from '../services/openai.service'
-import { getAIFunctionsService, AI_FUNCTIONS } from '../services/ai-functions.service'
+import { getAIFunctionsService, AI_FUNCTIONS, DESTRUCTIVE_FUNCTIONS, ADMIN_ONLY_FUNCTIONS } from '../services/ai-functions.service'
 import { gatherMessageContext } from '../services/message-context.service'
 import { generateContextualMessage, generateVariations, ComposeSettings } from '../services/ai-compose.service'
 import * as templateService from '../services/template-ai.service'
@@ -1612,10 +1612,43 @@ TONE SETTINGS: ${toneConfig.systemAddition}`,
     const response = await openAI.chatWithFunctions(messages, AI_FUNCTIONS, userId, organizationId)
 
     if (response.functionCall) {
-      logger.info(`🎯 Executing function: ${response.functionCall.name}`)
-      
+      const fnName = response.functionCall.name
+
+      // Role-based permission check: admin-only functions require ADMIN or MANAGER role
+      if (ADMIN_ONLY_FUNCTIONS.has(fnName)) {
+        const userRole = req.user!.role
+        if (userRole !== 'ADMIN' && userRole !== 'MANAGER') {
+          return res.status(403).json({
+            success: false,
+            message: `The action "${fnName}" requires admin or manager privileges.`,
+            data: { functionBlocked: fnName, requiredRole: 'ADMIN or MANAGER', userRole },
+          })
+        }
+      }
+
+      // Destructive function confirmation gate: return a confirmation prompt
+      // unless the user explicitly confirmed (confirmed: true in request body)
+      if (DESTRUCTIVE_FUNCTIONS.has(fnName) && !req.body.confirmed) {
+        logger.info(`⚠️ Destructive function requires confirmation: ${fnName}`)
+        return res.json({
+          success: true,
+          data: {
+            message: `I need your confirmation before I can execute this action: **${fnName}**. Please confirm to proceed.`,
+            tokens: response.tokens,
+            cost: response.cost,
+            requiresConfirmation: true,
+            pendingFunction: {
+              name: fnName,
+              arguments: response.functionCall.arguments,
+            },
+          },
+        })
+      }
+
+      logger.info(`🎯 Executing function: ${fnName}`)
+
       const functionResult = await functionsService.executeFunction(
-        response.functionCall.name,
+        fnName,
         response.functionCall.arguments,
         organizationId,
         userId

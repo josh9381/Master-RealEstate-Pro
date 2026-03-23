@@ -8,6 +8,7 @@ export const chatWithAISchema = z.object({
     content: z.string(),
   })).optional(),
   tone: z.string().max(50).optional(),
+  confirmed: z.boolean().optional(),
 });
 
 // ── Enhance Message ─────────────────────────────────────────────────
