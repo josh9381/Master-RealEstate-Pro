@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Sparkles, RefreshCw, Copy, Send, Settings, X, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -95,7 +95,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   const [useStreaming, setUseStreaming] = useState(false)
   
   // Phase 3: Templates state
-  const [templates, setTemplates] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
@@ -176,6 +176,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         conversationId,
         messageType,
         draftMessage: draftMessage || undefined, // Send user's draft if provided
+        topic: topic || undefined, // Send topic if provided
         settings: {
           tone,
           length,
@@ -194,7 +195,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       } else {
         toast.error('Failed to generate message')
       }
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       logger.error('Generate message error:', error)
       const aiMsg = getAIUnavailableMessage(error)
       if (aiMsg) {
@@ -240,7 +241,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       
       let accumulated = ''
       
-      while (true) {
+      while (true) { // eslint-disable-line no-constant-condition
         const { done, value } = await reader.read()
         if (done) break
         
@@ -269,7 +270,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
           }
         }
       }
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       logger.error('Stream error:', error)
       if (error.message?.includes('401')) {
         toast.error('Session expired. Please refresh the page.')
@@ -283,12 +284,17 @@ export const AIComposer: React.FC<AIComposerProps> = ({
     }
   }
   
-  // Regenerate when settings change (and save preferences)
+  // Regenerate when settings change (and save preferences) — debounced
+  const settingsTimerRef = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => {
     if (context) {
-      generateMessage()
-      savePreferences()
+      clearTimeout(settingsTimerRef.current)
+      settingsTimerRef.current = setTimeout(() => {
+        generateMessage()
+        savePreferences()
+      }, 600)
     }
+    return () => clearTimeout(settingsTimerRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tone, length, includeCTA, personalization])
   

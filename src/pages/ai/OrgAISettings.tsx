@@ -145,6 +145,15 @@ const OrgAISettings = () => {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Validate budget thresholds
+      if (form.aiBudgetAlertEnabled) {
+        if (form.aiBudgetWarning >= form.aiBudgetCaution) {
+          throw new Error('Warning threshold must be less than caution threshold');
+        }
+        if (form.aiBudgetCaution >= form.aiBudgetHardLimit) {
+          throw new Error('Caution threshold must be less than hard limit');
+        }
+      }
       const payload: Record<string, unknown> = { ...form };
       if (newApiKey) {
         payload.openaiApiKey = newApiKey;
@@ -327,6 +336,9 @@ const OrgAISettings = () => {
                 </div>
                 <button
                   onClick={() => updateField('useOwnAIKey', !form.useOwnAIKey)}
+                  role="switch"
+                  aria-checked={form.useOwnAIKey}
+                  aria-label="Use own API key"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     form.useOwnAIKey ? 'bg-primary' : 'bg-muted'
                   }`}
@@ -482,6 +494,9 @@ const OrgAISettings = () => {
                 </div>
                 <button
                   onClick={() => updateField('aiBudgetAlertEnabled', !form.aiBudgetAlertEnabled)}
+                  role="switch"
+                  aria-checked={form.aiBudgetAlertEnabled}
+                  aria-label="Enable budget alerts"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     form.aiBudgetAlertEnabled ? 'bg-primary' : 'bg-muted'
                   }`}

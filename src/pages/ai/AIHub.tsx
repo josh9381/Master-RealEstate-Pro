@@ -550,19 +550,19 @@ const AIHub = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-4">
-            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/lead-scoring')}>
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/lead-scoring')} aria-label="Recalculate lead scores">
               <RefreshCw className="h-4 w-4 mr-2" />
               Recalculate Scores
             </Button>
-            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/insights')}>
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/insights')} aria-label="View all AI insights">
               <Sparkles className="h-4 w-4 mr-2" />
               View All Insights
             </Button>
-            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/predictive')}>
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/predictive')} aria-label="View predictions">
               <BarChart3 className="h-4 w-4 mr-2" />
               View Predictions
             </Button>
-            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/settings')}>
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/settings')} aria-label="Configure AI profile">
               <Settings className="h-4 w-4 mr-2" />
               Configure AI Profile
             </Button>

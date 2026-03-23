@@ -75,7 +75,7 @@ const IntelligenceInsights = () => {
       ])
 
       // Normalize scoring model from API response shape
-      const md = (modelRaw as any)?.data ?? modelRaw
+      const md = (modelRaw as any)?.data ?? modelRaw // eslint-disable-line @typescript-eslint/no-explicit-any
       const normalizedModel: ScoringModel | null = md ? {
         organizationId: md.organizationId ?? '',
         factors: md.factors ?? { scoreWeight: 0.4, activityWeight: 0.3, recencyWeight: 0.2, funnelTimeWeight: 0.1 },
@@ -629,6 +629,7 @@ const IntelligenceInsights = () => {
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
+              aria-label="Filter by priority"
               className="rounded-md border bg-background px-3 py-2 text-sm"
             >
               <option value="all">All Priorities</option>
@@ -639,6 +640,7 @@ const IntelligenceInsights = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
+              aria-label="Filter by category"
               className="rounded-md border bg-background px-3 py-2 text-sm"
             >
               <option value="all">All Categories</option>
@@ -652,6 +654,7 @@ const IntelligenceInsights = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
+                aria-label="Sort insights by"
                 className="rounded-md border bg-background px-3 py-2 text-sm"
               >
                 <option value="priority">Sort by Priority</option>

@@ -1,6 +1,7 @@
 import { logger } from '@/lib/logger'
 import React, { useState } from 'react';
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability';
+import { useToast } from '@/hooks/useToast';
 import {
   Wand2,
   Mail,
@@ -18,7 +19,7 @@ type ContentType = 'email-sequence' | 'sms' | 'property-description' | 'social-p
 interface ContentGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
-  onApply: (content: any) => void;
+  onApply: (content: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 const contentTypes = [
@@ -43,10 +44,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
   onClose,
   onApply,
 }) => {
+  const { toast } = useToast();
   const [step, setStep] = useState<'type' | 'details' | 'result'>('type');
   const [contentType, setContentType] = useState<ContentType>('email-sequence');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<any>(null);
+  const [generatedContent, setGeneratedContent] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [copied, setCopied] = useState(false);
 
   // Form fields
@@ -79,7 +81,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
     setIsGenerating(true);
     try {
       let endpoint = '';
-      let body: any = {};
+      let body: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
 
       switch (contentType) {
         case 'email-sequence':
@@ -133,12 +135,12 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
         setGeneratedContent(result.data);
         setStep('result');
       } else {
-        alert(result.message || 'Generation failed');
+        toast.error(result.message || 'Generation failed');
       }
     } catch (error) {
       logger.error('Content generation error:', error);
       const aiMsg = getAIUnavailableMessage(error);
-      alert(aiMsg || 'Failed to generate content. Please try again.');
+      toast.error(aiMsg || 'Failed to generate content. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -576,7 +578,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 max-h-96 overflow-y-auto">
             {contentType === 'email-sequence' && generatedContent.emails && (
               <div className="space-y-4">
-                {generatedContent.emails.map((email: any, index: number) => (
+                {generatedContent.emails.map((email: any, index: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                   <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-500">
@@ -636,7 +638,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
 
             {contentType === 'social-posts' && generatedContent.posts && (
               <div className="space-y-4">
-                {Object.entries(generatedContent.posts).map(([platform, post]: [string, any]) => (
+                {Object.entries(generatedContent.posts).map(([platform, post]: [string, any]) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                   <div key={platform} className="bg-white rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-500 capitalize">

@@ -384,6 +384,9 @@ const AISettings = () => {
                 </div>
                 <button
                   onClick={() => updateForm('composer', 'defaultCTA', !form.composer.defaultCTA)}
+                  role="switch"
+                  aria-checked={form.composer.defaultCTA}
+                  aria-label="Always include call-to-action"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     form.composer.defaultCTA ? 'bg-primary' : 'bg-muted'
                   }`}
@@ -845,6 +848,9 @@ const AISettings = () => {
                   </div>
                   <button
                     onClick={() => updateForm('featureToggles', key, !form.featureToggles[key])}
+                    role="switch"
+                    aria-checked={form.featureToggles[key]}
+                    aria-label={`Toggle ${label}`}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       form.featureToggles[key] ? 'bg-primary' : 'bg-muted'
                     }`}

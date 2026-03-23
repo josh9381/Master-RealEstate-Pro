@@ -357,6 +357,7 @@ const PredictiveAnalytics = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    aria-expanded={selectedPrediction?.id === prediction.id}
                     onClick={() => setSelectedPrediction(
                       selectedPrediction?.id === prediction.id ? null : prediction
                     )}

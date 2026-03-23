@@ -1,7 +1,28 @@
 import { getOpenAIService } from './openai.service'
 import { MessageContext, formatDate, formatCurrency, getScoreLabel } from './message-context.service'
 import { predictResponseRate, generatePredictionReasoning } from './prediction.service'
-import { generateSmartSuggestions as generateSuggestions, Suggestion } from './suggestions.service'
+import { generateSmartSuggestions as generateSuggestions } from './suggestions.service'
+
+/**
+ * Sanitize user-supplied strings before interpolating into AI prompts.
+ * Strips common prompt-injection patterns (role overrides, instruction ignores)
+ * and truncates to a max length to prevent context stuffing.
+ */
+function sanitizeForPrompt(value: string, maxLength = 500): string {
+  if (!value) return ''
+  // Remove common injection patterns
+  let sanitized = value
+    .replace(/ignore (all |previous |above )?instructions/gi, '[filtered]')
+    .replace(/you are now/gi, '[filtered]')
+    .replace(/system:\s/gi, '[filtered]')
+    .replace(/\bprompt\b/gi, '[filtered]')
+    .replace(/reveal|dump|output|print.*system/gi, '[filtered]')
+  // Truncate
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.slice(0, maxLength) + '...'
+  }
+  return sanitized
+}
 
 export interface ComposeSettings {
   tone: 'professional' | 'friendly' | 'direct' | 'coaching' | 'casual'
@@ -101,12 +122,12 @@ function buildComposePrompt(
   return `Generate a ${settings.tone} ${messageType} for a real estate lead.
 
 LEAD CONTEXT:
-- Name: ${lead.name}
+- Name: ${sanitizeForPrompt(lead.name, 100)}
 - Score: ${lead.score}/100 (${getScoreLabel(lead.score)})
-- Status: ${lead.status}
-- Interests: ${lead.interests.length > 0 ? lead.interests.join(', ') : 'Not specified'}
+- Status: ${sanitizeForPrompt(lead.status, 50)}
+- Interests: ${lead.interests.length > 0 ? sanitizeForPrompt(lead.interests.join(', '), 300) : 'Not specified'}
 - Budget: ${lead.budget ? formatCurrency(lead.budget) : 'Not specified'}
-- Location: ${lead.location || 'Not specified'}
+- Location: ${sanitizeForPrompt(lead.location || 'Not specified', 200)}
 
 ENGAGEMENT DATA:
 - Last Contact: ${engagement.lastContact ? formatDate(engagement.lastContact) : 'Never contacted'}
@@ -120,7 +141,7 @@ ${conversationHistory || 'No previous conversation'}
 
 PROPERTIES VIEWED:
 ${context.properties.length > 0 
-  ? context.properties.map(p => `- ${p.address} ($${formatCurrency(p.price)})`).join('\n')
+  ? context.properties.map(p => `- ${sanitizeForPrompt(p.address, 200)} ($${formatCurrency(p.price)})`).join('\n')
   : 'None yet'}
 
 REQUIREMENTS:
@@ -152,20 +173,20 @@ function buildEnhancementPrompt(
   return `You are enhancing a ${messageType} draft for a real estate lead.
 
 LEAD CONTEXT:
-- Name: ${lead.name}
+- Name: ${sanitizeForPrompt(lead.name, 100)}
 - Score: ${lead.score}/100 (${getScoreLabel(lead.score)})
-- Status: ${lead.status}
+- Status: ${sanitizeForPrompt(lead.status, 50)}
 - Last Contact: ${engagement.lastContact ? formatDate(engagement.lastContact) : 'First contact'}
 - Open Rate: ${engagement.openRate}%
 - Response Rate: ${engagement.responseRate}%
 
 USER'S DRAFT MESSAGE:
-${settings.draftMessage}
+${sanitizeForPrompt(settings.draftMessage || '', 2000)}
 
 YOUR TASK:
 1. Keep the core message and intent from the draft
 2. Enhance with ${settings.tone} tone
-3. Add personalization using lead's name (${lead.name}) and context
+3. Add personalization using lead's name (${sanitizeForPrompt(lead.name, 100)}) and context
 4. ${settings.includeCTA ? 'Strengthen the call-to-action' : 'Keep it conversational'}
 5. ${messageType === 'email' ? 'Improve subject line if needed (start with "Subject:")' : ''}
 6. ${messageType === 'sms' ? 'Keep under 160 characters' : 'Maintain appropriate length'}
