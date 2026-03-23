@@ -358,12 +358,14 @@ export async function sendTemplateEmail(
       throw new Error(`Email template ${templateId} is not active`);
     }
 
-    // Compile template with Handlebars
-    const compiledSubject = Handlebars.compile(template.subject);
-    const compiledBody = Handlebars.compile(template.body);
+    // Compile template with Handlebars (strict mode prevents prototype access)
+    const compileOptions = { strict: true };
+    const runtimeOptions = { allowProtoPropertiesByDefault: false, allowProtoMethodsByDefault: false };
+    const compiledSubject = Handlebars.compile(template.subject, compileOptions);
+    const compiledBody = Handlebars.compile(template.body, compileOptions);
 
-    const subject = compiledSubject(data);
-    const html = compiledBody(data);
+    const subject = compiledSubject(data, runtimeOptions);
+    const html = compiledBody(data, runtimeOptions);
 
     // Update template usage
     await prisma.emailTemplate.update({

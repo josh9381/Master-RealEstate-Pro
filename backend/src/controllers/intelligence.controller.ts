@@ -380,19 +380,24 @@ export async function getScoringModel(req: Request, res: Response): Promise<void
     // Get user-specific model (not organization-wide)
     const model = await mlOptimizationService.getScoringModel(userId);
 
+    const defaultFactors = {
+      scoreWeight: 0.4,
+      activityWeight: 0.3,
+      recencyWeight: 0.2,
+      funnelTimeWeight: 0.1,
+    };
+
     if (!model) {
       res.json({
         success: true,
         data: {
           exists: false,
           personalized: false,
+          factors: defaultFactors,
+          accuracy: null,
+          lastTrainedAt: null,
+          trainingDataCount: 0,
           message: 'No personalized model yet. Using default weights. Close more deals to train your AI.',
-          defaultWeights: {
-            scoreWeight: 0.4,
-            activityWeight: 0.3,
-            recencyWeight: 0.2,
-            funnelTimeWeight: 0.1,
-          },
         },
       });
       return;
@@ -403,7 +408,7 @@ export async function getScoringModel(req: Request, res: Response): Promise<void
       data: {
         exists: true,
         personalized: true,
-        weights: model.factors,
+        factors: model.factors,
         accuracy: model.accuracy,
         lastTrainedAt: model.lastTrainedAt,
         trainingDataCount: model.trainingDataCount,

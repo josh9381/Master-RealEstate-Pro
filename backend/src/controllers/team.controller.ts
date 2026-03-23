@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { UnauthorizedError, NotFoundError, ConflictError } from '../middleware/errorHandler';
+import { sendEmail } from '../services/email.service';
+import { logger } from '../lib/logger';
 
 /**
  * List user's teams
@@ -320,7 +322,26 @@ export async function inviteMember(req: Request, res: Response): Promise<void> {
     }
   });
 
-  // TODO: Send invitation email
+  // Send invitation email
+  try {
+    const team = await prisma.team.findUnique({ where: { id }, select: { name: true } });
+    const inviter = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { firstName: true, lastName: true } });
+    const inviterName = `${inviter?.firstName || ''} ${inviter?.lastName || ''}`.trim() || 'A team member';
+    const APP_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+    await sendEmail({
+      to: invitedUser.email,
+      subject: `You've been invited to join ${team?.name || 'a team'}`,
+      html: `<p>Hi ${invitedUser.firstName || ''},</p>
+        <p>${inviterName} has invited you to join the team <strong>${team?.name || 'the team'}</strong> as a ${(role || 'MEMBER').toLowerCase()}.</p>
+        <p><a href="${APP_URL}/settings/team" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">View Team</a></p>
+        <p>If you did not expect this invitation, you can safely ignore this email.</p>`,
+      organizationId: req.user!.organizationId,
+      skipSuppressionCheck: true,
+    });
+  } catch (emailErr) {
+    logger.warn('Failed to send team invitation email:', emailErr);
+    // Non-blocking: member was still added successfully
+  }
 
   res.status(201).json({
     success: true,

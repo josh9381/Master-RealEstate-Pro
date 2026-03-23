@@ -53,7 +53,7 @@ const ABTesting = lazyWithRetry(() => import('./pages/campaigns/ABTesting'))
 // AI Hub (lazy loaded)
 const AIHub = lazyWithRetry(() => import('./pages/ai/AIHub'))
 const LeadScoring = lazyWithRetry(() => import('./pages/ai/LeadScoring'))
-const Segmentation = lazyWithRetry(() => import('./pages/ai/Segmentation'))
+const Segmentation = lazyWithRetry(() => import('./pages/leads/segments/Segmentation'))
 const PredictiveAnalytics = lazyWithRetry(() => import('./pages/ai/PredictiveAnalytics'))
 const IntelligenceInsights = lazyWithRetry(() => import('./pages/ai/IntelligenceInsights'))
 const AIAnalytics = lazyWithRetry(() => import('./pages/ai/AIAnalytics'))
@@ -168,6 +168,7 @@ function App() {
         <Route path="/leads/followups" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Follow-ups"><LeadsFollowups /></PageErrorBoundary></Suspense>} />
         <Route path="/leads/history" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead History"><LeadHistory /></PageErrorBoundary></Suspense>} />
         <Route path="/leads/merge" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Merge Leads"><LeadsMerge /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads/segments" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Segmentation"><Segmentation /></PageErrorBoundary></Suspense>} />
         
         {/* Calendar & Tasks */}
         <Route path="/calendar" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Calendar"><CalendarPage /></PageErrorBoundary></Suspense>} />
@@ -190,7 +191,7 @@ function App() {
         {/* AI Hub */}
         <Route path="/ai" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Hub"><AIHub /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/lead-scoring" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Scoring"><LeadScoring /></PageErrorBoundary></Suspense>} />
-        <Route path="/ai/segmentation" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Segmentation"><Segmentation /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/segmentation" element={<Navigate to="/leads/segments" replace />} />
         <Route path="/ai/predictive" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Predictive Analytics"><PredictiveAnalytics /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/insights" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Insights"><IntelligenceInsights /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary></Suspense>} />

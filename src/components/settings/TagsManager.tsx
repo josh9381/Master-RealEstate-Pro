@@ -23,7 +23,8 @@ import {
   Users,
   Palette,
   Combine,
-  Loader2
+  Loader2,
+  Shield,
 } from 'lucide-react'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { useToast } from '@/hooks/useToast'
@@ -33,38 +34,68 @@ interface TagData {
   id: string
   name: string
   color: string
-  category: string
   usageCount: number
   lastUsed: string
-  description?: string
 }
 
 const tagColors = [
-  { name: 'Red', value: 'bg-red-500' },
-  { name: 'Orange', value: 'bg-orange-500' },
-  { name: 'Yellow', value: 'bg-yellow-500' },
-  { name: 'Green', value: 'bg-green-500' },
-  { name: 'Cyan', value: 'bg-cyan-500' },
-  { name: 'Blue', value: 'bg-blue-500' },
-  { name: 'Purple', value: 'bg-purple-500' },
-  { name: 'Pink', value: 'bg-pink-500' },
-  { name: 'Gray', value: 'bg-gray-500' },
+  { name: 'Red', value: '#EF4444' },
+  { name: 'Orange', value: '#F97316' },
+  { name: 'Yellow', value: '#EAB308' },
+  { name: 'Green', value: '#22C55E' },
+  { name: 'Cyan', value: '#06B6D4' },
+  { name: 'Blue', value: '#3B82F6' },
+  { name: 'Purple', value: '#A855F7' },
+  { name: 'Pink', value: '#EC4899' },
+  { name: 'Gray', value: '#6B7280' },
 ]
 
-// Color mapping from stored hex/name to Tailwind class
-function getColorClass(color?: string): string {
-  if (!color) return 'bg-blue-500'
-  if (color.startsWith('bg-')) return color
-  // Map common color names
-  const map: Record<string, string> = {
-    red: 'bg-red-500', orange: 'bg-orange-500', yellow: 'bg-yellow-500',
-    green: 'bg-green-500', cyan: 'bg-cyan-500', blue: 'bg-blue-500',
-    purple: 'bg-purple-500', pink: 'bg-pink-500', gray: 'bg-gray-500',
-  }
-  return map[color.toLowerCase()] || 'bg-blue-500'
-}
+const DEFAULT_COLOR = '#3B82F6'
 
-const categories = ['Priority', 'Company Size', 'Action Required', 'Status', 'Timeline', 'Industry']
+// Pre-built real estate tags that come pre-created for new organizations
+const DEFAULT_TAGS = [
+  // Lead Type
+  { name: 'Buyer', color: '#3B82F6', group: 'Lead Type' },
+  { name: 'Seller', color: '#3B82F6', group: 'Lead Type' },
+  { name: 'Investor', color: '#3B82F6', group: 'Lead Type' },
+  { name: 'Renter', color: '#3B82F6', group: 'Lead Type' },
+  { name: 'Landlord', color: '#3B82F6', group: 'Lead Type' },
+  // Priority
+  { name: 'Hot Lead', color: '#EF4444', group: 'Priority' },
+  { name: 'Warm Lead', color: '#F97316', group: 'Priority' },
+  { name: 'Cold Lead', color: '#06B6D4', group: 'Priority' },
+  // Source
+  { name: 'Referral', color: '#22C55E', group: 'Source' },
+  { name: 'Open House', color: '#22C55E', group: 'Source' },
+  { name: 'Website', color: '#22C55E', group: 'Source' },
+  { name: 'Social Media', color: '#22C55E', group: 'Source' },
+  // Status
+  { name: 'VIP', color: '#A855F7', group: 'Status' },
+  { name: 'Follow-up Needed', color: '#EAB308', group: 'Status' },
+  { name: 'Do Not Contact', color: '#6B7280', group: 'Status' },
+]
+
+const DEFAULT_TAG_NAMES = new Set(DEFAULT_TAGS.map(t => t.name))
+
+// Normalize any stored color to hex
+function toHexColor(color?: string | null): string {
+  if (!color) return DEFAULT_COLOR
+  if (color.startsWith('#')) return color
+  // Map legacy Tailwind class names to hex
+  const twMap: Record<string, string> = {
+    'bg-red-500': '#EF4444', 'bg-orange-500': '#F97316', 'bg-yellow-500': '#EAB308',
+    'bg-green-500': '#22C55E', 'bg-cyan-500': '#06B6D4', 'bg-blue-500': '#3B82F6',
+    'bg-purple-500': '#A855F7', 'bg-pink-500': '#EC4899', 'bg-gray-500': '#6B7280',
+  }
+  if (twMap[color]) return twMap[color]
+  // Map plain color names
+  const nameMap: Record<string, string> = {
+    red: '#EF4444', orange: '#F97316', yellow: '#EAB308',
+    green: '#22C55E', cyan: '#06B6D4', blue: '#3B82F6',
+    purple: '#A855F7', pink: '#EC4899', gray: '#6B7280',
+  }
+  return nameMap[color.toLowerCase()] || DEFAULT_COLOR
+}
 
 export function TagsManager() {
   const { toast } = useToast()
@@ -75,9 +106,7 @@ export function TagsManager() {
   const [editingTag, setEditingTag] = useState<TagData | null>(null)
   const [newTag, setNewTag] = useState({
     name: '',
-    color: 'bg-blue-500',
-    category: 'Priority',
-    description: ''
+    color: DEFAULT_COLOR,
   })
 
   // Fetch tags from API
@@ -93,11 +122,9 @@ export function TagsManager() {
     return raw.map((t: any) => ({
       id: t.id,
       name: t.name,
-      color: getColorClass(t.color),
-      category: t.category || 'Priority',
+      color: toHexColor(t.color),
       usageCount: t._count?.leads || t.usageCount || 0,
       lastUsed: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'N/A',
-      description: t.description || '',
     }))
   })()
 
@@ -108,7 +135,7 @@ export function TagsManager() {
       queryClient.invalidateQueries({ queryKey: ['tags'] })
       toast.success(`Tag "${newTag.name}" created successfully`)
       setShowAddModal(false)
-      setNewTag({ name: '', color: 'bg-blue-500', category: 'Priority', description: '' })
+      setNewTag({ name: '', color: DEFAULT_COLOR })
     },
     onError: () => {
       toast.error('Failed to create tag')
@@ -123,7 +150,7 @@ export function TagsManager() {
       toast.success(`Tag "${newTag.name}" updated successfully`)
       setShowAddModal(false)
       setEditingTag(null)
-      setNewTag({ name: '', color: 'bg-blue-500', category: 'Priority', description: '' })
+      setNewTag({ name: '', color: DEFAULT_COLOR })
     },
     onError: () => {
       toast.error('Failed to update tag')
@@ -143,12 +170,6 @@ export function TagsManager() {
     },
   })
 
-  const filteredTags = tags.filter((tag: TagData) =>
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tag.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tag.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
   const totalUsage = tags.reduce((acc: number, tag: TagData) => acc + tag.usageCount, 0)
   const mostUsedTag = tags.length > 0
     ? tags.reduce((prev: TagData, current: TagData) => prev.usageCount > current.usageCount ? prev : current)
@@ -167,8 +188,6 @@ export function TagsManager() {
     setNewTag({
       name: tag.name,
       color: tag.color,
-      category: tag.category,
-      description: tag.description || ''
     })
     setShowAddModal(true)
   }
@@ -191,12 +210,16 @@ export function TagsManager() {
     toast.info('Merge tags functionality coming soon')
   }
 
+  // Separate default vs custom tags
+  const defaultTags = tags.filter((t: TagData) => DEFAULT_TAG_NAMES.has(t.name))
+  const customTags = tags.filter((t: TagData) => !DEFAULT_TAG_NAMES.has(t.name))
+
   if (isError) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Tags Manager</h1>
-          <p className="mt-2 text-muted-foreground">Organize and manage your lead tags</p>
+          <h1 className="text-3xl font-bold">Tags & Segments</h1>
+          <p className="mt-2 text-muted-foreground">Organize and manage your lead tags and segment settings</p>
         </div>
         <ErrorBanner message={`Failed to load tags: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
       </div>
@@ -216,9 +239,9 @@ export function TagsManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Tags Manager</h1>
+          <h1 className="text-3xl font-bold">Tags & Segments</h1>
           <p className="mt-2 text-muted-foreground">
-            Organize and manage your lead tags
+            Organize and manage your lead tags and segment settings
           </p>
         </div>
         <div className="flex gap-2">
@@ -243,7 +266,7 @@ export function TagsManager() {
           <CardContent>
             <div className="text-2xl font-bold">{tags.length}</div>
             <p className="text-xs text-muted-foreground">
-              Across {new Set(tags.map((t: TagData) => t.category)).size} categories
+              {tags.length} tags total
             </p>
           </CardContent>
         </Card>
@@ -276,13 +299,13 @@ export function TagsManager() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Categories</CardTitle>
+            <CardTitle className="text-sm font-medium">Colors Used</CardTitle>
             <Palette className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{categories.length}</div>
+            <div className="text-2xl font-bold">{new Set(tags.map((t: TagData) => t.color)).size}</div>
             <p className="text-xs text-muted-foreground">
-              Tag categories available
+              Distinct colors
             </p>
           </CardContent>
         </Card>
@@ -293,7 +316,7 @@ export function TagsManager() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search tags by name, category, or description..."
+            placeholder="Search tags by name..."
             value={searchQuery}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -301,12 +324,81 @@ export function TagsManager() {
         </div>
       </Card>
 
-      {/* Tags Table */}
+      {/* Default Tags Section */}
       <Card>
         <CardHeader>
-          <CardTitle>All Tags</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-muted-foreground" />
+            Default Tags
+          </CardTitle>
           <CardDescription>
-            Manage your tag library and view usage statistics
+            Pre-built real estate tags provided for your organization. Default tags cannot be deleted.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {defaultTags.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tag</TableHead>
+                  <TableHead>Group</TableHead>
+                  <TableHead>Usage</TableHead>
+                  <TableHead>Last Used</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {defaultTags
+                  .filter((tag: TagData) => tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map((tag: TagData) => {
+                    const group = DEFAULT_TAGS.find(dt => dt.name === tag.name)?.group || '—'
+                    return (
+                      <TableRow key={tag.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge style={{ backgroundColor: tag.color, color: '#fff' }}>
+                              {tag.name}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">Default</Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{group}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{tag.usageCount}</span>
+                            <span className="text-xs text-muted-foreground">leads</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {tag.lastUsed}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Default tags have not been created yet. These tags are recommended for real estate workflows:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {DEFAULT_TAGS.map(dt => (
+                  <Badge key={dt.name} style={{ backgroundColor: dt.color, color: '#fff' }} className="text-xs">
+                    {dt.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Custom Tags Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Custom Tags</CardTitle>
+          <CardDescription>
+            Tags you&apos;ve created for your organization. Create, edit, or delete custom tags.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -314,23 +406,20 @@ export function TagsManager() {
             <TableHeader>
               <TableRow>
                 <TableHead>Tag</TableHead>
-                <TableHead>Category</TableHead>
                 <TableHead>Usage</TableHead>
                 <TableHead>Last Used</TableHead>
-                <TableHead>Description</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTags.map((tag: TagData) => (
+              {customTags
+                .filter((tag: TagData) => tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((tag: TagData) => (
                 <TableRow key={tag.id}>
                   <TableCell>
-                    <Badge className={`${tag.color} text-white`}>
+                    <Badge style={{ backgroundColor: tag.color, color: '#fff' }}>
                       {tag.name}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {tag.category}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -340,9 +429,6 @@ export function TagsManager() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {tag.lastUsed}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                    {tag.description || '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -367,11 +453,62 @@ export function TagsManager() {
             </TableBody>
           </Table>
 
-          {filteredTags.length === 0 && (
+          {customTags.filter((tag: TagData) => tag.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              No tags found matching your search
+              {searchQuery ? 'No custom tags match your search' : 'No custom tags yet. Click "Add Tag" to create one.'}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Segment Settings Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Segment Settings</CardTitle>
+          <CardDescription>
+            Configure how segments behave across your organization.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium">Auto-refresh interval</label>
+              <p className="text-xs text-muted-foreground mb-2">How often segment member counts refresh</p>
+              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background">
+                <option value="1h">Every 1 hour</option>
+                <option value="6h">Every 6 hours</option>
+                <option value="24h" selected>Every 24 hours</option>
+                <option value="manual">Manual only</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Default match type</label>
+              <p className="text-xs text-muted-foreground mb-2">Whether new segments default to match ALL or ANY rules</p>
+              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background">
+                <option value="ALL" selected>Match ALL rules (AND)</option>
+                <option value="ANY">Match ANY rule (OR)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Max segment rules</label>
+              <p className="text-xs text-muted-foreground mb-2">Limit on number of rules per segment to prevent performance issues</p>
+              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background">
+                <option value="5">5 rules</option>
+                <option value="10" selected>10 rules</option>
+                <option value="20">20 rules</option>
+                <option value="50">50 rules</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Segment color palette</label>
+              <p className="text-xs text-muted-foreground mb-2">Default colors available when creating segments</p>
+              <div className="flex gap-2 flex-wrap">
+                {['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#6366F1'].map(c => (
+                  <div key={c} className="w-8 h-8 rounded-full border" style={{ backgroundColor: c }} title={c} />
+                ))}
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -399,46 +536,20 @@ export function TagsManager() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Category</label>
-                <select
-                  className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2"
-                  value={newTag.category}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setNewTag({ ...newTag, category: e.target.value })
-                  }
-                >
-                  {categories.map((cat: string) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
                 <label className="text-sm font-medium">Color</label>
                 <div className="mt-2 grid grid-cols-5 gap-2">
                   {tagColors.map((color) => (
                     <button
                       key={color.value}
-                      className={`h-10 rounded-md ${color.value} ${
+                      className={`h-10 rounded-md ${
                         newTag.color === color.value ? 'ring-2 ring-primary ring-offset-2' : ''
                       }`}
+                      style={{ backgroundColor: color.value }}
                       onClick={() => setNewTag({ ...newTag, color: color.value })}
                       title={color.name}
                     />
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Description (Optional)</label>
-                <Input
-                  placeholder="Brief description of when to use this tag"
-                  value={newTag.description}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setNewTag({ ...newTag, description: e.target.value })
-                  }
-                  className="mt-2"
-                />
               </div>
 
               <div className="flex gap-2 pt-4">
@@ -447,7 +558,7 @@ export function TagsManager() {
                   onClick={() => {
                     setShowAddModal(false)
                     setEditingTag(null)
-                    setNewTag({ name: '', color: 'bg-blue-500', category: 'Priority', description: '' })
+                    setNewTag({ name: '', color: DEFAULT_COLOR })
                   }}
                   className="flex-1"
                 >

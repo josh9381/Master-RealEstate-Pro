@@ -12,6 +12,7 @@ import { calcProgress } from '@/lib/metricsCalculator';
 import { useToast } from '@/hooks/useToast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 // Types matching the backend FullAIPreferences structure
 interface ComposerPreferences {
@@ -112,7 +113,7 @@ const AISettings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
   // Load preferences
-  const { data: prefsData, isLoading } = useQuery({
+  const { data: prefsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['ai', 'preferences'],
     queryFn: async () => {
       const res = await aiApi.getPreferences();
@@ -229,6 +230,10 @@ const AISettings = () => {
 
   if (isLoading) {
     return <LoadingSkeleton rows={4} />;
+  }
+
+  if (isError) {
+    return <ErrorBanner message={`Failed to load AI settings: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
   }
 
   const tabs: { id: SettingsTab; label: string; icon: typeof User }[] = [

@@ -9,12 +9,12 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '@/components/ui/Dialog'
-import { Search, Filter, Download, LayoutGrid, LayoutList, Users } from 'lucide-react'
+import { Search, Filter, Download, LayoutGrid, LayoutList, Users, Tag as TagIcon } from 'lucide-react'
 import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { ActiveFilterChips } from '@/components/filters/ActiveFilterChips'
 import { useToast } from '@/hooks/useToast'
-import { leadsApi, usersApi, notesApi, messagesApi, activitiesApi, pipelinesApi, CreateLeadData, UpdateLeadData, BulkUpdateData, PipelineData } from '@/lib/api'
+import { leadsApi, usersApi, notesApi, messagesApi, activitiesApi, pipelinesApi, tagsApi, segmentsApi, CreateLeadData, UpdateLeadData, BulkUpdateData, PipelineData } from '@/lib/api'
 import { exportToCSV, leadExportColumns } from '@/lib/exportService'
 import { Lead } from '@/types'
 import type { AssignedUser } from '@/types'
@@ -87,6 +87,8 @@ function LeadsList() {
   const [deletingLeadId, setDeletingLeadId] = useState<number | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
+  const [showSaveSegment, setShowSaveSegment] = useState(false)
+  const [saveSegmentName, setSaveSegmentName] = useState('')
 
   const queryClient = useQueryClient()
 
@@ -258,6 +260,17 @@ function LeadsList() {
     enabled: showPipelineModal,
   })
 
+  // Tags query for quick-filter dropdown
+  const { data: allTagsData } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => tagsApi.getTags(),
+  })
+  const allTags: string[] = (() => {
+    const raw = allTagsData?.data?.tags || allTagsData?.data || allTagsData?.tags || allTagsData || []
+    if (!Array.isArray(raw)) return []
+    return raw.map((t: any) => t.name as string)
+  })()
+
   const pipelines: PipelineData[] = Array.isArray(pipelinesData) ? pipelinesData : []
   const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId)
 
@@ -420,6 +433,24 @@ function LeadsList() {
     toast.success(`Loaded view: ${view.name || 'Saved View'}`)
   }
 
+  const handleSaveAsSegment = async () => {
+    if (!saveSegmentName.trim()) { toast.error('Please enter a segment name'); return }
+    const rules: { field: string; operator: string; value: any }[] = []
+    if (filters.status.length > 0) rules.push({ field: 'status', operator: 'in', value: filters.status })
+    if (filters.source.length > 0) rules.push({ field: 'source', operator: 'in', value: filters.source })
+    if (filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100) rules.push({ field: 'score', operator: 'between', value: { min: filters.scoreRange[0], max: filters.scoreRange[1] } })
+    if (filters.tags.length > 0) rules.push({ field: 'tags', operator: 'includesAny', value: filters.tags })
+    if (rules.length === 0) { toast.error('No active filters to save as segment'); return }
+    try {
+      await segmentsApi.createSegment({ name: saveSegmentName.trim(), rules, matchType: 'ALL' })
+      toast.success(`Segment "${saveSegmentName}" created`)
+      setShowSaveSegment(false)
+      setSaveSegmentName('')
+    } catch {
+      toast.error('Failed to create segment')
+    }
+  }
+
   const hasActiveFilters = activeFilterChips.length > 0 || scoreFilter !== 'ALL' ||
     filters.status.length > 0 || filters.source.length > 0 ||
     filters.tags.length > 0 || filters.assignedTo.length > 0 ||
@@ -559,11 +590,20 @@ function LeadsList() {
       toast.error('You don\'t have permission to export data')
       return
     }
-    const selectedLeadsData = leads.filter((l: Lead) => selectedLeads.includes(l.id))
-    const data = selectedLeadsData.length > 0 ? selectedLeadsData : filteredAndSortedLeads
-    exportToCSV(data, leadExportColumns, { filename: `leads-export-${new Date().toISOString().split('T')[0]}` })
-    toast.success(`Exported ${data.length} leads to CSV`)
-    setSelectedLeads([])
+    try {
+      const selectedLeadsData = leads.filter((l: Lead) => selectedLeads.includes(l.id))
+      const data = selectedLeadsData.length > 0 ? selectedLeadsData : filteredAndSortedLeads
+      const MAX_EXPORT = 1000
+      if (data.length >= MAX_EXPORT) {
+        toast.warning(`Export is limited to ${MAX_EXPORT} records. ${totalLeads > MAX_EXPORT ? `${totalLeads - MAX_EXPORT} leads were not included.` : ''}`)
+      }
+      exportToCSV(data.slice(0, MAX_EXPORT), leadExportColumns, { filename: `leads-export-${new Date().toISOString().split('T')[0]}` })
+      toast.success(`Exported ${Math.min(data.length, MAX_EXPORT)} leads to CSV`)
+      setSelectedLeads([])
+    } catch (error) {
+      logger.error('Failed to export leads:', error)
+      toast.error('Failed to export leads. Please try again.')
+    }
   }
 
   const handleAddQuickNote = async (leadId: number) => {
@@ -752,6 +792,23 @@ function LeadsList() {
               <option value="COOL">❄️ Cool (25-49)</option>
               <option value="COLD">⚫ Cold (0-24)</option>
             </select>
+            <select
+              value={filters.tags.length === 1 ? filters.tags[0] : ''}
+              onChange={(e) => {
+                const tag = e.target.value
+                if (tag) {
+                  setFilters(prev => ({ ...prev, tags: [tag] }))
+                } else {
+                  setFilters(prev => ({ ...prev, tags: [] }))
+                }
+              }}
+              className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+            >
+              <option value="">All Tags</option>
+              {allTags.map(tag => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
             <Button variant="outline" onClick={() => setShowFilters(true)}>
               <Filter className="mr-2 h-4 w-4" />
               Filters
@@ -781,6 +838,30 @@ function LeadsList() {
 
       {/* Active Filter Chips */}
       <ActiveFilterChips chips={activeFilterChips} onRemove={handleRemoveChip} onClearAll={handleClearAllFilters} resultCount={filteredAndSortedLeads.length} />
+
+      {/* Save as Segment */}
+      {hasActiveFilters && (
+        <div className="flex items-center gap-2 px-1">
+          {!showSaveSegment ? (
+            <Button variant="outline" size="sm" onClick={() => setShowSaveSegment(true)}>
+              <TagIcon className="mr-2 h-3.5 w-3.5" />
+              Save as Segment
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Segment name..."
+                value={saveSegmentName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSaveSegmentName(e.target.value)}
+                className="h-8 w-48 text-sm"
+                autoFocus
+              />
+              <Button size="sm" onClick={handleSaveAsSegment}>Save</Button>
+              <Button variant="ghost" size="sm" onClick={() => { setShowSaveSegment(false); setSaveSegmentName('') }}>Cancel</Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Saved Filter Views */}
       <div className="px-1">

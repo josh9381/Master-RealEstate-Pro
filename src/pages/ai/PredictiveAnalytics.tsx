@@ -174,7 +174,10 @@ const PredictiveAnalytics = () => {
           </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-[350px] text-muted-foreground">
-              No forecast data available yet. Revenue forecast requires historical data.
+              <div className="text-center">
+                <p>No forecast data available yet.</p>
+                <p className="text-xs mt-1">Revenue forecast requires historical deal data. <a href="/leads" className="text-primary hover:underline">Add leads</a> and close deals to generate forecasts.</p>
+              </div>
             </div>
           )}
         </CardContent>
@@ -216,7 +219,10 @@ const PredictiveAnalytics = () => {
             </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[250px] text-muted-foreground">
-                No conversion trend data available yet. Add leads to generate trends.
+                <div className="text-center">
+                  <p>No conversion trend data available yet.</p>
+                  <p className="text-xs mt-1">Add and convert leads to start generating trend data.</p>
+                </div>
               </div>
             )}
           </CardContent>
@@ -261,7 +267,10 @@ const PredictiveAnalytics = () => {
             </div>
             ) : (
               <div className="flex items-center justify-center h-[250px] text-muted-foreground">
-                No predictions available yet. Run model training to generate predictions.
+                <div className="text-center">
+                  <p>No predictions available yet.</p>
+                  <p className="text-xs mt-1">Run model training from <a href="/ai/lead-scoring" className="text-primary hover:underline">Lead Scoring</a> to generate predictions.</p>
+                </div>
               </div>
             )}
           </CardContent>

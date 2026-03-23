@@ -10,6 +10,7 @@ import intelligenceService, { type DashboardInsights, type ScoringModel } from '
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 type InsightsTab = 'active' | 'acted' | 'dismissed';
 
@@ -62,7 +63,7 @@ const IntelligenceInsights = () => {
     onError: () => toast.error('Failed to save preferences'),
   })
 
-  const { data: insightsData, isLoading: loading, refetch } = useQuery({
+  const { data: insightsData, isLoading: loading, isError, error, refetch } = useQuery({
     queryKey: ['ai', 'intelligence-insights'],
     queryFn: async () => {
       const [oldInsights, allRecommendations, newDashboard, modelRaw, trends] = await Promise.all([
@@ -77,7 +78,7 @@ const IntelligenceInsights = () => {
       const md = (modelRaw as any)?.data ?? modelRaw
       const normalizedModel: ScoringModel | null = md ? {
         organizationId: md.organizationId ?? '',
-        factors: md.factors ?? md.weights ?? md.defaultWeights ?? { scoreWeight: 0.4, activityWeight: 0.3, recencyWeight: 0.2, funnelTimeWeight: 0.1 },
+        factors: md.factors ?? { scoreWeight: 0.4, activityWeight: 0.3, recencyWeight: 0.2, funnelTimeWeight: 0.1 },
         accuracy: md.accuracy ?? null,
         lastTrainedAt: md.lastTrainedAt ?? null,
         trainingDataCount: md.trainingDataCount ?? 0,
@@ -199,6 +200,10 @@ const IntelligenceInsights = () => {
     Optimization: 'bg-blue-100 text-blue-600',
     Trend: 'bg-purple-100 text-purple-600',
   };
+
+  if (isError) {
+    return <ErrorBanner message={`Failed to load insights: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
+  }
 
   return (
     <div className="space-y-6">

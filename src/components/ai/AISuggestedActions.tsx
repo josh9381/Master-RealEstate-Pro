@@ -64,49 +64,11 @@ function resolvePriority(confidence: number): 'high' | 'medium' | 'low' {
   return 'low'
 }
 
-const fallbackSuggestions: Suggestion[] = [
-  {
-    id: '1',
-    icon: Mail,
-    action: 'Send follow-up email',
-    reason: 'Recommended next step',
-    confidence: 70,
-    priority: 'high',
-    onClick: () => { /* wired dynamically */ },
-  },
-  {
-    id: '2',
-    icon: Phone,
-    action: 'Schedule a call',
-    reason: 'Personal outreach increases engagement',
-    confidence: 75,
-    priority: 'high',
-    onClick: () => { /* wired dynamically */ },
-  },
-  {
-    id: '3',
-    icon: Calendar,
-    action: 'Book demo meeting',
-    reason: 'Demos help move leads forward',
-    confidence: 60,
-    priority: 'medium',
-    onClick: () => { /* wired dynamically */ },
-  },
-  {
-    id: '4',
-    icon: TrendingUp,
-    action: 'Add to nurture campaign',
-    reason: 'Keep lead engaged over time',
-    confidence: 55,
-    priority: 'low',
-    onClick: () => { /* wired dynamically */ },
-  },
-]
-
 export function AISuggestedActions({ className, leadId, onComposeEmail, onScheduleCall, onBookDemo }: AISuggestedActionsProps) {
   const [dismissedActions, setDismissedActions] = useState<string[]>([])
-  const [suggestions, setSuggestions] = useState<Suggestion[]>(fallbackSuggestions)
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isUnavailable, setIsUnavailable] = useState(false)
 
   const wireClickHandler = useCallback((action: string): (() => void) => {
     const lower = action.toLowerCase()
@@ -145,11 +107,11 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
       } catch (error) {
         const aiMsg = getAIUnavailableMessage(error)
         if (aiMsg) {
-          logger.info('AI suggestions unavailable (API key not configured) — using defaults')
+          logger.info('AI suggestions unavailable (API key not configured)')
         } else {
           logger.error('Failed to fetch AI suggestions:', error)
         }
-        // Keep fallback suggestions
+        setIsUnavailable(true)
       } finally {
         setIsLoading(false)
       }
@@ -188,6 +150,24 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
             Loading AI Recommendations...
           </CardTitle>
         </CardHeader>
+      </Card>
+    )
+  }
+
+  if (isUnavailable) {
+    return (
+      <Card className={className}>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-base">
+            <Sparkles className="mr-2 h-5 w-5 text-muted-foreground" />
+            AI Recommendations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            AI suggestions are currently unavailable. Check your AI settings or try again later.
+          </p>
+        </CardContent>
       </Card>
     )
   }

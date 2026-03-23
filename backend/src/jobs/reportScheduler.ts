@@ -2,6 +2,7 @@ import { logger } from '../lib/logger'
 import cron from 'node-cron'
 import { prisma } from '../config/database'
 import { acquireLock, releaseLock } from '../utils/distributedLock'
+import { sendEmail } from '../services/email.service'
 
 const LOCK_KEY = 'report-scheduler'
 const LOCK_TTL = 120 // 2 minutes
@@ -67,8 +68,24 @@ async function runReportScheduler() {
           },
         })
 
-        // TODO: In production, send email with PDF attachment here
-        // For now, the report is stored in-app in ReportHistory
+        // Send report email to all recipients
+        const APP_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000'
+        for (const recipient of allRecipients) {
+          try {
+            await sendEmail({
+              to: recipient,
+              subject: `Report: ${schedule.savedReport.name} — ${now.toLocaleDateString()}`,
+              html: `<p>Hi,</p>
+                <p>Your scheduled report <strong>${schedule.savedReport.name}</strong> has been generated.</p>
+                <p><a href="${APP_URL}/admin/reports" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">View Report</a></p>
+                <p style="color:#6b7280;font-size:12px;">This is an automated report from your Real Estate Pro account.</p>`,
+              organizationId: schedule.organizationId,
+              skipSuppressionCheck: true,
+            })
+          } catch (emailErr) {
+            logger.warn(`[ReportScheduler] Failed to email report to ${recipient}:`, emailErr)
+          }
+        }
         logger.info(`[ReportScheduler] Generated report "${schedule.savedReport.name}" for user ${schedule.user.email}`)
       } catch (err: any) {
         logger.error(`[ReportScheduler] Failed to generate report ${schedule.id}:`, err.message)

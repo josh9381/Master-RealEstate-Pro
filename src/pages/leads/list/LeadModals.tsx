@@ -2,11 +2,13 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogContent } from '@/components/ui/Dialog'
-import { X, Send, Tag as TagIcon, FileText } from 'lucide-react'
+import { X, Send, Tag as TagIcon, FileText, Loader2 } from 'lucide-react'
 import { useState, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { Lead } from '@/types'
 import type { AssignedUser, TeamMember } from '@/types'
 import { useConfirm } from '@/hooks/useConfirm'
+import { tagsApi } from '@/lib/api'
 
 // ── Mass Email Modal ──
 
@@ -143,6 +145,17 @@ export function TagsModal({
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState('')
 
+  // Fetch tags from API instead of using hardcoded list
+  const { data: tagsResponse, isLoading: tagsLoading } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => tagsApi.getTags(),
+  })
+  const availableTags: string[] = (() => {
+    const raw = tagsResponse?.data?.tags || tagsResponse?.data || tagsResponse?.tags || tagsResponse || []
+    if (!Array.isArray(raw)) return []
+    return raw.map((t: any) => t.name).filter(Boolean)
+  })()
+
   const handleToggleTag = (tag: string) => {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   }
@@ -164,16 +177,25 @@ export function TagsModal({
           <div>
             <label className="text-sm font-medium">Select Tags</label>
             <div className="flex flex-wrap gap-2 mt-2">
-              {['Hot Lead', 'Enterprise', 'VIP', 'Follow-up', 'Demo Scheduled', 'Proposal Sent'].map(tag => (
-                <Badge
-                  key={tag}
-                  variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => handleToggleTag(tag)}
-                >
-                  {tag}
-                </Badge>
-              ))}
+              {tagsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading tags...
+                </div>
+              ) : availableTags.length > 0 ? (
+                availableTags.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                    className="cursor-pointer"
+                    onClick={() => handleToggleTag(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No tags found. Add a new tag below.</p>
+              )}
             </div>
           </div>
 

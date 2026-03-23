@@ -1,8 +1,44 @@
 import { Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+import type { SegmentRule } from '../services/segmentation.service'
 
 const prisma = new PrismaClient()
+
+/**
+ * Convert SavedFilterView filterConfig to SegmentRule[] format.
+ * This enables sharing buildWhereFromRules() between saved views and segments.
+ */
+export function filterConfigToSegmentRules(config: any): SegmentRule[] {
+  const rules: SegmentRule[] = []
+
+  if (config.status?.length > 0) {
+    rules.push({ field: 'status', operator: 'in', value: config.status })
+  }
+  if (config.source?.length > 0) {
+    rules.push({ field: 'source', operator: 'in', value: config.source })
+  }
+  if (config.scoreRange) {
+    const [min, max] = config.scoreRange
+    if (min > 0 || max < 100) {
+      rules.push({ field: 'score', operator: 'between', value: { min, max } })
+    }
+  }
+  if (config.dateRange?.from) {
+    rules.push({ field: 'createdAt', operator: 'greaterThanOrEqual', value: config.dateRange.from })
+  }
+  if (config.dateRange?.to) {
+    rules.push({ field: 'createdAt', operator: 'lessThanOrEqual', value: config.dateRange.to })
+  }
+  if (config.tags?.length > 0) {
+    rules.push({ field: 'tags', operator: 'includesAny', value: config.tags })
+  }
+  if (config.assignedTo?.length > 0) {
+    rules.push({ field: 'assignedToId', operator: 'in', value: config.assignedTo })
+  }
+
+  return rules
+}
 
 const createFilterViewSchema = z.object({
   name: z.string().min(1).max(100),

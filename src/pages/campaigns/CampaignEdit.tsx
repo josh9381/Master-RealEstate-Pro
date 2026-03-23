@@ -113,6 +113,8 @@ function CampaignEdit() {
       budget: editForm.budget != null ? editForm.budget : undefined,
       isABTest: editForm.isABTest,
       abTestData: editForm.abTestData || undefined,
+      abTestWinnerMetric: editForm.isABTest ? editForm.abTestWinnerMetric : undefined,
+      abTestEvalHours: editForm.isABTest ? editForm.abTestEvalHours : undefined,
       isRecurring: editForm.isRecurring,
       frequency: editForm.frequency ? editForm.frequency as 'daily' | 'weekly' | 'monthly' : undefined,
       recurringPattern: editForm.recurringPattern || undefined,

@@ -2,6 +2,7 @@ import { logger } from '@/lib/logger'
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Brain, Target, TrendingUp, Sparkles, BarChart3, RefreshCw, CheckCircle, Zap, Settings, MessageSquare, Wand2, FileText, ArrowRight, Bot, ChevronRight, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -98,7 +99,7 @@ const AIHub = () => {
   const { toast } = useToast()
 
   // Fetch hub data — only what the overview dashboard needs
-  const { data: aiData, isLoading: loading } = useQuery({
+  const { data: aiData, isLoading: loading, isError, error, refetch } = useQuery({
     queryKey: ['ai', 'hub'],
     queryFn: async () => {
       const [
@@ -185,6 +186,10 @@ const AIHub = () => {
     return <LoadingSkeleton rows={3} showChart={true} />;
   }
 
+  if (isError) {
+    return <ErrorBanner message={`Failed to load AI Hub: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -214,22 +219,22 @@ const AIHub = () => {
           </Card>
         </Link>
 
-        <Link to="/ai/segmentation" className="group">
-          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
+        <div className="relative">
+          <Card className="h-full opacity-75">
             <CardContent className="pt-6">
               <div className="flex items-start justify-between">
                 <div className="p-2 bg-cyan-500/10 rounded-lg">
                   <BarChart3 className="h-6 w-6 text-cyan-500" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <Badge variant="outline" className="text-xs">Coming Soon</Badge>
               </div>
-              <h3 className="font-semibold mt-3">Segmentation</h3>
+              <h3 className="font-semibold mt-3">AI Segmentation</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {getFeatureStat('segment') || 'AI-powered lead segments & clusters'}
+                AI-powered clustering &amp; auto-segmentation — coming soon
               </p>
             </CardContent>
           </Card>
-        </Link>
+        </div>
 
         <Link to="/ai/insights" className="group">
           <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">

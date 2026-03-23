@@ -187,6 +187,8 @@ model Campaign {
   user             User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
   organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   tags             Tag[]          @relation("CampaignToTag")
+  segmentId        String?
+  segment          Segment?       @relation(fields: [segmentId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([createdById])
@@ -199,6 +201,7 @@ model Campaign {
   @@index([isRecurring, nextSendAt])
   @@index([organizationId])
   @@index([organizationId, status])
+  @@index([segmentId])
 }
 
 model FeatureFlag {
@@ -726,6 +729,7 @@ model Segment {
   updatedAt      DateTime     @updatedAt
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaigns      Campaign[]
 
   @@index([organizationId])
   @@index([isActive])
@@ -1425,6 +1429,8 @@ enum WorkflowTrigger {
   TIME_BASED
   SCORE_THRESHOLD
   TAG_ADDED
+  SEGMENT_ENTERED
+  SEGMENT_EXITED
   MANUAL
   WEBHOOK
 }

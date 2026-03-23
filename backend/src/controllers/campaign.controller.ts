@@ -8,6 +8,7 @@ import { getAllTemplates, getTemplateById, trackTemplateUsage } from '../data/ca
 import { getCampaignsFilter, getRoleFilterFromRequest } from '../utils/roleFilters';
 import { calcOpenRate, calcClickRate, calcConversionRate, calcBounceRate, calcROI, formatRate } from '../utils/metricsCalculator';
 import { compileEmailBlocks, compilePlainText } from '../utils/mjmlCompiler';
+import { getSegmentById } from '../services/segmentation.service';
 
 /**
  * Get all campaigns with filtering and pagination
@@ -199,7 +200,7 @@ export const getCampaign = async (req: Request, res: Response) => {
  * POST /api/campaigns
  */
 export const createCampaign = async (req: Request, res: Response) => {
-  const { name, type, status, subject, body, previewText, startDate, endDate, budget, audience, isABTest, abTestData, tagIds, isRecurring, frequency, recurringPattern, maxOccurrences, abTestWinnerMetric, abTestEvalHours } = req.body;
+  const { name, type, status, subject, body, previewText, startDate, endDate, budget, audience, isABTest, abTestData, tagIds, segmentId, isRecurring, frequency, recurringPattern, maxOccurrences, abTestWinnerMetric, abTestEvalHours } = req.body;
   const userId = req.user?.userId;
   const organizationId = req.user?.organizationId;
 
@@ -247,6 +248,7 @@ export const createCampaign = async (req: Request, res: Response) => {
           connect: tagIds.map((id: string) => ({ id })),
         },
       }),
+      ...(segmentId && { segmentId }),
     },
     include: {
       user: {
@@ -867,6 +869,7 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
     where: { id, organizationId: req.user!.organizationId },
     include: {
       tags: true,
+      segment: true,
       user: {
         select: {
           id: true,
@@ -899,6 +902,39 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
         },
       },
     };
+  }
+
+  // If campaign has a segment, evaluate segment rules for additional filtering
+  if (campaign.segmentId) {
+    try {
+      const segment = await getSegmentById(campaign.segmentId, campaign.organizationId);
+      const rules = segment.rules as any[];
+      if (rules && rules.length > 0) {
+        // Build segment conditions and merge them into the where clause
+        const segmentConditions = rules.map((rule: any) => {
+          const { field, operator, value } = rule;
+          if (field === 'tags') {
+            switch (operator) {
+              case 'includes': return { tags: { some: { name: value } } };
+              case 'excludes': return { NOT: { tags: { some: { name: value } } } };
+              case 'includesAny': return { tags: { some: { name: { in: Array.isArray(value) ? value : [value] } } } };
+              default: return { tags: { some: { name: value } } };
+            }
+          }
+          switch (operator) {
+            case 'equals': return { [field]: value };
+            case 'notEquals': return { [field]: { not: value } };
+            case 'contains': return { [field]: { contains: value, mode: 'insensitive' } };
+            case 'greaterThan': return { [field]: { gt: Number(value) } };
+            case 'lessThan': return { [field]: { lt: Number(value) } };
+            default: return { [field]: value };
+          }
+        });
+        where.AND = [...(where.AND || []), ...segmentConditions];
+      }
+    } catch (err) {
+      logger.warn('Failed to evaluate segment rules for campaign preview', err);
+    }
   }
 
   // Get all matching leads (use count + limited sample for preview)
@@ -993,8 +1029,8 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
           );
         });
       }
-      const bodyTemplate = Handlebars.compile(bodyContent);
-      const subjectTemplate = campaign.subject ? Handlebars.compile(campaign.subject) : null;
+      const bodyTemplate = Handlebars.compile(bodyContent, { strict: true });
+      const subjectTemplate = campaign.subject ? Handlebars.compile(campaign.subject, { strict: true }) : null;
 
       const firstLead = leads[0];
       const nameParts = `${firstLead.firstName} ${firstLead.lastName}`.split(' ');
@@ -1021,9 +1057,10 @@ export const getCampaignPreview = async (req: Request, res: Response) => {
         currentTime: new Date().toLocaleTimeString(),
       };
 
+      const runtimeOptions = { allowProtoPropertiesByDefault: false, allowProtoMethodsByDefault: false };
       messagePreview = {
-        subject: subjectTemplate ? subjectTemplate(templateData) : campaign.subject || '',
-        body: bodyTemplate(templateData),
+        subject: subjectTemplate ? subjectTemplate(templateData, runtimeOptions) : campaign.subject || '',
+        body: bodyTemplate(templateData, runtimeOptions),
       };
     } catch (error) {
       logger.error('[CAMPAIGN] Error rendering preview template:', error);

@@ -23,7 +23,7 @@ import {
   UserCog,
 } from 'lucide-react'
 
-const navigation = [
+const navigation: { name: string; href: string; icon: any }[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Leads', href: '/leads', icon: Users },
   { name: 'Campaigns', href: '/campaigns', icon: Megaphone },

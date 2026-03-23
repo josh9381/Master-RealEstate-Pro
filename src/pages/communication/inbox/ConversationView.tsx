@@ -159,18 +159,14 @@ export const ConversationView = ({
   const [showChannelPicker, setShowChannelPicker] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Reset tab when contact changes
+  // Reset tab and scroll when contact changes (combined to prevent race condition)
   useEffect(() => {
     setActiveTab('all')
-  }, [selectedContact?.id])
-
-  useEffect(() => {
     if (selectedContact) {
       const t = setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
       return () => clearTimeout(t)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedContact])
+  }, [selectedContact?.id])
 
   if (!selectedContact) {
     return (
@@ -237,7 +233,7 @@ export const ConversationView = ({
             <Trash2 className="h-4 w-4" />
           </Button>
           <div className="relative">
-            <Button size="sm" variant="ghost" onClick={() => onShowMoreMenu(!showMoreMenu)}>
+            <Button size="sm" variant="ghost" onClick={() => onShowMoreMenu(!showMoreMenu)} aria-label="More actions" aria-expanded={showMoreMenu}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
             {showMoreMenu && (
@@ -692,6 +688,8 @@ export const ConversationView = ({
                       className="absolute right-0 top-0 bottom-0 px-1.5 border-l border-white/30 hover:bg-black/10 rounded-r-md transition"
                       onClick={() => setShowChannelPicker(!showChannelPicker)}
                       title="Switch reply channel"
+                      aria-label="Switch reply channel"
+                      aria-expanded={showChannelPicker}
                     >
                       <ChevronDown className="h-3 w-3 text-white" />
                     </button>

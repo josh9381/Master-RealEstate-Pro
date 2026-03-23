@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Mail, MessageSquare, Phone, Users, Calendar, DollarSign, Target, Sparkles, RefreshCw, Save, ChevronRight, ChevronLeft, Eye, AtSign, Smartphone, AlertTriangle, FileText, Check } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-import { campaignsApi, leadsApi, templatesApi, CreateCampaignData } from '@/lib/api'
+import { campaignsApi, leadsApi, templatesApi, segmentsApi, CreateCampaignData } from '@/lib/api'
 import { useQuery } from '@tanstack/react-query'
 import { CampaignPreviewModal } from '@/components/campaigns/CampaignPreviewModal'
 import { MessageEnhancerModal } from '@/components/ai/MessageEnhancerModal'
@@ -224,6 +224,21 @@ function CampaignCreate() {
   
   // Track filtered lead count
   const [filteredLeadCount, setFilteredLeadCount] = useState(totalLeads)
+
+  // Fetch segments for audience picker
+  const { data: segmentsData } = useQuery({
+    queryKey: ['segments'],
+    queryFn: async () => {
+      const response = await segmentsApi.getSegments()
+      return response.data || response.segments || []
+    },
+  })
+  const savedSegments = (segmentsData || []).map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    filters: (s.rules || []).map((r: any) => ({ field: r.field, operator: r.operator, value: r.value })),
+    leadCount: s.memberCount || 0,
+  }))
 
   // Fetch filtered lead count when filters change
   useEffect(() => {
@@ -1327,7 +1342,7 @@ function CampaignCreate() {
                     filters={formData.audienceFilters}
                     onChange={(filters) => updateFormData({ audienceFilters: filters })}
                     leadCount={filteredLeadCount}
-                    savedSegments={[]}
+                    savedSegments={savedSegments}
                   />
                 </div>
               )}

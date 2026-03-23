@@ -11,6 +11,7 @@ import { aiApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface OrgSettings {
   useOwnAIKey: boolean;
@@ -89,7 +90,7 @@ const OrgAISettings = () => {
   const [newApiKey, setNewApiKey] = useState('');
 
   // Load org settings
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['ai', 'org-settings'],
     queryFn: async () => {
       const res = await aiApi.getOrgSettings();
@@ -168,6 +169,10 @@ const OrgAISettings = () => {
 
   if (isLoading) {
     return <LoadingSkeleton rows={4} />;
+  }
+
+  if (isError) {
+    return <ErrorBanner message={`Failed to load organization settings: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
   }
 
   // Group models by tier for display

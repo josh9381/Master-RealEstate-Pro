@@ -33,10 +33,29 @@ export interface UpdateSegmentInput {
 
 /**
  * Build Prisma where clause from segment rules
+ * Shared by Segment evaluation and SavedFilterView evaluation.
  */
-function buildWhereFromRules(rules: SegmentRule[], matchType: string, organizationId: string): any {
+export function buildWhereFromRules(rules: SegmentRule[], matchType: string, organizationId: string): any {
   const conditions = rules.map(rule => {
     const { field, operator, value } = rule;
+
+    // Special handling for tags field — uses Prisma relation queries
+    if (field === 'tags') {
+      switch (operator) {
+        case 'includes':
+          return { tags: { some: { name: value } } };
+        case 'excludes':
+          return { NOT: { tags: { some: { name: value } } } };
+        case 'includesAny':
+          return { tags: { some: { name: { in: Array.isArray(value) ? value : [value] } } } };
+        case 'includesAll': {
+          const tagNames = Array.isArray(value) ? value : [value];
+          return { AND: tagNames.map((name: string) => ({ tags: { some: { name } } })) };
+        }
+        default:
+          return { tags: { some: { name: value } } };
+      }
+    }
 
     // Map field names to Prisma Lead model fields
     switch (operator) {

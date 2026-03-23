@@ -10,6 +10,7 @@ import { leadsApi, aiApi } from '@/lib/api';
 import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { useToast } from '@/hooks/useToast';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import {
   Table,
@@ -232,7 +233,7 @@ const LeadScoring = () => {
     modelStatus: 'active',
   }
 
-  const { data: scoringData = defaultScoringData, isLoading: loading, refetch } = useQuery({
+  const { data: scoringData = defaultScoringData, isLoading: loading, isError, error, refetch } = useQuery({
     queryKey: ['lead-scoring'],
     queryFn: async () => {
       try {
@@ -326,6 +327,10 @@ const LeadScoring = () => {
 
   if (loading) {
     return <LoadingSkeleton rows={5} showChart />;
+  }
+
+  if (isError) {
+    return <ErrorBanner message={`Failed to load scoring data: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
   }
 
   return (
@@ -712,7 +717,10 @@ const LeadScoring = () => {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No breakdown data available.</p>
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">No breakdown data available.</p>
+                <p className="text-xs text-muted-foreground mt-1">Score some leads to see factor breakdowns.</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -729,7 +737,13 @@ const LeadScoring = () => {
             {(() => {
               const total = recentScores.length
               if (total === 0) {
-                return <p className="text-sm text-muted-foreground">No scored leads yet.</p>
+                return (
+                  <div className="text-center py-6">
+                    <p className="text-sm text-muted-foreground">No scored leads yet.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Import leads and run scoring to see distribution here.</p>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/leads')}>Go to Leads</Button>
+                  </div>
+                )
               }
               const aCount = recentScores.filter((l: { score: number }) => l.score >= 80).length
               const bCount = recentScores.filter((l: { score: number }) => l.score >= 60 && l.score < 80).length

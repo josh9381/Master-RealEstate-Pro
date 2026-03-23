@@ -300,30 +300,14 @@ function formatConversation(messages: MessageData[], conversationId: string): Me
 
 /**
  * Get property interactions for lead
- * This is a placeholder - adjust based on your actual schema
+ * Property/PropertyView tables do not exist in the current schema.
+ * Returns empty array until property models are implemented.
  */
-async function getLeadPropertyInteractions(leadId: string): Promise<MessageContext['properties']> {
-  try {
-    // Check if Property model exists and has relationship with Lead
-    const properties = await prisma.$queryRaw`
-      SELECT p.id, p.address, p.price, p.type
-      FROM "Property" p
-      INNER JOIN "PropertyView" pv ON pv."propertyId" = p.id
-      WHERE pv."leadId" = ${leadId}
-      LIMIT 10
-    ` as Array<{ id: string; address: string; price: number; type: string }>
-
-    return properties.map(p => ({
-      id: p.id,
-      address: p.address || 'Property',
-      price: p.price || 0,
-      type: p.type || 'residential',
-      viewed: true
-    }))
-  } catch (error) {
-    // If Property table doesn't exist, return empty array
-    return []
-  }
+async function getLeadPropertyInteractions(_leadId: string): Promise<MessageContext['properties']> {
+  // Property and PropertyView models are not yet in the Prisma schema.
+  // When they are added, replace this with a proper Prisma query.
+  logger.debug('getLeadPropertyInteractions: Property model not yet implemented, returning empty array')
+  return []
 }
 
 /**

@@ -1,8 +1,8 @@
 import { getOpenAIService } from './openai.service'
 import { gatherMessageContext, MessageContext } from './message-context.service'
+import { prisma } from '../config/database'
 
-// In-memory template storage for Phase 3 MVP
-// TODO Phase 4: Migrate to database with MessageTemplate model
+// Interface for template data used by this service
 export interface MessageTemplate {
   id: string
   name: string
@@ -13,8 +13,6 @@ export interface MessageTemplate {
   createdBy: string
   createdAt: Date
 }
-
-const templates = new Map<string, MessageTemplate>()
 
 export interface TemplateGenerationResult {
   message: string
@@ -32,9 +30,11 @@ export async function generateFromTemplate(
   userId: string,
   orgId: string
 ): Promise<TemplateGenerationResult> {
-  const template = templates.get(templateId)
+  const template = await prisma.messageTemplate.findFirst({
+    where: { id: templateId, organizationId: orgId },
+  })
 
-  if (!template || template.organizationId !== orgId) {
+  if (!template) {
     throw new Error('Template not found')
   }
 
@@ -63,7 +63,7 @@ Response Rate: ${messageContext.engagement.responseRate}%`
   const prompt = `You are personalizing a message template for a real estate lead.
 
 TEMPLATE:
-Subject: ${template.subject || 'N/A'}
+Subject: N/A
 Body: ${template.content}
 
 LEAD CONTEXT:
@@ -93,7 +93,7 @@ Respond in JSON format with subject, message, and changes array.`
 
   return {
     message: result.message,
-    subject: result.subject || template.subject,
+    subject: result.subject || null,
     changes: result.changes || []
   }
 }
@@ -137,20 +137,28 @@ Respond in JSON format with subject and content fields.`
     throw new Error('Failed to parse AI response')
   }
 
-  // Create template
-  const template: MessageTemplate = {
-    id: `tpl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    name,
-    category,
-    subject: genericMessage.subject || null,
-    content: genericMessage.content,
-    organizationId: orgId,
-    createdBy: userId,
-    createdAt: new Date()
-  }
+  // Create template in database
+  const template = await prisma.messageTemplate.create({
+    data: {
+      name,
+      category,
+      content: genericMessage.content,
+      tier: 'PERSONAL',
+      organizationId: orgId,
+      userId: userId,
+    },
+  })
 
-  templates.set(template.id, template)
-  return template
+  return {
+    id: template.id,
+    name: template.name,
+    category: template.category || category,
+    subject: genericMessage.subject || null,
+    content: template.content,
+    organizationId: template.organizationId,
+    createdBy: template.userId || userId,
+    createdAt: template.createdAt,
+  }
 }
 
 /**
@@ -160,14 +168,22 @@ export async function getUserTemplates(
   orgId: string,
   category?: string
 ): Promise<MessageTemplate[]> {
-  const userTemplates = Array.from(templates.values())
-    .filter(t => t.organizationId === orgId)
-
+  const where: Record<string, unknown> = { organizationId: orgId, isActive: true }
   if (category) {
-    return userTemplates.filter(t => t.category === category)
+    where.category = category
   }
 
-  return userTemplates
+  const templates = await prisma.messageTemplate.findMany({ where, orderBy: { createdAt: 'desc' } })
+  return templates.map(t => ({
+    id: t.id,
+    name: t.name,
+    category: t.category || '',
+    subject: null,
+    content: t.content,
+    organizationId: t.organizationId,
+    createdBy: t.userId || '',
+    createdAt: t.createdAt,
+  }))
 }
 
 /**
@@ -177,11 +193,17 @@ export async function deleteTemplate(
   templateId: string,
   orgId: string
 ): Promise<boolean> {
-  const template = templates.get(templateId)
+  const template = await prisma.messageTemplate.findFirst({
+    where: { id: templateId, organizationId: orgId },
+  })
   
-  if (!template || template.organizationId !== orgId) {
+  if (!template) {
     return false
   }
 
-  return templates.delete(templateId)
+  await prisma.messageTemplate.update({
+    where: { id: templateId },
+    data: { isActive: false },
+  })
+  return true
 }

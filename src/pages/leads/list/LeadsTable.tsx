@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -48,6 +48,7 @@ export function LeadsTable({
 }: LeadsTableProps) {
   const [showRowMenu, setShowRowMenu] = useState<number | null>(null)
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
+  const [, setSearchParams] = useSearchParams()
   const rowMenuRef = useRef<HTMLDivElement>(null)
 
   const openRowMenu = useCallback((leadId: number, buttonEl: HTMLButtonElement) => {
@@ -185,7 +186,12 @@ export function LeadsTable({
                     {(lead.tags || []).slice(0, 2).map((tag: string | TagObject, idx: number) => {
                       const tagName = typeof tag === 'string' ? tag : tag?.name || 'Unknown'
                       return (
-                        <Badge key={idx} variant="outline" className="text-xs">
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setSearchParams({ tags: tagName }) }}
+                        >
                           {tagName}
                         </Badge>
                       )

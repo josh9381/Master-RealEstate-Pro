@@ -415,8 +415,9 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
   }
 
   // Compile templates with Handlebars for variable substitution
-  const subjectTemplate = Handlebars.compile(campaign.subject || '');
-  const bodyTemplate = Handlebars.compile(compiledBodyTemplate);
+  const hbsCompileOpts = { strict: true };
+  const subjectTemplate = Handlebars.compile(campaign.subject || '', hbsCompileOpts);
+  const bodyTemplate = Handlebars.compile(compiledBodyTemplate, hbsCompileOpts);
 
   // Load campaign attachments (base64 encoded for SendGrid)
   let campaignAttachments: Array<{ content: string; filename: string; type?: string }> = [];
@@ -561,7 +562,7 @@ async function sendEmailCampaign(campaign: any, leads: any[]) {
  */
 async function sendSMSCampaign(campaign: any, leads: any[]) {
   // Compile SMS template
-  const bodyTemplate = Handlebars.compile(campaign.body || '');
+  const bodyTemplate = Handlebars.compile(campaign.body || '', { strict: true });
 
   // TCPA compliance footer
   const TCPA_FOOTER = '\n\nReply STOP to opt out.';
@@ -810,8 +811,8 @@ export async function previewCampaign(
       compiledBody = mjmlResult.html;
     }
 
-    const subjectTemplate = Handlebars.compile(campaign.subject || '');
-    const bodyTemplate = Handlebars.compile(compiledBody);
+    const subjectTemplate = Handlebars.compile(campaign.subject || '', { strict: true });
+    const bodyTemplate = Handlebars.compile(compiledBody, { strict: true });
 
     return sampleLeads.map((lead) => {
       const safeFirst = lead.firstName || '';
@@ -835,7 +836,7 @@ export async function previewCampaign(
       };
     });
   } else if (campaign.type === 'SMS') {
-    const bodyTemplate = Handlebars.compile(campaign.body || '');
+    const bodyTemplate = Handlebars.compile(campaign.body || '', { strict: true });
 
     return sampleLeads.map((lead) => {
       const safeFirst = lead.firstName || '';

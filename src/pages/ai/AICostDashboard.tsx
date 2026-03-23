@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { aiApi } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { formatCurrency } from '@/lib/metricsCalculator';
 
 interface CostData {
@@ -32,7 +33,7 @@ const AICostDashboard = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState(30);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['ai', 'cost-dashboard', timeRange],
     queryFn: async () => {
       const res = await aiApi.getCostDashboard(timeRange);
@@ -42,6 +43,10 @@ const AICostDashboard = () => {
 
   if (isLoading) {
     return <LoadingSkeleton rows={4} showChart />;
+  }
+
+  if (isError) {
+    return <ErrorBanner message={`Failed to load cost dashboard: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
   }
 
   const budgetStatus = !data?.budget.alertEnabled
@@ -155,7 +160,10 @@ const AICostDashboard = () => {
       {data?.budget.alertEnabled && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Monthly Budget Progress</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Monthly Budget Progress</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => navigate('/ai/org-settings')}>Edit Budget</Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -217,7 +225,10 @@ const AICostDashboard = () => {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[240px] text-sm text-muted-foreground">
-                No cost history available yet
+                <div className="text-center">
+                  <p>No cost history available yet.</p>
+                  <p className="text-xs mt-1">AI usage costs will appear here as features are used.</p>
+                </div>
               </div>
             )}
           </CardContent>
@@ -244,7 +255,10 @@ const AICostDashboard = () => {
               </div>
             ) : (
               <div className="flex items-center justify-center h-[120px] text-sm text-muted-foreground">
-                No model usage data yet
+                <div className="text-center">
+                  <p>No model usage data yet.</p>
+                  <p className="text-xs mt-1">Use AI features like lead scoring or content generation to see model usage.</p>
+                </div>
               </div>
             )}
           </CardContent>
@@ -283,7 +297,10 @@ const AICostDashboard = () => {
             </div>
           ) : (
             <div className="flex items-center justify-center h-[80px] text-sm text-muted-foreground">
-              No user usage data yet
+              <div className="text-center">
+                <p>No user usage data yet.</p>
+                <p className="text-xs mt-1">Team member AI usage will appear here as features are used.</p>
+              </div>
             </div>
           )}
         </CardContent>

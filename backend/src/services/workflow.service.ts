@@ -6,6 +6,7 @@ import { sendSMS } from './sms.service';
 import { pushWorkflowEvent, pushNotification } from '../config/socket';
 import crypto from 'crypto';
 import { calcRate } from '../utils/metricsCalculator';
+import { getSegmentMembers } from './segmentation.service';
 
 /**
  * Workflow Service
@@ -323,7 +324,7 @@ export async function triggerWorkflowsForLead(
       const actionsConfig = workflow.actions as any;
       const conditions = actionsConfig.conditions || [];
       
-      if (conditions.length > 0 && !evaluateConditions(conditions, lead)) {
+      if (conditions.length > 0 && !(await evaluateConditions(conditions, lead))) {
         continue;
       }
 
@@ -400,12 +401,44 @@ function shouldTriggerWorkflow(workflow: any, lead: any, metadata?: any): boolea
 /**
  * Evaluate workflow conditions
  */
-function evaluateConditions(conditions: WorkflowCondition[], lead: any): boolean {
-  return conditions.every(condition => evaluateCondition(condition, lead));
+async function evaluateConditions(conditions: WorkflowCondition[], lead: any): Promise<boolean> {
+  for (const condition of conditions) {
+    const result = await evaluateConditionAsync(condition, lead);
+    if (!result) return false;
+  }
+  return true;
 }
 
 /**
- * Evaluate a single condition
+ * Evaluate a single condition (async to support SEGMENT_MATCH)
+ */
+async function evaluateConditionAsync(condition: WorkflowCondition, lead: any): Promise<boolean> {
+  // Special handling for SEGMENT_MATCH — check if lead is in a segment
+  if (condition.field === 'SEGMENT_MATCH' && condition.value) {
+    try {
+      const orgId = lead.organizationId;
+      if (!orgId) return false;
+      const result = await getSegmentMembers(condition.value, orgId, { page: 1, limit: 1 });
+      // Check if this specific lead is in the segment
+      const leadInSegment = result.leads.some((m: any) => m.id === lead.id);
+      if (result.leads.length === 0 && result.total > 0) {
+        // Fallback: count matching leads with this lead's ID
+        const count = await prisma.lead.count({
+          where: { id: lead.id, organizationId: orgId },
+        });
+        return count > 0;
+      }
+      return leadInSegment;
+    } catch {
+      return false;
+    }
+  }
+
+  return evaluateCondition(condition, lead);
+}
+
+/**
+ * Evaluate a single condition (sync — for non-segment conditions)
  */
 function evaluateCondition(condition: WorkflowCondition, lead: any): boolean {
   const fieldValue = getNestedValue(lead, condition.field);
@@ -976,15 +1009,18 @@ async function evaluateActionCondition(config: any, leadId?: string): Promise<bo
     const field = config.field;
     const operator = config.operator || 'equals';
     const value = config.value;
-    return evaluateCondition({ field, operator, value }, lead);
+    return evaluateConditionAsync({ field, operator, value }, lead);
   }
 
   // Multiple conditions with AND/OR logic
   const matchType = config.matchType || 'ALL';
   if (matchType === 'ALL') {
-    return conditions.every((c: WorkflowCondition) => evaluateCondition(c, lead));
+    return evaluateConditions(conditions, lead);
   } else {
-    return conditions.some((c: WorkflowCondition) => evaluateCondition(c, lead));
+    for (const c of conditions as WorkflowCondition[]) {
+      if (await evaluateConditionAsync(c, lead)) return true;
+    }
+    return false;
   }
 }
 

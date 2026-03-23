@@ -8,6 +8,7 @@ import { aiApi } from '@/lib/api'
 import { formatRate, calcRate } from '@/lib/metricsCalculator'
 import { useToast } from '@/hooks/useToast'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 
 const AIAnalytics = () => {
   const { toast } = useToast()
@@ -17,7 +18,7 @@ const AIAnalytics = () => {
     modelComparison: [] as Array<{ model: string; accuracy: number; speed: number; reliability: number }>,
   }
 
-  const { data: analyticsData = defaultAnalytics, isLoading: loading, refetch } = useQuery({
+  const { data: analyticsData = defaultAnalytics, isLoading: loading, isError, error, refetch } = useQuery({
     queryKey: ['ai-analytics'],
     queryFn: async () => {
       try {
@@ -49,18 +50,9 @@ const AIAnalytics = () => {
             speed: m.speed || m.latency ? Math.max(0, 100 - (m.latency || 0)) : 0,
             reliability: m.reliability || m.uptime || 0,
           }))
-        } else if (data?.performance && data.performance.length > 0) {
-          // Derive from performance data if models not available
-          const avgAcc = data.performance.reduce((s: number, p: { accuracy?: number }) => s + (p.accuracy || 0), 0) / data.performance.length
-          const avgLat = data.performance.reduce((s: number, p: { latency?: number }) => s + (p.latency || 0), 0) / data.performance.length
-          const avgThr = data.performance.reduce((s: number, p: { throughput?: number }) => s + (p.throughput || 0), 0) / data.performance.length
-          modelComparison = [
-            { model: 'Lead Scoring', accuracy: Math.round(avgAcc), speed: Math.round(Math.max(0, 100 - avgLat / 10)), reliability: Math.min(100, Math.round(avgThr / 10)) },
-            { model: 'Segmentation', accuracy: Math.round(avgAcc * 0.95), speed: Math.round(Math.max(0, 100 - avgLat / 8)), reliability: Math.min(100, Math.round(avgThr / 10 * 0.98)) },
-            { model: 'Predictive', accuracy: Math.round(avgAcc * 0.97), speed: Math.round(Math.max(0, 100 - avgLat / 7)), reliability: Math.min(100, Math.round(avgThr / 10 * 0.96)) },
-            { model: 'Churn Model', accuracy: Math.round(avgAcc * 0.93), speed: Math.round(Math.max(0, 100 - avgLat / 9)), reliability: Math.min(100, Math.round(avgThr / 10 * 0.95)) },
-          ]
         }
+        // If no real model data is available, leave modelComparison empty
+        // instead of fabricating synthetic entries
 
         return { performanceData, modelComparison }
       } catch (error) {
@@ -85,6 +77,10 @@ const AIAnalytics = () => {
 
   if (loading) {
     return <LoadingSkeleton rows={5} showChart />;
+  }
+
+  if (isError) {
+    return <ErrorBanner message={`Failed to load AI analytics: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
   }
 
   return (
@@ -216,6 +212,7 @@ const AIAnalytics = () => {
           <CardDescription>Compare key metrics across all AI models</CardDescription>
         </CardHeader>
         <CardContent>
+          {modelComparison.length > 0 ? (
           <div className="space-y-4">
             {modelComparison.map((model, index) => (
               <div key={index} className="space-y-2">
@@ -259,6 +256,11 @@ const AIAnalytics = () => {
               </div>
             ))}
           </div>
+          ) : (
+            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+              No model data available. Train models to see performance comparisons.
+            </div>
+          )}
         </CardContent>
       </Card>
 

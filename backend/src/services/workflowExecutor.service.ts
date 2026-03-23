@@ -252,7 +252,7 @@ async function createExecutionLog(data: {
         leadId: data.leadId,
         status: data.status,
         error: data.error,
-        metadata: data.metadata as Record<string, unknown> | undefined,
+        metadata: data.metadata as any,
         startedAt: new Date(),
         completedAt: data.status !== ExecutionStatus.RUNNING ? new Date() : undefined,
       },

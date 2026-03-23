@@ -7,7 +7,8 @@ import {
   Download, 
   History, 
   Merge,
-  Plus
+  Plus,
+  Filter
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
@@ -16,6 +17,7 @@ const navItems = [
   { name: 'All Leads', href: '/leads', icon: Users, exact: true },
   { name: 'Pipeline', href: '/leads/pipeline', icon: SquareKanban },
   { name: 'Follow-ups', href: '/leads/followups', icon: Clock },
+  { name: 'Segments', href: '/leads/segments', icon: Filter },
   { name: 'Import', href: '/leads/import', icon: Upload },
   { name: 'Export', href: '/leads/export', icon: Download },
   { name: 'History', href: '/leads/history', icon: History },

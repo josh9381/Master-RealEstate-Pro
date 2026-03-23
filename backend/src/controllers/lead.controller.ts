@@ -40,6 +40,7 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
     maxScore?: number;
     minValue?: number;
     maxValue?: number;
+    tags?: string;
   };
 
   const {
@@ -55,6 +56,7 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
     maxScore,
     minValue,
     maxValue,
+    tags: tagsParam,
   } = query;
 
   // Get role-based filter options
@@ -95,6 +97,18 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
     if (minValue !== undefined) valueFilter.gte = Number(minValue);
     if (maxValue !== undefined) valueFilter.lte = Number(maxValue);
     additionalWhere.value = valueFilter;
+  }
+
+  // Tag filtering — comma-separated tag names
+  if (tagsParam) {
+    const tagNames = String(tagsParam).split(',').map(t => t.trim()).filter(Boolean);
+    if (tagNames.length > 0) {
+      additionalWhere.tags = {
+        some: {
+          name: { in: tagNames },
+        },
+      };
+    }
   }
 
   // Search in firstName, lastName, email, company
