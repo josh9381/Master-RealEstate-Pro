@@ -65,8 +65,12 @@ let missCount = 0
 
 /**
  * Build a deterministic cache key from category + orgId + arbitrary content.
+ * Organization ID is REQUIRED to ensure cross-org data isolation.
  */
 export function buildCacheKey(category: CacheCategory, organizationId: string, content: string): string {
+  if (!organizationId || organizationId === 'undefined' || organizationId === 'null') {
+    throw new Error('Organization ID is required for cache key generation — refusing to cache without org isolation')
+  }
   const hash = crypto.createHash('sha256').update(content).digest('hex').slice(0, 24)
   return `${category}:${organizationId}:${hash}`
 }

@@ -35,6 +35,16 @@ interface AIAssistantProps {
   onSuggestionRead?: () => void
 }
 
+/**
+ * Sanitize message content to strip HTML tags and prevent XSS.
+ * React JSX auto-escapes, but this provides defense-in-depth for
+ * any content that might bypass the rendering pipeline.
+ */
+function sanitizeMessageContent(content: string): string {
+  // Strip HTML tags
+  return content.replace(/<[^>]*>/g, '')
+}
+
 export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -402,7 +412,8 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
             }
             
           } catch (e) {
-            // If parsing fails, keep original message
+            // If JSON parsing fails, use the raw AI response as the message content
+            assistantMessage.content = response.data.message
             logger.error('Failed to parse function response:', e)
           }
         }
@@ -520,13 +531,13 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 )}
               >
                 <p className="text-sm whitespace-pre-line" style={{ lineHeight: '1.6' }}>
-                  {/* Simple markdown-style rendering */}
-                  {message.content.split('\n').map((line, i) => {
+                  {/* Simple markdown-style rendering with HTML sanitization */}
+                  {sanitizeMessageContent(message.content).split('\n').map((line, i, arr) => {
                     // Bold text **text**
-                    const boldProcessed = line.split(/\*\*(.+?)\*\*/).map((part, j) => 
+                    const boldProcessed = line.split(/\*\*(.+?)\*\*/).map((part, j) =>
                       j % 2 === 1 ? <strong key={j}>{part}</strong> : part
                     )
-                    return <span key={i}>{boldProcessed}{i < message.content.split('\n').length - 1 && <br />}</span>
+                    return <span key={i}>{boldProcessed}{i < arr.length - 1 && <br />}</span>
                   })}
                 </p>
                 <p className="mt-1 text-xs opacity-70">

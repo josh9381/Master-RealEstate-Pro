@@ -5,8 +5,8 @@ export const chatWithAISchema = z.object({
   message: z.string().min(1, 'Message is required').max(5000),
   conversationHistory: z.array(z.object({
     role: z.enum(['user', 'assistant', 'system']),
-    content: z.string(),
-  })).optional(),
+    content: z.string().max(10000, 'Individual message too long'),
+  })).max(50, 'Conversation history too long (max 50 messages)').optional(),
   tone: z.string().max(50).optional(),
   confirmed: z.boolean().optional(),
 });
