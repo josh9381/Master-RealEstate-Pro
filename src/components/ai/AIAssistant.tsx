@@ -156,14 +156,20 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
 
   const handleQuickQuestion = (question: string) => {
     setInput(question)
-    // Trigger send after a brief moment to show the question in input
-    setTimeout(() => handleSendMessage(), 100)
+    // Send directly with the question to avoid state timing race condition
+    handleSendMessage(question)
   }
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || isTyping) return
+  const handleSendMessage = async (overrideInput?: string) => {
+    const messageText = overrideInput || input
+    if (!messageText.trim() || isTyping) return
 
-    const userInput = input
+    if (messageText.trim().length > 5000) {
+      toast.error('Message too long', 'Maximum 5000 characters allowed')
+      return
+    }
+
+    const userInput = messageText
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -174,16 +180,6 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
     setMessages((prev) => [...prev, userMessage])
     setInput('')
     setIsTyping(true)
-
-    // Add typing indicator with function hint
-    const typingIndicatorId = 'typing-indicator'
-    const typingMessage: Message = {
-      id: typingIndicatorId,
-      role: 'assistant',
-      content: '⏳ Thinking...',
-      timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, typingMessage])
     
     try {
       // Build conversation history for context
@@ -194,9 +190,6 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
 
       // Call real AI API with tone
       const response = await sendChatMessage(userInput, conversationHistory, selectedTone)
-      
-      // Remove typing indicator
-      setMessages((prev) => prev.filter(m => m.id !== typingIndicatorId))
       
       if (response.success) {
         const assistantMessage: Message = {
@@ -425,9 +418,6 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
     } catch (err: unknown) {
       logger.error('AI chat error:', err)
       
-      // Remove typing indicator
-      setMessages((prev) => prev.filter(m => m.id !== 'typing-indicator'))
-      
       const errorResponse = err as { response?: { data?: { message?: string }; status?: number } }
       
       const aiMsg = getAIUnavailableMessage(err)
@@ -548,7 +538,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                     <button
                       onClick={() => {
                         aiApi.submitChatFeedback(message.id, { feedback: 'positive' }).catch(() => {})
-                        message.feedback = 'positive'
+                        setMessages(prev => prev.map(m => m.id === message.id ? { ...m, feedback: 'positive' } : m))
                       }}
                       className={cn(
                         'p-0.5 rounded hover:bg-background/60 transition-colors',
@@ -561,7 +551,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                     <button
                       onClick={() => {
                         aiApi.submitChatFeedback(message.id, { feedback: 'negative' }).catch(() => {})
-                        message.feedback = 'negative'
+                        setMessages(prev => prev.map(m => m.id === message.id ? { ...m, feedback: 'negative' } : m))
                       }}
                       className={cn(
                         'p-0.5 rounded hover:bg-background/60 transition-colors',
@@ -663,7 +653,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
               className="flex-1"
               disabled={isTyping}
             />
-            <Button onClick={handleSendMessage} size="icon" disabled={isTyping || !input.trim()} aria-label="Send message">
+            <Button onClick={() => handleSendMessage()} size="icon" disabled={isTyping || !input.trim()} aria-label="Send message">
               <Send className="h-4 w-4" />
             </Button>
           </div>

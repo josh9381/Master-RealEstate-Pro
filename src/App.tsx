@@ -54,8 +54,7 @@ const ABTesting = lazyWithRetry(() => import('./pages/campaigns/ABTesting'))
 const AIHub = lazyWithRetry(() => import('./pages/ai/AIHub'))
 const LeadScoring = lazyWithRetry(() => import('./pages/ai/LeadScoring'))
 const Segmentation = lazyWithRetry(() => import('./pages/leads/segments/Segmentation'))
-const PredictiveAnalytics = lazyWithRetry(() => import('./pages/ai/PredictiveAnalytics'))
-const IntelligenceInsights = lazyWithRetry(() => import('./pages/ai/IntelligenceInsights'))
+const IntelligenceHub = lazyWithRetry(() => import('./pages/ai/IntelligenceHub'))
 const AIAnalytics = lazyWithRetry(() => import('./pages/ai/AIAnalytics'))
 const AISettings = lazyWithRetry(() => import('./pages/ai/AISettings'))
 const OrgAISettings = lazyWithRetry(() => import('./pages/ai/OrgAISettings'))
@@ -192,8 +191,9 @@ function App() {
         <Route path="/ai" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Hub"><AIHub /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/lead-scoring" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Scoring"><LeadScoring /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/segmentation" element={<Navigate to="/leads/segments" replace />} />
-        <Route path="/ai/predictive" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Predictive Analytics"><PredictiveAnalytics /></PageErrorBoundary></Suspense>} />
-        <Route path="/ai/insights" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Insights"><IntelligenceInsights /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/intelligence" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Hub"><IntelligenceHub /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/predictive" element={<Navigate to="/ai/intelligence" replace />} />
+        <Route path="/ai/insights" element={<Navigate to="/ai/intelligence" replace />} />
         <Route path="/ai/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Settings"><AISettings /></PageErrorBoundary></Suspense>} />
         <Route path="/ai/org-settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Org AI Settings"><OrgAISettings /></PageErrorBoundary></Suspense>} />

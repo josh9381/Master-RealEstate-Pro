@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw, Brain, Target, Zap, Search, ArrowLeft, Filter, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw, Brain, Target, Zap, Search, Filter, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -10,16 +10,15 @@ import intelligenceService, { type DashboardInsights, type ScoringModel } from '
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
-type InsightsTab = 'active' | 'acted' | 'dismissed';
+type InsightsSubTab = 'active' | 'acted' | 'dismissed';
 
-const IntelligenceInsights = () => {
+const InsightsTab = () => {
   const { toast } = useToast()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [optimizing, setOptimizing] = useState(false)
-  const [activeTab, setActiveTab] = useState<InsightsTab>('active')
+  const [activeTab, setActiveTab] = useState<InsightsSubTab>('active')
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -63,7 +62,7 @@ const IntelligenceInsights = () => {
     onError: () => toast.error('Failed to save preferences'),
   })
 
-  const { data: insightsData, isLoading: loading, isError, error, refetch } = useQuery({
+  const { data: insightsData, refetch } = useQuery({
     queryKey: ['ai', 'intelligence-insights'],
     queryFn: async () => {
       const [oldInsights, allRecommendations, newDashboard, modelRaw, trends] = await Promise.all([
@@ -116,7 +115,7 @@ const IntelligenceInsights = () => {
     try {
       const result = await intelligenceService.optimizeScoring()
       toast.success(`Scoring optimized! New accuracy: ${formatRate(result.accuracy, 1)}%`)
-      await refetch() // Reload to get updated model
+      await refetch()
     } catch (error) {
       const err = error as Error
       toast.error(err.message || 'Failed to optimize scoring')
@@ -147,7 +146,6 @@ const IntelligenceInsights = () => {
       if (category === 'optimization' || action.includes('optim') || action.includes('improv')) {
         handleOptimizeScoring()
       } else if (category === 'risk' || action.includes('risk') || action.includes('address')) {
-        // Create a task to address at-risk leads
         await tasksApi.createTask({
           title: `Address at-risk leads: ${insight.title}`,
           description: insight.description || `AI Insight: ${insight.action}`,
@@ -157,7 +155,6 @@ const IntelligenceInsights = () => {
         toast.success('Task created to address at-risk leads')
         navigate('/tasks')
       } else if (category === 'opportunity' || action.includes('follow up') || action.includes('lead')) {
-        // Create a follow-up task for opportunity
         await tasksApi.createTask({
           title: `Follow up on opportunity: ${insight.title}`,
           description: insight.description || `AI Insight: ${insight.action}`,
@@ -201,30 +198,8 @@ const IntelligenceInsights = () => {
     Trend: 'bg-purple-100 text-purple-600',
   };
 
-  if (isError) {
-    return <ErrorBanner message={`Failed to load insights: ${(error as Error)?.message || 'Unknown error'}`} retry={() => refetch()} />;
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/ai')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Intelligence & Insights</h1>
-            <p className="text-muted-foreground mt-1">
-              AI-generated insights, recommendations, and business intelligence
-            </p>
-          </div>
-        </div>
-        <Button onClick={() => refetch()} disabled={loading}>
-          {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-          {loading ? 'Loading...' : 'Refresh Insights'}
-        </Button>
-      </div>
-
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -253,7 +228,7 @@ const IntelligenceInsights = () => {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{new Set(insights.map((i: { category?: string }) => i.category)).size}</div>
+            <div className="text-2xl font-bold">{new Set((insights || []).map((i: { category?: string }) => i.category)).size}</div>
             <p className="text-xs text-muted-foreground">Different types</p>
           </CardContent>
         </Card>
@@ -345,7 +320,7 @@ const IntelligenceInsights = () => {
       )}
 
       {/* Dashboard Insights - Top Opportunities */}
-      {dashboardInsights && dashboardInsights.topOpportunities.length > 0 && (
+      {dashboardInsights && dashboardInsights.topOpportunities?.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -376,7 +351,7 @@ const IntelligenceInsights = () => {
       )}
 
       {/* Conversion Trends Chart */}
-      {trendsData && trendsData.conversionTrend && (
+      {trendsData && trendsData.conversionTrend?.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Conversion Probability Trends</CardTitle>
@@ -456,7 +431,6 @@ const IntelligenceInsights = () => {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               {(() => {
-                // Group recommendations by category/type
                 const grouped: Record<string, typeof recommendations> = {}
                 recommendations.forEach((rec: { type?: string; priority?: string; title?: string; description?: string; action?: string; id?: string | number }) => {
                   const category = rec.type || rec.priority || 'general'
@@ -593,9 +567,9 @@ const IntelligenceInsights = () => {
         <div className="flex items-center justify-between">
           <div className="flex border-b">
             {[
-              { id: 'active' as InsightsTab, label: 'Active Insights' },
-              { id: 'acted' as InsightsTab, label: 'Acted On' },
-              { id: 'dismissed' as InsightsTab, label: 'Dismissed' },
+              { id: 'active' as InsightsSubTab, label: 'Active Insights' },
+              { id: 'acted' as InsightsSubTab, label: 'Acted On' },
+              { id: 'dismissed' as InsightsSubTab, label: 'Dismissed' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -670,24 +644,19 @@ const IntelligenceInsights = () => {
       <div className="space-y-4">
         {(() => {
           const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
-          // Tab filter
           let filtered = insights.filter((i: { dismissed?: boolean; actedOn?: boolean }) => {
             if (activeTab === 'dismissed') return i.dismissed
             if (activeTab === 'acted') return i.actedOn && !i.dismissed
-            return !i.dismissed && !i.actedOn // active
+            return !i.dismissed && !i.actedOn
           })
-          // Priority filter
           if (priorityFilter !== 'all') filtered = filtered.filter((i: { priority?: string }) => i.priority === priorityFilter)
-          // Category filter
           if (categoryFilter !== 'all') filtered = filtered.filter((i: { category?: string; type?: string }) => (i.category || i.type) === categoryFilter)
-          // Search filter
           if (searchQuery) {
             const q = searchQuery.toLowerCase()
             filtered = filtered.filter((i: { title?: string; description?: string }) =>
               (i.title || '').toLowerCase().includes(q) || (i.description || '').toLowerCase().includes(q)
             )
           }
-          // Sort
           if (sortBy === 'newest') {
             filtered = [...filtered].sort((a: { createdAt?: string }, b: { createdAt?: string }) =>
               new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
@@ -697,7 +666,6 @@ const IntelligenceInsights = () => {
               (priorityOrder[a.priority || 'medium'] || 2) - (priorityOrder[b.priority || 'medium'] || 2)
             )
           }
-          // impact sort is same as priority for now
 
           return (
             <>
@@ -850,4 +818,4 @@ const IntelligenceInsights = () => {
   );
 };
 
-export default IntelligenceInsights;
+export default InsightsTab;

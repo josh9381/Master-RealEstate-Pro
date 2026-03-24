@@ -5,6 +5,7 @@ import { getIntelligenceService } from './intelligence.service';
 import { sendEmail as sendRealEmail, type EmailResult } from './email.service';
 import { sendSMS as sendRealSMS, type SMSResult } from './sms.service';
 import { formatRate, calcOpenRate, calcClickRate, calcConversionRate, calcRate } from '../utils/metricsCalculator';
+import { logger } from '../lib/logger';
 
 export const AI_FUNCTIONS = [
   {
@@ -845,6 +846,7 @@ export const AI_FUNCTIONS = [
 ];
 
 interface FunctionArgs {
+  [key: string]: string | number | boolean | string[] | Record<string, unknown> | undefined;
   // Lead CRUD
   firstName?: string;
   lastName?: string;
@@ -920,7 +922,7 @@ interface FunctionArgs {
   
   // Bulk operation fields
   leadIds?: string[];
-  updates?: Record<string, any>;
+  updates?: Record<string, unknown>;
   
   // Analytics fields
   timeRange?: string;
@@ -928,7 +930,7 @@ interface FunctionArgs {
   // Integration fields
   provider?: string;
   apiKey?: string;
-  additionalConfig?: Record<string, any>;
+  additionalConfig?: Record<string, unknown>;
 }
 
 /**
@@ -1055,7 +1057,7 @@ export class AIFunctionsService {
         return JSON.stringify({ error: 'Lead not found' });
       }
 
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (args.firstName) updateData.firstName = args.firstName;
       if (args.lastName) updateData.lastName = args.lastName;
       if (args.email) updateData.email = args.email;
@@ -1219,7 +1221,7 @@ export class AIFunctionsService {
         return JSON.stringify({ error: 'Lead not found' });
       }
 
-      const activityTypeMap: Record<string, any> = {
+      const activityTypeMap: Record<string, string> = {
         'CALL': 'CALL_MADE',
         'EMAIL': 'EMAIL_SENT',
         'MEETING': 'MEETING_SCHEDULED',
@@ -1465,7 +1467,7 @@ export class AIFunctionsService {
       const lead = await prisma.lead.findFirst({ where: { id: args.leadId, organizationId } });
       if (!lead) return JSON.stringify({ error: 'Lead not found' });
 
-      const task = await prisma.task.create({
+      await prisma.task.create({
         data: {
           title: args.title,
           description: args.description || '',
@@ -2155,6 +2157,7 @@ Generate the script:`;
       const campaign = await prisma.campaign.create({
         data: {
           name: args.name,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           type: campaignType as any,
           status: 'DRAFT',
           subject: args.subject || args.name,
@@ -2187,11 +2190,11 @@ Generate the script:`;
         return JSON.stringify({ error: 'campaignId is required' });
       }
       
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (args.name) updateData.name = args.name;
       if (args.subject) updateData.subject = args.subject;
       if (args.content) updateData.body = args.content;
-      if (args.scheduledFor) updateData.startDate = new Date(args.scheduledFor);
+      if (args.scheduledFor) updateData.startDate = new Date(args.scheduledFor as string);
       
       const campaign = await prisma.campaign.update({
         where: { id: args.campaignId, organizationId },
@@ -2415,6 +2418,7 @@ Generate the script:`;
           name: args.name,
           description: args.description || `Automated workflow: ${args.name}`,
           isActive: false, // Start inactive for safety
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           triggerType: triggerType as any,
           triggerData: {},
           actions: actionsJson,
@@ -2444,7 +2448,7 @@ Generate the script:`;
         return JSON.stringify({ error: 'workflowId is required' });
       }
       
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (args.name) updateData.name = args.name;
       if (args.description) updateData.description = args.description;
       if (args.trigger) {
@@ -2708,7 +2712,7 @@ Generate the script:`;
   // ANALYTICS & REPORTING
   // ============================================
   
-  async getDashboardStats(organizationId: string, args: FunctionArgs): Promise<string> {
+  async getDashboardStats(organizationId: string, _args: FunctionArgs): Promise<string> {
     try {
       const [leadsCount, tasksCount, appointmentsCount] = await Promise.all([
         prisma.lead.count({ where: { organizationId } }),
@@ -2760,7 +2764,7 @@ Generate the script:`;
         }),
       ]);
       
-      const statusBreakdown = byStatus.reduce((acc: any, item: any) => {
+      const statusBreakdown = byStatus.reduce<Record<string, number>>((acc, item) => {
         acc[item.status] = item._count;
         return acc;
       }, {});
@@ -2877,7 +2881,7 @@ Generate the script:`;
           data: {
             isConnected: true,
             credentials: { apiKey: args.apiKey },
-            config: args.additionalConfig || {},
+            config: (args.additionalConfig || {}) as Record<string, string>,
             lastSyncAt: new Date(),
             syncStatus: 'CONNECTED',
           },
@@ -2897,7 +2901,7 @@ Generate the script:`;
             provider,
             isConnected: true,
             credentials: { apiKey: args.apiKey },
-            config: args.additionalConfig || {},
+            config: (args.additionalConfig || {}) as Record<string, string>,
             lastSyncAt: new Date(),
             syncStatus: 'CONNECTED',
           },
@@ -3041,9 +3045,40 @@ Generate the script:`;
     return sanitized
   }
 
-  async executeFunction(functionName: string, args: FunctionArgs, organizationId: string, userId: string): Promise<string> {
+  async executeFunction(functionName: string, args: FunctionArgs, organizationId: string, userId: string, userRole?: string): Promise<string> {
     // Sanitize all arguments before execution
     const sanitizedArgs = this.sanitizeArgs(args)
+
+    // ── Service-layer permission enforcement ──
+    // Admin-only functions require ADMIN or MANAGER role even if called directly
+    if (ADMIN_ONLY_FUNCTIONS.has(functionName)) {
+      if (userRole !== 'ADMIN' && userRole !== 'MANAGER') {
+        logger.warn(`[AI Functions] Blocked ${functionName} for user ${userId} with role ${userRole}`)
+        return JSON.stringify({
+          error: `Permission denied: "${functionName}" requires admin or manager privileges.`,
+        })
+      }
+    }
+
+    // ── Audit logging for destructive actions ──
+    if (DESTRUCTIVE_FUNCTIONS.has(functionName)) {
+      logger.info(`[AI Audit] DESTRUCTIVE action: ${functionName} | user: ${userId} | org: ${organizationId} | args: ${JSON.stringify(sanitizedArgs)}`)
+      try {
+        await prisma.activity.create({
+          data: {
+            type: 'NOTE_ADDED',
+            title: `AI Chatbot: ${functionName}`,
+            description: `Destructive action "${functionName}" executed via AI chatbot by user ${userId}. Args: ${JSON.stringify(sanitizedArgs).substring(0, 500)}`,
+            organizationId,
+            userId,
+            leadId: sanitizedArgs.leadId || null,
+          },
+        })
+      } catch (auditErr) {
+        logger.error('[AI Audit] Failed to write audit log:', auditErr)
+        // Don't block the action if audit logging fails
+      }
+    }
 
     switch (functionName) {
       // Lead CRUD

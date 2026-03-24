@@ -9,6 +9,7 @@ export const chatWithAISchema = z.object({
   })).max(50, 'Conversation history too long (max 50 messages)').optional(),
   tone: z.string().max(50).optional(),
   confirmed: z.boolean().optional(),
+  confirmationToken: z.string().max(128).optional(),
 });
 
 // ── Enhance Message ─────────────────────────────────────────────────

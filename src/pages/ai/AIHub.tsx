@@ -236,7 +236,7 @@ const AIHub = () => {
           </Card>
         </div>
 
-        <Link to="/ai/insights" className="group">
+        <Link to="/ai/intelligence" className="group">
           <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
             <CardContent className="pt-6">
               <div className="flex items-start justify-between">
@@ -245,26 +245,9 @@ const AIHub = () => {
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <h3 className="font-semibold mt-3">Intelligence & Insights</h3>
+              <h3 className="font-semibold mt-3">Intelligence Hub</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {stats?.activeInsights ? `${stats.activeInsights} active insights, ${stats.highPriorityInsights || 0} high priority` : 'AI-generated recommendations'}
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link to="/ai/predictive" className="group">
-          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-green-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
-              <h3 className="font-semibold mt-3">Predictive Analytics</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {stats?.predictionsToday ? `${stats.predictionsToday.toLocaleString()} predictions today` : 'Conversion & revenue forecasts'}
+                {stats?.activeInsights ? `${stats.activeInsights} insights, ${stats.predictionsToday || 0} predictions` : 'Insights, predictions & forecasts'}
               </p>
             </CardContent>
           </Card>
@@ -444,7 +427,7 @@ const AIHub = () => {
                 <CardTitle>Recent AI Insights</CardTitle>
                 <CardDescription>Automated insights from your AI models</CardDescription>
               </div>
-              <Link to="/ai/insights">
+              <Link to="/ai/intelligence">
                 <Button variant="ghost" size="sm">
                   View All <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
@@ -554,13 +537,9 @@ const AIHub = () => {
               <RefreshCw className="h-4 w-4 mr-2" />
               Recalculate Scores
             </Button>
-            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/insights')} aria-label="View all AI insights">
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/intelligence')} aria-label="View Intelligence Hub">
               <Sparkles className="h-4 w-4 mr-2" />
-              View All Insights
-            </Button>
-            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/predictive')} aria-label="View predictions">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              View Predictions
+              Intelligence Hub
             </Button>
             <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/settings')} aria-label="Configure AI profile">
               <Settings className="h-4 w-4 mr-2" />

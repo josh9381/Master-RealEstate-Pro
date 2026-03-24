@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { fmtMoney } from '@/lib/metricsCalculator';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { TrendingUp, AlertTriangle, CheckCircle, Clock, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+
+import { TrendingUp, AlertTriangle, CheckCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -22,9 +22,8 @@ import {
   Legend,
 } from 'recharts';
 
-const PredictiveAnalytics = () => {
+const PredictionsTab = () => {
   const [selectedPrediction, setSelectedPrediction] = useState<{ id: string; title: string; prediction: string; confidence: number; impact: string; status: string; details: string; dataPoints?: number | string } | null>(null);
-  const navigate = useNavigate();
 
   const defaultPredictiveData = {
     predictions: [] as Array<{ id: string; title: string; prediction: string; confidence: number; impact: string; status: string; details: string; dataPoints?: number }>,
@@ -62,22 +61,6 @@ const PredictiveAnalytics = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Predictive Analytics</h1>
-          <p className="text-muted-foreground mt-2">
-            AI-powered forecasts and business predictions
-          </p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={() => navigate('/ai/lead-scoring')}>Configure Models</Button>
-          <Button onClick={() => refetch()} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Loading...' : 'Run Predictions'}
-          </Button>
-        </div>
-      </div>
-
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -415,4 +398,4 @@ const PredictiveAnalytics = () => {
   );
 };
 
-export default PredictiveAnalytics;
+export default PredictionsTab;
