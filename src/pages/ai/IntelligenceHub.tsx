@@ -40,13 +40,16 @@ const IntelligenceHub = () => {
 
       {/* Tab Navigation */}
       <div className="border-b">
-        <div className="flex">
+        <div className="flex" role="tablist" aria-label="Intelligence Hub sections">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`panel-${tab.id}`}
                 className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
                     ? 'border-primary text-primary'
@@ -63,8 +66,10 @@ const IntelligenceHub = () => {
 
       {/* Tab Content */}
       <Suspense fallback={<LoadingSkeleton rows={5} showChart />}>
-        {activeTab === 'insights' && <InsightsTab />}
-        {activeTab === 'predictions' && <PredictionsTab />}
+        <div role="tabpanel" id={`panel-${activeTab}`}>
+          {activeTab === 'insights' && <InsightsTab />}
+          {activeTab === 'predictions' && <PredictionsTab />}
+        </div>
       </Suspense>
     </div>
   );

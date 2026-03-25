@@ -407,16 +407,20 @@ Improve the above draft with a ${composeSettings.tone} tone. Personalize with le
     )
 
     let totalTokens = 0
+    let seq = 0 // Sequence number for error recovery
     try {
       for await (const token of stream) {
         totalTokens += token.length // Approximate token count from character length
-        res.write(`data: ${JSON.stringify({ type: 'token', data: token })}\n\n`)
+        seq++
+        res.write(`data: ${JSON.stringify({ type: 'token', seq, data: token })}\n\n`)
       }
-      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
+      res.write(`data: ${JSON.stringify({ type: 'done', seq, totalChunks: seq })}\n\n`)
     } catch (streamError: unknown) {
       logger.error('Stream interrupted:', streamError)
       res.write(`data: ${JSON.stringify({
         type: 'error',
+        seq,
+        totalChunks: seq,
         code: 'STREAM_ERROR',
         message: getErrorMessage(streamError)
       })}\n\n`)

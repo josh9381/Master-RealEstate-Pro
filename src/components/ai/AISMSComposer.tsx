@@ -122,7 +122,7 @@ export function AISMSComposer({
       />
 
       {/* Modal */}
-      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background shadow-2xl">
+      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background shadow-2xl" role="dialog" aria-modal="true" aria-label="AI SMS Composer">
         {/* Header */}
         <div className="flex items-center justify-between border-b bg-gradient-to-r from-green-600 to-emerald-600 p-4 text-white rounded-t-lg">
           <div className="flex items-center space-x-2">
@@ -132,6 +132,7 @@ export function AISMSComposer({
           <button
             onClick={onClose}
             className="rounded-lg p-1 hover:bg-white/20 transition-colors"
+            aria-label="Close SMS composer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -160,6 +161,7 @@ export function AISMSComposer({
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
+                      aria-selected={selectedTemplate.id === template.id}
                       className={cn(
                         "rounded-lg border-2 p-3 text-sm font-medium transition-all",
                         selectedTemplate.id === template.id

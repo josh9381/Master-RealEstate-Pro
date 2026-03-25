@@ -33,6 +33,7 @@ export function MessageEnhancerModal({
   const [selectedTone, setSelectedTone] = useState<Tone>('professional');
   const [enhancedText, setEnhancedText] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [enhanceFailed, setEnhanceFailed] = useState(false);
   const { toast } = useToast();
 
   const handleEnhance = async () => {
@@ -42,12 +43,14 @@ export function MessageEnhancerModal({
     }
 
     setIsEnhancing(true);
+    setEnhanceFailed(false);
     try {
       const result = await enhanceMessage(originalText, selectedTone);
       setEnhancedText(result.data.enhanced);
       toast.success('Message enhanced successfully!');
     } catch (error) {
       logger.error('Enhancement error:', error);
+      setEnhanceFailed(true);
       const aiMsg = getAIUnavailableMessage(error);
       if (aiMsg) {
         toast.error(aiMsg);
@@ -148,10 +151,23 @@ export function MessageEnhancerModal({
                   </div>
                 ) : enhancedText ? (
                   <p className="text-sm text-gray-800 whitespace-pre-wrap">{enhancedText}</p>
+                ) : enhanceFailed ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-3">
+                    <p className="text-sm text-red-600 text-center">Enhancement failed. Please try again.</p>
+                    <Button
+                      onClick={handleEnhance}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Loader2 className="h-4 w-4" />
+                      Retry
+                    </Button>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-sm text-gray-500 text-center">
-                      Click "Enhance" to see the AI-improved version
+                      Click &quot;Enhance&quot; to see the AI-improved version
                     </p>
                   </div>
                 )}

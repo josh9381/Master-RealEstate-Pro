@@ -77,6 +77,10 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
                   : 'border-gray-200 dark:border-gray-700'
               }`}
               onClick={() => onSelect(variation)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(variation); } }}
+              role="button"
+              tabIndex={0}
+              aria-label={`${formatTone(variation.tone)} variation — ${formatRate(variation.predictedResponseRate)}% predicted response rate${isBest ? ' (best)' : ''}${isSelected ? ' (selected)' : ''}`}
             >
               <CardContent className="p-4 space-y-3">
                 {/* Header: Tone + Rate */}

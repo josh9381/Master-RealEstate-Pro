@@ -7,6 +7,7 @@ import { getOrgAISettings, updateOrgAISettings, MODEL_PRICING, MODEL_TIERS } fro
 import prisma from '../config/database'
 import { calcRate, calcPercentChange, roundTo2 } from '../utils/metricsCalculator'
 import { recalibrationJobs } from './ai-scoring.controller'
+import { invalidateTierCache } from '../routes/ai.routes'
 
 export const getAIStats = async (req: Request, res: Response) => {
   try {
@@ -433,6 +434,10 @@ export const updateOrgSettings = async (req: Request, res: Response) => {
   try {
     const organizationId = req.user!.organizationId
     const result = await updateOrgAISettings(organizationId, req.body)
+
+    // Invalidate tier cache so rate limits reflect any subscription changes immediately
+    invalidateTierCache(organizationId)
+
     res.json({ success: true, data: result })
   } catch (error: unknown) {
     res.status(500).json({ success: false, message: 'Failed to update org AI settings', error: getErrorMessage(error) })

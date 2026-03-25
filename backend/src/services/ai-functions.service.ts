@@ -1232,7 +1232,7 @@ export class AIFunctionsService {
 
       await prisma.activity.create({
         data: {
-          type: activityTypeMap[args.type!] || 'NOTE_ADDED',
+          type: (activityTypeMap[args.type!] || 'NOTE_ADDED') as import('@prisma/client').ActivityType,
           title: args.type || 'Activity',
           description: args.description,
           leadId: args.leadId,

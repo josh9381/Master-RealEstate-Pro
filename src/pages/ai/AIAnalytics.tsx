@@ -9,9 +9,12 @@ import { formatRate, calcRate } from '@/lib/metricsCalculator'
 import { useToast } from '@/hooks/useToast'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { logger } from '@/lib/logger'
+import { useState } from 'react'
 
 const AIAnalytics = () => {
   const { toast } = useToast()
+  const [dateRange, setDateRange] = useState('30d')
 
   const defaultAnalytics = {
     performanceData: [] as Array<{ date?: string; month?: string; accuracy?: number; latency?: number; throughput?: number }>,
@@ -19,7 +22,7 @@ const AIAnalytics = () => {
   }
 
   const { data: analyticsData = defaultAnalytics, isLoading: loading, isError, error, refetch } = useQuery({
-    queryKey: ['ai-analytics'],
+    queryKey: ['ai-analytics', dateRange],
     queryFn: async () => {
       try {
         const data = await aiApi.getModelPerformance()
@@ -28,7 +31,7 @@ const AIAnalytics = () => {
 
         if (data?.history || data?.performance) {
           const raw = data.history || data.performance || []
-          performanceData = raw.map((h: any) => ({
+          performanceData = raw.map((h: { date?: string; month?: string; accuracyAfter?: number; accuracy?: number; trainingDuration?: number; latency?: number; sampleSize?: number; throughput?: number }) => ({
             date: h.date ? new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : h.month,
             accuracy: h.accuracyAfter ?? h.accuracy ?? 0,
             latency: h.trainingDuration ?? h.latency ?? 0,
@@ -37,7 +40,7 @@ const AIAnalytics = () => {
         }
         // Derive model comparison from real API data
         if (data?.currentModels && Array.isArray(data.currentModels)) {
-          modelComparison = data.currentModels.map((m: any) => ({
+          modelComparison = data.currentModels.map((m: { user?: string; name?: string; model?: string; accuracy?: number; speed?: number; trainingDataCount?: number; lastTrainedAt?: string }) => ({
             model: m.user || m.name || m.model || 'Unknown',
             accuracy: Math.round(m.accuracy || 0),
             speed: m.speed ?? (m.trainingDataCount ? Math.min(100, m.trainingDataCount) : 0),
@@ -57,6 +60,7 @@ const AIAnalytics = () => {
         return { performanceData, modelComparison }
       } catch (error) {
         const err = error as Error
+        logger.error('Failed to load AI analytics:', error)
         toast.error(err.message || 'Failed to load AI analytics')
         return defaultAnalytics
       }
@@ -97,9 +101,9 @@ const AIAnalytics = () => {
           <select
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
             aria-label="Select date range"
+            value={dateRange}
             onChange={(e) => {
-              toast.info(`Date range changed to ${e.target.value}`);
-              refetch();
+              setDateRange(e.target.value);
             }}
           >
             <option value="7d">Last 7 days</option>

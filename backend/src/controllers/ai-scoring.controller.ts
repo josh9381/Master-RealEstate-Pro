@@ -164,11 +164,35 @@ export const uploadTrainingData = async (req: Request, res: Response) => {
       })
     }
 
+    // Size limit to prevent abuse
+    const MAX_TRAINING_RECORDS = 10000
+    if (data.length > MAX_TRAINING_RECORDS) {
+      return res.status(400).json({
+        success: false,
+        message: `Training data exceeds maximum of ${MAX_TRAINING_RECORDS} records per upload (received ${data.length})`,
+      })
+    }
+
     // Validate and apply conversion outcomes to leads
     let processed = 0
     let skipped = 0
-    for (const record of data) {
-      if (!record.leadId || typeof record.converted !== 'boolean') {
+    const errors: string[] = []
+    for (let i = 0; i < data.length; i++) {
+      const record = data[i]
+
+      // Schema validation per record
+      if (!record || typeof record !== 'object') {
+        errors.push(`Record ${i}: must be an object`)
+        skipped++
+        continue
+      }
+      if (!record.leadId || typeof record.leadId !== 'string' || record.leadId.trim().length === 0) {
+        errors.push(`Record ${i}: leadId must be a non-empty string`)
+        skipped++
+        continue
+      }
+      if (typeof record.converted !== 'boolean') {
+        errors.push(`Record ${i}: converted must be a boolean`)
         skipped++
         continue
       }
@@ -215,6 +239,7 @@ export const uploadTrainingData = async (req: Request, res: Response) => {
         recordsUploaded: data.length,
         recordsProcessed: processed,
         recordsSkipped: skipped,
+        validationErrors: errors.length > 0 ? errors.slice(0, 20) : undefined,
         status: 'processing',
         message: 'Training data applied. Recalibration started in background.',
       },
@@ -524,6 +549,24 @@ export const getGlobalPredictions = async (req: Request, res: Response) => {
       : 0
     const highImpact = predictions.filter(p => p.impact === 'high').length
 
+    // Ground truth accuracy: compare predicted scores against actual outcomes
+    // for leads that have reached WON/LOST status
+    const resolvedLeads = leads.filter(l => l.status === 'WON' || l.status === 'LOST')
+    let predictionAccuracy: number | null = null
+    let accuracySample = 0
+    if (resolvedLeads.length >= 5) {
+      // A lead with score >= 50 is "predicted to convert"
+      // Check how many of those actually converted (WON) vs not (LOST)
+      let correct = 0
+      for (const lead of resolvedLeads) {
+        const predictedConvert = (lead.score || 0) >= 50
+        const actuallyConverted = lead.status === 'WON'
+        if (predictedConvert === actuallyConverted) correct++
+      }
+      accuracySample = resolvedLeads.length
+      predictionAccuracy = Math.round((correct / resolvedLeads.length) * 100)
+    }
+
     res.json({
       success: true,
       data: {
@@ -533,6 +576,8 @@ export const getGlobalPredictions = async (req: Request, res: Response) => {
           avgConfidence,
           highImpactAlerts: highImpact,
           accuracy: Math.round(avgRate),
+          predictionAccuracy,
+          accuracySample,
         },
         conversionTrend: monthlyConversions,
         revenueForecast: [
@@ -564,6 +609,29 @@ export const getPredictions = async (req: Request, res: Response) => {
     const { leadId } = req.params
     const intelligence = getIntelligenceService()
     const prediction = await intelligence.predictLeadConversion(leadId)
+
+    // Record the prediction for future accuracy tracking
+    // Updated on each call — stores latest prediction to compare against actual outcome
+    await prisma.activity.create({
+      data: {
+        type: 'OTHER' as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        title: 'AI Conversion Prediction',
+        description: `AI prediction: ${prediction.conversionProbability}% conversion probability (confidence: ${prediction.confidence})`,
+        leadId,
+        organizationId: req.user!.organizationId,
+        userId: req.user!.userId,
+        metadata: {
+          source: 'ai_prediction',
+          conversionProbability: prediction.conversionProbability,
+          confidence: prediction.confidence,
+          factors: prediction.factors,
+          recordedAt: new Date().toISOString(),
+        } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      },
+    }).catch(err => {
+      // Non-critical — don't fail the request if tracking fails
+      logger.warn('Failed to record prediction for accuracy tracking:', err)
+    })
     
     res.json({
       success: true,
@@ -898,12 +966,15 @@ Respond in JSON format with only the fields you can confidently infer:
 
 /**
  * 7.6: Apply enrichment suggestions to a lead
+ * Supports field-level conflict resolution: `fields` contains the values to apply,
+ * `overwriteFields` is an optional array of field names the user has explicitly
+ * approved to overwrite even if they already have a value.
  */
 export const applyEnrichment = async (req: Request, res: Response) => {
   try {
     const { leadId } = req.params
     const organizationId = req.user!.organizationId
-    const { fields } = req.body // Fields the user approved to apply
+    const { fields, overwriteFields } = req.body // fields: values to apply, overwriteFields: string[] of fields user approved to overwrite
 
     const lead = await prisma.lead.findFirst({
       where: { id: leadId, organizationId },
@@ -913,19 +984,41 @@ export const applyEnrichment = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Lead not found' })
     }
 
-    // Only update fields that are currently empty on the lead
+    const overwriteSet = new Set<string>(Array.isArray(overwriteFields) ? overwriteFields : [])
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: Record<string, any> = {}
+    const conflicts: Array<{ field: string; existing: unknown; suggested: unknown }> = []
     const allowedFields = ['propertyType', 'transactionType', 'budgetMin', 'budgetMax', 'desiredLocation', 'moveInTimeline']
 
     for (const field of allowedFields) {
-      if (fields[field] !== undefined && fields[field] !== null && !lead[field as keyof typeof lead]) {
-        updateData[field] = fields[field]
+      if (fields[field] !== undefined && fields[field] !== null) {
+        const existingValue = lead[field as keyof typeof lead]
+        if (!existingValue) {
+          // Empty field — always safe to fill
+          updateData[field] = fields[field]
+        } else if (overwriteSet.has(field)) {
+          // User explicitly approved overwriting this field
+          updateData[field] = fields[field]
+        } else if (existingValue !== fields[field]) {
+          // Conflict: existing value differs from suggestion
+          conflicts.push({ field, existing: existingValue, suggested: fields[field] })
+        }
       }
     }
 
+    // If there are unresolved conflicts and no fields to update, return conflicts for resolution
+    if (Object.keys(updateData).length === 0 && conflicts.length > 0) {
+      return res.json({
+        success: true,
+        data: lead,
+        conflicts,
+        message: `${conflicts.length} field(s) have existing values that differ from suggestions. Approve overwriting specific fields to apply.`,
+      })
+    }
+
     if (Object.keys(updateData).length === 0) {
-      return res.json({ success: true, data: lead, message: 'No new fields to apply' })
+      return res.json({ success: true, data: lead, conflicts: [], message: 'No new fields to apply' })
     }
 
     const updated = await prisma.lead.update({
@@ -933,7 +1026,12 @@ export const applyEnrichment = async (req: Request, res: Response) => {
       data: updateData,
     })
 
-    res.json({ success: true, data: updated, message: `Updated ${Object.keys(updateData).length} field(s)` })
+    res.json({
+      success: true,
+      data: updated,
+      conflicts,
+      message: `Updated ${Object.keys(updateData).length} field(s)${conflicts.length > 0 ? `, ${conflicts.length} conflict(s) remain` : ''}`,
+    })
   } catch (error: unknown) {
     res.status(500).json({ success: false, message: 'Failed to apply enrichment', error: getErrorMessage(error) })
   }

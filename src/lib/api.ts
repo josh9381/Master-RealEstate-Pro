@@ -3,7 +3,7 @@ import type { User } from '@/types'
 import { devApiSuccessInterceptor, devApiErrorInterceptor } from './devErrorMonitor'
 
 // Determine the API base URL
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   // Check if we have an environment variable for the API URL
   const envApiUrl = import.meta.env.VITE_API_URL
   if (envApiUrl) {
@@ -133,7 +133,7 @@ api.interceptors.response.use(
     }
 
     // Surface API error messages so .message contains the server's message
-    const serverMessage = (error as any).response?.data?.message
+    const serverMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message
     if (serverMessage && typeof serverMessage === 'string') {
       error.message = serverMessage
     }
@@ -270,7 +270,7 @@ export interface CreateLeadData {
   stage?: string
   assignedToId?: string
   notes?: string
-  customFields?: Record<string, any>
+  customFields?: Record<string, unknown>
   tags?: string[]
   // Real-estate specific fields
   propertyType?: string

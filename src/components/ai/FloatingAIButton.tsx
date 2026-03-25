@@ -12,6 +12,7 @@ export function FloatingAIButton() {
   })
   const [showPulse, setShowPulse] = useState(true)
   const keysPressed = useRef(new Set<string>())
+  const shortcutCooldown = useRef(false)
 
   // Stop the pulse animation after 10 seconds
   useEffect(() => {
@@ -42,7 +43,11 @@ export function FloatingAIButton() {
 
       if (keysPressed.current.has('a') && keysPressed.current.has('i')) {
         e.preventDefault()
-        toggleOpen(!isOpen)
+        if (!shortcutCooldown.current) {
+          shortcutCooldown.current = true
+          toggleOpen(!isOpen)
+          setTimeout(() => { shortcutCooldown.current = false }, 300)
+        }
         keysPressed.current.clear()
       }
     }

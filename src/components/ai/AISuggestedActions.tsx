@@ -72,9 +72,9 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
 
   const wireClickHandler = useCallback((action: string): (() => void) => {
     const lower = action.toLowerCase()
-    if ((lower.includes('email') || lower.includes('mail')) && onComposeEmail) return onComposeEmail
-    if ((lower.includes('call') || lower.includes('phone')) && onScheduleCall) return onScheduleCall
-    if ((lower.includes('demo') || lower.includes('meeting') || lower.includes('calendar')) && onBookDemo) return onBookDemo
+    if (lower.includes('email') || lower.includes('mail')) return onComposeEmail ?? (() => {})
+    if (lower.includes('call') || lower.includes('phone')) return onScheduleCall ?? (() => {})
+    if (lower.includes('demo') || lower.includes('meeting') || lower.includes('calendar')) return onBookDemo ?? (() => {})
     return () => {}
   }, [onComposeEmail, onScheduleCall, onBookDemo])
 
@@ -94,7 +94,7 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
         const result = await aiApi.suggestActions({ leadId })
         const items = result.success ? (result.data?.suggestions || result.data) : (result.suggestions || result)
         if (Array.isArray(items) && items.length > 0) {
-          setSuggestions(items.map((item: any, idx: number) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          setSuggestions(items.map((item: { id?: string; action?: string; title?: string; reason?: string; description?: string; confidence?: number; score?: number; priority?: 'high' | 'medium' | 'low' }, idx: number) => ({
             id: item.id || String(idx + 1),
             icon: resolveIcon(item.action || item.title || ''),
             action: formatActionName(item.action || item.title || 'Suggested action'),
@@ -199,6 +199,9 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
                 getPriorityColor(suggestion.priority)
               )}
               onClick={suggestion.onClick}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); suggestion.onClick(); } }}
+              role="button"
+              tabIndex={0}
             >
               {/* Dismiss Button */}
               <button

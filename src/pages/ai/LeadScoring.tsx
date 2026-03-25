@@ -206,7 +206,7 @@ const LeadScoring = () => {
     if (scoringConfig?.data && Object.keys(configForm).length === 0) {
       initConfigForm(scoringConfig.data)
     }
-  }, [scoringConfig])
+  }, [scoringConfig]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const getScoreGrade = (score: number): string => {
     if (score >= 90) return 'A+'
@@ -300,8 +300,8 @@ const LeadScoring = () => {
         return { scoringStats, recentScores: scoredLeads, scoreFactors, modelStatus }
       } catch (error) {
         const err = error as Error
-        toast.error(err.message || 'Failed to load scoring data')
-        return defaultScoringData
+        // Re-throw so React Query captures it via isError/error state
+        throw new Error(err.message || 'Failed to load scoring data')
       }
     }
   })
@@ -427,7 +427,7 @@ const LeadScoring = () => {
                   ].map(({ key, label, max }) => (
                     <div key={key} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">{label}</label>
+                        <label id={`label-${key}`} className="text-sm font-medium">{label}</label>
                         <span className="text-sm font-bold tabular-nums w-8 text-right">
                           {configForm[key] ?? 0}
                         </span>
@@ -440,6 +440,7 @@ const LeadScoring = () => {
                         value={configForm[key] ?? 0}
                         onChange={(e) => setConfigForm(prev => ({ ...prev, [key]: Number(e.target.value) }))}
                         className="w-full accent-primary"
+                        aria-labelledby={`label-${key}`}
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>0</span>
@@ -450,7 +451,7 @@ const LeadScoring = () => {
                   {/* Email opt-out penalty (negative) */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Email Opt-Out Penalty</label>
+                      <label id="label-emailOptOutPenalty" className="text-sm font-medium">Email Opt-Out Penalty</label>
                       <span className="text-sm font-bold tabular-nums w-10 text-right text-red-600">
                         {configForm.emailOptOutPenalty ?? -50}
                       </span>
@@ -463,6 +464,7 @@ const LeadScoring = () => {
                       value={configForm.emailOptOutPenalty ?? -50}
                       onChange={(e) => setConfigForm(prev => ({ ...prev, emailOptOutPenalty: Number(e.target.value) }))}
                       className="w-full accent-red-500"
+                      aria-labelledby="label-emailOptOutPenalty"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>-200</span>

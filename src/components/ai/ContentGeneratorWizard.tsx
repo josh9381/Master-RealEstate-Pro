@@ -78,6 +78,23 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
   if (!isOpen) return null;
 
   const handleGenerate = async () => {
+    // Validate required fields based on content type
+    if ((contentType === 'email-sequence' || contentType === 'sms') && !goal.trim()) {
+      toast.error('Please enter a campaign/message goal before generating');
+      return;
+    }
+    if (contentType === 'property-description' && !address.trim()) {
+      toast.error('Please enter a property address before generating');
+      return;
+    }
+    if (contentType === 'social-posts' && !topic.trim()) {
+      toast.error('Please enter a topic before generating');
+      return;
+    }
+    if (contentType === 'listing-presentation' && !address.trim()) {
+      toast.error('Please enter a property address before generating');
+      return;
+    }
     setIsGenerating(true);
     try {
       let endpoint = '';
@@ -718,6 +735,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           <button
             onClick={onClose}
             className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
+            aria-label="Close content generator"
           >
             ✕
           </button>

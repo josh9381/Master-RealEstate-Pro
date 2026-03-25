@@ -1,5 +1,5 @@
 import { logger } from '../lib/logger'
-import express from 'express'
+import express, { Request } from 'express'
 import rateLimit from 'express-rate-limit'
 import * as aiController from '../controllers/ai.controller'
 import * as scoringConfigController from '../controllers/scoring-config.controller'
@@ -39,6 +39,14 @@ import { SubscriptionTier } from '@prisma/client'
 // Cache tier lookups for 60s to avoid DB hit on every request
 const tierCache = new Map<string, { tier: SubscriptionTier; expiresAt: number }>()
 
+/**
+ * Invalidate the cached subscription tier for an organization.
+ * Call this when the org's subscription changes to prevent stale rate limits.
+ */
+export function invalidateTierCache(organizationId: string): void {
+  tierCache.delete(organizationId)
+}
+
 async function getUserTier(userId: string, organizationId: string): Promise<SubscriptionTier> {
   const cacheKey = organizationId
   const cached = tierCache.get(cacheKey)
@@ -60,14 +68,14 @@ async function getUserTier(userId: string, organizationId: string): Promise<Subs
 // Dynamic per-tier rate limiter — reads aiRateLimit from subscription config
 const aiRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: async (req: any) => {
-    const userId = req.user?.userId
-    const orgId = req.user?.organizationId
+  max: async (req: Request) => {
+    const userId = (req as Request & { user?: { userId?: string; organizationId?: string } }).user?.userId
+    const orgId = (req as Request & { user?: { userId?: string; organizationId?: string } }).user?.organizationId
     if (!userId || !orgId) return 10 // Strictest limit for unauthenticated
     const tier = await getUserTier(userId, orgId)
     return AI_PLAN_LIMITS[tier]?.aiRateLimit || 10
   },
-  keyGenerator: (req: any) => req.user?.userId || 'anonymous',
+  keyGenerator: (req: Request) => (req as Request & { user?: { userId?: string } }).user?.userId || 'anonymous',
   message: { success: false, message: 'Too many AI requests. Please wait a moment.' },
   validate: { xForwardedForHeader: false }
 })

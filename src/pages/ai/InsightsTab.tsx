@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw, Brain, Target, Zap, Search, Filter, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -36,14 +36,16 @@ const InsightsTab = () => {
   })
 
   // Hydrate local state from loaded prefs (only once)
-  const [prefsHydrated, setPrefsHydrated] = useState(false)
-  if (prefsData?.data?.chatbot && !prefsHydrated) {
-    const cb = prefsData.data.chatbot
-    if (cb.insightPriorityThreshold) setInsightPriorityThreshold(cb.insightPriorityThreshold)
-    if (cb.insightTypes && Array.isArray(cb.insightTypes)) setInsightTypes(cb.insightTypes)
-    if (cb.aiInsightsFrequency) setDigestFrequency(cb.aiInsightsFrequency)
-    setPrefsHydrated(true)
-  }
+  const prefsHydratedRef = useRef(false)
+  useEffect(() => {
+    if (prefsData?.data?.chatbot && !prefsHydratedRef.current) {
+      const cb = prefsData.data.chatbot
+      if (cb.insightPriorityThreshold) setInsightPriorityThreshold(cb.insightPriorityThreshold)
+      if (cb.insightTypes && Array.isArray(cb.insightTypes)) setInsightTypes(cb.insightTypes)
+      if (cb.aiInsightsFrequency) setDigestFrequency(cb.aiInsightsFrequency)
+      prefsHydratedRef.current = true
+    }
+  }, [prefsData])
 
   // Save insight preferences mutation
   const saveInsightPrefs = useMutation({
@@ -74,7 +76,7 @@ const InsightsTab = () => {
       ])
 
       // Normalize scoring model from API response shape
-      const md = (modelRaw as any)?.data ?? modelRaw // eslint-disable-line @typescript-eslint/no-explicit-any
+      const md = (modelRaw as { data?: ScoringModel })?.data ?? modelRaw
       const normalizedModel: ScoringModel | null = md ? {
         organizationId: md.organizationId ?? '',
         factors: md.factors ?? { scoreWeight: 0.4, activityWeight: 0.3, recencyWeight: 0.2, funnelTimeWeight: 0.1 },
@@ -320,7 +322,7 @@ const InsightsTab = () => {
       )}
 
       {/* Dashboard Insights - Top Opportunities */}
-      {dashboardInsights && dashboardInsights.topOpportunities?.length > 0 && (
+      {dashboardInsights && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -330,6 +332,7 @@ const InsightsTab = () => {
             <CardDescription>Leads with highest conversion probability</CardDescription>
           </CardHeader>
           <CardContent>
+            {dashboardInsights.topOpportunities?.length > 0 ? (
             <div className="space-y-3">
               {dashboardInsights.topOpportunities.map((opp) => (
                 <div key={opp.leadId} className="flex items-center justify-between p-3 border rounded-lg hover:bg-secondary/50 transition-colors">
@@ -346,6 +349,11 @@ const InsightsTab = () => {
                 </div>
               ))}
             </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No high-probability opportunities detected yet. As leads engage with your content, top opportunities will appear here.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -508,6 +516,7 @@ const InsightsTab = () => {
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                   value={insightPriorityThreshold}
                   onChange={e => { setInsightPriorityThreshold(e.target.value); setPrefsDirty(true) }}
+                  aria-label="Priority threshold"
                 >
                   <option value="all">Show All</option>
                   <option value="low">Low and above</option>
@@ -543,6 +552,7 @@ const InsightsTab = () => {
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                   value={digestFrequency}
                   onChange={e => { setDigestFrequency(e.target.value); setPrefsDirty(true) }}
+                  aria-label="Digest frequency"
                 >
                   <option value="realtime">Real-time</option>
                   <option value="daily">Daily digest</option>

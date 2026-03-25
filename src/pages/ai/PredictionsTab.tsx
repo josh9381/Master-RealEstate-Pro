@@ -42,7 +42,13 @@ const PredictionsTab = () => {
       return {
         predictions: d.predictions || [],
         stats: d.stats || defaultPredictiveData.stats,
-        revenueForecast: d.revenueForecast || [],
+        revenueForecast: (d.revenueForecast || []).map((item: Record<string, unknown>) => ({
+          month: item.month,
+          actual: item.actual ?? null,
+          predicted: item.predicted ?? null,
+          lower: item.lower ?? item.confidence ? (item.predicted as number ?? 0) * 0.85 : null,
+          upper: item.upper ?? item.confidence ? (item.predicted as number ?? 0) * 1.15 : null,
+        })),
         conversionTrend: d.conversionTrend || [],
         stageDistribution: d.stageDistribution || [],
         pipelineSummary: d.pipelineSummary || defaultPredictiveData.pipelineSummary,

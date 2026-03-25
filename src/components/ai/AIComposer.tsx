@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/hooks/useToast'
-import api from '@/lib/api'
+import api, { getApiBaseUrl } from '@/lib/api'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { formatCurrency, formatRate } from '@/lib/metricsCalculator'
 import { VariationsPanel } from './VariationsPanel'
@@ -100,15 +100,25 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const [templateCategory, setTemplateCategory] = useState('follow-up')
+  const streamAbortRef = useRef<AbortController | null>(null)
   
   // Load preferences and templates on mount
   useEffect(() => {
     const initComposer = async () => {
-      await loadPreferences()
-      await loadTemplates()
+      try {
+        await loadPreferences()
+        await loadTemplates()
+      } catch (error) {
+        logger.error('Init composer error:', error)
+      } finally {
+        setInitializing(false)
+      }
       // Don't auto-generate - wait for user to click Generate or type
     }
     initComposer()
+    return () => {
+      streamAbortRef.current?.abort()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   
@@ -131,8 +141,6 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       setLength('standard')
       setIncludeCTA(true)
       setPersonalization('standard')
-    } finally {
-      setInitializing(false)
     }
   }
   
@@ -213,12 +221,17 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   
   // Phase 3: Stream message generation
   const generateMessageStream = async () => {
+    // Cancel any in-flight stream
+    streamAbortRef.current?.abort()
+    const controller = new AbortController()
+    streamAbortRef.current = controller
+    
     setIsStreaming(true)
     setStreamedMessage('')
     setMessage('')
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/ai/compose/stream`, {
+      const response = await fetch(`${getApiBaseUrl()}/ai/compose/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -230,7 +243,8 @@ export const AIComposer: React.FC<AIComposerProps> = ({
           messageType,
           draftMessage: draftMessage || undefined,
           settings: { tone, length, includeCTA, personalization }
-        })
+        }),
+        signal: controller.signal
       })
       
       const reader = response.body?.getReader()
@@ -239,10 +253,18 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       if (!reader) throw new Error('No reader available')
       
       let accumulated = ''
+      let receivedChunks = 0
       
       while (true) { // eslint-disable-line no-constant-condition
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) {
+          // Connection closed without a 'done' event — incomplete stream
+          if (receivedChunks > 0 && accumulated) {
+            toast.warning('Stream ended unexpectedly — partial message received. You may want to regenerate.')
+            setMessage(accumulated)
+          }
+          break
+        }
         
         const chunk = decoder.decode(value)
         const lines = chunk.split('\n')
@@ -256,27 +278,35 @@ export const AIComposer: React.FC<AIComposerProps> = ({
                 setContext(prev => ({ ...prev!, ...data.data }))
               } else if (data.type === 'token') {
                 accumulated += data.data
+                receivedChunks++
                 setStreamedMessage(accumulated)
               } else if (data.type === 'done') {
                 setMessage(accumulated)
                 toast.success('Message generated!')
               } else if (data.type === 'error') {
-                toast.error(data.message)
+                if (receivedChunks > 0 && accumulated) {
+                  // Partial content received before error — preserve it
+                  setMessage(accumulated)
+                  toast.warning(`Stream error after ${receivedChunks} chunks — partial message saved. ${data.message}`)
+                } else {
+                  toast.error(data.message)
+                }
               }
             } catch (e) {
-              // Ignore parse errors
+              logger.warn('Stream JSON parse error for chunk:', line.slice(6, 80))
             }
           }
         }
       }
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       logger.error('Stream error:', error)
-      if (error.message?.includes('401')) {
+      if (error.name === 'AbortError') {
+        // User cancelled — do nothing
+      } else if (error.message?.includes('401')) {
         toast.error('Session expired. Please refresh the page.')
       } else {
-        toast.error('Streaming failed, trying standard generation...')
+        toast.error('Streaming failed. Please try again or disable streaming in settings.')
         setUseStreaming(false)
-        // Don't call generateMessage() again as it will cause infinite loop
       }
     } finally {
       setIsStreaming(false)

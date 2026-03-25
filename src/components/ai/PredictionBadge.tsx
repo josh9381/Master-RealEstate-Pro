@@ -5,6 +5,9 @@ import { fmtMoney } from '@/lib/metricsCalculator';
 
 export type PredictionType = 'probability' | 'value' | 'time' | 'risk';
 
+const PROBABILITY_THRESHOLDS = { HIGH: 75, MEDIUM: 50, LOW: 25 } as const;
+const VALUE_THRESHOLDS = { HIGH: 20000, MEDIUM: 10000 } as const;
+
 interface PredictionBadgeProps {
   type: PredictionType;
   value: number | string;
@@ -49,9 +52,9 @@ export const PredictionBadge = ({
         const prob = typeof value === 'number' ? value : parseFloat(value as string) || 0;
         return {
           icon: TrendingUp,
-          color: prob >= 75 ? 'bg-green-100 text-green-700 border-green-200' :
-                 prob >= 50 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                 prob >= 25 ? 'bg-orange-100 text-orange-700 border-orange-200' :
+          color: prob >= PROBABILITY_THRESHOLDS.HIGH ? 'bg-green-100 text-green-700 border-green-200' :
+                 prob >= PROBABILITY_THRESHOLDS.MEDIUM ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                 prob >= PROBABILITY_THRESHOLDS.LOW ? 'bg-orange-100 text-orange-700 border-orange-200' :
                  'bg-red-100 text-red-700 border-red-200',
           label: label || 'Conversion',
           displayValue: `${prob}%`,
@@ -61,8 +64,8 @@ export const PredictionBadge = ({
         const val = typeof value === 'number' ? value : parseFloat(value as string) || 0;
         return {
           icon: DollarSign,
-          color: val >= 20000 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                 val >= 10000 ? 'bg-blue-100 text-blue-700 border-blue-200' :
+          color: val >= VALUE_THRESHOLDS.HIGH ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                 val >= VALUE_THRESHOLDS.MEDIUM ? 'bg-blue-100 text-blue-700 border-blue-200' :
                  'bg-slate-100 text-slate-700 border-slate-200',
           label: label || 'Est. Value',
           displayValue: fmtMoney(val),

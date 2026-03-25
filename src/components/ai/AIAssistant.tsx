@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
 import { useState, useRef, useEffect } from 'react'
-import { X, Send, Sparkles, TrendingUp, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { X, Send, Sparkles, TrendingUp, MessageSquare, ThumbsUp, ThumbsDown, AlertTriangle, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -19,6 +19,15 @@ interface Message {
   tokens?: number | null
   cost?: number | null
   feedback?: string | null
+}
+
+interface PendingConfirmation {
+  token: string
+  functionName: string
+  args: Record<string, unknown>
+  originalMessage: string
+  conversationHistory: Array<{ role: string; content: string }>
+  tone: string
 }
 
 interface Suggestion {
@@ -58,6 +67,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
   const [selectedTone, setSelectedTone] = useState<string>('FRIENDLY')
   const [isTyping, setIsTyping] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null)
   const [messagePreview, setMessagePreview] = useState<{
     type: 'email' | 'sms' | 'script'
     content: {
@@ -192,6 +202,28 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
       const response = await sendChatMessage(userInput, conversationHistory, selectedTone)
       
       if (response.success) {
+        // Check if this requires user confirmation (destructive function)
+        if (response.data.requiresConfirmation && response.data.confirmationToken) {
+          const confirmMsg: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: response.data.message,
+            timestamp: new Date(),
+            tokens: response.data.tokens,
+            cost: response.data.cost,
+          }
+          setMessages((prev) => [...prev, confirmMsg])
+          setPendingConfirmation({
+            token: response.data.confirmationToken,
+            functionName: response.data.pendingFunction?.name || '',
+            args: response.data.pendingFunction?.arguments || {},
+            originalMessage: userInput,
+            conversationHistory,
+            tone: selectedTone,
+          })
+          return
+        }
+
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
@@ -443,6 +475,48 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
     }
   }
 
+  const handleConfirm = async () => {
+    if (!pendingConfirmation) return
+    const { token, originalMessage, conversationHistory, tone } = pendingConfirmation
+    setPendingConfirmation(null)
+    setIsTyping(true)
+
+    try {
+      const response = await sendChatMessage(originalMessage, conversationHistory, tone, token)
+      if (response.success) {
+        const confirmMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: response.data.message,
+          timestamp: new Date(),
+          tokens: response.data.tokens,
+          cost: response.data.cost,
+        }
+        setMessages((prev) => [...prev, confirmMsg])
+      }
+    } catch (err) {
+      logger.error('Confirmation execution error:', err)
+      setMessages((prev) => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Failed to execute the confirmed action. The confirmation may have expired — please try again.',
+        timestamp: new Date(),
+      }])
+    } finally {
+      setIsTyping(false)
+    }
+  }
+
+  const handleCancelConfirmation = () => {
+    setPendingConfirmation(null)
+    setMessages((prev) => [...prev, {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: '❌ Action cancelled. No changes were made.',
+      timestamp: new Date(),
+    }])
+  }
+
   return (
     <>
       {/* Backdrop */}
@@ -566,6 +640,38 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
               </div>
             </div>
           ))}
+
+          {/* Destructive Action Confirmation Banner */}
+          {pendingConfirmation && (
+            <div className="mx-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Confirm Action</span>
+              </div>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                The AI wants to execute <strong>{pendingConfirmation.functionName.replace(/_/g, ' ')}</strong>. This action may modify your data.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleConfirm}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-xs"
+                  disabled={isTyping}
+                >
+                  <Check className="h-3 w-3 mr-1" /> Confirm
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelConfirmation}
+                  className="flex-1 text-xs"
+                  disabled={isTyping}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Typing Indicator */}
           {isTyping && (

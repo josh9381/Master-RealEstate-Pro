@@ -103,7 +103,7 @@ export class OpenAIService {
     }
 
     this.client = new OpenAI({
-      apiKey: apiKey || 'not-configured',
+      apiKey: apiKey || 'sk-not-configured',
       organization: process.env.OPENAI_ORG_ID,
     });
 

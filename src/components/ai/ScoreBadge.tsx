@@ -1,6 +1,8 @@
 import { Badge } from '@/components/ui/Badge';
 import { Flame, Thermometer, Snowflake, CircleDot } from 'lucide-react';
 
+const SCORE_THRESHOLDS = { HOT: 80, WARM: 50, COOL: 25 } as const;
+
 interface ScoreBadgeProps {
   score: number;
   size?: 'sm' | 'md' | 'lg';
@@ -18,21 +20,21 @@ export function ScoreBadge({
 }: ScoreBadgeProps) {
   // Determine category and styling based on score
   const getScoreCategory = () => {
-    if (score >= 80) {
+    if (score >= SCORE_THRESHOLDS.HOT) {
       return {
         label: 'Hot',
         icon: Flame,
         className: 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200',
         iconColor: 'text-red-500'
       };
-    } else if (score >= 50) {
+    } else if (score >= SCORE_THRESHOLDS.WARM) {
       return {
         label: 'Warm',
         icon: Thermometer,
         className: 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-200',
         iconColor: 'text-yellow-500'
       };
-    } else if (score >= 25) {
+    } else if (score >= SCORE_THRESHOLDS.COOL) {
       return {
         label: 'Cool',
         icon: Snowflake,

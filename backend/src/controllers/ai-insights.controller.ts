@@ -5,12 +5,25 @@ import prisma from '../config/database'
 import { AIInsightType, AIInsightPriority, Prisma } from '@prisma/client'
 import { calcRate, formatRate } from '../utils/metricsCalculator'
 
+// Throttle insight generation: at most once per 5 minutes per org
+const insightGenerationTimestamps = new Map<string, number>()
+const INSIGHT_GENERATION_COOLDOWN_MS = 5 * 60 * 1000
+
 async function generateAndStoreInsights(organizationId: string): Promise<void> {
+  const currentTime = Date.now()
+  const lastRun = insightGenerationTimestamps.get(organizationId) || 0
+  if (currentTime - lastRun < INSIGHT_GENERATION_COOLDOWN_MS) {
+    return // Skip — generated recently
+  }
+  insightGenerationTimestamps.set(organizationId, currentTime)
   const now = new Date()
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
   // Helper: only create if no recent duplicate of same type exists
   async function upsertInsight(type: AIInsightType, priority: AIInsightPriority, title: string, description: string, data?: Record<string, unknown>, actionUrl?: string) {
+    // Before creating, check if the user has disabled this insight type
+    // (org-level check — if ANY user in the org has dismissed this type, we still
+    // generate for the org but the getInsights endpoint filters per-user)
     const existing = await prisma.aIInsight.findFirst({
       where: {
         organizationId,
@@ -180,6 +193,7 @@ async function generateAndStoreInsights(organizationId: string): Promise<void> {
 export const getInsights = async (req: Request, res: Response) => {
   try {
     const organizationId = req.user!.organizationId
+    const userId = req.user!.userId
     const showDismissed = req.query.showDismissed === 'true'
     const status = req.query.status as string | undefined // 'active' | 'dismissed' | 'acted' | 'all'
     const priority = req.query.priority as string | undefined
@@ -189,6 +203,16 @@ export const getInsights = async (req: Request, res: Response) => {
 
     // First, generate fresh insights (idempotent — won't duplicate)
     await generateAndStoreInsights(organizationId)
+
+    // Load user's insight type preferences to filter results
+    const userPrefs = await prisma.userAIPreferences.findUnique({
+      where: { userId },
+      select: { insightTypes: true, insightPriorityThreshold: true },
+    })
+
+    // insightTypes is a JSON array of enabled type strings e.g. ["lead_followup","scoring_accuracy"]
+    const enabledTypes = (userPrefs?.insightTypes as string[] | null) || null
+    const priorityThreshold = userPrefs?.insightPriorityThreshold || 'all'
 
     // Fetch insights from DB
     const where: Record<string, unknown> = { organizationId }
@@ -213,9 +237,29 @@ export const getInsights = async (req: Request, res: Response) => {
       where.priority = priority
     }
 
-    // Type filter
+    // Type filter (explicit query param takes precedence over user pref)
     if (type && type !== 'all') {
       where.type = type
+    } else if (enabledTypes && Array.isArray(enabledTypes) && enabledTypes.length > 0) {
+      // Apply user's preferred insight types filter (uppercased to match enum)
+      const uppercased = enabledTypes.map(t => t.toUpperCase())
+      where.type = { in: uppercased }
+    }
+
+    // Apply priority threshold from user preferences
+    if (priorityThreshold && priorityThreshold !== 'all') {
+      const thresholdMap: Record<string, string[]> = {
+        critical: ['CRITICAL'],
+        high: ['CRITICAL', 'HIGH'],
+        medium: ['CRITICAL', 'HIGH', 'MEDIUM'],
+      }
+      const allowedPriorities = thresholdMap[priorityThreshold.toLowerCase()]
+      if (allowedPriorities) {
+        // Explicit priority filter takes precedence
+        if (!priority || priority === 'all') {
+          where.priority = { in: allowedPriorities }
+        }
+      }
     }
 
     // Filter out expired insights
@@ -309,12 +353,14 @@ export const getInsightById = async (req: Request, res: Response) => {
 
 /**
  * Dismiss an AI insight
+ * Optionally set `disableType: true` in body to remove this insight type from the user's preferences
  */
 export const dismissInsight = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
     const organizationId = req.user!.organizationId
     const userId = req.user!.userId
+    const { disableType } = req.body || {}
 
     const insight = await prisma.aIInsight.findFirst({
       where: { id, organizationId },
@@ -336,9 +382,28 @@ export const dismissInsight = async (req: Request, res: Response) => {
       },
     })
 
+    // If user wants to stop seeing this type of insight, update their preferences
+    if (disableType) {
+      const prefs = await prisma.userAIPreferences.findUnique({
+        where: { userId },
+        select: { insightTypes: true },
+      })
+      if (prefs) {
+        const currentTypes = (prefs.insightTypes as string[] | null) || []
+        const typeToRemove = insight.type.toLowerCase()
+        const updatedTypes = currentTypes.filter(t => t.toLowerCase() !== typeToRemove)
+        await prisma.userAIPreferences.update({
+          where: { userId },
+          data: { insightTypes: updatedTypes },
+        })
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Insight dismissed successfully'
+      message: disableType
+        ? `Insight dismissed and "${insight.type}" insights disabled for your account`
+        : 'Insight dismissed successfully',
     })
   } catch (error: unknown) {
     res.status(500).json({

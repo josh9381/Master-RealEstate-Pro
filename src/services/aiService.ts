@@ -15,6 +15,13 @@ export interface ChatResponse {
     message: string
     tokens: number
     cost: number
+    requiresConfirmation?: boolean
+    confirmationToken?: string
+    pendingFunction?: {
+      name: string
+      arguments: Record<string, unknown>
+    }
+    functionUsed?: string
   }
 }
 
@@ -60,12 +67,14 @@ export interface UsageResponse {
 export const sendChatMessage = async (
   message: string,
   conversationHistory?: Array<{ role: string; content: string }>,
-  tone: string = 'FRIENDLY'
+  tone: string = 'FRIENDLY',
+  confirmationToken?: string
 ): Promise<ChatResponse> => {
   const response = await api.post('/ai/chat', {
     message,
     conversationHistory,
     tone,
+    ...(confirmationToken ? { confirmationToken } : {}),
   })
   return response.data
 }
