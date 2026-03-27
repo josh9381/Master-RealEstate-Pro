@@ -12,13 +12,15 @@ jest.mock('../../src/lib/logger', () => ({ logger: { info: jest.fn(), warn: jest
 jest.mock('../../src/utils/encryption', () => ({
   encrypt: jest.fn((v: string) => `enc:${v}`),
   decrypt: jest.fn((v: string) => v.replace('enc:', '')),
-  maskSensitive: jest.fn((v: string) => '****'),
+  maskSensitive: jest.fn((_v: string) => '****'),
 }))
 
 jest.mock('openai', () => {
   const OpenAI = jest.fn(() => ({ chat: { completions: { create: jest.fn() } } }))
   return { __esModule: true, default: OpenAI }
 })
+
+import { SubscriptionTier } from '@prisma/client'
 
 import {
   MODEL_TIERS,
@@ -67,12 +69,12 @@ describe('ai-config.service', () => {
 
   describe('resolveAIConfig', () => {
     it('throws if organization not found', async () => {
-      ;(mockPrisma.organization.findUnique as jest.Mock).mockResolvedValue(null)
+      (mockPrisma.organization.findUnique as jest.Mock).mockResolvedValue(null)
       await expect(resolveAIConfig('nonexistent')).rejects.toThrow('Organization nonexistent not found')
     })
 
     it('uses platform key when useOwnAIKey=false', async () => {
-      ;(mockPrisma.organization.findUnique as jest.Mock).mockResolvedValue({
+      (mockPrisma.organization.findUnique as jest.Mock).mockResolvedValue({
         useOwnAIKey: false,
         openaiApiKey: null,
         openaiOrgId: null,
@@ -206,7 +208,7 @@ describe('ai-config.service', () => {
       maxTokens: 1000,
       defaultTone: 'professional',
       useOwnKey: false,
-      tier: 'PROFESSIONAL' as any,
+      tier: 'PROFESSIONAL' as SubscriptionTier,
     }
 
     it('returns just the base prompt when no systemPrompt or custom tone', () => {

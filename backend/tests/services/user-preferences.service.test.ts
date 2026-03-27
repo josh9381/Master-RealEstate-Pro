@@ -56,7 +56,7 @@ describe('saveComposerPreferences', () => {
       composerAutoGenerate: false,
       composerShowAdvanced: true,
     }
-    mockPrisma.userAIPreferences.upsert.mockResolvedValue(mockRecord as any)
+    mockPrisma.userAIPreferences.upsert.mockResolvedValue(mockRecord as never)
 
     const result = await saveComposerPreferences(
       'user-1',
@@ -73,7 +73,7 @@ describe('saveComposerPreferences', () => {
   })
 
   it('looks up organizationId from user when not provided', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ organizationId: 'org-99' } as any)
+    mockPrisma.user.findUnique.mockResolvedValue({ organizationId: 'org-99' } as never)
     mockPrisma.userAIPreferences.upsert.mockResolvedValue({
       composerDefaultTone: 'professional',
       composerDefaultLength: 'standard',
@@ -81,7 +81,7 @@ describe('saveComposerPreferences', () => {
       composerDefaultPersonalization: 'standard',
       composerAutoGenerate: true,
       composerShowAdvanced: false,
-    } as any)
+    } as never)
 
     await saveComposerPreferences('user-1', {})
 

@@ -23,7 +23,9 @@ import {
   UserCog,
 } from 'lucide-react'
 
-const navigation: { name: string; href: string; icon: any }[] = [
+import type { LucideIcon } from 'lucide-react'
+
+const navigation: { name: string; href: string; icon: LucideIcon }[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Leads', href: '/leads', icon: Users },
   { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
@@ -47,8 +49,7 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { user, logout, isAdmin: _isAdmin, isManager: _isManager, getSubscriptionTier } = useAuthStore()
+  const { user, logout, getSubscriptionTier } = useAuthStore()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   const handleLogout = async () => {

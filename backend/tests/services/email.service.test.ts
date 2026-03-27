@@ -45,7 +45,7 @@ describe('isEmailSuppressed', () => {
   })
 
   it('returns true when email is on suppression list', async () => {
-    mockPrisma.emailSuppression.findUnique.mockResolvedValue({ id: '1' } as any)
+    mockPrisma.emailSuppression.findUnique.mockResolvedValue({ id: '1' } as never)
     const result = await isEmailSuppressed('bad@example.com', 'org-1')
     expect(result).toBe(true)
   })
@@ -76,7 +76,7 @@ describe('suppressEmail', () => {
   })
 
   it('upserts the suppression record', async () => {
-    mockPrisma.emailSuppression.upsert.mockResolvedValue({} as any)
+    mockPrisma.emailSuppression.upsert.mockResolvedValue({} as never)
     await suppressEmail('bounce@example.com', 'org-1', 'bounce')
     expect(mockPrisma.emailSuppression.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -91,7 +91,7 @@ describe('suppressEmail', () => {
   })
 
   it('lowercases the email before suppressing', async () => {
-    mockPrisma.emailSuppression.upsert.mockResolvedValue({} as any)
+    mockPrisma.emailSuppression.upsert.mockResolvedValue({} as never)
     await suppressEmail('UPPER@EXAMPLE.COM', 'org-1', 'spam')
     expect(mockPrisma.emailSuppression.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -148,7 +148,7 @@ describe('sendEmail', () => {
   }
 
   it('returns failure when recipient is suppressed', async () => {
-    mockPrisma.emailSuppression.findUnique.mockResolvedValue({ id: '1' } as any)
+    mockPrisma.emailSuppression.findUnique.mockResolvedValue({ id: '1' } as never)
     const result = await sendEmail({ ...baseOptions })
     expect(result.success).toBe(false)
     expect(result.error).toContain('suppressed')
@@ -160,7 +160,7 @@ describe('sendEmail', () => {
     // No email config for user
     mockPrisma.emailConfig.findUnique.mockResolvedValue(null)
     // Message record creation
-    mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as any)
+    mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as never)
 
     // With no API key in test, sgMail.send won't actually be called correctly
     // The service requires FROM_EMAIL to be set; if not set, it logs a warning but proceeds
@@ -174,9 +174,9 @@ describe('sendEmail', () => {
   })
 
   it('skips suppression check when skipSuppressionCheck=true', async () => {
-    mockPrisma.emailSuppression.findUnique.mockResolvedValue({ id: '1' } as any)
+    mockPrisma.emailSuppression.findUnique.mockResolvedValue({ id: '1' } as never)
     mockPrisma.emailConfig.findUnique.mockResolvedValue(null)
-    mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as any)
+    mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as never)
 
     const sgMail = require('@sendgrid/mail').default
     sgMail.send.mockResolvedValue([{ statusCode: 202, headers: {} }])

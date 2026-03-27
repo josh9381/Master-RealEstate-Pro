@@ -17,12 +17,12 @@ import { logAudit, getRequestContext } from '../../src/services/audit.service'
 describe('logAudit', () => {
   beforeEach(() => {
     mockReset(mockPrisma)
-    mockPrisma.auditLog.create.mockResolvedValue({} as any)
+    mockPrisma.auditLog.create.mockResolvedValue({} as never)
   })
 
   const baseEntry = {
     organizationId: 'org-1',
-    action: 'CREATE' as any,
+    action: 'CREATED' as const,
     entityType: 'Lead',
     description: 'Created a lead',
   }

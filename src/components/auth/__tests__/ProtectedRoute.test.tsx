@@ -24,7 +24,7 @@ function renderWithRouter(ui: React.ReactElement, initialPath = '/') {
 describe('ProtectedRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseSessionManager.mockReturnValue(undefined as any)
+    mockUseSessionManager.mockReturnValue(undefined as ReturnType<typeof useSessionManager>)
   })
 
   it('renders children when authenticated', async () => {
@@ -32,7 +32,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: true,
       accessToken: 'tok',
       fetchCurrentUser: vi.fn(),
-    } as any)
+    } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <ProtectedRoute>
         <div>Protected Content</div>
@@ -48,7 +48,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: false,
       accessToken: null,
       fetchCurrentUser: vi.fn(),
-    } as any)
+    } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <ProtectedRoute>
         <div>Protected Content</div>
@@ -66,7 +66,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: false,
       accessToken: 'token',
       fetchCurrentUser: () => new Promise(() => {}),
-    } as any)
+    } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <ProtectedRoute>
         <div>Protected Content</div>
@@ -81,7 +81,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: false,
       accessToken: 'token',
       fetchCurrentUser,
-    } as any)
+    } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <ProtectedRoute>
         <div>Content</div>
@@ -97,7 +97,7 @@ describe('ProtectedRoute', () => {
       isAuthenticated: true,
       accessToken: 'tok',
       fetchCurrentUser: vi.fn(),
-    } as any)
+    } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <ProtectedRoute>
         <div>Content</div>

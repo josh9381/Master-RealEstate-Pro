@@ -18,11 +18,11 @@ describe('aiLogger', () => {
     mockLoggerWarn.mockClear()
     mockLoggerError.mockClear()
     // Set logLevel directly on singleton (constructor runs once at import time)
-    ;(aiLogger as any).logLevel = 'debug'
+    Object.assign(aiLogger, { logLevel: 'debug' })
   })
 
   afterEach(() => {
-    ;(aiLogger as any).logLevel = 'info'
+    Object.assign(aiLogger, { logLevel: 'info' })
   })
 
   describe('start()', () => {
@@ -45,7 +45,7 @@ describe('aiLogger', () => {
     it('does not log when logLevel is info (debug suppressed)', () => {
       process.env.AI_LOG_LEVEL = 'info'
       // Re-import to pick up new env – since module is cached, instantiate logger directly
-      const { AILogEntry } = require('../../src/utils/ai-logger')
+      require('../../src/utils/ai-logger')
       // We test via the singleton; note AI_LOG_LEVEL is read in constructor.
       // Use a different approach: check no calls when level=info
       mockLoggerInfo.mockClear()

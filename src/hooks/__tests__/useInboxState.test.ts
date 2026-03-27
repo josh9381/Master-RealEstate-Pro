@@ -43,7 +43,7 @@ describe('useInboxState', () => {
 
   it('updates selectedContact via setter', () => {
     const { result } = renderHook(() => useInboxState())
-    const contact = { id: 'c1', name: 'John Doe' } as any
+    const contact = { id: 'c1', name: 'John Doe' } as unknown as Parameters<typeof result.current.setSelectedContact>[0]
 
     act(() => result.current.setSelectedContact(contact))
     expect(result.current.selectedContact).toEqual(contact)

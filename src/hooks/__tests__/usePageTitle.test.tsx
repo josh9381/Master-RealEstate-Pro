@@ -69,7 +69,7 @@ describe('usePageTitle', () => {
 
   it('prepends unread count when notifications exist', async () => {
     localStorage.setItem('accessToken', 'test-token')
-    vi.mocked(notificationsApi.getUnreadCount).mockResolvedValue({ data: { count: 5 } } as any)
+    vi.mocked(notificationsApi.getUnreadCount).mockResolvedValue({ data: { count: 5 } } as never)
     renderHook(() => usePageTitle(), { wrapper: wrapperWithPath('/dashboard') })
     await waitFor(() => {
       expect(document.title).toMatch(/^\(5\)/)

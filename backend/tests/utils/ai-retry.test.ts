@@ -20,6 +20,10 @@ jest.mock('../../src/lib/logger', () => ({
 import { withRetryAndFallback } from '../../src/utils/ai-retry'
 import OpenAI from 'openai'
 
+// Extract mock error constructors with proper types
+const RateLimitError = OpenAI.RateLimitError as unknown as new (msg: string) => Error
+const NotFoundError = OpenAI.NotFoundError as unknown as new (msg: string) => Error
+
 describe('withRetryAndFallback', () => {
   const mockClient = {} as OpenAI
 
@@ -32,7 +36,7 @@ describe('withRetryAndFallback', () => {
 
   it('retries on retryable error (rate limit)', async () => {
     const fn = jest.fn()
-      .mockRejectedValueOnce(new (OpenAI.RateLimitError as any)('rate limited'))
+      .mockRejectedValueOnce(new RateLimitError('rate limited'))
       .mockResolvedValue({ text: 'ok' })
 
     const result = await withRetryAndFallback(fn, mockClient, 'gpt-5.1', {
@@ -45,8 +49,8 @@ describe('withRetryAndFallback', () => {
 
   it('falls back to next model after exhausting retries', async () => {
     const fn = jest.fn()
-      .mockRejectedValueOnce(new (OpenAI.RateLimitError as any)('rate limited'))
-      .mockRejectedValueOnce(new (OpenAI.RateLimitError as any)('rate limited'))
+      .mockRejectedValueOnce(new RateLimitError('rate limited'))
+      .mockRejectedValueOnce(new RateLimitError('rate limited'))
       .mockResolvedValue({ text: 'fallback success' })
 
     const result = await withRetryAndFallback(fn, mockClient, 'gpt-5.1', {
@@ -59,7 +63,7 @@ describe('withRetryAndFallback', () => {
   })
 
   it('throws when all models and retries exhausted', async () => {
-    const fn = jest.fn().mockRejectedValue(new (OpenAI.RateLimitError as any)('always fails'))
+    const fn = jest.fn().mockRejectedValue(new RateLimitError('always fails'))
 
     await expect(
       withRetryAndFallback(fn, mockClient, 'gpt-5.1', {
@@ -72,7 +76,7 @@ describe('withRetryAndFallback', () => {
 
   it('skips retries and falls back immediately on model error (NotFoundError)', async () => {
     const fn = jest.fn()
-      .mockRejectedValueOnce(new (OpenAI.NotFoundError as any)('model not found'))
+      .mockRejectedValueOnce(new NotFoundError('model not found'))
       .mockResolvedValue({ text: 'fallback' })
 
     const result = await withRetryAndFallback(fn, mockClient, 'gpt-deprecated', {
@@ -85,8 +89,7 @@ describe('withRetryAndFallback', () => {
   })
 
   it('disables fallback when enableFallback=false', async () => {
-    const fn = jest.fn().mockRejectedValue(new (OpenAI.RateLimitError as any)('always rate limited'))
-    const { getFallbackChain } = require('../../src/services/ai-config.service')
+    const fn = jest.fn().mockRejectedValue(new RateLimitError('always rate limited'))
 
     await expect(
       withRetryAndFallback(fn, mockClient, 'gpt-5.1', {

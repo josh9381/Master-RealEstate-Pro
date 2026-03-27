@@ -16,7 +16,7 @@ describe('WorkflowTriggerService', () => {
       id: 'wf1',
       name: 'Test Workflow',
       triggerData: conditions ? { conditions } : null,
-    } as any)
+    } as never)
 
     it('returns true when no triggerData (no conditions)', async () => {
       expect(await service.evaluateConditions(makeWorkflow(), {})).toBe(true)

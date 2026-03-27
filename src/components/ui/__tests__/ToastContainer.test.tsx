@@ -12,7 +12,7 @@ describe('ToastContainer', () => {
   })
 
   it('renders nothing when there are no toasts', () => {
-    mockUseToastStore.mockReturnValue({ toasts: [], removeToast: vi.fn() } as any)
+    mockUseToastStore.mockReturnValue({ toasts: [], removeToast: vi.fn(), addToast: vi.fn(), clearAll: vi.fn() })
     const { container } = render(<ToastContainer />)
     expect(container.firstChild).toBeNull()
   })
@@ -21,7 +21,9 @@ describe('ToastContainer', () => {
     mockUseToastStore.mockReturnValue({
       toasts: [{ id: '1', type: 'success', message: 'Saved successfully!' }],
       removeToast: vi.fn(),
-    } as any)
+      addToast: vi.fn(),
+      clearAll: vi.fn(),
+    })
     render(<ToastContainer />)
     expect(screen.getByText('Saved successfully!')).toBeInTheDocument()
   })
@@ -30,7 +32,9 @@ describe('ToastContainer', () => {
     mockUseToastStore.mockReturnValue({
       toasts: [{ id: '1', type: 'info', message: 'Info', description: 'More details' }],
       removeToast: vi.fn(),
-    } as any)
+      addToast: vi.fn(),
+      clearAll: vi.fn(),
+    })
     render(<ToastContainer />)
     expect(screen.getByText('More details')).toBeInTheDocument()
   })
@@ -39,7 +43,9 @@ describe('ToastContainer', () => {
     mockUseToastStore.mockReturnValue({
       toasts: [{ id: '1', type: 'success', message: 'Toast!' }],
       removeToast: vi.fn(),
-    } as any)
+      addToast: vi.fn(),
+      clearAll: vi.fn(),
+    })
     render(<ToastContainer />)
     expect(screen.getByLabelText('Dismiss notification')).toBeInTheDocument()
   })
@@ -49,7 +55,9 @@ describe('ToastContainer', () => {
     mockUseToastStore.mockReturnValue({
       toasts: [{ id: 'toast-1', type: 'error', message: 'Error occurred' }],
       removeToast,
-    } as any)
+      addToast: vi.fn(),
+      clearAll: vi.fn(),
+    })
     render(<ToastContainer />)
     fireEvent.click(screen.getByLabelText('Dismiss notification'))
     expect(removeToast).toHaveBeenCalledWith('toast-1')
@@ -62,7 +70,9 @@ describe('ToastContainer', () => {
         { id: '2', type: 'error', message: 'Second toast' },
       ],
       removeToast: vi.fn(),
-    } as any)
+      addToast: vi.fn(),
+      clearAll: vi.fn(),
+    })
     render(<ToastContainer />)
     expect(screen.getByText('First toast')).toBeInTheDocument()
     expect(screen.getByText('Second toast')).toBeInTheDocument()
@@ -72,7 +82,9 @@ describe('ToastContainer', () => {
     mockUseToastStore.mockReturnValue({
       toasts: [{ id: '1', type: 'info', message: 'Hello' }],
       removeToast: vi.fn(),
-    } as any)
+      addToast: vi.fn(),
+      clearAll: vi.fn(),
+    })
     render(<ToastContainer />)
     expect(document.querySelector('[aria-live="polite"]')).toBeInTheDocument()
   })

@@ -12,7 +12,7 @@ jest.mock('../../src/config/database', () => ({
 jest.mock('twilio', () => {
   const create = jest.fn()
   const factory = jest.fn(() => ({ messages: { create } }))
-  ;(factory as any).__create = create
+  Object.assign(factory, { __create: create })
   return { __esModule: true, default: factory }
 })
 
@@ -35,7 +35,7 @@ import { sendSMS, sendTemplateSMS } from '../../src/services/sms.service'
 
 // jest.setup.ts sets TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN, so twilioClient is
 // the mock instance returned by twilio(). Get a handle to its messages.create mock.
-const getTwilioCreate = (): jest.Mock => (twilio as any).__create
+const getTwilioCreate = (): jest.Mock => (twilio as unknown as { __create: jest.Mock }).__create
 
 describe('sendSMS', () => {
   const baseOptions = {
@@ -47,7 +47,7 @@ describe('sendSMS', () => {
   beforeEach(() => {
     mockReset(mockPrisma)
     mockPrisma.sMSConfig.findUnique.mockResolvedValue(null)
-    mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as any)
+    mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as never)
     // Set up Twilio mock to return a valid message
     getTwilioCreate().mockReset()
     getTwilioCreate().mockResolvedValue({ sid: 'SM_test_123', status: 'queued', numSegments: '1' })
@@ -57,7 +57,7 @@ describe('sendSMS', () => {
     mockPrisma.lead.findUnique.mockResolvedValue({
       smsOptOutAt: new Date(),
       phone: '+15551234567',
-    } as any)
+    } as never)
     const result = await sendSMS({ ...baseOptions, leadId: 'lead-1' })
     expect(result.success).toBe(false)
     expect(result.error).toContain('opted out')
@@ -91,7 +91,7 @@ describe('sendSMS', () => {
   })
 
   it('passes leadId to message record when opt-in (no opt-out)', async () => {
-    mockPrisma.lead.findUnique.mockResolvedValue({ smsOptOutAt: null, phone: '+15551234567' } as any)
+    mockPrisma.lead.findUnique.mockResolvedValue({ smsOptOutAt: null, phone: '+15551234567' } as never)
     await sendSMS({ ...baseOptions, leadId: 'lead-42' })
     expect(mockPrisma.message.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -112,8 +112,8 @@ describe('sendTemplateSMS', () => {
   beforeEach(() => {
     mockReset(mockPrisma)
     mockPrisma.sMSConfig.findUnique.mockResolvedValue(null)
-    mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as any)
-    mockPrisma.sMSTemplate.update.mockResolvedValue({} as any)
+    mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as never)
+    mockPrisma.sMSTemplate.update.mockResolvedValue({} as never)
     getTwilioCreate().mockReset()
     getTwilioCreate().mockResolvedValue({ sid: 'SM_test_123', status: 'queued', numSegments: '1' })
   })
@@ -126,20 +126,20 @@ describe('sendTemplateSMS', () => {
   })
 
   it('returns error when template is not active', async () => {
-    mockPrisma.sMSTemplate.findUnique.mockResolvedValue({ id: 'tmpl-1', body: 'Hi', isActive: false } as any)
+    mockPrisma.sMSTemplate.findUnique.mockResolvedValue({ id: 'tmpl-1', body: 'Hi', isActive: false } as never)
     const result = await sendTemplateSMS('tmpl-1', '+15551234567', {}, { organizationId: 'org-1' })
     expect(result.success).toBe(false)
     expect(result.error).toContain('not active')
   })
 
   it('sends SMS when template is active', async () => {
-    mockPrisma.sMSTemplate.findUnique.mockResolvedValue({ id: 'tmpl-1', body: 'Hi {{name}}', isActive: true } as any)
+    mockPrisma.sMSTemplate.findUnique.mockResolvedValue({ id: 'tmpl-1', body: 'Hi {{name}}', isActive: true } as never)
     const result = await sendTemplateSMS('tmpl-1', '+15551234567', { name: 'Alice' }, { organizationId: 'org-1' })
     expect(result.success).toBe(true)
   })
 
   it('increments template usage count', async () => {
-    mockPrisma.sMSTemplate.findUnique.mockResolvedValue({ id: 'tmpl-1', body: 'Hi', isActive: true } as any)
+    mockPrisma.sMSTemplate.findUnique.mockResolvedValue({ id: 'tmpl-1', body: 'Hi', isActive: true } as never)
     await sendTemplateSMS('tmpl-1', '+15551234567', {}, { organizationId: 'org-1' })
     expect(mockPrisma.sMSTemplate.update).toHaveBeenCalledWith(
       expect.objectContaining({

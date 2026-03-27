@@ -36,9 +36,9 @@ describe('send-time-optimizer.service', () => {
 
   describe('calculateOptimalSendTimes — timezone strategy', () => {
     it('uses lead timezone to set target hour', async () => {
-      ;(mockPrisma.lead.findMany as jest.Mock).mockResolvedValue([
+      mockPrisma.lead.findMany.mockResolvedValue([
         { id: 'lead1', timezone: 'America/New_York' },
-      ])
+      ] as never)
 
       const base = new Date('2025-06-01T15:00:00Z')
       const result = await calculateOptimalSendTimes(['lead1'], 'timezone', base, { targetHour: 10 })
@@ -50,9 +50,9 @@ describe('send-time-optimizer.service', () => {
     })
 
     it('falls back to America/New_York for leads without timezone', async () => {
-      ;(mockPrisma.lead.findMany as jest.Mock).mockResolvedValue([
+      mockPrisma.lead.findMany.mockResolvedValue([
         { id: 'lead2', timezone: null },
-      ])
+      ] as never)
 
       const base = new Date('2025-06-01T15:00:00Z')
       const result = await calculateOptimalSendTimes(['lead2'], 'timezone', base, { targetHour: 9 })

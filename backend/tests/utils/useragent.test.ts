@@ -2,7 +2,7 @@ jest.mock('ua-parser-js', () => {
   const UAParser = jest.fn().mockImplementation((ua: string) => ({
     getResult: jest.fn().mockReturnValue(
       // Minimal defaults overridden per test via mockImplementation
-      (UAParser as any).__getResult?.(ua) ?? {
+      (UAParser as unknown as { __getResult?: (ua: string) => object }).__getResult?.(ua) ?? {
         browser: { name: 'Unknown' },
         os: { name: 'Unknown' },
         device: { type: undefined },
@@ -23,7 +23,7 @@ function setupUAResult(result: object) {
 
 describe('parseUserAgent', () => {
   beforeEach(() => {
-    ;(UAParser as unknown as jest.Mock).mockClear()
+    (UAParser as unknown as jest.Mock).mockClear()
   })
 
   it('returns Unknown for null ua', () => {

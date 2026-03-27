@@ -26,7 +26,7 @@ describe('RequireRole', () => {
   })
 
   it('redirects to /auth/login when user is null', () => {
-    mockUseAuthStore.mockReturnValue(null as any)
+    mockUseAuthStore.mockReturnValue(null as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <RequireRole roles={['ADMIN']}>
         <div>Admin Page</div>
@@ -37,7 +37,7 @@ describe('RequireRole', () => {
   })
 
   it('redirects to /dashboard when user has wrong role', () => {
-    mockUseAuthStore.mockReturnValue({ role: 'USER' } as any)
+    mockUseAuthStore.mockReturnValue({ role: 'USER' } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <RequireRole roles={['ADMIN']}>
         <div>Admin Page</div>
@@ -48,7 +48,7 @@ describe('RequireRole', () => {
   })
 
   it('renders children when user has the required role (ADMIN)', () => {
-    mockUseAuthStore.mockReturnValue({ role: 'ADMIN' } as any)
+    mockUseAuthStore.mockReturnValue({ role: 'ADMIN' } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <RequireRole roles={['ADMIN', 'admin']}>
         <div>Admin Page</div>
@@ -58,7 +58,7 @@ describe('RequireRole', () => {
   })
 
   it('renders children when user has the required role (MANAGER)', () => {
-    mockUseAuthStore.mockReturnValue({ role: 'MANAGER' } as any)
+    mockUseAuthStore.mockReturnValue({ role: 'MANAGER' } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <RequireRole roles={['ADMIN', 'MANAGER']}>
         <div>Manager Page</div>
@@ -68,7 +68,7 @@ describe('RequireRole', () => {
   })
 
   it('redirects to custom fallback when provided', () => {
-    mockUseAuthStore.mockReturnValue({ role: 'USER' } as any)
+    mockUseAuthStore.mockReturnValue({ role: 'USER' } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <RequireRole roles={['ADMIN']} fallback="/custom-fallback">
         <div>Admin Page</div>
@@ -84,7 +84,7 @@ describe('RequireAdmin', () => {
   })
 
   it('renders children for ADMIN role', () => {
-    mockUseAuthStore.mockReturnValue({ role: 'ADMIN' } as any)
+    mockUseAuthStore.mockReturnValue({ role: 'ADMIN' } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <RequireAdmin>
         <div>Admin Only</div>
@@ -94,7 +94,7 @@ describe('RequireAdmin', () => {
   })
 
   it('redirects for non-admin role', () => {
-    mockUseAuthStore.mockReturnValue({ role: 'USER' } as any)
+    mockUseAuthStore.mockReturnValue({ role: 'USER' } as unknown as ReturnType<typeof useAuthStore>)
     renderWithRouter(
       <RequireAdmin>
         <div>Admin Only</div>

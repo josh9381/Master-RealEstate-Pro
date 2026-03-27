@@ -1,5 +1,6 @@
 import { mockDeep, mockReset } from 'jest-mock-extended'
 import { PrismaClient } from '@prisma/client'
+import type { Request } from 'express'
 
 const mockPrisma = mockDeep<PrismaClient>()
 jest.mock('../../src/config/database', () => ({
@@ -26,7 +27,7 @@ describe('apiKeyAudit utils', () => {
         ip: '1.2.3.4',
         headers: { 'user-agent': 'TestAgent/1.0' },
         socket: { remoteAddress: '5.6.7.8' },
-      } as any
+      } as unknown as Request
       ;(mockPrisma.aPIKeyAudit.create as jest.Mock).mockResolvedValue({})
 
       await logAPIKeyAccess('user1', 'twilio', 'created', req, 'org1')
@@ -49,8 +50,8 @@ describe('apiKeyAudit utils', () => {
         ip: undefined,
         headers: { 'x-forwarded-for': '9.9.9.9', 'user-agent': 'UA' },
         socket: {},
-      } as any
-      ;(mockPrisma.aPIKeyAudit.create as jest.Mock).mockResolvedValue({})
+      } as unknown as Request
+      (mockPrisma.aPIKeyAudit.create as jest.Mock).mockResolvedValue({})
 
       await logAPIKeyAccess('u2', 'sendgrid', 'updated', req)
 
@@ -59,7 +60,7 @@ describe('apiKeyAudit utils', () => {
     })
 
     it('uses "unknown" as organizationId when not provided', async () => {
-      ;(mockPrisma.aPIKeyAudit.create as jest.Mock).mockResolvedValue({})
+      (mockPrisma.aPIKeyAudit.create as jest.Mock).mockResolvedValue({})
 
       await logAPIKeyAccess('u3', 'openai', 'accessed')
 
@@ -68,14 +69,14 @@ describe('apiKeyAudit utils', () => {
     })
 
     it('does not throw when prisma.create fails', async () => {
-      ;(mockPrisma.aPIKeyAudit.create as jest.Mock).mockRejectedValue(new Error('DB error'))
+      (mockPrisma.aPIKeyAudit.create as jest.Mock).mockRejectedValue(new Error('DB error'))
 
       await expect(logAPIKeyAccess('u4', 'stripe', 'deleted')).resolves.toBeUndefined()
       expect(mockLogger.error).toHaveBeenCalled()
     })
 
     it('handles missing req gracefully (null ipAddress and userAgent)', async () => {
-      ;(mockPrisma.aPIKeyAudit.create as jest.Mock).mockResolvedValue({})
+      (mockPrisma.aPIKeyAudit.create as jest.Mock).mockResolvedValue({})
 
       await logAPIKeyAccess('u5', 'twilio', 'created', undefined, 'org2')
 
@@ -101,7 +102,7 @@ describe('apiKeyAudit utils', () => {
     })
 
     it('respects custom limit', async () => {
-      ;(mockPrisma.aPIKeyAudit.findMany as jest.Mock).mockResolvedValue([])
+      (mockPrisma.aPIKeyAudit.findMany as jest.Mock).mockResolvedValue([])
 
       await getAPIKeyAuditLogs('u2', 10)
 
@@ -125,7 +126,7 @@ describe('apiKeyAudit utils', () => {
     })
 
     it('respects custom limit', async () => {
-      ;(mockPrisma.aPIKeyAudit.findMany as jest.Mock).mockResolvedValue([])
+      (mockPrisma.aPIKeyAudit.findMany as jest.Mock).mockResolvedValue([])
 
       await getProviderAuditLogs('u3', 'twilio', 5)
 

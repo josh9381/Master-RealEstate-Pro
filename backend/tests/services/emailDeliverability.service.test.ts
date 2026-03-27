@@ -17,8 +17,8 @@ describe('emailDeliverability.service', () => {
 
   describe('recordBounce', () => {
     it('updates message status to FAILED with bounce info', async () => {
-      ;(mockPrisma.message.update as jest.Mock).mockResolvedValue({})
-      ;(mockPrisma.message.findUnique as jest.Mock).mockResolvedValue(null)
+      mockPrisma.message.update.mockResolvedValue({} as never)
+      mockPrisma.message.findUnique.mockResolvedValue(null)
 
       const ts = new Date('2025-01-15T10:00:00Z')
       await recordBounce({ messageId: 'msg1', bounceType: BounceType.SOFT, reason: 'Mailbox full', timestamp: ts })
@@ -35,9 +35,9 @@ describe('emailDeliverability.service', () => {
     })
 
     it('suppresses lead email for hard bounce', async () => {
-      ;(mockPrisma.message.update as jest.Mock).mockResolvedValue({})
-      ;(mockPrisma.message.findUnique as jest.Mock).mockResolvedValue({ toAddress: 'test@example.com', leadId: 'lead1' })
-      ;(mockPrisma.lead.update as jest.Mock).mockResolvedValue({})
+      mockPrisma.message.update.mockResolvedValue({} as never)
+      mockPrisma.message.findUnique.mockResolvedValue({ toAddress: 'test@example.com', leadId: 'lead1' } as never)
+      mockPrisma.lead.update.mockResolvedValue({} as never)
 
       const ts = new Date()
       await recordBounce({ messageId: 'msg2', bounceType: BounceType.HARD, reason: 'Invalid address', timestamp: ts })
@@ -49,9 +49,9 @@ describe('emailDeliverability.service', () => {
     })
 
     it('suppresses lead email for complaint bounce type', async () => {
-      ;(mockPrisma.message.update as jest.Mock).mockResolvedValue({})
-      ;(mockPrisma.message.findUnique as jest.Mock).mockResolvedValue({ toAddress: 'c@c.com', leadId: 'lead2' })
-      ;(mockPrisma.lead.update as jest.Mock).mockResolvedValue({})
+      mockPrisma.message.update.mockResolvedValue({} as never)
+      mockPrisma.message.findUnique.mockResolvedValue({ toAddress: 'c@c.com', leadId: 'lead2' } as never)
+      mockPrisma.lead.update.mockResolvedValue({} as never)
 
       await recordBounce({ messageId: 'msg3', bounceType: BounceType.COMPLAINT, reason: 'Complaint', timestamp: new Date() })
 
@@ -59,7 +59,7 @@ describe('emailDeliverability.service', () => {
     })
 
     it('does not suppress for soft bounce', async () => {
-      ;(mockPrisma.message.update as jest.Mock).mockResolvedValue({})
+      mockPrisma.message.update.mockResolvedValue({} as never)
 
       await recordBounce({ messageId: 'msg4', bounceType: BounceType.SOFT, reason: 'Temp', timestamp: new Date() })
 
@@ -68,8 +68,8 @@ describe('emailDeliverability.service', () => {
     })
 
     it('does not suppress when hard bounce message has no leadId', async () => {
-      ;(mockPrisma.message.update as jest.Mock).mockResolvedValue({})
-      ;(mockPrisma.message.findUnique as jest.Mock).mockResolvedValue({ toAddress: 'x@x.com', leadId: null })
+      mockPrisma.message.update.mockResolvedValue({} as never)
+      mockPrisma.message.findUnique.mockResolvedValue({ toAddress: 'x@x.com', leadId: null } as never)
 
       await recordBounce({ messageId: 'msg5', bounceType: BounceType.HARD, reason: 'Gone', timestamp: new Date() })
 
@@ -79,9 +79,9 @@ describe('emailDeliverability.service', () => {
 
   describe('recordSpamComplaint', () => {
     it('updates message with COMPLAINT bounce type', async () => {
-      ;(mockPrisma.message.update as jest.Mock).mockResolvedValue({})
-      ;(mockPrisma.message.findUnique as jest.Mock).mockResolvedValue({ leadId: 'lead3' })
-      ;(mockPrisma.lead.update as jest.Mock).mockResolvedValue({})
+      mockPrisma.message.update.mockResolvedValue({} as never)
+      mockPrisma.message.findUnique.mockResolvedValue({ leadId: 'lead3' } as never)
+      mockPrisma.lead.update.mockResolvedValue({} as never)
 
       const ts = new Date()
       await recordSpamComplaint('msg6', ts)
@@ -93,9 +93,9 @@ describe('emailDeliverability.service', () => {
     })
 
     it('suppresses lead email after spam complaint', async () => {
-      ;(mockPrisma.message.update as jest.Mock).mockResolvedValue({})
-      ;(mockPrisma.message.findUnique as jest.Mock).mockResolvedValue({ leadId: 'lead4' })
-      ;(mockPrisma.lead.update as jest.Mock).mockResolvedValue({})
+      mockPrisma.message.update.mockResolvedValue({} as never)
+      mockPrisma.message.findUnique.mockResolvedValue({ leadId: 'lead4' } as never)
+      mockPrisma.lead.update.mockResolvedValue({} as never)
 
       await recordSpamComplaint('msg7', new Date())
 
@@ -106,8 +106,8 @@ describe('emailDeliverability.service', () => {
     })
 
     it('does not suppress when spam complaint message has no leadId', async () => {
-      ;(mockPrisma.message.update as jest.Mock).mockResolvedValue({})
-      ;(mockPrisma.message.findUnique as jest.Mock).mockResolvedValue({ leadId: null })
+      mockPrisma.message.update.mockResolvedValue({} as never)
+      mockPrisma.message.findUnique.mockResolvedValue({ leadId: null } as never)
 
       await recordSpamComplaint('msg8', new Date())
 

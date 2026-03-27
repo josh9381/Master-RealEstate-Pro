@@ -48,12 +48,12 @@ describe('reminder.service', () => {
   })
 
   it('throws when appointment not found', async () => {
-    ;(mockPrisma.appointment.findUnique as jest.Mock).mockResolvedValue(null)
+    mockPrisma.appointment.findUnique.mockResolvedValue(null)
     await expect(sendAppointmentReminder({ appointmentId: 'nope', method: 'email' })).rejects.toThrow('Appointment not found')
   })
 
   it('sends email reminder when method=email', async () => {
-    ;(mockPrisma.appointment.findUnique as jest.Mock).mockResolvedValue(makeAppointment())
+    mockPrisma.appointment.findUnique.mockResolvedValue(makeAppointment() as never)
     mockSendEmail.mockResolvedValue({ success: true })
 
     const result = await sendAppointmentReminder({ appointmentId: 'appt1', method: 'email' })
@@ -68,7 +68,7 @@ describe('reminder.service', () => {
   })
 
   it('sends SMS reminder when method=sms', async () => {
-    ;(mockPrisma.appointment.findUnique as jest.Mock).mockResolvedValue(makeAppointment())
+    mockPrisma.appointment.findUnique.mockResolvedValue(makeAppointment() as never)
     mockSendSMS.mockResolvedValue({ success: true })
 
     const result = await sendAppointmentReminder({ appointmentId: 'appt1', method: 'sms' })
@@ -80,7 +80,7 @@ describe('reminder.service', () => {
   })
 
   it('sends both email and SMS when method=both', async () => {
-    ;(mockPrisma.appointment.findUnique as jest.Mock).mockResolvedValue(makeAppointment())
+    mockPrisma.appointment.findUnique.mockResolvedValue(makeAppointment() as never)
     mockSendEmail.mockResolvedValue({})
     mockSendSMS.mockResolvedValue({})
 
@@ -93,8 +93,8 @@ describe('reminder.service', () => {
   })
 
   it('returns email=false when lead has no email', async () => {
-    ;(mockPrisma.appointment.findUnique as jest.Mock).mockResolvedValue(
-      makeAppointment({ lead: { id: 'l1', firstName: 'X', lastName: 'Y', email: null, phone: null, organizationId: 'org1' } })
+    mockPrisma.appointment.findUnique.mockResolvedValue(
+      makeAppointment({ lead: { id: 'l1', firstName: 'X', lastName: 'Y', email: null, phone: null, organizationId: 'org1' } }) as never
     )
 
     const result = await sendAppointmentReminder({ appointmentId: 'appt1', method: 'email' })
@@ -104,8 +104,8 @@ describe('reminder.service', () => {
   })
 
   it('returns sms=false when lead has no phone', async () => {
-    ;(mockPrisma.appointment.findUnique as jest.Mock).mockResolvedValue(
-      makeAppointment({ lead: { id: 'l1', firstName: 'X', lastName: 'Y', email: 'x@x.com', phone: null, organizationId: 'org1' } })
+    mockPrisma.appointment.findUnique.mockResolvedValue(
+      makeAppointment({ lead: { id: 'l1', firstName: 'X', lastName: 'Y', email: 'x@x.com', phone: null, organizationId: 'org1' } }) as never
     )
 
     const result = await sendAppointmentReminder({ appointmentId: 'appt1', method: 'sms' })
@@ -115,7 +115,7 @@ describe('reminder.service', () => {
   })
 
   it('returns email=false and catches sendEmail failure gracefully', async () => {
-    ;(mockPrisma.appointment.findUnique as jest.Mock).mockResolvedValue(makeAppointment())
+    mockPrisma.appointment.findUnique.mockResolvedValue(makeAppointment() as never)
     mockSendEmail.mockRejectedValue(new Error('SMTP failure'))
 
     const result = await sendAppointmentReminder({ appointmentId: 'appt1', method: 'email' })
@@ -124,7 +124,7 @@ describe('reminder.service', () => {
   })
 
   it('supports custom message in email body', async () => {
-    ;(mockPrisma.appointment.findUnique as jest.Mock).mockResolvedValue(makeAppointment())
+    mockPrisma.appointment.findUnique.mockResolvedValue(makeAppointment() as never)
     mockSendEmail.mockResolvedValue({})
 
     await sendAppointmentReminder({ appointmentId: 'appt1', method: 'email', customMessage: 'Your custom note here' })

@@ -12,7 +12,7 @@ describe('ConfirmDialog', () => {
   })
 
   it('renders nothing when options is null', () => {
-    mockUseConfirmStore.mockReturnValue({ open: false, options: null, close: vi.fn() } as any)
+    mockUseConfirmStore.mockReturnValue({ open: false, options: null, close: vi.fn(), resolve: null, confirm: vi.fn() })
     const { container } = render(<ConfirmDialog />)
     expect(container.firstChild).toBeNull()
   })
@@ -22,7 +22,9 @@ describe('ConfirmDialog', () => {
       open: true,
       options: { title: 'Delete item?', message: 'This cannot be undone.' },
       close: vi.fn(),
-    } as any)
+      resolve: null,
+      confirm: vi.fn(),
+    })
     render(<ConfirmDialog />)
     expect(screen.getByText('Delete item?')).toBeInTheDocument()
     expect(screen.getByText('This cannot be undone.')).toBeInTheDocument()
@@ -33,7 +35,9 @@ describe('ConfirmDialog', () => {
       open: true,
       options: { title: 'Are you sure?', message: 'Please confirm.' },
       close: vi.fn(),
-    } as any)
+      resolve: null,
+      confirm: vi.fn(),
+    })
     render(<ConfirmDialog />)
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument()
@@ -49,7 +53,9 @@ describe('ConfirmDialog', () => {
         confirmLabel: 'Yes, Remove',
       },
       close: vi.fn(),
-    } as any)
+      resolve: null,
+      confirm: vi.fn(),
+    })
     render(<ConfirmDialog />)
     expect(screen.getByText('No')).toBeInTheDocument()
     expect(screen.getByText('Yes, Remove')).toBeInTheDocument()
@@ -61,7 +67,9 @@ describe('ConfirmDialog', () => {
       open: true,
       options: { title: 'Are you sure?', message: 'Sure?' },
       close,
-    } as any)
+      resolve: null,
+      confirm: vi.fn(),
+    })
     render(<ConfirmDialog />)
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(close).toHaveBeenCalledWith(false)
@@ -73,7 +81,9 @@ describe('ConfirmDialog', () => {
       open: true,
       options: { title: 'Are you sure?', message: 'Sure?' },
       close,
-    } as any)
+      resolve: null,
+      confirm: vi.fn(),
+    })
     render(<ConfirmDialog />)
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     expect(close).toHaveBeenCalledWith(true)
@@ -84,7 +94,9 @@ describe('ConfirmDialog', () => {
       open: true,
       options: { title: 'Delete?', message: 'Permanent?', variant: 'destructive', confirmLabel: 'Delete' },
       close: vi.fn(),
-    } as any)
+      resolve: null,
+      confirm: vi.fn(),
+    })
     render(<ConfirmDialog />)
     const confirmBtn = screen.getByRole('button', { name: 'Delete' })
     expect(confirmBtn).toBeInTheDocument()
