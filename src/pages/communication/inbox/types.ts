@@ -16,7 +16,7 @@ export interface Message {
   emailOpened?: boolean
   emailClicked?: boolean
   status?: string
-  snoozed?: number
+  snoozedUntil?: string | null
   archived?: boolean
   trashed?: boolean
   attachments?: Array<{

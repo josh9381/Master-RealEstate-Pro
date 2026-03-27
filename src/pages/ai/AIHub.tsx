@@ -220,7 +220,7 @@ const AIHub = () => {
         </Link>
 
         <div className="relative">
-          <Card className="h-full opacity-75">
+          <Card className="h-full opacity-60 pointer-events-none" aria-disabled="true">
             <CardContent className="pt-6">
               <div className="flex items-start justify-between">
                 <div className="p-2 bg-cyan-500/10 rounded-lg">

@@ -106,7 +106,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     { id: 'dashboard', type: 'page', title: 'Dashboard', description: 'View your overview and statistics', url: '/dashboard', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'leads', type: 'page', title: 'Leads', description: 'Manage your leads and contacts', url: '/leads', icon: <User className="w-4 h-4" /> },
     { id: 'campaigns', type: 'page', title: 'Campaigns', description: 'Create and manage campaigns', url: '/campaigns', icon: <Target className="w-4 h-4" /> },
-    { id: 'automation', type: 'page', title: 'Automation', description: 'Workflow automation', url: '/automation', icon: <Zap className="w-4 h-4" /> },
+    { id: 'automation', type: 'page', title: 'Automation', description: 'Workflow automation', url: '/workflows', icon: <Zap className="w-4 h-4" /> },
     { id: 'analytics', type: 'page', title: 'Analytics', description: 'View reports and insights', url: '/analytics', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'communications', type: 'page', title: 'Communications', description: 'Inbox and messages', url: '/communications', icon: <Mail className="w-4 h-4" /> },
     { id: 'settings', type: 'page', title: 'Settings', description: 'Account and preferences', url: '/settings', icon: <Settings className="w-4 h-4" /> },
@@ -163,7 +163,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
         title: workflow.name,
         subtitle: workflow.trigger,
         description: `${workflow.status} - ${workflow.executionCount || 0} runs`,
-        url: `/automation/workflows/${workflow.id}`,
+        url: `/workflows/builder?id=${workflow.id}`,
         icon: <Zap className="w-4 h-4" />,
       }))
       results.push(...workflowResults)

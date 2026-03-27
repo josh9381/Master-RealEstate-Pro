@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { register, login, verify2FALogin, refresh, me, forgotPassword, resetPassword, logout, getActiveSessions, terminateSession, verifyEmail, resendVerification, terminateAllSessions, deleteAccount } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 import { validateBody } from '../middleware/validate';
-import { registerSchema, loginSchema, refreshSchema } from '../validators/auth.validator';
+import { registerSchema, loginSchema, refreshSchema, verify2FASchema } from '../validators/auth.validator';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authLimiter, registerLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
 
@@ -40,6 +40,7 @@ router.post(
 router.post(
   '/login/2fa-verify',
   authLimiter,
+  validateBody(verify2FASchema),
   asyncHandler(verify2FALogin)
 );
 

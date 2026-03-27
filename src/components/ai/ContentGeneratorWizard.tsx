@@ -2,6 +2,7 @@ import { logger } from '@/lib/logger'
 import React, { useState } from 'react';
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/store/authStore';
 import {
   Wand2,
   Mail,
@@ -141,7 +142,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Authorization': `Bearer ${useAuthStore.getState().accessToken}`,
         },
         body: JSON.stringify(body),
       });

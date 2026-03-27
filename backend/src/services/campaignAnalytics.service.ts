@@ -60,19 +60,21 @@ export async function getCampaignMetrics(campaignId: string): Promise<CampaignMe
     },
   })
 
-  // Count different event types
-  const sent = activities.filter((a) => a.type === 'EMAIL_SENT').length
-  const opened = activities.filter((a) => a.type === 'EMAIL_OPENED').length
-  const clicked = activities.filter((a) => a.type === 'EMAIL_CLICKED').length
-
-  // Get message stats for this campaign
-  const messageIds = activities
-    .filter((a) => a.type === 'EMAIL_SENT')
-    .map((a) => {
-      const metadata = a.metadata as Record<string, unknown>
-      return metadata?.messageId as string
-    })
-    .filter(Boolean)
+  // Single-pass aggregation instead of 4 separate filter passes
+  let sent = 0, opened = 0, clicked = 0
+  const messageIds: string[] = []
+  for (const a of activities) {
+    const metadata = a.metadata as Record<string, unknown>
+    if (a.type === 'EMAIL_SENT') {
+      sent++
+      const mid = metadata?.messageId as string
+      if (mid) messageIds.push(mid)
+    } else if (a.type === 'EMAIL_OPENED') {
+      opened++
+    } else if (a.type === 'EMAIL_CLICKED') {
+      clicked++
+    }
+  }
 
   let delivered = 0
   let bounced = 0
@@ -145,56 +147,59 @@ export async function trackEmailOpen(
   messageId: string,
   organizationId: string
 ): Promise<void> {
-  // Idempotency: skip if this open was already tracked
-  const existing = await prisma.activity.findFirst({
-    where: {
-      type: 'EMAIL_OPENED',
-      campaignId,
-      leadId,
-      metadata: { path: ['messageId'], equals: messageId },
-    },
-    select: { id: true },
-  })
-  if (existing) return
-
-  // Create activity
-  await prisma.activity.create({
-    data: {
-      type: 'EMAIL_OPENED',
-      title: 'Email Opened',
-      description: 'Lead opened campaign email',
-      campaignId,
-      leadId,
-      organizationId,
-      metadata: {
-        messageId,
-        timestamp: new Date().toISOString(),
+  // Wrap all operations in a transaction for atomicity and idempotency
+  await prisma.$transaction(async (tx) => {
+    // Idempotency: skip if this open was already tracked
+    const existing = await tx.activity.findFirst({
+      where: {
+        type: 'EMAIL_OPENED',
+        campaignId,
+        leadId,
+        metadata: { path: ['messageId'], equals: messageId },
       },
-    },
-  })
+      select: { id: true },
+    })
+    if (existing) return
 
-  // Update message
-  await prisma.message.update({
-    where: { id: messageId },
-    data: {
-      readAt: new Date(),
-    },
-  })
+    // Create activity
+    await tx.activity.create({
+      data: {
+        type: 'EMAIL_OPENED',
+        title: 'Email Opened',
+        description: 'Lead opened campaign email',
+        campaignId,
+        leadId,
+        organizationId,
+        metadata: {
+          messageId,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    })
 
-  // Update campaign metrics
-  await prisma.campaign.update({
-    where: { id: campaignId },
-    data: {
-      opened: { increment: 1 },
-    },
-  })
+    // Update message
+    await tx.message.update({
+      where: { id: messageId },
+      data: {
+        readAt: new Date(),
+      },
+    })
 
-  // Update lead score
-  await prisma.lead.update({
-    where: { id: leadId },
-    data: {
-      score: { increment: 5 }, // +5 points for email open
-    },
+    // Update campaign metrics
+    await tx.campaign.update({
+      where: { id: campaignId },
+      data: {
+        opened: { increment: 1 },
+      },
+    })
+
+    // Update lead score
+    await tx.lead.update({
+      where: { id: leadId },
+      data: {
+        score: { increment: 5 }, // +5 points for email open
+      },
+    })
   })
 }
 
@@ -208,70 +213,73 @@ export async function trackEmailClick(
   url: string,
   organizationId: string
 ): Promise<void> {
-  // Idempotency: skip if this exact click was already tracked
-  const existing = await prisma.activity.findFirst({
-    where: {
-      type: 'EMAIL_CLICKED',
-      campaignId,
-      leadId,
-      metadata: { path: ['messageId'], equals: messageId },
-    },
-    select: { id: true },
-  })
-  if (existing) return
-
-  // Create activity
-  await prisma.activity.create({
-    data: {
-      type: 'EMAIL_CLICKED',
-      title: 'Email Link Clicked',
-      description: `Lead clicked link: ${url}`,
-      campaignId,
-      leadId,
-      organizationId,
-      metadata: {
-        messageId,
-        url,
-        timestamp: new Date().toISOString(),
+  // Wrap all operations in a transaction for atomicity and idempotency
+  await prisma.$transaction(async (tx) => {
+    // Idempotency: skip if this exact click was already tracked
+    const existing = await tx.activity.findFirst({
+      where: {
+        type: 'EMAIL_CLICKED',
+        campaignId,
+        leadId,
+        metadata: { path: ['messageId'], equals: messageId },
       },
-    },
-  })
+      select: { id: true },
+    })
+    if (existing) return
 
-  // Update message metadata to track clicks
-  const message = await prisma.message.findUnique({
-    where: { id: messageId },
-    select: { metadata: true },
-  })
-
-  const metadata = (message?.metadata as Record<string, unknown>) || {}
-  const clicks = ((metadata.clicks as number) || 0) + 1
-
-  await prisma.message.update({
-    where: { id: messageId },
-    data: {
-      metadata: {
-        ...metadata,
-        clicked: true,
-        clicks,
-        lastClickedAt: new Date().toISOString(),
+    // Create activity
+    await tx.activity.create({
+      data: {
+        type: 'EMAIL_CLICKED',
+        title: 'Email Link Clicked',
+        description: `Lead clicked link: ${url}`,
+        campaignId,
+        leadId,
+        organizationId,
+        metadata: {
+          messageId,
+          url,
+          timestamp: new Date().toISOString(),
+        },
       },
+    })
+
+    // Update message metadata to track clicks
+    const message = await tx.message.findUnique({
+      where: { id: messageId },
+      select: { metadata: true },
+    })
+
+    const metadata = (message?.metadata as Record<string, unknown>) || {}
+    const clicks = ((metadata.clicks as number) || 0) + 1
+
+    await tx.message.update({
+      where: { id: messageId },
+      data: {
+        metadata: {
+          ...metadata,
+          clicked: true,
+          clicks,
+          lastClickedAt: new Date().toISOString(),
+        },
     },
   })
 
-  // Update campaign metrics
-  await prisma.campaign.update({
-    where: { id: campaignId },
-    data: {
-      clicked: { increment: 1 },
-    },
-  })
+    // Update campaign metrics
+    await tx.campaign.update({
+      where: { id: campaignId },
+      data: {
+        clicked: { increment: 1 },
+      },
+    })
 
-  // Update lead score
-  await prisma.lead.update({
-    where: { id: leadId },
-    data: {
-      score: { increment: 10 }, // +10 points for email click
-    },
+    // Update lead score
+    await tx.lead.update({
+      where: { id: leadId },
+      data: {
+        score: { increment: 10 }, // +10 points for email click
+      },
+    })
   })
 }
 

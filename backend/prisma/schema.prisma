@@ -29,6 +29,8 @@ model Activity {
   @@index([type])
   @@index([userId])
   @@index([organizationId, createdAt])
+  @@index([organizationId, type])
+  @@index([campaignId, type])
   @@index([organizationId])
 }
 
@@ -630,6 +632,10 @@ model User {
   jobTitle             String?
   company              String?
   address              String?
+  city                 String?
+  state                String?
+  zipCode              String?
+  country              String?
   role                 Role                  @default(USER)
   isActive             Boolean               @default(true)
   emailVerified        Boolean               @default(false)
@@ -639,6 +645,8 @@ model User {
   lastLoginIp          String?
   twoFactorEnabled     Boolean               @default(false)
   twoFactorSecret      String?
+  failedLoginAttempts  Int                   @default(0)
+  lockedUntil          DateTime?
   tosAcceptedAt        DateTime?
   emailVerificationToken String?
   emailVerificationExpiry DateTime?

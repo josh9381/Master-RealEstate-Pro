@@ -123,7 +123,8 @@ export function useSessionManager() {
     idleTimerRef.current = setTimeout(() => {
       logger.info('[SessionManager] Auto-logout due to inactivity')
       clearAuth()
-      window.location.href = '/auth/login?reason=idle'
+      const returnPath = encodeURIComponent(window.location.pathname + window.location.search)
+      window.location.href = `/auth/login?reason=idle&returnTo=${returnPath}`
     }, IDLE_TIMEOUT_MS)
   }, [clearAuth])
 

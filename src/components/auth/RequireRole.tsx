@@ -35,7 +35,7 @@ export function RequireRole({ children, roles, fallback = '/dashboard' }: Requir
  */
 export function RequireAdmin({ children }: { children: React.ReactNode }) {
   return (
-    <RequireRole roles={['ADMIN', 'admin', 'MANAGER', 'manager']}>
+    <RequireRole roles={['ADMIN', 'admin']}>
       {children}
     </RequireRole>
   )

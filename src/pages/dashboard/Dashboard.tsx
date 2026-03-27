@@ -141,18 +141,18 @@ function Dashboard() {
     },
   })
 
-  // Fetch activity feed for recent activities
+  // Fetch activity feed for recent activities (no dateRange dependency — always fetches last 6)
   const { data: activityFeedData, isLoading: activityLoading, isError: activityError, refetch: refetchActivity } = useQuery({
-    queryKey: ['activity-feed', dateRange],
+    queryKey: ['activity-feed'],
     queryFn: async () => {
       const response = await analyticsApi.getActivityFeed({ limit: 6 })
       return response.data
     },
   })
 
-  // Fetch recent tasks
+  // Fetch recent tasks (no dateRange dependency — always fetches latest 5)
   const { data: tasksData, isLoading: tasksLoading, isError: tasksError, refetch: refetchTasks } = useQuery({
-    queryKey: ['recent-tasks', dateRange],
+    queryKey: ['recent-tasks'],
     queryFn: async () => {
       const response = await tasksApi.getTasks({ page: 1, limit: 5 })
       return response.data
@@ -198,12 +198,22 @@ function Dashboard() {
     retry: false,
   })
 
+  // Fetch distinct lead sources for filter dropdown
+  const { data: leadSourceOptions } = useQuery({
+    queryKey: ['lead-source-options'],
+    queryFn: async () => {
+      const response = await analyticsApi.getLeadSources()
+      return response.data as { value: string; label: string; count: number }[]
+    },
+    staleTime: 5 * 60_000,
+  })
+
   const isLoading = statsLoading
 
   // Transform API data for charts
   // Lead source data for pie chart — aggregate to top 5 + "Other" for readability
   const LEAD_SOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#6b7280']
-  const leadSourceData = (() => {
+  const leadSourceData = useMemo(() => {
     if (!leadAnalyticsData?.bySource) return []
     const all = Object.entries(leadAnalyticsData.bySource)
       .map(([name, value]) => ({ name, value: typeof value === 'number' ? value : 0 }))
@@ -217,7 +227,8 @@ function Dashboard() {
       ...top5.map((s, i) => ({ ...s, color: LEAD_SOURCE_COLORS[i] })),
       { name: 'Other', value: otherValue, color: LEAD_SOURCE_COLORS[5] }
     ]
-  })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadAnalyticsData])
 
   // Conversion funnel data
   const conversionData = conversionFunnelData?.stages 
@@ -237,7 +248,7 @@ function Dashboard() {
     : []
 
   // Recent activities from API
-  const recentActivities: DashboardActivity[] = activityFeedData?.activities?.slice(0, 6).map((activity: ActivityRecord) => ({
+  const recentActivities: DashboardActivity[] = useMemo(() => activityFeedData?.activities?.slice(0, 6).map((activity: ActivityRecord) => ({
     id: activity.id,
     type: (activity.type || 'note').toLowerCase(),
     action: activity.title || '',
@@ -245,7 +256,7 @@ function Dashboard() {
     leadId: activity.leadId ? String(activity.leadId) : undefined,
     time: new Date(activity.createdAt).toLocaleString(),
     icon: Users // Default icon
-  })) || []
+  })) || [], [activityFeedData])
 
   // Upcoming tasks from API
   const upcomingTasks: DashboardTask[] = tasksData?.tasks?.slice(0, 5).map((task: { id: string; title: string; dueDate?: string; priority?: string; status?: string }) => ({
@@ -277,12 +288,13 @@ function Dashboard() {
     : []
 
   // Quick stats from API
-  const quickStats = [
+  const quickStats = useMemo(() => [
     { label: 'Total Activities', value: dashboardData?.activities?.total?.toString() || '0', change: '' },
     { label: 'Tasks Due Today', value: dashboardData?.tasks?.dueToday?.toString() || '0', change: '' },
     { label: 'Active Campaigns', value: dashboardData?.campaigns?.active?.toString() || '0', change: '' },
     { label: 'Tasks Completed', value: `${dashboardData?.tasks?.completed || 0}/${dashboardData?.tasks?.total || 0}`, change: `${formatRate(dashboardData?.tasks?.completionRate || 0)}%` },
-  ]
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [dashboardData])
 
   // Dashboard performance targets (can be customized per organization)
   const DEFAULT_LEADS_TARGET = 3000
@@ -754,10 +766,9 @@ function Dashboard() {
                   aria-label="Filter by lead source"
                 >
                   <option value="all">All Sources</option>
-                  <option value="website">Website</option>
-                  <option value="referral">Referral</option>
-                  <option value="social">Social Media</option>
-                  <option value="direct">Direct</option>
+                  {leadSourceOptions?.map((src) => (
+                    <option key={src.value} value={src.value}>{src.label} ({src.count})</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -900,7 +911,7 @@ function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Revenue & Leads Trend</CardTitle>
+              <CardTitle>Revenue & Deals Trend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">6-month overview</p>
             </div>
             <Button variant="ghost" size="sm" onClick={() => navigate('/analytics')} aria-label="View full analytics">
@@ -1091,7 +1102,7 @@ function Dashboard() {
             ) : (
             <div className="space-y-4">
               {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-accent/50 rounded-md -mx-1 px-1" onClick={() => activity.leadId ? navigate(`/leads/${activity.leadId}`) : undefined}>
+                <button type="button" key={activity.id} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-accent/50 rounded-md -mx-1 px-1 w-full text-left" onClick={() => activity.leadId ? navigate(`/leads/${activity.leadId}`) : undefined}>
                   <div className="mt-1 p-2 rounded-full bg-primary/10">
                     <activity.icon className="h-4 w-4 text-primary" />
                   </div>
@@ -1100,7 +1111,7 @@ function Dashboard() {
                     <p className="text-sm text-muted-foreground">{activity.lead}</p>
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
-                </div>
+                </button>
               ))}
             </div>
             )}
@@ -1207,7 +1218,7 @@ function Dashboard() {
                 const aptTime = apt.startTime || apt.scheduledAt
                 const leadName = apt.lead?.name || [apt.lead?.firstName, apt.lead?.lastName].filter(Boolean).join(' ') || apt.leadName
                 return (
-                <div key={apt.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate('/calendar')}>
+                <button type="button" key={apt.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer w-full text-left" onClick={() => navigate('/calendar')}>
                   <div className="mt-0.5 p-2 rounded-lg bg-primary/10">
                     <Calendar className="h-4 w-4 text-primary" />
                   </div>
@@ -1226,7 +1237,7 @@ function Dashboard() {
                   {apt.type && (
                     <Badge variant="outline" className="text-xs shrink-0">{apt.type}</Badge>
                   )}
-                </div>
+                </button>
                 )
               })}
             </div>
@@ -1303,7 +1314,7 @@ function Dashboard() {
       <Card className="border-l-4 border-l-yellow-500" role="region" aria-label="Alerts and notifications">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-yellow-500" />
+            <Bell className="h-5 w-5 text-yellow-600" />
             <CardTitle>Alerts & Notifications</CardTitle>
           </div>
         </CardHeader>

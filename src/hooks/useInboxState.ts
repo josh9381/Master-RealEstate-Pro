@@ -46,6 +46,7 @@ export function useInboxState() {
 
   const resetCompose = () => {
     setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeLeadId('')
+    setComposeType('email')
   }
 
   // ── AI / Enhance ──────────────────────────────────────────────

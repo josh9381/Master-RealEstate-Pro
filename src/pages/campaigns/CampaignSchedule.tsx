@@ -206,10 +206,12 @@ const CampaignSchedule = () => {
 
     try {
       setIsRescheduling(true);
-      // Send ISO string which preserves the local timezone offset
+      // Send ISO string and include user timezone for accurate scheduling
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       await campaignsApi.rescheduleCampaign(
         rescheduleModal.campaignId,
-        newStartDate.toISOString()
+        newStartDate.toISOString(),
+        userTimezone
       );
       
       toast.success(`Campaign "${rescheduleModal.campaignName}" rescheduled to ${newStartDate.toLocaleString()}`);

@@ -90,7 +90,7 @@ export const AttachmentModal = ({
 
             <div className="text-xs text-muted-foreground">
               <p>Supported formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF</p>
-              <p>Maximum file size: 25 MB</p>
+              <p>Maximum 10 MB per file, 25 MB total</p>
             </div>
 
             <div className="flex justify-end gap-2">

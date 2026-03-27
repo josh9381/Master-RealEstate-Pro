@@ -50,8 +50,11 @@ interface AIAssistantProps {
  * any content that might bypass the rendering pipeline.
  */
 function sanitizeMessageContent(content: string): string {
-  // Strip HTML tags
-  return content.replace(/<[^>]*>/g, '')
+  // Create a temporary element and extract only text content
+  // This handles nested tags, encoded entities, and edge cases
+  // that regex-based stripping misses
+  const doc = new DOMParser().parseFromString(content, 'text/html')
+  return doc.body.textContent || ''
 }
 
 export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantProps) {

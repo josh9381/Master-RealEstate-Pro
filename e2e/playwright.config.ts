@@ -1,22 +1,20 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
-  forbidOnly: true,
-  retries: 2,
-  workers: 4,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
   reporter: [
     ['html', { open: 'never' }],
     ['list'],
   ],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'off',
-    actionTimeout: 8000,
-    navigationTimeout: 15000,
+    video: 'retain-on-failure',
   },
   projects: [
     {
@@ -24,5 +22,17 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  timeout: 45000,
-});
+  /* Start local servers if not running in CI (CI starts them separately) */
+  ...(process.env.CI
+    ? {}
+    : {
+        webServer: [
+          {
+            command: 'cd .. && npm run dev',
+            url: 'http://localhost:3000',
+            reuseExistingServer: true,
+            timeout: 30_000,
+          },
+        ],
+      }),
+})

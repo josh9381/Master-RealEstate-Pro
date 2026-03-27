@@ -31,7 +31,8 @@ interface NotificationCategory {
 const NotificationSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const userId = useAuthStore((s) => s.user?.id);
+  const user = useAuthStore((s) => s.user);
+  const userId = user?.id;
 
   // Sound settings (per-user, localStorage)
   const [soundSettings, setSoundSettings] = useState<SoundSettings>(() => getSoundSettings(userId));
@@ -56,7 +57,7 @@ const NotificationSettings = () => {
   // Channel toggles
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(true);
-  const [smsEnabled, setSmsEnabled] = useState(true);
+  const [smsEnabled, setSmsEnabled] = useState(false);
   
   // Quiet hours
   const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
@@ -159,6 +160,10 @@ const NotificationSettings = () => {
   });
 
   const handleSave = () => {
+    if (quietHoursEnabled && quietStart === quietEnd) {
+      toast.error('Quiet hours start and end times cannot be the same');
+      return;
+    }
     saveMutation.mutate({
       emailEnabled,
       pushEnabled,
@@ -261,7 +266,7 @@ const NotificationSettings = () => {
                 </div>
                 <div>
                   <h4 className="font-semibold">Email</h4>
-                  <p className="text-sm text-muted-foreground">john.doe@company.com</p>
+                  <p className="text-sm text-muted-foreground">{user?.email || 'Not set'}</p>
                 </div>
               </div>
               <label className="flex items-center space-x-2 cursor-pointer">

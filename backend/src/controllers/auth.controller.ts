@@ -87,23 +87,22 @@ export async function register(req: Request, res: Response): Promise<void> {
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Generate unique organization slug from company name or email
+  // Generate base slug from company name or email
   const baseSlug = (companyName || email.split('@')[0])
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-  
-  let slug = baseSlug;
-  let counter = 1;
-  
-  // Ensure slug is unique
-  while (await prisma.organization.findUnique({ where: { slug } })) {
-    slug = `${baseSlug}-${counter}`;
-    counter++;
-  }
 
-  // Create organization and user in a transaction
+  // Create organization and user in a transaction (slug uniqueness checked inside to avoid TOCTOU)
   const result = await prisma.$transaction(async (tx) => {
+    // Ensure slug is unique inside transaction to prevent race conditions
+    let slug = baseSlug;
+    let counter = 1;
+    while (await tx.organization.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
     // Create organization
     const organization = await tx.organization.create({
       data: {
@@ -238,11 +237,43 @@ export async function login(req: Request, res: Response): Promise<void> {
     throw new UnauthorizedError('Organization is inactive. Please contact support.');
   }
 
+  // Check account lockout before password comparison
+  if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+    throw new UnauthorizedError('Account is temporarily locked. Please try again later.');
+  }
+
   // Check password
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
+    // Track failed login attempts for account lockout
+    const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+    const MAX_FAILED_ATTEMPTS = 5;
+    const LOCKOUT_DURATION_MINUTES = 15;
+    
+    const updateData: Record<string, unknown> = { failedLoginAttempts: failedAttempts };
+    if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+      updateData.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
+    }
+    
+    await prisma.user.update({
+      where: { id: user.id },
+      data: updateData,
+    });
+    
+    if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+      throw new UnauthorizedError(`Account locked due to ${MAX_FAILED_ATTEMPTS} failed attempts. Try again in ${LOCKOUT_DURATION_MINUTES} minutes.`);
+    }
+    
     throw new UnauthorizedError('Invalid credentials');
+  }
+
+  // Reset failed attempts on successful login
+  if (user.failedLoginAttempts && user.failedLoginAttempts > 0) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    });
   }
 
   // Check if 2FA is enabled and required

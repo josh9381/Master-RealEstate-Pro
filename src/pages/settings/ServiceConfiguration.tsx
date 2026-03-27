@@ -157,7 +157,6 @@ const ServiceConfiguration = () => {
                 placeholder="AKIAIOSFODNN7EXAMPLE"
                 value={accessKeyId}
                 onChange={(e) => setAccessKeyId(e.target.value)}
-                defaultValue="AKIA••••••••••••MPLE"
                 className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
               />
             </div>
@@ -199,8 +198,9 @@ const ServiceConfiguration = () => {
           </div>
           <div className="flex space-x-2">
             <Button onClick={handleSaveSettings} loading={saveMutation.isPending}>Save Storage Settings</Button>
-            <Button variant="outline" onClick={() => handleTestConnection('Storage')} loading={testingConnection}>Test Connection</Button>
+            <Button variant="outline" onClick={() => handleTestConnection('Storage')} loading={testingConnection} disabled={!accessKeyId || !bucketName}>Test Connection</Button>
           </div>
+          <p className="text-xs text-muted-foreground">Save your credentials before testing the connection.</p>
         </CardContent>
       </Card>
 

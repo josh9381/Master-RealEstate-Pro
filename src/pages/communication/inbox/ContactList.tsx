@@ -94,7 +94,7 @@ export const ContactList = ({
   hasActiveFilters,
 }: ContactListProps) => {
   return (
-    <Card className="col-span-4 flex flex-col overflow-hidden">
+    <Card className="col-span-12 md:col-span-4 flex flex-col overflow-hidden">
       <CardContent className="p-0 flex flex-col h-full">
         {/* Folder Tabs */}
         <div className="px-3 pt-3 pb-1 border-b flex-shrink-0">

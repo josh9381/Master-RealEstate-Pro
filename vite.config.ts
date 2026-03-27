@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: true, // Enable source maps for production error tracing
     rollupOptions: {
       output: {
         manualChunks: {

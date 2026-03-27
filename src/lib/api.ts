@@ -638,8 +638,8 @@ export const campaignsApi = {
     return response.data
   },
 
-  rescheduleCampaign: async (id: string, startDate: string) => {
-    const response = await api.patch(`/campaigns/${id}/reschedule`, { startDate })
+  rescheduleCampaign: async (id: string, startDate: string, timezone?: string) => {
+    const response = await api.patch(`/campaigns/${id}/reschedule`, { startDate, timezone })
     return response.data
   },
 
@@ -995,6 +995,11 @@ export const analyticsApi = {
 
   getFollowUpAnalytics: async (params?: { months?: number }) => {
     const response = await api.get('/analytics/follow-up-analytics', { params })
+    return response.data
+  },
+
+  getLeadSources: async () => {
+    const response = await api.get('/analytics/lead-sources')
     return response.data
   },
 }
@@ -1442,6 +1447,16 @@ export const messagesApi = {
     const response = await api.post('/messages/attachments', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
+    return response.data
+  },
+
+  getThreadMessages: async (threadId: string) => {
+    const response = await api.get(`/messages/thread/${threadId}`)
+    return response.data
+  },
+
+  replyToMessage: async (messageId: string, data: { body: string; attachments?: Array<{ filename: string; content: string; contentType: string }> }) => {
+    const response = await api.post(`/messages/${messageId}/reply`, data)
     return response.data
   },
 }

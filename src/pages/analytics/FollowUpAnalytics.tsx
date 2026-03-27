@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Bell, CheckCircle2, Clock, AlertTriangle, BarChart3, TrendingUp, MonitorSmartphone, BellRing
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -11,15 +13,24 @@ import {
 import { analyticsApi } from '@/lib/api';
 import { formatRate } from '@/lib/metricsCalculator';
 
+const MONTH_OPTIONS = [
+  { value: 1, label: 'Last Month' },
+  { value: 3, label: 'Last 3 Months' },
+  { value: 6, label: 'Last 6 Months' },
+  { value: 12, label: 'Last Year' },
+];
+
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: '#6b7280', MEDIUM: '#3b82f6', HIGH: '#f59e0b', URGENT: '#ef4444',
 };
 
 const FollowUpAnalytics = () => {
+  const [months, setMonths] = useState(3);
+
   const { data: result, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['follow-up-analytics'],
+    queryKey: ['follow-up-analytics', months],
     queryFn: async () => {
-      const response = await analyticsApi.getFollowUpAnalytics({ months: 3 });
+      const response = await analyticsApi.getFollowUpAnalytics({ months });
       return response.data;
     },
   });
@@ -67,14 +78,28 @@ const FollowUpAnalytics = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Bell className="h-7 w-7 text-indigo-600" />
-          Follow-Up Analytics
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Track follow-up completion rates, response times, and trends
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Bell className="h-7 w-7 text-indigo-600" />
+            Follow-Up Analytics
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Track follow-up completion rates, response times, and trends
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {MONTH_OPTIONS.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={months === opt.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMonths(opt.value)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* KPI Cards */}

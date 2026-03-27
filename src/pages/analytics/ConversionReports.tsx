@@ -40,8 +40,8 @@ const ConversionReports = () => {
       let funnelData = null;
       try {
         funnelData = await analyticsApi.getConversionFunnel(params);
-      } catch (error) {
-        logger.error('Conversion funnel endpoint unavailable:', error)
+      } catch (funnelErr) {
+        logger.error('Conversion funnel endpoint unavailable:', funnelErr)
         // Optional endpoint
       }
       const leadResult = leads?.data || leads;
@@ -63,20 +63,20 @@ const ConversionReports = () => {
     refetch();
   };
 
-  // Build conversion funnel from lead status data
+  // Build conversion funnel from lead status data — ordered pipeline stages, excluding LOST
+  const FUNNEL_ORDER = ['NEW', 'CONTACTED', 'NURTURING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON'];
   const conversionFunnel = leadData?.byStatus
-    ? (Object.entries(leadData.byStatus) as [string, number][]).map(([stage, count]) => ({
-        stage: stage.charAt(0).toUpperCase() + stage.slice(1),
-        count: count,
-        percentage: formatRate(calcRate(count, leadData.total || 0)),
-      }))
-    : [
-        { stage: 'New', count: 0, percentage: 0 },
-        { stage: 'Contacted', count: 0, percentage: 0 },
-        { stage: 'Qualified', count: 0, percentage: 0 },
-        { stage: 'Proposal', count: 0, percentage: 0 },
-        { stage: 'Won', count: 0, percentage: 0 },
-      ];
+    ? FUNNEL_ORDER
+        .filter((stage) => (leadData.byStatus[stage] || 0) > 0)
+        .map((stage) => {
+          const count = leadData.byStatus[stage] || 0;
+          return {
+            stage: stage.charAt(0).toUpperCase() + stage.slice(1).toLowerCase(),
+            count,
+            percentage: formatRate(calcRate(count, leadData.total || 0)),
+          };
+        })
+    : [];
 
   // Build source conversion from lead source data using real per-source won counts
   const totalConversions = leadData?.byStatus?.won || leadData?.byStatus?.WON || 0;
@@ -89,14 +89,14 @@ const ConversionReports = () => {
           source: source.charAt(0).toUpperCase() + source.slice(1).replace('-', ' '),
           leads: count,
           converted,
-          rate: formatRate(calcRate(converted, count))
+          rate: calcRate(converted, count)
         };
       })
     : [];
 
 
   // Time to convert — use real API data if available
-  const COLORS_TTC = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+  const COLORS_TTC = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
   const timeToConvert: { days: string; count: number; color: string }[] = leadData?.timeToConvert
     ? leadData.timeToConvert.map((item: { days: string; count: number }, i: number) => ({
         days: item.days,
@@ -196,7 +196,7 @@ const ConversionReports = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{sourceConversion.length > 0 ? formatRate(Math.max(...sourceConversion.map(s => parseFloat(String(s.rate)))), 1) : 0}%</div>
+            <div className="text-2xl font-bold">{sourceConversion.length > 0 ? formatRate(Math.max(...sourceConversion.map(s => s.rate)), 1) : 0}%</div>
             <p className="text-xs text-muted-foreground">Top source conversion</p>
           </CardContent>
         </Card>
@@ -272,7 +272,7 @@ const ConversionReports = () => {
                 <div key={source.source} className="flex items-center justify-between text-sm">
                   <span>{source.source}</span>
                   <span className="font-medium">
-                    {source.converted}/{source.leads} ({source.rate}%)
+                    {source.converted}/{source.leads} ({formatRate(source.rate)}%)
                   </span>
                 </div>
               ))}
@@ -322,7 +322,7 @@ const ConversionReports = () => {
                       className="h-3 w-3 rounded-full"
                       style={{ backgroundColor: item.color }}
                     ></div>
-                    <span>{item.days} days</span>
+                    <span>{item.days}</span>
                   </div>
                   <span className="font-medium">{item.count} conversions</span>
                 </div>

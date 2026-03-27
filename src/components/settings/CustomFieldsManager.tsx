@@ -138,6 +138,9 @@ export function CustomFieldsManager() {
     return name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
   }
 
+  const isFieldKeyTaken = (key: string, excludeId?: string) =>
+    fields.some((f) => f.fieldKey === key && f.id !== excludeId)
+
   const handleAddField = () => {
     if (!newField.name.trim()) {
       toast.error('Field name is required')
@@ -147,9 +150,14 @@ export function CustomFieldsManager() {
       toast.error('Dropdown fields require at least one option')
       return
     }
+    const key = newField.fieldKey || generateFieldKey(newField.name)
+    if (isFieldKeyTaken(key)) {
+      toast.error(`A field with key "${key}" already exists. Please use a different name.`)
+      return
+    }
     createFieldMutation.mutate({
       name: newField.name.trim(),
-      fieldKey: newField.fieldKey || generateFieldKey(newField.name),
+      fieldKey: key,
       type: newField.type,
       required: newField.required,
       options: newField.type === 'dropdown' ? newField.options : undefined,
@@ -161,11 +169,16 @@ export function CustomFieldsManager() {
 
   const handleUpdateField = () => {
     if (!editingField) return
+    const key = newField.fieldKey || generateFieldKey(newField.name)
+    if (isFieldKeyTaken(key, editingField.id)) {
+      toast.error(`A field with key "${key}" already exists. Please use a different name.`)
+      return
+    }
     updateFieldMutation.mutate({
       id: editingField.id,
       data: {
         name: newField.name.trim(),
-        fieldKey: newField.fieldKey || generateFieldKey(newField.name),
+        fieldKey: key,
         type: newField.type,
         required: newField.required,
         options: newField.type === 'dropdown' ? newField.options : undefined,
@@ -192,7 +205,12 @@ export function CustomFieldsManager() {
   }
 
   const handleDeleteField = async (id: string) => {
-    if (await showConfirm({ title: 'Delete Custom Field', message: 'Are you sure you want to delete this custom field?', confirmLabel: 'Delete', variant: 'destructive' })) {
+    const field = fields.find((f) => f.id === id)
+    const usageCount = field?.usageCount || 0
+    const warningMsg = usageCount > 0
+      ? `This field is used in ${usageCount} lead record${usageCount !== 1 ? 's' : ''}. Deleting it will remove all stored values. Are you sure?`
+      : 'Are you sure you want to delete this custom field?'
+    if (await showConfirm({ title: 'Delete Custom Field', message: warningMsg, confirmLabel: 'Delete', variant: 'destructive' })) {
       deleteFieldMutation.mutate(id)
     }
   }

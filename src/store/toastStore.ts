@@ -28,6 +28,12 @@ export const useToastStore = create<ToastState>((set) => ({
     const newToast = { ...toast, id }
     
     set((state) => {
+      // Deduplicate: skip if a toast with the same type+message already exists
+      const isDuplicate = state.toasts.some(
+        (t) => !t.exiting && t.type === toast.type && t.message === toast.message
+      )
+      if (isDuplicate) return state
+
       let toasts = [...state.toasts, newToast]
       // Enforce max limit — remove oldest (non-exiting) toasts beyond limit
       while (toasts.filter(t => !t.exiting).length > MAX_TOASTS) {

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, TrendingUp, Users, DollarSign, Mail, Phone, Target, RefreshCw, ArrowRightLeft, Activity, FileBarChart, ChevronRight } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, DollarSign, Mail, ClipboardCheck, Target, RefreshCw, ArrowRightLeft, Activity, FileBarChart, ChevronRight, Gauge, Crosshair, PiggyBank, PhoneForwarded, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { Button } from '@/components/ui/Button';
@@ -34,17 +34,19 @@ const AnalyticsDashboard = () => {
     queryKey: ['analytics-dashboard'],
     queryFn: async () => {
       const params = dateRangeRef.current;
-      const [dashboard, leads, campaigns, teamPerf] = await Promise.all([
+      const [dashboard, leads, campaigns, teamPerf, revTimeline] = await Promise.all([
         analyticsApi.getDashboardStats(params),
         analyticsApi.getLeadAnalytics(params),
         analyticsApi.getCampaignAnalytics(params),
-        analyticsApi.getTeamPerformance(params)
+        analyticsApi.getTeamPerformance(params),
+        analyticsApi.getRevenueTimeline({ months: 12 })
       ]);
       return {
         dashboardData: dashboard.data,
         leadAnalytics: leads.data,
         campaignAnalytics: campaigns.data,
         teamPerformanceData: teamPerf?.data || [],
+        revenueTimeline: revTimeline?.data?.monthly || [],
       };
     },
   });
@@ -53,16 +55,19 @@ const AnalyticsDashboard = () => {
   const leadAnalytics = analyticsResult?.leadAnalytics ?? null;
   const campaignAnalytics = analyticsResult?.campaignAnalytics ?? null;
   const teamPerformanceData = analyticsResult?.teamPerformanceData ?? [];
+  const revenueTimeline = analyticsResult?.revenueTimeline ?? [];
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
     refetch();
   };
 
-  // Mock data as fallback — REMOVED: use API data only
-  // Revenue data from campaign analytics
-  const revenueData = campaignAnalytics?.monthlyData || [];
-  const totalRevenue = campaignAnalytics?.performance?.totalRevenue || 0;
+  // Revenue data from revenue timeline endpoint
+  const revenueData = revenueTimeline.map((m: any) => ({
+    month: m.month,
+    revenue: m.totalRevenue || 0,
+  }));
+  const totalRevenue = campaignAnalytics?.performance?.totalRevenue || revenueTimeline.reduce((sum: number, m: any) => sum + (m.totalRevenue || 0), 0);
   const totalLeads = dashboardData?.leads?.total || leadAnalytics?.total || 0;
   const conversionRate = leadAnalytics?.conversionRate || dashboardData?.leads?.conversionRate || 0;
   const wonLeads = leadAnalytics?.byStatus?.WON || 0;
@@ -206,7 +211,7 @@ const AnalyticsDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Revenue Trend</CardTitle>
-            <CardDescription>Monthly revenue vs target</CardDescription>
+            <CardDescription>Monthly revenue trend</CardDescription>
           </CardHeader>
           <CardContent>
             {revenueData.length > 0 ? (
@@ -224,15 +229,6 @@ const AnalyticsDashboard = () => {
                   stroke="hsl(var(--primary))"
                   fill="hsl(var(--primary))"
                   fillOpacity={0.6}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="target"
-                  stackId="2"
-                  stroke="hsl(var(--muted-foreground))"
-                  fill="hsl(var(--muted-foreground))"
-                  fillOpacity={0.2}
-                  strokeDasharray="5 5"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -339,7 +335,7 @@ const AnalyticsDashboard = () => {
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/campaigns')}>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/conversions')}>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Mail className="h-4 w-4 mr-2" />
@@ -367,7 +363,7 @@ const AnalyticsDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Phone className="h-4 w-4 mr-2" />
+              <ClipboardCheck className="h-4 w-4 mr-2" />
               Task Activity
             </CardTitle>
           </CardHeader>
@@ -461,6 +457,96 @@ const AnalyticsDashboard = () => {
               <h3 className="font-semibold mt-3">Custom Reports</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Build & save custom reports tailored to your needs
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/attribution')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                  <Crosshair className="h-6 w-6 text-cyan-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Attribution Report</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Multi-touch attribution & channel performance
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/velocity')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-amber-500/10 rounded-lg">
+                  <Gauge className="h-6 w-6 text-amber-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Lead Velocity</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Pipeline speed, stage durations & bottlenecks
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/source-roi')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                  <PiggyBank className="h-6 w-6 text-emerald-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Source ROI</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Revenue efficiency per lead source
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/goals')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-rose-500/10 rounded-lg">
+                  <Target className="h-6 w-6 text-rose-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Goal Tracking</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Set, track & measure your business goals
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/follow-ups')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                  <PhoneForwarded className="h-6 w-6 text-indigo-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Follow-Up Analytics</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Completion rates, channels & response trends
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/comparison')}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="p-2 bg-sky-500/10 rounded-lg">
+                  <CalendarRange className="h-6 w-6 text-sky-500" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mt-3">Period Comparison</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Compare metrics across different time periods
               </p>
             </CardContent>
           </Card>

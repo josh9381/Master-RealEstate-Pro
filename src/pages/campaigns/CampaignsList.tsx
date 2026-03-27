@@ -117,17 +117,18 @@ function CampaignsList() {
     refetchOnWindowFocus: false,
   })
 
-  // Separate query for dashboard stats (lightweight, no pagination needed)
+  // Separate query for dashboard stats — cached longer to avoid redundant API calls
   const { data: statsResponse } = useQuery({
     queryKey: ['campaigns-stats-all', typeFilter],
     queryFn: async () => {
-      const params: CampaignsQuery = { page: 1, limit: 1000 }
+      const params: CampaignsQuery = { page: 1, limit: 200 }
       if (typeFilter !== 'all') params.type = typeFilter as CampaignsQuery['type']
       const response = await campaignsApi.getCampaigns(params)
       return response.data
     },
     retry: false,
     refetchOnWindowFocus: false,
+    staleTime: 60_000, // Cache for 1 minute to avoid double-fetching
   })
 
   const campaigns = useMemo(() => {

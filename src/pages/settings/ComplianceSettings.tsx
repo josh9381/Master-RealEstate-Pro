@@ -71,6 +71,11 @@ const ComplianceSettings = () => {
   const handleRefresh = () => loadSettings(true);
 
   const handleSave = async () => {
+    const days = parseInt(retentionDays, 10);
+    if (isNaN(days) || days < 1 || days > 3650) {
+      toast.error('Retention period must be between 1 and 3,650 days (10 years)');
+      return;
+    }
     setSaving(true);
     try {
       await settingsApi.updateBusinessSettings({
@@ -85,7 +90,7 @@ const ComplianceSettings = () => {
         dataPortability,
         auditEnabled,
         logAllChanges,
-        retentionDays: parseInt(retentionDays, 10),
+        retentionDays: days,
         ccpaEnabled,
         ccpaDoNotSell,
         ccpaConsumerRequests,
@@ -344,7 +349,7 @@ const ComplianceSettings = () => {
                 className="rounded" 
               />
               <span className="text-sm">
-                Allow users to request their data (Right to Access)
+                Automatically check Do Not Call registry
               </span>
             </label>
           </div>
@@ -391,12 +396,14 @@ const ComplianceSettings = () => {
             <label className="text-sm font-medium mb-2 block">Data Retention Period (days)</label>
             <input
               type="number"
+              min="1"
+              max="3650"
               value={retentionDays}
               onChange={(e) => setRetentionDays(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Automatically delete inactive data after this period
+              Automatically delete inactive data after this period (1–3,650 days)
             </p>
           </div>
         </CardContent>

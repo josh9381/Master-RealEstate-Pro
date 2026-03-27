@@ -154,9 +154,9 @@ const OrgAISettings = () => {
           throw new Error('Caution threshold must be less than hard limit');
         }
       }
-      // Validate API key format if provided
-      if (newApiKey && !newApiKey.startsWith('sk-')) {
-        throw new Error('API key must start with "sk-". Please enter a valid OpenAI API key.');
+      // Validate API key format if provided (sk- prefix, minimum length)
+      if (newApiKey && (!/^sk-[a-zA-Z0-9_-]{20,}$/.test(newApiKey))) {
+        throw new Error('Invalid API key format. OpenAI keys start with "sk-" followed by at least 20 alphanumeric characters.');
       }
       const payload: Record<string, unknown> = { ...form };
       if (newApiKey) {

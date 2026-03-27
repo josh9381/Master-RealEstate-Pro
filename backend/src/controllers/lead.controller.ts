@@ -124,9 +124,11 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
   // Apply role-based filtering (ADMIN sees all, USER sees only assigned)
   const where = getLeadsFilter(roleFilter, additionalWhere);
 
-  // Calculate pagination
-  const skip = (Number(page) - 1) * Number(limit);
-  const take = Number(limit);
+  // Calculate pagination (guard against invalid values)
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.min(200, Math.max(1, Number(limit) || 20));
+  const skip = (pageNum - 1) * limitNum;
+  const take = limitNum;
 
   // Execute queries
   const [leads, total] = await Promise.all([

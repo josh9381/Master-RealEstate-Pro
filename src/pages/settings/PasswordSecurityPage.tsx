@@ -1,17 +1,63 @@
 import { useState } from 'react'
-import { Lock, Key, Shield, Smartphone } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Lock, Key, Shield, Smartphone, Monitor, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/hooks/useToast'
-import { settingsApi } from '@/lib/api'
+import { settingsApi, authApi } from '@/lib/api'
+
+interface Session {
+  id: string;
+  deviceType: string | null;
+  browser: string | null;
+  os: string | null;
+  city: string | null;
+  country: string | null;
+  lastActiveAt: string | null;
+  createdAt: string;
+}
 
 export default function PasswordSecurityPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const { data: securityData } = useQuery({
+    queryKey: ['settings', 'security'],
+    queryFn: async () => {
+      const result = await settingsApi.getSecuritySettings();
+      return result?.data || result;
+    },
+  });
+
+  const { data: sessionsData } = useQuery({
+    queryKey: ['auth', 'sessions'],
+    queryFn: async () => {
+      const result = await authApi.getSessions();
+      return (result?.sessions || result || []) as Session[];
+    },
+  });
+
+  const sessions = sessionsData || [];
+
+  const formatSessionTime = (dateStr: string | null) => {
+    if (!dateStr) return 'Unknown';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Active now';
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr} hr ago`;
+    return `${Math.floor(diffHr / 24)} days ago`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -128,17 +174,11 @@ export default function PasswordSecurityPage() {
             <div className="flex items-center justify-between p-4 border rounded-lg mb-4">
               <div>
                 <div className="font-medium">Authenticator App</div>
-                <div className="text-sm text-muted-foreground">Use an app like Google Authenticator</div>
+                <div className="text-sm text-muted-foreground">Use an app like Google Authenticator or Authy</div>
               </div>
-              <Button variant="outline">Enable</Button>
-            </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <div className="font-medium">SMS Authentication</div>
-                <div className="text-sm text-muted-foreground">Receive codes via text message</div>
-              </div>
-              <Button variant="outline">Enable</Button>
+              <Button variant="outline" onClick={() => navigate('/settings/security')}>
+                {securityData?.twoFactorEnabled ? 'Manage' : 'Enable'}
+              </Button>
             </div>
           </Card>
 
@@ -150,21 +190,42 @@ export default function PasswordSecurityPage() {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <div className="font-medium">Windows - Chrome</div>
-                  <div className="text-sm text-muted-foreground">New York, USA • Active now</div>
-                </div>
-                <Button variant="outline" size="sm">Revoke</Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <div className="font-medium">iPhone - Safari</div>
-                  <div className="text-sm text-muted-foreground">Los Angeles, USA • 2 hours ago</div>
-                </div>
-                <Button variant="outline" size="sm">Revoke</Button>
-              </div>
+              {sessions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No active sessions found.</p>
+              ) : (
+                sessions.map((session, idx) => {
+                  const isFirst = idx === 0;
+                  const deviceLabel = [session.os, session.browser].filter(Boolean).join(' - ') || session.deviceType || 'Unknown device';
+                  const locationLabel = [session.city, session.country].filter(Boolean).join(', ') || 'Unknown location';
+                  return (
+                    <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-start gap-3">
+                        {session.deviceType === 'Mobile' ? (
+                          <Smartphone className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        ) : session.deviceType === 'Tablet' ? (
+                          <Globe className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        ) : (
+                          <Monitor className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        )}
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            {deviceLabel}
+                            {isFirst && <Badge variant="success" className="text-xs">Current</Badge>}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {locationLabel} • {formatSessionTime(session.lastActiveAt || session.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              {sessions.length > 1 && (
+                <Button variant="outline" className="w-full" onClick={() => navigate('/settings/security')}>
+                  Manage All Sessions
+                </Button>
+              )}
             </div>
           </Card>
         </div>
@@ -195,7 +256,11 @@ export default function PasswordSecurityPage() {
 
           <Card className="p-6">
             <h3 className="font-semibold mb-2">Last Password Change</h3>
-            <p className="text-sm text-muted-foreground">March 15, 2024</p>
+            <p className="text-sm text-muted-foreground">
+              {securityData?.lastPasswordChange
+                ? new Date(securityData.lastPasswordChange).toLocaleDateString()
+                : 'Never changed'}
+            </p>
           </Card>
 
           <Card className="p-6">

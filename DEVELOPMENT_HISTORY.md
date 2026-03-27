@@ -1,7 +1,7 @@
 # Master Real Estate Pro — Development History
 
-> **Consolidated:** March 9, 2026
-> **Source:** 143 individual development documentation files merged into this single chronological timeline.
+> **Consolidated:** March 25, 2026
+> **Source:** 172 individual development documentation files merged into this single chronological timeline.
 > **Active Plan:** See `MASTER_COMPLETION_PLAN.md` for current progress and remaining work.
 
 ---
@@ -13,6 +13,7 @@
 - [October 2025](#october-2025) (72 entries)
 - [November 2025](#november-2025) (38 entries)
 - [February 2026](#february-2026) (3 entries)
+- [March 2026](#march-2026) (29 entries)
 
 
 ---
@@ -1323,3 +1324,148 @@ These are pages that have routes in App.tsx but no navigation link to reach them
 **12.9 — Fix .gitignore files**
 - Root `.gitignore`: added `coverage/`, `playwright-report/`, `test-results/`, `e2e/screenshots/`, `e2e/e2e/`, `*.tsbuildinfo`, `backend/dist/`
 - Backend `.gitignore`: removed `prisma/migrations/` (must be committed for reproducible migrations) and `package-lock.json` (must be committed for deterministic installs)
+
+### Dashboard User-Focused Audit
+*Date: March 10, 2026 | Source: `DASHBOARD_AUDIT.md`*
+
+Full interactive audit of the Dashboard. Found 22 issues: 15 frontend-only fixes (task field lowercase, appointment field mismatches, missing click handlers, hardcoded values) and 7 requiring backend changes (filter logic, date filtering, new endpoints). All navigation works, loading states present, error handling solid.
+
+### Leads Tab — Fix Plan & Decisions
+*Date: March 10, 2026 | Source: `LEADS_TAB_FIXES.md`*
+
+Generated from user-focused audit with 12 issues (10 no-decision fixes + 2 decision-required). Key problems: sort field mapping broken (always sorts by `createdAt`), search has redundant double client-side filtering (breaks pagination), URL persistence missing for filters, merge sends wrong field names to backend. Clear roadmap ready to execute.
+
+### Leads Tab — UI Audit & Decisions
+*Date: March 11, 2026 | Source: `LEADS_UI_AUDIT.md`*
+
+Screenshot-based audit with 7 issues (4 fixed via decisions, 3 deferred). Stats cards fixed to use global totals via new `/api/leads/stats` endpoint. Pie chart switched to horizontal bar chart to fix overlapping labels. Conversion rate corrected to WON/(WON+LOST). Pagination total count fixed to use `pagination.total` from API.
+
+### Leads Tab — Full Code + UI/UX Audit
+*Date: March 13, 2026 | Source: `LEADS_FULL_AUDIT.md`*
+
+Comprehensive audit of ~10,090 LOC across 18 files covering 11 pages/components. Found 39+ issues. Mature system with code quality concerns: excessive state in LeadsList (25+ useState calls causing re-render spam), score filter client-side only (pagination counts incorrect), BulkActionsBar always rendered, view mode toggle not persisted, row menu clipping issues.
+
+### Campaigns Tab Full Audit
+*Date: March 13, 2026 | Source: `CAMPAIGNS_AUDIT.md`*
+
+Audit of ~11,215 LOC across 18 files (8 pages, 4 components, backend layer). 20 strong features working: full CRUD lifecycle connected to real APIs, multi-channel support (Email, SMS, Phone/Social placeholders), multi-step creation wizard, A/B testing, recurring campaigns, templates system, bulk actions, TCPA compliance notice on SMS campaigns.
+
+### Campaigns System — Full Audit Report
+*Date: March 13, 2026 | Source: `CAMPAIGNS_FULL_AUDIT.md`*
+
+Full audit of ~11,215 LOC finding 60 total issues (8 P0, 16 P1, 18 P2, 18 P3). Strong codebase with critical bugs in edge cases: campaign stuck in SENDING status on crash (no rollback), SMS segment calculation formula error (undercounts multi-part SMS), Promise race condition on CampaignCreate unmount. Two fixes already applied (stale dist build, case-sensitive search).
+
+### Campaigns Tab — Deep Audit
+*Date: March 14, 2026 | Source: `CAMPAIGNS_DEEP_AUDIT.md`*
+
+Deep code analysis with live API testing across 18 campaign files. Security vulnerabilities found: IDOR on tracking endpoints (don't verify lead belongs to org), campaign preview endpoint missing org filter. Performance issue: client-side pagination fetches ALL campaigns. Search filter applied to `searchQuery` instead of `debouncedSearch`. Null-safe handling missing for `budget: null`.
+
+### Campaigns > Templates — Full Audit
+*Date: March 14–15, 2026 | Source: `CAMPAIGNS_TEMPLATES_AUDIT.md`*
+
+Audit of 4 template systems (Campaign, Email, SMS, Message). Campaign templates hardcoded in-memory (7 total, all EMAIL type). Email/SMS/Message templates DB-backed with full CRUD UI. All issues fixed: placeholder variables now validated (`{{...}}` replaced with `[Not Set]`), multi-tenancy isolation verified correct.
+
+### Campaigns User-Focused Audit — Full Stack
+*Date: March 14, 2026 | Source: `CAMPAIGNS_USER_AUDIT.md`*
+
+User journey audit of ~12,824 LOC across 20 files. 10+ critical/high bugs blocking core workflows: SENDING status not in validator enum (stale campaign state), CANCELLED/DRAFT campaigns only visible under "All" tab, `pauseCampaign` doesn't validate status transitions, hard delete with no soft-delete option (data loss risk), client-side pagination fetches ALL campaigns.
+
+### Campaigns System — Complete Full-Stack Audit
+*Date: March 15, 2026 | Source: `CAMPAIGNS_COMPLETE_AUDIT.md`*
+
+Database → Backend → Frontend → Tests audit of ~12,824 LOC across 20 files. Architecture solid with compliance features present. Full data flow verified: React → Express → Prisma → PostgreSQL. 25+ API methods covering full CRUD + analytics. Zod validation comprehensive, rate limiting present. Plan limit enforcement working. CAN-SPAM/TCPA compliance implemented. 19 backend integration tests + 11 E2E smoke tests.
+
+### Campaigns Sub-Tabs: Templates, Schedule, Reports, A/B Testing
+*Date: March 16, 2026 | Source: `CAMPAIGNS_SUBTABS_AUDIT.md`*
+
+Audit of 4 sub-features across 35+ files. All functionality working: Templates fixed (PHONE scripts added, usage tracking, placeholder validation), Schedule working (runs every minute with optimistic concurrency control), Reports strong analytics dashboard with proper date filtering, A/B Testing full creation/running/results analysis with statistical significance.
+
+### Metrics & Stats Calculations — Full Audit
+*Date: March 16, 2026 | Source: `METRICS_STATS_AUDIT.md`*
+
+All backend/frontend metrics, calculations, and scoring algorithms audited (~50+ metrics). All critical/high issues resolved: lead conversion rate corrected to WON/(WON+LOST), date filtering applied to conversion rate, dashboard progress bar scaling corrected. Campaign metrics, ROI, task completion, and scoring all verified correct. Zero open bugs.
+
+### Schedule, Calendar & Tasks — Full Audit
+*Date: March 17, 2026 | Source: `SCHEDULE_CALENDAR_TASKS_AUDIT.md`*
+
+Found 13 issues (3 critical, 5 moderate, 5 minor). Calendar page broken: frontend sends `scheduledAt`/`duration` but backend expects `startTime`/`endTime` (API fails validation). Frontend type enum (lowercase: meeting/viewing) mismatched with backend (uppercase: CALL/MEETING). Appointment detail page doesn't load due to field mismatch. Tasks page and Campaigns Schedule working correctly.
+
+### Communications Tab — Full Audit Report (v2)
+*Date: March 17, 2026 | Source: `COMMUNICATIONS_AUDIT.md`*
+
+Round 2 audit of 40+ files with all 21 issues fixed across 2 audit rounds. 100% complete: `getRetryableMessages` invalid Prisma syntax fixed, E.164 phone validation added, error handling updated to use NotFoundError consistently. Grade: A — full-stack implementation solid, multi-tenancy enforced.
+
+### Communications Tab Audit: SMS vs Email — User's Perspective
+*Date: March 17–18, 2026 | Source: `COMMUNICATIONS_SMS_VS_EMAIL_AUDIT.md`*
+
+UX-focused audit identifying 50 specific issues. Main problem: no channel badge in compose — user doesn't know if sending SMS vs Email. AI composer uses `selectedChannel` instead of thread type (generates wrong content). Compose modal defaults to SMS regardless of context. Reply box shows generic placeholder instead of channel-specific text.
+
+### Communications Hub — Full Audit Report
+*Date: March 18, 2026 | Source: `COMMUNICATIONS_HUB_FULL_AUDIT.md`*
+
+100+ files audited. Grades: Unified Inbox A- (95% functional, 85% UX), Email Templates B (90% functional, 70% UX — needs search/pagination), SMS Templates B (85% functional, 75% UX), Cold Call Hub C+ (75% functional), Newsletter D (30% — placeholder), Social Media F (0% — placeholder). Backend validation gaps and accessibility issues identified.
+
+### Communications Tab Audit: SMS vs Email — Full Breakdown
+*Date: March 18, 2026 | Source: `COMMUNICATIONS_SMS_EMAIL_AUDIT.md`*
+
+Detailed audit finding 50 issues across 5 parts (Sending, Features, Structure, Backend, Data). Backend: `replyToMessage` always replies to `fromAddress` (wrong for forwarding), SMS service has no opt-out check, SMS webhook has no signature verification. 10 backend reliability issues + 15 frontend UX gaps preventing proper channel selection.
+
+### Email Templates Library — User Focus & UI Audit
+*Date: March 18, 2026 | Source: `EMAIL_TEMPLATES_AUDIT.md`*
+
+Found 16 issues (2 critical, 6 major, 8 minor). Critical: response shape mismatch prevents templates from rendering (API returns nested object, frontend expects array). Critical: "Compose" button copies raw JSON, not usable HTML. Missing: search input, pagination controls, template variables editor. No content preview before sending, no template versioning.
+
+### Communications Hub — Full Audit (March 2025)
+*Date: March 2025 | Source: `COMMUNICATIONS_HUB_AUDIT_2025.md`*
+
+Architecture audit of 30+ files (~7,987 LOC) across 6 frontend pages and 2 backend route files. Clean TypeScript compilation (zero errors). Contact-grouped threading working correctly. All core features functional: folders, search, filters, signatures. Email/SMS services properly integrated (SendGrid/Twilio).
+
+### Communications Hub — UI Improvement Plan
+*Date: March 2026 | Source: `COMMUNICATIONS_UI_IMPROVEMENTS.md`*
+
+Proposed 4 major UI consolidations: consolidate Email/SMS Template buttons into single 2-tab picker, remove redundant "Inbox" from sub-nav, move "Mark All Read" to ContactList toolbar, enhance Compose modal with template picker + AI + better type selector.
+
+### Automations & Workflows Tab — Full Audit
+*Date: March 20, 2026 | Source: `AUTOMATIONS_WORKFLOWS_AUDIT.md`*
+
+Audit of ~8,700 LOC across 13 files finding 18 issues. BLOCKING: WorkflowBuilder has 8 unresolved git merge conflicts (file won't compile). CRITICAL: WEBHOOK trigger missing from validator (creation fails). HIGH: Action types fragile (`n.type` instead of proper action types), TriggerType derivation uses brittle label fallback. Recent Executions section static with no data displayed.
+
+### Automations Tab — Full Audit (Post-Fix)
+*Date: March 20, 2026 | Source: `AUTOMATIONS_TAB_FULL_AUDIT.md`*
+
+Post-fix re-audit of 13 files. Score: 8.5/10. All prior critical issues resolved: git merge conflicts fixed, WEBHOOK trigger added to validators, execution logs now include steps + lead data, WorkflowBuilder stats fetch real data, Available Triggers list updated (all 10 types). Remaining: action type derivation partial fallback, duplicate workflow uses wrong payload format.
+
+### Automations Tab — User-Focused Audit
+*Date: March 20, 2026 | Source: `AUTOMATIONS_USER_AUDIT.md`*
+
+User journey analysis across 10 frontend pages + 7 backend files. Good foundation with navigation/UX gaps: no sub-navigation between 3 pages (Workflows, Rules, Builder), grid view toggle does nothing, no search/filter on WorkflowsList, no pagination, AutomationRules and WorkflowsList fetch data differently (count inconsistency), "Follow a Guide" locked as Coming Soon.
+
+### Automations Tab — UI-Focused Audit
+*Date: March 2025 | Source: `AUTOMATIONS_UI_AUDIT_2025.md`*
+
+Professional UI scored 8.0/10. Header/empty state/buttons well-designed. Config panels dynamic per node type. Templates modal excellent (90vw, search, filters). Canvas zoom/pan/mini-map working. Issues: sub-nav not sticky, no grid implementation, inline edit could be clearer.
+
+### Automations Tab — Complete Audit
+*Date: March 2025 | Source: `AUTOMATIONS_COMPLETE_AUDIT_2025.md`*
+
+Full-stack audit of 5,494 LOC frontend + ~3,200 LOC backend across 8 files + 3 Prisma models. Score: 7.5/10. Strengths: professional UI, dark mode, 3 entry points, strong backend (multi-tenant, logging, retry). Weaknesses: user confusion (Workflows vs Rules), NodeConfigPanel label matching, incomplete action UIs. Missing: undo/redo, webhook trigger endpoint, execution queue persistence.
+
+### AI Chatbot — Full Audit
+*Date: March 23, 2026 | Source: `AI_CHATBOT_AUDIT.md`*
+
+End-to-end audit of ~11,559 LOC across 17 files covering frontend UI, backend API, OpenAI integration, function calling, and security. Well-architected and feature-rich: chat UI fully functional (history, tone selector, quick actions, suggestions), 25+ CRM function callables (Create Lead, Update Status, Add to Campaign, etc.), HTML sanitization working, message feedback tracked, rate limiting on API endpoints.
+
+### Tags & Segments Overhaul Plan
+*Date: March 2026 | Source: `TAGS_SEGMENTS_PLAN.md`*
+
+Planning document for connecting Tags and Segments systems. Tags well-integrated but have data integrity issues. Segments powerful but completely isolated (not connected to campaigns/automations/leads). Proposal: keep separate but connected — Tags as on-ramp, Segments as power tool. Phase 1: add default real estate tags, segment settings, fix hardcoded tag arrays, color standardization, phantom fields, tag filtering.
+
+### WE ARE MOVING — Master Plan
+*Date: 2026 | Source: `WE ARE MOVING.md.bak`*
+
+Meta-guideline document establishing rules for the implementation push. Objective: wire every disconnected frontend↔backend pair, fix logic bugs, ensure mathematical correctness, proper validation, and honest error handling. Rules: no new features, no admin focus, every calculation mathematically correct, multi-tenant isolation enforced. Error handling policy: never hide errors, no swallowed catches, fail honestly. Sprint 0: pre-flight checks, environment audit, codebase audit.
+
+### Campaigns Full System Audit — March 2026
+*Date: March 2026 | Source: `CAMPAIGNS_FULL_AUDIT_2025.md`*
+
+Full-stack audit of campaigns backend (12,200+ LOC) and frontend (6,850+ LOC) with 60 issues across 4 severity levels (8 P0, 16 P1, 18 P2, 18 P3). Comprehensive assessment of the campaigns pipeline from database schema through API layer to frontend rendering.

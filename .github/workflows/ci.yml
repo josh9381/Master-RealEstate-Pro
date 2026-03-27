@@ -32,6 +32,9 @@ jobs:
       - name: TypeScript check & Build
         run: npm run build
 
+      - name: Unit tests
+        run: npm test
+
   # ─── Backend: Prisma Generate + TypeCheck + Build ─────────────────
   backend:
     name: Backend
@@ -86,6 +89,17 @@ jobs:
       - name: TypeScript check & Build
         working-directory: backend
         run: npm run build
+
+      - name: Unit tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/realestate_test?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ci-test-access-secret-32-chars-long
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-32-chars-long
+          MASTER_ENCRYPTION_KEY: ci000000000000000000000000000000000000000000000000000000000000ff
+          NODE_ENV: test
+        run: npm test
 
   # ─── E2E: Playwright (PRs to main only) ──────────────────────────
   e2e:

@@ -18,7 +18,7 @@ export function NotificationBell() {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const token = localStorage.getItem('accessToken')
+      const token = useAuthStore.getState().accessToken
       if (!token) {
         setUnreadCount(0)
         return
@@ -90,6 +90,9 @@ export function NotificationBell() {
         size="sm"
         className="relative"
         onClick={() => setIsOpen(!isOpen)}
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -103,13 +106,16 @@ export function NotificationBell() {
       </Button>
 
       {isOpen && (
-        <div ref={panelRef}>
+        <div ref={panelRef} role="dialog" aria-label="Notifications">
           <NotificationPanel
             onClose={() => setIsOpen(false)}
             onMarkAllRead={handleMarkAllRead}
           />
         </div>
       )}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : ''}
+      </div>
     </div>
   )
 }

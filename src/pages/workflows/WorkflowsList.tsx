@@ -106,7 +106,17 @@ const WorkflowsList = () => {
     totalExecutions: derivedTotalExecutions || apiStats.totalExecutions,
     successfulExecutions: apiStats.successfulExecutions,
     failedExecutions: apiStats.failedExecutions,
+    // Backend calcRate() already returns 0-100 scale; no conversion needed
     successRate: apiStats.successRate,
+  };
+
+  // Helper: extract the actions array from the backend shape { conditions: [], actions: [...] }
+  const getActionsList = (actions: unknown): WorkflowAction[] => {
+    if (Array.isArray(actions)) return actions;
+    if (actions && typeof actions === 'object' && Array.isArray((actions as Record<string, unknown>).actions)) {
+      return (actions as Record<string, unknown>).actions as WorkflowAction[];
+    }
+    return [];
   };
 
   const handleRefresh = () => {
@@ -460,7 +470,7 @@ const WorkflowsList = () => {
                         <div>
                           <p className="text-xs text-muted-foreground">Actions</p>
                           <p className="text-sm font-medium">
-                            {Array.isArray(workflow.actions) ? workflow.actions.length : 0} steps
+                            {getActionsList(workflow.actions).length} steps
                           </p>
                         </div>
                         <div>
@@ -476,13 +486,13 @@ const WorkflowsList = () => {
                       </div>
 
                       {/* Workflow Flow Preview */}
-                      {Array.isArray(workflow.actions) && workflow.actions.length > 0 && (
+                      {getActionsList(workflow.actions).length > 0 && (
                         <div className="py-3 px-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-sm">
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="font-bold text-blue-700 dark:text-blue-300 capitalize px-2.5 py-1 bg-white/60 dark:bg-gray-800/60 rounded-md shadow-sm">
                               When {workflow.triggerType.replace(/_/g, ' ').toLowerCase()}
                             </span>
-                            {workflow.actions.map((action, idx: number) => (
+                            {getActionsList(workflow.actions).map((action, idx: number) => (
                               <div key={idx} className="flex items-center gap-2">
                                 <ChevronRight className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                                 <span className="text-gray-700 dark:text-gray-300 capitalize font-medium px-2.5 py-1 bg-white/40 dark:bg-gray-800/40 rounded-md shadow-sm">
@@ -591,7 +601,7 @@ const WorkflowsList = () => {
                     <div>
                       <p className="text-xs text-muted-foreground">Actions</p>
                       <p className="font-medium">
-                        {Array.isArray(workflow.actions) ? workflow.actions.length : 0} steps
+                        {getActionsList(workflow.actions).length} steps
                       </p>
                     </div>
                     <div>
@@ -607,13 +617,13 @@ const WorkflowsList = () => {
                   </div>
 
                   {/* Workflow Flow Preview */}
-                  {Array.isArray(workflow.actions) && workflow.actions.length > 0 && (
+                  {getActionsList(workflow.actions).length > 0 && (
                     <div className="py-2 px-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-md border border-blue-200 dark:border-blue-800">
                       <div className="flex flex-wrap items-center gap-1.5 text-xs">
                         <span className="font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap capitalize">
                           {workflow.triggerType.replace(/_/g, ' ').toLowerCase()}
                         </span>
-                        {workflow.actions.map((action, idx: number) => (
+                        {getActionsList(workflow.actions).map((action, idx: number) => (
                           <div key={idx} className="flex items-center gap-1.5">
                             <ChevronRight className="h-3 w-3 text-blue-400 flex-shrink-0" />
                             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap capitalize">
@@ -782,7 +792,7 @@ const WorkflowsList = () => {
                   <div>
                     <p className="text-sm font-medium mb-1">Number of Actions</p>
                     <p className="text-sm text-muted-foreground">
-                      {analyticsWorkflow.actions?.length || 0} action(s) configured
+                      {getActionsList(analyticsWorkflow.actions).length} action(s) configured
                     </p>
                   </div>
                   {analyticsWorkflow.description && (
@@ -812,7 +822,7 @@ const WorkflowsList = () => {
                       {analyticsWorkflow.workflowExecutions.slice(0, 5).map((execution) => (
                         <div key={execution.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center gap-3">
-                            <Badge variant={execution.status === 'COMPLETED' ? 'default' : 'destructive'}>
+                            <Badge variant={execution.status === 'SUCCESS' ? 'default' : execution.status === 'FAILED' ? 'destructive' : 'secondary'}>
                               {execution.status}
                             </Badge>
                             <span className="text-sm text-muted-foreground">

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/hooks/useToast'
 import api, { getApiBaseUrl } from '@/lib/api'
+import { useAuthStore } from '@/store/authStore'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { formatCurrency, formatRate } from '@/lib/metricsCalculator'
 import { VariationsPanel } from './VariationsPanel'
@@ -72,6 +73,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [topic, setTopic] = useState('') // Topic for generation
   const { toast } = useToast()
+  const accessToken = useAuthStore((s) => s.accessToken)
   
   // Settings state
   const [tone, setTone] = useState<string>('professional')
@@ -235,7 +237,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
           leadId,

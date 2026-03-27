@@ -30,7 +30,7 @@ const UsageAnalytics = () => {
       const dateParams = dateRangeRef.current;
       const [dashboard, activity] = await Promise.all([
         analyticsApi.getDashboardStats(dateParams),
-        analyticsApi.getActivityFeed(),
+        analyticsApi.getActivityFeed({ startDate: dateParams.startDate, endDate: dateParams.endDate, limit: 200 }),
       ]);
       return {
         dashboardData: dashboard?.data || dashboard,
@@ -50,24 +50,31 @@ const UsageAnalytics = () => {
   // Usage data derived from activity feed
   const usageData = activityData.length > 0
     ? Object.values(
-        activityData.reduce((acc: Record<string, { date: string; users: number; apiCalls: number; storage: number }>, activity: any) => {
+        activityData.reduce((acc: Record<string, { date: string; users: number; activities: number; storage: number; _userSet: Set<string> }>, activity: any) => {
           const date = (activity.createdAt || activity.time || '').split('T')[0];
           if (!date) return acc;
           if (!acc[date]) {
-            acc[date] = { date, users: 0, apiCalls: 0, storage: 0 };
+            acc[date] = { date, users: 0, activities: 0, storage: 0, _userSet: new Set() };
           }
-          acc[date].apiCalls++;
-          acc[date].users = Math.max(acc[date].users, 1);
+          acc[date].activities++;
+          const userId = activity.userId || activity.user?.id || activity.userName || 'unknown';
+          acc[date]._userSet.add(userId);
+          acc[date].users = acc[date]._userSet.size;
           return acc;
         }, {})
-      ).slice(-14) as { date: string; users: number; apiCalls: number; storage: number }[]
+      ).map(({ date, users, activities, storage }: any) => ({ date, users, activities, storage })).slice(-14) as { date: string; users: number; activities: number; storage: number }[]
     : [];
 
   // Active users derived from activity data
   const topUsers = activityData.length > 0
     ? Object.values(
         activityData.reduce((acc: Record<string, { name: string; logins: number; actions: number; lastActive: string }>, activity: any) => {
-          const name = activity.userName || activity.user || 'Unknown';
+          const user = activity.user;
+          const name = activity.userName
+            || (typeof user === 'object' && user !== null
+                ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name
+                : user)
+            || 'Unknown';
           if (!acc[name]) {
             acc[name] = { name, logins: 0, actions: 0, lastActive: '' };
           }
@@ -154,12 +161,12 @@ const UsageAnalytics = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Session Time</CardTitle>
+            <CardTitle className="text-sm font-medium">Tasks Completed</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData?.activities?.total || '—'}</div>
-            <p className="text-xs text-muted-foreground">This period</p>
+            <div className="text-2xl font-bold">{dashboardData?.tasks?.completed || 0}</div>
+            <p className="text-xs text-muted-foreground">{dashboardData?.tasks?.completionRate || 0}% completion rate</p>
           </CardContent>
         </Card>
       </div>
@@ -197,11 +204,11 @@ const UsageAnalytics = () => {
               <Area
                 yAxisId="right"
                 type="monotone"
-                dataKey="apiCalls"
+                dataKey="activities"
                 stackId="2"
                 stroke="#10b981"
                 fill="#10b981"
-                name="API Calls (hundreds)"
+                name="Activities"
                 fillOpacity={0.6}
               />
             </AreaChart>
@@ -236,7 +243,7 @@ const UsageAnalytics = () => {
                       </p>
                     </div>
                   </div>
-                  <Badge variant="secondary">{user.lastActive}</Badge>
+                  <Badge variant="secondary">{user.lastActive ? new Date(user.lastActive).toLocaleDateString() : 'N/A'}</Badge>
                 </div>
               )) : (
                 <div className="flex items-center justify-center h-24 text-muted-foreground">
@@ -290,20 +297,20 @@ const UsageAnalytics = () => {
           <div className="grid gap-6 md:grid-cols-3">
             {/* Storage */}
             <div className="p-4 border rounded-lg">
-              <h4 className="font-semibold mb-4">Storage</h4>
+              <h4 className="font-semibold mb-4">CRM Overview</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Database</span>
-                  <span className="font-medium">{dashboardData?.stats?.storage?.database || '—'}</span>
+                  <span className="text-muted-foreground">Total Leads</span>
+                  <span className="font-medium">{dashboardData?.overview?.totalLeads || 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Documents</span>
-                  <span className="font-medium">{dashboardData?.stats?.storage?.documents || '—'}</span>
+                  <span className="text-muted-foreground">Total Campaigns</span>
+                  <span className="font-medium">{dashboardData?.overview?.totalCampaigns || 0}</span>
                 </div>
                 <div className="pt-3 border-t">
                   <div className="flex items-center justify-between font-semibold">
-                    <span>Total</span>
-                    <span>{dashboardData?.stats?.storage?.total || 'N/A'}</span>
+                    <span>Total Tasks</span>
+                    <span>{dashboardData?.overview?.totalTasks || 0}</span>
                   </div>
                 </div>
               </div>
@@ -311,16 +318,16 @@ const UsageAnalytics = () => {
 
             {/* API Usage */}
             <div className="p-4 border rounded-lg">
-              <h4 className="font-semibold mb-4">API Usage</h4>
+              <h4 className="font-semibold mb-4">Campaigns</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Total API Calls</span>
-                  <span className="font-medium">{dashboardData?.stats?.apiCalls || '—'}</span>
+                  <span className="text-muted-foreground">Active Campaigns</span>
+                  <span className="font-medium">{dashboardData?.overview?.activeCampaigns || 0}</span>
                 </div>
                 <div className="pt-3 border-t">
                   <div className="flex items-center justify-between font-semibold">
-                    <span>Status</span>
-                    <span>{dashboardData?.stats?.apiCalls ? 'Active' : 'No data'}</span>
+                    <span>Activities</span>
+                    <span>{dashboardData?.activities?.total || 0}</span>
                   </div>
                 </div>
               </div>
@@ -328,19 +335,19 @@ const UsageAnalytics = () => {
 
             {/* System Info */}
             <div className="p-4 border rounded-lg">
-              <h4 className="font-semibold mb-4">System</h4>
+              <h4 className="font-semibold mb-4">Tasks</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Total Leads</span>
-                  <span className="font-medium">{dashboardData?.stats?.totalLeads || 0}</span>
+                  <span className="text-muted-foreground">Task Completion</span>
+                  <span className="font-medium">{dashboardData?.tasks?.completionRate || 0}%</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Campaigns</span>
-                  <span className="font-medium">{dashboardData?.stats?.totalCampaigns || 0}</span>
+                  <span className="text-muted-foreground">Overdue Tasks</span>
+                  <span className="font-medium">{dashboardData?.tasks?.overdue || 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Workflows</span>
-                  <span className="font-medium">{dashboardData?.stats?.totalWorkflows || 0}</span>
+                  <span className="text-muted-foreground">Due Today</span>
+                  <span className="font-medium">{dashboardData?.tasks?.dueToday || 0}</span>
                 </div>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Shield } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -10,6 +10,7 @@ import { authApi } from '@/lib/api'
 
 function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const { toast } = useToast()
   const { setAuth, isLoading } = useAuthStore()
@@ -21,6 +22,24 @@ function Login() {
   // Cleanup ref for navigation timeouts
   const navTimerRef = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => () => { clearTimeout(navTimerRef.current) }, [])
+
+  // Determine where to redirect after login:
+  // 1. React Router state.from (set by ProtectedRoute)
+  // 2. ?returnTo= query param (set by idle session manager)
+  // 3. Fallback to dashboard
+  const getReturnPath = () => {
+    const stateFrom = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from
+    if (stateFrom?.pathname) return stateFrom.pathname + (stateFrom.search || '')
+    const returnTo = searchParams.get('returnTo')
+    if (returnTo) {
+      try {
+        const decoded = decodeURIComponent(returnTo)
+        // Only allow relative paths to prevent open redirect
+        if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded
+      } catch { /* ignore */ }
+    }
+    return '/'
+  }
 
   // 2FA challenge state
   const [requires2FA, setRequires2FA] = useState(false)
@@ -58,8 +77,8 @@ function Login() {
       // Normal login — extract user/tokens (may be nested under .data)
       const payload = response.data || response
       setAuth(payload.user, payload.tokens?.accessToken, payload.tokens?.refreshToken)
-      toast.success('Login successful!', 'Redirecting to dashboard...')
-      navTimerRef.current = setTimeout(() => navigate('/'), 500)
+      toast.success('Login successful!', 'Redirecting...')
+      navTimerRef.current = setTimeout(() => navigate(getReturnPath()), 500)
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } }
       toast.error('Login failed', err.response?.data?.message || 'Invalid email or password')
@@ -82,8 +101,8 @@ function Login() {
       const data = response.data || response
       
       setAuth(data.user, data.tokens?.accessToken, data.tokens?.refreshToken)
-      toast.success('Login successful!', 'Redirecting to dashboard...')
-      navTimerRef.current = setTimeout(() => navigate('/'), 500)
+      toast.success('Login successful!', 'Redirecting...')
+      navTimerRef.current = setTimeout(() => navigate(getReturnPath()), 500)
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } }
       toast.error('Verification failed', err.response?.data?.message || 'Invalid 2FA code')

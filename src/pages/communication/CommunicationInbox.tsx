@@ -91,6 +91,7 @@ const CommunicationInbox = () => {
     selectedContactIdRef,
   } = state
   const userId = useAuthStore(s => s.user?.id)
+  const userEmail = useAuthStore(s => s.user?.email)
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -164,14 +165,30 @@ const CommunicationInbox = () => {
   // Sync query data to local contacts state
   useEffect(() => {
     if (contactsData) {
-      setContacts(contactsData)
-      const currentId = selectedContactIdRef.current
-      if (currentId !== null) {
-        const updated = contactsData.find((c: Contact) => c.id === currentId)
-        if (updated) setSelectedContact(updated)
-      } else if (contactsData.length > 0) {
-        setSelectedContact(contactsData[0])
-      }
+      setContacts(prev => {
+        // Append new contacts when paginating; replace when search/filter/folder changes
+        if (inboxPage > 1) {
+          const existingIds = new Set(prev.map(c => c.id))
+          const newContacts = contactsData.filter((c: Contact) => !existingIds.has(c.id))
+          const merged = [...prev, ...newContacts]
+          // Update the selected contact from fresh data if it exists
+          const currentId = selectedContactIdRef.current
+          if (currentId !== null) {
+            const updated = merged.find((c: Contact) => c.id === currentId)
+            if (updated) setSelectedContact(updated)
+          }
+          return merged
+        }
+        // Page 1: replace entire list
+        const currentId = selectedContactIdRef.current
+        if (currentId !== null) {
+          const updated = contactsData.find((c: Contact) => c.id === currentId)
+          if (updated) setSelectedContact(updated)
+        } else if (contactsData.length > 0) {
+          setSelectedContact(contactsData[0])
+        }
+        return contactsData
+      })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactsData])
@@ -199,8 +216,8 @@ const CommunicationInbox = () => {
 
   // ─── Draft Autosave ───────────────────────────────────────────
   useEffect(() => {
-    if (!selectedContact) return
-    const key = `draft_${selectedContact.id}`
+    if (!selectedContact || !userId) return
+    const key = `user_${userId}_draft_${selectedContact.id}`
     if (replyText) {
       const timer = setTimeout(() => {
         try { localStorage.setItem(key, replyText) } catch { /* storage full */ }
@@ -209,12 +226,12 @@ const CommunicationInbox = () => {
     } else {
       localStorage.removeItem(key)
     }
-  }, [replyText, selectedContact])
+  }, [replyText, selectedContact, userId])
 
   // Restore draft when contact changes
   useEffect(() => {
-    if (!selectedContact) return
-    const draft = localStorage.getItem(`draft_${selectedContact.id}`)
+    if (!selectedContact || !userId) return
+    const draft = localStorage.getItem(`user_${userId}_draft_${selectedContact.id}`)
     if (draft) setReplyText(draft)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact?.id])
@@ -228,11 +245,13 @@ const CommunicationInbox = () => {
 
     if (folderFilter === 'unread' && contact.totalUnread === 0) return false
     if (folderFilter === 'starred' && !allMessages.some(m => m.starred)) return false
-    if (folderFilter === 'snoozed' && !allMessages.some(m => m.snoozed && m.snoozed > Date.now())) return false
-    if (folderFilter === 'archived' || folderFilter === 'trash') return true
+    if (folderFilter === 'snoozed' && !allMessages.some(m => m.snoozedUntil && new Date(m.snoozedUntil).getTime() > Date.now())) return false
+    if (folderFilter === 'archived') return allMessages.every(m => m.archived) && !allMessages.some(m => m.trashed)
+    if (folderFilter === 'trash') return allMessages.some(m => m.trashed)
 
-    // Exclude snoozed contacts from inbox if still snoozed
-    if (folderFilter === 'inbox' && allMessages.some(m => m.snoozed && m.snoozed > Date.now())) return false
+    // Inbox: exclude archived/trashed contacts and still-snoozed contacts
+    if (allMessages.every(m => m.archived || m.trashed)) return false
+    if (allMessages.some(m => m.snoozedUntil && new Date(m.snoozedUntil).getTime() > Date.now())) return false
 
     const matchesSearch = !searchQuery ||
       contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -474,7 +493,7 @@ const CommunicationInbox = () => {
   const snoozeContact = async (contactId: string | number, minutes = 60) => {
     const contact = contacts.find(c => c.id === contactId)
     if (!contact) return
-    const snoozeUntil = Date.now() + minutes * 60 * 1000
+    const snoozeUntil = new Date(Date.now() + minutes * 60 * 1000).toISOString()
     const previousContacts = [...contacts]
     setContacts(prev => prev.map(c =>
       c.id === contactId
@@ -483,16 +502,15 @@ const CommunicationInbox = () => {
           threads: Object.fromEntries(
             Object.entries(c.threads).map(([ch, t]) => [ch, {
               ...t,
-              messages: t.messages.map(m => ({ ...m, snoozed: snoozeUntil }))
+              messages: t.messages.map(m => ({ ...m, snoozedUntil: snoozeUntil }))
             }])
           )
         }
         : c
     ))
     try {
-      const snoozedUntilISO = new Date(snoozeUntil).toISOString()
       const allMsgs = Object.values(contact.threads).flatMap(t => t.messages)
-      await Promise.all(allMsgs.map(m => messagesApi.snoozeMessage(String(m.id), snoozedUntilISO)))
+      await Promise.all(allMsgs.map(m => messagesApi.snoozeMessage(String(m.id), snoozeUntil)))
       toast.success('Conversation snoozed')
     } catch (error) {
       logger.error('Failed to snooze:', error)
@@ -575,7 +593,7 @@ const CommunicationInbox = () => {
 
       const newMessage: Message = {
         id: Date.now(), type: replyChannel, direction: 'OUTBOUND',
-        from: 'you@company.com', to: replyTo, contact: selectedContact.name,
+        from: userEmail || 'me', to: replyTo, contact: selectedContact.name,
         subject: replyChannel === 'email' ? emailSubject : undefined, body: messageBody,
         timestamp: new Date().toISOString(), date: new Date().toLocaleString(),
         unread: false, starred: false, status: 'sent'
@@ -903,7 +921,7 @@ const CommunicationInbox = () => {
         <LoadingSkeleton rows={6} showChart={false} />
       ) : (
         <>
-          <div className="grid grid-cols-12 gap-4" style={{ height: 'calc(100vh - 240px)' }}>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4" style={{ height: 'calc(100vh - 240px)' }}>
             <ContactList
               contacts={filteredContacts}
               selectedContact={selectedContact}
@@ -915,9 +933,9 @@ const CommunicationInbox = () => {
               loading={loading}
               isFetching={isFetching}
               inboxPage={inboxPage}
-              onSearchChange={setSearchQuery}
+              onSearchChange={(q) => { setSearchQuery(q); setInboxPage(1) }}
               onSelectContact={handleSelectContact}
-              onFolderChange={setFolderFilter}
+              onFolderChange={(f) => { setFolderFilter(f); setInboxPage(1) }}
               onToggleBulkSelect={handleToggleBulkSelect}
               onToggleContactSelect={handleToggleContactSelect}
               onToggleStar={toggleStarContact}

@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, TrendingUp, Filter, Download, RefreshCw, Layout, Plus, Settings, X, GripVertical, Clock, Trash2, Pause, Play, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, Filter, Download, Upload, RefreshCw, Layout, Plus, Settings, X, GripVertical, Clock, Trash2, Pause, Play, Calendar } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -229,7 +229,7 @@ const ScheduledReportsSection = () => {
                 <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {sched.frequency} at {sched.timeOfDay || '08:00'}
-                  {sched.dayOfWeek != null && (scheduleForm.frequency === 'WEEKLY' || scheduleForm.frequency === 'BIWEEKLY')
+                  {sched.dayOfWeek != null && (sched.frequency === 'WEEKLY' || sched.frequency === 'BIWEEKLY')
                     ? ` on ${DAY_OPTIONS.find(d => d.value === sched.dayOfWeek)?.label || ''}`
                     : ''}
                 </p>
@@ -269,7 +269,6 @@ const CustomReports = () => {
   const [activeTab, setActiveTab] = useState<'saved' | 'builder'>('saved');
 
   // ——— Saved Reports state ———
-  const [_showReportBuilder, _setShowReportBuilder] = useState(false);
   const [reportConfig, setReportConfig] = useState<ReportConfig>({ name: '', type: 'leads', groupBy: 'none', metrics: [], dateRange: '30d' });
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [generatedReport, setGeneratedReport] = useState<Record<string, unknown> | null>(null);
@@ -619,6 +618,46 @@ const CustomReports = () => {
     a.download = `${reportName.replace(/\s+/g, '_')}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  const handleBuilderImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        if (parsed.name) setReportName(parsed.name);
+        if (parsed.category) setReportCategory(parsed.category);
+        if (Array.isArray(parsed.widgets)) {
+          const imported: ReportWidget[] = parsed.widgets.map((w: any, i: number) => {
+            const widget: ReportWidget = {
+              id: `widget-import-${Date.now()}-${i}`,
+              type: w.type || 'bar-chart',
+              dataSource: w.dataSource || null,
+              label: w.label || 'Imported Widget',
+              data: null,
+              value: undefined,
+            };
+            const { data, value } = getDataForWidget(widget.dataSource, widget.type);
+            widget.data = data;
+            widget.value = value;
+            return widget;
+          });
+          setWidgets(imported);
+          toast.success(`Imported ${imported.length} widget(s) from "${parsed.name || 'report'}"`);
+        } else {
+          toast.error('Invalid report file: missing widgets array');
+        }
+      } catch {
+        toast.error('Failed to parse report JSON file');
+      }
+    };
+    reader.readAsText(file);
+    // Reset so the same file can be re-imported
+    e.target.value = '';
   };
 
   // ——————————————————————————————————————————
@@ -1119,6 +1158,17 @@ const CustomReports = () => {
               Drag data sources or widgets onto the canvas to build visual reports
             </p>
             <div className="flex items-center space-x-2">
+              <input
+                ref={importFileRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={handleBuilderImport}
+              />
+              <Button variant="outline" onClick={() => importFileRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import
+              </Button>
               <Button variant="outline" onClick={handleBuilderExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export

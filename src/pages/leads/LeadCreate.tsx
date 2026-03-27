@@ -70,6 +70,7 @@ export default function LeadCreate() {
     mutationFn: leadsApi.createLead,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] })
+      queryClient.invalidateQueries({ queryKey: ['lead'] })
       toast.success('Lead created successfully')
       navigate('/leads')
     },
@@ -98,6 +99,7 @@ export default function LeadCreate() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrors({})
     
     const newErrors = validateForm()
     setErrors(newErrors)
@@ -120,8 +122,9 @@ export default function LeadCreate() {
           })
           if (!confirmed) return
         }
-      } catch {
-        // If check fails, allow creation to proceed
+      } catch (err) {
+        // If duplicate check fails, log it but allow creation to proceed
+        logger.warn('Duplicate check failed, proceeding with creation:', err)
       }
     }
     

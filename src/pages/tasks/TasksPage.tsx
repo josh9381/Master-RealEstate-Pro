@@ -23,7 +23,7 @@ interface Task {
   assignedToId?: string
   completed: boolean
   category: string
-  status: 'pending' | 'completed' | 'cancelled'
+  status: 'pending' | 'completed' | 'cancelled' | 'in_progress' | 'IN_PROGRESS'
   leadId?: string
 }
 

@@ -19,61 +19,20 @@ const TeamManagement = () => {
   const [showActivityLogs, setShowActivityLogs] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Sales Rep');
   
-  const [teamMembers, setTeamMembers] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@company.com',
-      role: 'Owner',
-      status: 'active' as const,
-      lastActive: '2 minutes ago',
-      avatar: 'JD',
-      isOnline: true,
-    },
-    {
-      id: 2,
-      name: 'Sarah Johnson',
-      email: 'sarah.j@company.com',
-      role: 'Admin',
-      status: 'active' as const,
-      lastActive: '5 minutes ago',
-      avatar: 'SJ',
-      isOnline: true,
-    },
-    {
-      id: 3,
-      name: 'Mike Smith',
-      email: 'mike.s@company.com',
-      role: 'Manager',
-      status: 'active' as const,
-      lastActive: '1 hour ago',
-      avatar: 'MS',
-      isOnline: false,
-    },
-    {
-      id: 4,
-      name: 'Emily Brown',
-      email: 'emily.b@company.com',
-      role: 'Sales Rep',
-      status: 'active' as const,
-      lastActive: '30 minutes ago',
-      avatar: 'EB',
-      isOnline: true,
-    },
-    {
-      id: 5,
-      name: 'David Lee',
-      email: 'david.l@company.com',
-      role: 'Sales Rep',
-      status: 'invited' as const,
-      lastActive: 'Pending',
-      avatar: 'DL',
-      isOnline: false,
-    },
-  ]);
+  const [teamMembers, setTeamMembers] = useState<Array<{
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    status: 'active' | 'invited';
+    lastActive: string;
+    avatar: string;
+    isOnline: boolean;
+  }>>([]);
 
   const { data: teamData, isLoading: loading, isFetching, refetch } = useQuery({
     queryKey: ['team', 'members'],
@@ -94,19 +53,9 @@ const TeamManagement = () => {
     refetch();
   };
 
-  const activityLogs = [
-    { user: 'Sarah Johnson', action: 'Updated lead status', time: '5 min ago' },
-    { user: 'Mike Smith', action: 'Created new campaign', time: '1 hour ago' },
-    { user: 'Emily Brown', action: 'Sent 12 emails', time: '2 hours ago' },
-    { user: 'John Doe', action: 'Modified team permissions', time: '3 hours ago' },
-  ];
+  const activityLogs: Array<{ user: string; action: string; time: string }> = [];
 
-  const leaderboardData = [
-    { name: 'Sarah Johnson', leads: 45, deals: 12, revenue: '$45,000', avatar: 'SJ' },
-    { name: 'Emily Brown', leads: 38, deals: 10, revenue: '$38,500', avatar: 'EB' },
-    { name: 'Mike Smith', leads: 32, deals: 8, revenue: '$32,000', avatar: 'MS' },
-    { name: 'David Lee', leads: 28, deals: 7, revenue: '$28,500', avatar: 'DL' },
-  ];
+  const leaderboardData: Array<{ name: string; leads: number; deals: number; revenue: string; avatar: string }> = [];
 
   const handleInvite = async () => {
     if (!inviteEmail) {
@@ -163,7 +112,11 @@ const TeamManagement = () => {
   };
 
   const editMember = (id: number) => {
-    toast.info(`Edit member ${id} - opens edit dialog`);
+    const member = teamMembers.find(m => m.id === id);
+    if (member) {
+      toast.info(`Opening edit dialog for ${member.name}`);
+      // TODO: Implement edit member modal
+    }
   };
 
   const bulkImportUsers = () => {
@@ -367,12 +320,17 @@ const TeamManagement = () => {
               <CardTitle>Team Members</CardTitle>
               <CardDescription>Manage team members and their roles</CardDescription>
             </div>
-            <Input placeholder="Search members..." className="w-64" />
+            <Input placeholder="Search members..." className="w-64" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {teamMembers.map((member) => (
+            {teamMembers.filter(m => 
+              !searchQuery || 
+              m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+              m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              m.role.toLowerCase().includes(searchQuery.toLowerCase())
+            ).map((member) => (
               <div
                 key={member.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent"

@@ -173,6 +173,7 @@ export const getMessages = async (req: Request, res: Response) => {
     }
 
     const channelThread = contact.threads[channelType]
+    const metadata = message.metadata as Record<string, unknown> | null
     const msgData = {
       id: message.id,
       type: channelType,
@@ -186,13 +187,14 @@ export const getMessages = async (req: Request, res: Response) => {
       date: message.createdAt,
       unread: !message.readAt && message.direction === 'INBOUND',
       starred: !!message.starred,
+      hasAttachment: !!(metadata && Array.isArray((metadata as Record<string, unknown>).attachments) && ((metadata as Record<string, unknown>).attachments as unknown[]).length > 0),
       status: message.status.toLowerCase(),
       emailOpened: message.status === 'OPENED' || message.status === 'CLICKED',
       emailClicked: message.status === 'CLICKED',
       readAt: message.readAt,
       archived: !!message.archived,
       trashed: !!message.trashedAt,
-      snoozedUntil: message.snoozedUntil,
+      snoozedUntil: message.snoozedUntil ? message.snoozedUntil.toISOString() : null,
     }
 
     channelThread.messages.push(msgData)

@@ -29,6 +29,8 @@ const VALID_ACTION_TYPES = [
   'SEND_NOTIFICATION',
   'ADD_TO_CAMPAIGN',
   'WEBHOOK',
+  'DELAY',
+  'CONDITION',
 ] as const
 
 /** Per-action-type config validation */
@@ -53,7 +55,7 @@ export const createWorkflowSchema = z.object({
   triggerType: z.enum(VALID_TRIGGER_TYPES),
   triggerData: z.record(z.string(), z.unknown()).optional(),
   actions: z.array(actionSchema).min(1, 'At least one action is required'),
-  maxRetries: z.number().int().min(1).max(10).optional(),
+  maxRetries: z.number().int().min(1).max(3).optional(),
   notifyOnFailure: z.boolean().optional(),
   nodes: z.array(nodeSchema).optional(),
 })
@@ -65,7 +67,7 @@ export const updateWorkflowSchema = z.object({
   triggerData: z.record(z.string(), z.unknown()).optional(),
   actions: z.array(actionSchema).min(1).optional(),
   isActive: z.boolean().optional(),
-  maxRetries: z.number().int().min(1).max(10).optional(),
+  maxRetries: z.number().int().min(1).max(3).optional(),
   notifyOnFailure: z.boolean().optional(),
   nodes: z.array(nodeSchema).optional(),
 })

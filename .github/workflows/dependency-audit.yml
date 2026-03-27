@@ -1,0 +1,39 @@
+name: Dependency Audit
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Every Monday at 9am UTC
+  push:
+    branches: [main]
+    paths:
+      - 'package-lock.json'
+      - 'backend/package-lock.json'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  audit-frontend:
+    name: Frontend Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+
+  audit-backend:
+    name: Backend Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: npm audit --audit-level=high

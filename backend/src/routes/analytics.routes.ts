@@ -23,6 +23,7 @@ import {
   getLeadVelocity,
   getSourceROI,
   getFollowUpAnalytics,
+  getLeadSources,
 } from '../controllers/analytics.controller'
 
 const router = Router()
@@ -57,5 +58,8 @@ router.get('/comparison', cacheResponse(300), asyncHandler(getPeriodComparison))
 router.get('/lead-velocity', cacheResponse(300), asyncHandler(getLeadVelocity))
 router.get('/source-roi', cacheResponse(300), asyncHandler(getSourceROI))
 router.get('/follow-up-analytics', cacheResponse(300), asyncHandler(getFollowUpAnalytics))
+
+// Filter options — distinct values from the database
+router.get('/lead-sources', cacheResponse(300), asyncHandler(getLeadSources))
 
 export default router

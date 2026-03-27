@@ -384,7 +384,7 @@ const WorkflowBuilder = () => {
       const executionsList = executionsData?.data?.executions || executionsData?.executions;
       if (executionsList) {
         const runningCount = executionsList.filter(
-          (exec: WorkflowExecution) => exec.status === 'IN_PROGRESS' || exec.status === 'RUNNING'
+          (exec: WorkflowExecution) => exec.status === 'RUNNING' || (exec.status as string) === 'IN_PROGRESS'
         ).length;
         setActiveExecutions(runningCount);
         if (runningCount > 0) {
@@ -689,16 +689,17 @@ const WorkflowBuilder = () => {
         status: 'draft'
       };
 
-      // Check if editing existing workflow
-      const urlParams = new URLSearchParams(window.location.search);
-      const workflowId = urlParams.get('id');
-
       if (workflowId) {
         await workflowsApi.updateWorkflow(workflowId, workflowData);
         toast.success('Workflow updated successfully');
       } else {
-        await workflowsApi.createWorkflow(workflowData);
+        const result = await workflowsApi.createWorkflow(workflowData);
         toast.success('Workflow created successfully');
+        // Redirect to edit the newly created workflow to prevent duplicate creates
+        const newId = result?.data?.workflow?.id;
+        if (newId) {
+          navigate(`/workflows/builder?id=${newId}`, { replace: true });
+        }
       }
       setHasUnsavedChanges(false);
       initialNodesRef.current = JSON.stringify(nodes.map(n => ({ id: n.id, type: n.type, label: n.label, config: n.config })));
@@ -714,9 +715,6 @@ const WorkflowBuilder = () => {
     try {
       setIsTestRunning(true);
       toast.info('Starting test execution...');
-      
-      const urlParams = new URLSearchParams(window.location.search);
-      const workflowId = urlParams.get('id');
       
       if (workflowId) {
         const result = await workflowsApi.testWorkflow(workflowId, testInput ? { leadIdentifier: testInput } : undefined);
@@ -1289,7 +1287,7 @@ const WorkflowBuilder = () => {
                         status: 'draft' as const
                       }
                       const response = await workflowsApi.createWorkflow(workflowData)
-                      const newId = response?.data?.id || response?.id
+                      const newId = response?.data?.workflow?.id
                       toast.success('Workflow duplicated successfully')
                       if (newId) {
                         navigate(`/workflows/builder?id=${newId}`);

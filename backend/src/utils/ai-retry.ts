@@ -11,6 +11,7 @@
 
 import OpenAI from 'openai'
 import { getFallbackChain } from '../services/ai-config.service'
+import { logger } from '../lib/logger'
 
 export interface RetryOptions {
   /** Max number of retries per model before falling back (default: 3) */
@@ -87,7 +88,7 @@ export async function withRetryAndFallback<T>(
       try {
         const result = await fn(client, model)
         if (model !== primaryModel) {
-          console.warn(`[AI Retry] Succeeded with fallback model ${model} (primary was ${primaryModel})`)
+          logger.warn(`[AI Retry] Succeeded with fallback model ${model} (primary was ${primaryModel})`)
         }
         return { result, modelUsed: model }
       } catch (error) {
@@ -95,7 +96,7 @@ export async function withRetryAndFallback<T>(
 
         // If it's a model error (model doesn't exist), skip remaining retries and try next model
         if (isModelError(error)) {
-          console.warn(`[AI Retry] Model ${model} not available, trying next fallback`)
+          logger.warn(`[AI Retry] Model ${model} not available, trying next fallback`)
           break
         }
 
@@ -106,14 +107,14 @@ export async function withRetryAndFallback<T>(
 
         // If we've exhausted retries for this model, move to next
         if (attempt === options.maxRetries) {
-          console.warn(`[AI Retry] Exhausted ${options.maxRetries} retries for model ${model}`)
+          logger.warn(`[AI Retry] Exhausted ${options.maxRetries} retries for model ${model}`)
           break
         }
 
         // Wait with exponential backoff + jitter
         const jitter = Math.random() * 0.3 * delay
         const waitTime = Math.min(delay + jitter, options.maxDelay)
-        console.warn(`[AI Retry] Attempt ${attempt + 1}/${options.maxRetries} for ${model} failed, retrying in ${Math.round(waitTime)}ms`)
+        logger.warn(`[AI Retry] Attempt ${attempt + 1}/${options.maxRetries} for ${model} failed, retrying in ${Math.round(waitTime)}ms`)
         await sleep(waitTime)
         delay *= options.backoffMultiplier
       }

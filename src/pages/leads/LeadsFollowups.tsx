@@ -435,7 +435,7 @@ function LeadsFollowups() {
 
       {/* Add Follow-up Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Add Follow-up" onKeyDown={(e) => { if (e.key === 'Escape') setShowAddModal(false) }}>
           <Card className="w-full max-w-md p-6 m-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Add Follow-up</h2>

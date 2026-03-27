@@ -705,11 +705,18 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <textarea
               id="message"
               className="w-full p-3 border rounded-md bg-background text-foreground dark:border-gray-600 text-sm"
-              placeholder="Hi [FirstName]! We have new listings in your area. Reply YES to learn more."
+              placeholder="Hi {{lead.firstName}}! We have new listings in your area. Reply YES to learn more."
               maxLength={160}
               rows={3}
-              value={msg}
-              onChange={(e) => updateConfig('message', e.target.value)}
+              value={msg
+                .replace(/\{\{lead\.firstName\}\}/gi, '[FirstName]')
+                .replace(/\{\{lead\.lastName\}\}/gi, '[LastName]')}
+              onChange={(e) => {
+                const v = e.target.value
+                  .replace(/\[FirstName\]/gi, '{{lead.firstName}}')
+                  .replace(/\[LastName\]/gi, '{{lead.lastName}}');
+                updateConfig('message', v);
+              }}
             />
           </FieldGroup>
           <div className="flex items-center justify-between">

@@ -440,7 +440,7 @@ function LeadsPipeline() {
         <div className="animate-pulse space-y-4">
           <div className="flex space-x-4">
             {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="w-80 shrink-0 h-96 bg-muted rounded" />
+              <div key={i} className="w-full md:w-80 shrink-0 h-96 bg-muted rounded" />
             ))}
           </div>
         </div>
@@ -449,7 +449,7 @@ function LeadsPipeline() {
           {stagesWithLeads.map((stage) => (
             <div
               key={stage.id}
-              className="w-80 shrink-0"
+              className="w-full md:w-80 shrink-0"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, stage.id)}
             >

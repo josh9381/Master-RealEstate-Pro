@@ -14,19 +14,19 @@ const BusinessSettings = () => {
   const queryClient = useQueryClient();
   
   // Company Information
-  const [companyName, setCompanyName] = useState('Acme Corporation');
-  const [industry, setIndustry] = useState('Technology');
-  const [companySize, setCompanySize] = useState('11-50 employees');
-  const [taxId, setTaxId] = useState('12-3456789');
-  const [website, setWebsite] = useState('https://www.acmecorp.com');
+  const [companyName, setCompanyName] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [companySize, setCompanySize] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [website, setWebsite] = useState('');
   
   // Contact Information
-  const [email, setEmail] = useState('contact@acmecorp.com');
-  const [phone, setPhone] = useState('+1 (555) 123-4567');
-  const [address, setAddress] = useState('123 Business Ave');
-  const [city, setCity] = useState('San Francisco');
-  const [state, setState] = useState('CA');
-  const [zipCode, setZipCode] = useState('94105');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [country, setCountry] = useState('United States');
   
   // Preferences
@@ -46,9 +46,9 @@ const BusinessSettings = () => {
   // Sync fetched data into form state
   useEffect(() => {
     if (businessData) {
-      setCompanyName(businessData.companyName || 'Acme Corporation');
-      setIndustry(businessData.industry || 'Technology');
-      setCompanySize(businessData.companySize || '11-50 employees');
+      setCompanyName(businessData.companyName || '');
+      setIndustry(businessData.industry || '');
+      setCompanySize(businessData.companySize || '');
       setTaxId(businessData.taxId || '');
       setWebsite(businessData.website || '');
       setEmail(businessData.email || '');
@@ -67,6 +67,26 @@ const BusinessSettings = () => {
 
   const handleRefresh = () => {
     refetch();
+  };
+
+  const handleCancel = () => {
+    if (businessData) {
+      setCompanyName(businessData.companyName || '');
+      setIndustry(businessData.industry || '');
+      setCompanySize(businessData.companySize || '');
+      setTaxId(businessData.taxId || '');
+      setWebsite(businessData.website || '');
+      setEmail(businessData.email || '');
+      setPhone(businessData.phone || '');
+      setAddress(businessData.address || '');
+      setCity(businessData.city || '');
+      setState(businessData.state || '');
+      setZipCode(businessData.zipCode || '');
+      setCountry(businessData.country || 'United States');
+      setTimezone(businessData.timezone || 'America/Los_Angeles');
+      setDateFormat(businessData.dateFormat || 'MM/DD/YYYY');
+      setCurrency(businessData.currency || 'USD');
+    }
   };
   
   const handleLogoUpload = () => {
@@ -110,6 +130,11 @@ const BusinessSettings = () => {
   const handleSave = () => {
     if (!companyName || !email) {
       toast.error('Please fill in required fields');
+      return;
+    }
+
+    if (website && !/^https?:\/\/.+/.test(website)) {
+      toast.error('Website must start with http:// or https://');
       return;
     }
     
@@ -193,11 +218,20 @@ const BusinessSettings = () => {
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
               >
-                <option>Technology</option>
-                <option>Healthcare</option>
-                <option>Finance</option>
-                <option>Retail</option>
-                <option>Other</option>
+                <option value="">Select industry...</option>
+                <option value="Real Estate">Real Estate</option>
+                <option value="Real Estate - Residential">Real Estate - Residential</option>
+                <option value="Real Estate - Commercial">Real Estate - Commercial</option>
+                <option value="Mortgage & Lending">Mortgage &amp; Lending</option>
+                <option value="Property Management">Property Management</option>
+                <option value="Technology">Technology</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Finance">Finance</option>
+                <option value="Retail">Retail</option>
+                <option value="Insurance">Insurance</option>
+                <option value="Legal">Legal</option>
+                <option value="Construction">Construction</option>
+                <option value="Other">Other</option>
               </select>
             </div>
             <div>
@@ -344,7 +378,7 @@ const BusinessSettings = () => {
 
       {/* Actions */}
       <div className="flex justify-between">
-        <Button variant="outline">Cancel</Button>
+        <Button variant="outline" onClick={handleCancel}>Cancel</Button>
         <Button onClick={handleSave} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
         </Button>

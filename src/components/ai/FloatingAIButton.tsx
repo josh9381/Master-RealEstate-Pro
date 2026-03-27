@@ -8,7 +8,11 @@ const BADGE_SEEN_KEY = 'ai-assistant-badge-seen'
 export function FloatingAIButton() {
   const [isOpen, setIsOpen] = useState(false)
   const [hasNewSuggestion, setHasNewSuggestion] = useState(() => {
-    return !localStorage.getItem(BADGE_SEEN_KEY)
+    try {
+      return !localStorage.getItem(BADGE_SEEN_KEY)
+    } catch {
+      return true
+    }
   })
   const [showPulse, setShowPulse] = useState(true)
   const keysPressed = useRef(new Set<string>())

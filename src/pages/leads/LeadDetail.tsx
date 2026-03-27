@@ -459,7 +459,7 @@ function LeadDetail() {
     if (editingLead.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editingLead.email)) {
       newErrors.email = 'Please enter a valid email address'
     }
-    if (editingLead.phone && !/^[+\d\s()-]{7,20}$/.test(editingLead.phone)) {
+    if (editingLead.phone && !/^\+?[\d\s()-]{7,20}$/.test(editingLead.phone)) {
       newErrors.phone = 'Please enter a valid phone number'
     }
     return newErrors

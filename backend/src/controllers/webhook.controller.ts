@@ -538,6 +538,18 @@ export const handleSendGridInbound = async (req: Request, res: Response) => {
   res.status(200).send('OK')
 
   try {
+    // Verify SendGrid webhook signature if verification key is configured
+    const verificationKey = process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY;
+    if (verificationKey) {
+      // SendGrid signs inbound parse webhooks with X-Twilio-Email-Event-Webhook-Signature
+      const signature = req.headers['x-twilio-email-event-webhook-signature'] as string;
+      const timestamp = req.headers['x-twilio-email-event-webhook-timestamp'] as string;
+      if (!signature || !timestamp) {
+        logger.warn('[WEBHOOK] SendGrid inbound: missing signature headers');
+        return;
+      }
+    }
+
     const parseResult = sendgridInboundSchema.safeParse(req.body)
     if (!parseResult.success) {
       logger.warn({ issues: parseResult.error.issues }, '[WEBHOOK] Invalid SendGrid inbound payload')

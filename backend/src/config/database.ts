@@ -7,8 +7,9 @@ declare global {
 }
 
 export const prisma = global.prisma || new PrismaClient({
+  // Avoid logging PII-containing query parameters (WHERE clause values) in any environment
   log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'error', 'warn'] 
+    ? ['error', 'warn'] 
     : ['error'],
 });
 

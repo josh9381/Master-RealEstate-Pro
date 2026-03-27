@@ -22,6 +22,22 @@ interface AuditEntry {
 }
 
 /**
+ * Redact sensitive fields from data before storing in audit log
+ */
+const SENSITIVE_FIELDS = new Set(['password', 'token', 'accessToken', 'refreshToken', 'secret', 'apiKey', 'key', 'authorization', 'creditCard', 'cardNumber', 'cvv', 'ssn'])
+
+function redactSensitiveFields(data: unknown): unknown {
+  if (!data || typeof data !== 'object') return data;
+  if (Array.isArray(data)) return data.map(redactSensitiveFields);
+  return Object.fromEntries(
+    Object.entries(data as Record<string, unknown>).map(([k, v]) => [
+      k,
+      SENSITIVE_FIELDS.has(k.toLowerCase()) ? '[REDACTED]' : redactSensitiveFields(v),
+    ])
+  );
+}
+
+/**
  * Create an audit log entry
  */
 export async function logAudit(entry: AuditEntry): Promise<void> {
@@ -36,9 +52,9 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
         description: entry.description,
         ipAddress: entry.ipAddress || undefined,
         userAgent: entry.userAgent || undefined,
-        beforeData: (entry.beforeData as object) || undefined,
-        afterData: (entry.afterData as object) || undefined,
-        metadata: (entry.metadata as object) || undefined,
+        beforeData: (redactSensitiveFields(entry.beforeData) as object) || undefined,
+        afterData: (redactSensitiveFields(entry.afterData) as object) || undefined,
+        metadata: (redactSensitiveFields(entry.metadata) as object) || undefined,
       },
     })
   } catch (error) {

@@ -3,6 +3,14 @@ import dotenv from 'dotenv'
 // Load environment variables BEFORE any other imports that use process.env at module scope
 dotenv.config()
 
+// Validate required environment variables at startup
+const REQUIRED_ENV_VARS = ['DATABASE_URL', 'JWT_SECRET', 'MASTER_ENCRYPTION_KEY']
+const missingEnvVars = REQUIRED_ENV_VARS.filter((v) => !process.env[v])
+if (missingEnvVars.length > 0) {
+  console.error(`[STARTUP ERROR] Missing required environment variables: ${missingEnvVars.join(', ')}`)
+  process.exit(1)
+}
+
 import express, { Express, Request, Response } from 'express'
 import path from 'path'
 import { createServer } from 'http'
@@ -67,6 +75,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { sanitizeInput } from './middleware/sanitize'
 import { generalLimiter } from './middleware/rateLimiter'
 import { authenticate } from './middleware/auth'
+import { csrfProtection } from './middleware/csrf'
 import { requireAdminOrManager } from './middleware/admin'
 import { logger } from './lib/logger'
 import { getRedisClient, isRedisConnected, closeRedis } from './config/redis'
@@ -123,8 +132,15 @@ app.use(helmet({
 // Stripe webhooks need raw body for signature verification — mount BEFORE express.json()
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }))
 
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+// Per-route request size limits (Phase 16.6)
+// AI routes need larger limits for prompts and training data
+app.use('/api/ai', express.json({ limit: '5mb' }))
+app.use('/api/ai', express.urlencoded({ extended: true, limit: '5mb' }))
+// Webhooks should be kept small — Stripe raw body is already handled above
+app.use('/api/webhooks', express.json({ limit: '1mb' }))
+// Default limit for all other routes (1 MB is generous for JSON API payloads)
+app.use(express.json({ limit: '1mb' }))
+app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 
 // Serve uploaded files (avatars, logos) statically
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
@@ -140,6 +156,9 @@ app.use(requestLogger)
 
 // Rate limiting (general)
 app.use(generalLimiter)
+
+// CSRF protection (defense-in-depth for state-changing requests)
+app.use(csrfProtection)
 
 // #110: Expanded health check endpoint
 app.get('/health', async (req: Request, res: Response) => {
@@ -298,6 +317,9 @@ app.use(errorHandler)
 // Initialise Socket.io for real-time events
 initSocketServer(httpServer)
 
+// Track cron jobs for graceful shutdown
+const cronJobs: ReturnType<typeof cron.schedule>[] = []
+
 // Start server
 httpServer.listen(PORT, () => {
   logger.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, 'Server started')
@@ -312,7 +334,7 @@ httpServer.listen(PORT, () => {
   logger.info('Starting scheduled jobs...')
   
   // Run every minute to check for scheduled campaigns
-  cron.schedule('* * * * *', async () => {
+  cronJobs.push(cron.schedule('* * * * *', async () => {
     const lockAcquired = await acquireLock('cron:campaign-scheduler', 55)
     if (!lockAcquired) {
       logger.debug('Campaign scheduler skipped — another instance holds the lock')
@@ -323,11 +345,11 @@ httpServer.listen(PORT, () => {
     } finally {
       await releaseLock('cron:campaign-scheduler')
     }
-  })
+  }))
   logger.info('Campaign scheduler active - checking every minute')
   
   // Run every minute to check for due follow-up reminders
-  cron.schedule('* * * * *', async () => {
+  cronJobs.push(cron.schedule('* * * * *', async () => {
     const lockAcquired = await acquireLock('cron:reminder-processor', 55)
     if (!lockAcquired) return
     try {
@@ -337,7 +359,7 @@ httpServer.listen(PORT, () => {
     } finally {
       await releaseLock('cron:reminder-processor')
     }
-  })
+  }))
   logger.info('Reminder processor active - checking every minute')
 
   // Recover delayed workflow actions that were lost due to restart
@@ -351,7 +373,7 @@ httpServer.listen(PORT, () => {
   })
 
   // Run every 5 minutes to check for delayed workflow actions that need resuming
-  cron.schedule('*/5 * * * *', async () => {
+  cronJobs.push(cron.schedule('*/5 * * * *', async () => {
     const lockAcquired = await acquireLock('cron:workflow-delay-recovery', 280)
     if (!lockAcquired) return
     try {
@@ -362,10 +384,10 @@ httpServer.listen(PORT, () => {
     } finally {
       await releaseLock('cron:workflow-delay-recovery')
     }
-  })
+  }))
   
   // Run daily at 2 AM to recalculate all lead scores
-  cron.schedule('0 2 * * *', async () => {
+  cronJobs.push(cron.schedule('0 2 * * *', async () => {
     logger.info('Running daily lead score recalculation...')
     try {
       const result = await updateAllLeadScores()
@@ -373,11 +395,11 @@ httpServer.listen(PORT, () => {
     } catch (error) {
       logger.error({ error }, 'Failed to recalculate lead scores')
     }
-  })
+  }))
   logger.info('Lead scoring scheduler active - running daily at 2 AM')
   
   // Run weekly on Sundays at 3 AM to optimize ML scoring weights
-  cron.schedule('0 3 * * 0', async () => {
+  cronJobs.push(cron.schedule('0 3 * * 0', async () => {
     logger.info('Running weekly ML optimization for all users...')
     try {
       const mlService = getMLOptimizationService()
@@ -407,7 +429,7 @@ httpServer.listen(PORT, () => {
     } catch (error) {
       logger.error({ error }, 'Failed to run ML optimization')
     }
-  })
+  }))
   logger.info('ML optimization scheduler active - running weekly on Sundays at 3 AM')
   
   // Start workflow background jobs
@@ -448,6 +470,10 @@ async function gracefulShutdown(signal: string) {
   isShuttingDown = true
 
   logger.info({ signal }, 'Graceful shutdown initiated')
+
+  // Stop all cron jobs
+  cronJobs.forEach(job => job.stop())
+  logger.info('Cron jobs stopped')
 
   // Stop background jobs
   stopDataCleanup()

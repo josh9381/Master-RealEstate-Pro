@@ -19,19 +19,19 @@ const GoogleIntegration = () => {
   const [connectedDate, setConnectedDate] = useState('');
   
   // Gmail settings
-  const [gmailEnabled, setGmailEnabled] = useState(true);
-  const [syncEmails, setSyncEmails] = useState(true);
-  const [trackEmails, setTrackEmails] = useState(true);
+  const [gmailEnabled, setGmailEnabled] = useState(false);
+  const [syncEmails, setSyncEmails] = useState(false);
+  const [trackEmails, setTrackEmails] = useState(false);
   const [createLeads, setCreateLeads] = useState(false);
   
   // Calendar settings
-  const [calendarEnabled, setCalendarEnabled] = useState(true);
-  const [syncCalendar, setSyncCalendar] = useState(true);
+  const [calendarEnabled, setCalendarEnabled] = useState(false);
+  const [syncCalendar, setSyncCalendar] = useState(false);
   const [autoCreateEvents, setAutoCreateEvents] = useState(false);
   
   // Contacts settings
-  const [contactsEnabled, setContactsEnabled] = useState(true);
-  const [syncContacts, setSyncContacts] = useState(true);
+  const [contactsEnabled, setContactsEnabled] = useState(false);
+  const [syncContacts, setSyncContacts] = useState(false);
   const [autoImport, setAutoImport] = useState(false);
 
   const { data: integrationData, isLoading: loading, isFetching, refetch } = useQuery({
@@ -44,9 +44,29 @@ const GoogleIntegration = () => {
 
   useEffect(() => {
     if (integrationData) {
-      setConnected(integrationData.connected ?? true);
+      setConnected(integrationData.connected ?? false);
       setConnectedEmail(integrationData.email || integrationData.account?.email || '');
       setConnectedDate(integrationData.connectedAt || integrationData.connectedDate || '');
+      // Sync saved feature settings from API
+      if (integrationData.settings) {
+        const s = integrationData.settings;
+        if (s.gmail) {
+          setGmailEnabled(s.gmail.enabled ?? false);
+          setSyncEmails(s.gmail.syncEmails ?? false);
+          setTrackEmails(s.gmail.trackEmails ?? false);
+          setCreateLeads(s.gmail.createLeads ?? false);
+        }
+        if (s.calendar) {
+          setCalendarEnabled(s.calendar.enabled ?? false);
+          setSyncCalendar(s.calendar.syncCalendar ?? false);
+          setAutoCreateEvents(s.calendar.autoCreateEvents ?? false);
+        }
+        if (s.contacts) {
+          setContactsEnabled(s.contacts.enabled ?? false);
+          setSyncContacts(s.contacts.syncContacts ?? false);
+          setAutoImport(s.contacts.autoImport ?? false);
+        }
+      }
     }
   }, [integrationData]);
 
@@ -215,12 +235,12 @@ const GoogleIntegration = () => {
                   <div className="flex items-center space-x-2 mb-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <h4 className="font-semibold">Send from CRM</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Send emails directly from the CRM interface
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Send emails directly from the CRM interface
-              </p>
-            </div>
-          </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
               <input 
@@ -444,8 +464,7 @@ const GoogleIntegration = () => {
             <label className="text-sm font-medium mb-2 block">Client ID</label>
             <input
               type="text"
-              placeholder="xxxxx.apps.googleusercontent.com"
-              defaultValue="123456789-abc123def456.apps.googleusercontent.com"
+              placeholder="Enter your Client ID"
               className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
             />
           </div>
@@ -453,8 +472,7 @@ const GoogleIntegration = () => {
             <label className="text-sm font-medium mb-2 block">Client Secret</label>
             <input
               type="password"
-              placeholder="••••••••••••••••••••"
-              defaultValue="GOCSPX-abcdefghijklmnopqrst"
+              placeholder="Enter your Client Secret"
               className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
             />
           </div>

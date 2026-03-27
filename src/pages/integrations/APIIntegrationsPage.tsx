@@ -176,8 +176,13 @@ export default function APIIntegrationsPage() {
                       <code className="text-sm bg-muted px-2 py-1 rounded font-mono">
                         {apiKey.keyPrefix}••••••••••••••••
                       </code>
-                      <Button variant="ghost" size="sm" onClick={() => handleCopy(apiKey.keyPrefix + '••••••••')}>
-                        <Copy className="h-4 w-4" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        title="Full API key is only shown once at creation time and cannot be retrieved"
+                      >
+                        <Copy className="h-4 w-4 opacity-40" />
                       </Button>
                     </div>
                   </div>

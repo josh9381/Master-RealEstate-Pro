@@ -229,7 +229,7 @@ export interface WorkflowAction {
 
 export interface WorkflowExecution {
   id: string
-  status: 'COMPLETED' | 'FAILED' | 'RUNNING' | 'PENDING' | 'IN_PROGRESS' | 'SUCCESS'
+  status: 'SUCCESS' | 'FAILED' | 'RUNNING' | 'PENDING'
   startedAt: string
   completedAt?: string
   createdAt?: string

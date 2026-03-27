@@ -79,7 +79,7 @@ const HealthCheckDashboard = () => {
       </div>
 
       {/* Overall Status */}
-      <Card className={`border-${overallStatus === 'operational' ? 'green' : overallStatus === 'checking' ? 'gray' : 'orange'}-200 bg-${overallStatus === 'operational' ? 'green' : overallStatus === 'checking' ? 'gray' : 'orange'}-50`}>
+      <Card className={`${overallStatus === 'operational' ? 'border-green-200 bg-green-50' : overallStatus === 'checking' ? 'border-gray-200 bg-gray-50' : 'border-orange-200 bg-orange-50'}`}>
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4">
             <div className={`flex items-center justify-center h-16 w-16 rounded-full ${overallStatus === 'operational' ? 'bg-green-600' : overallStatus === 'checking' ? 'bg-gray-400' : 'bg-orange-600'}`}>

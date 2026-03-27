@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -102,9 +102,10 @@ export function UnsubscribePage() {
   }
 
   // Auto-unsubscribe on mount (only once)
-  useState(() => {
+  useEffect(() => {
     handleUnsubscribe()
-  })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const renderStatus = () => {
     switch (status) {

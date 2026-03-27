@@ -6,7 +6,7 @@ import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
-import { formatRate } from '@/lib/metricsCalculator';
+import { formatRate, calcRate } from '@/lib/metricsCalculator';
 import {
   AreaChart,
   Area,
@@ -17,7 +17,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
-import { calcRate } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
@@ -260,7 +259,7 @@ const LeadAnalytics = () => {
           <CardContent>
             <div className="space-y-4">
               {topPerformers.length > 0 ? topPerformers.map((performer: any, index: number) => (
-                <div key={performer.name} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => performer.id && navigate(`/leads/${performer.id}`)}>
+                <div key={performer.id || index} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => performer.id && navigate(`/leads/${performer.id}`)}>
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-white text-sm font-bold">
                       #{index + 1}

@@ -255,7 +255,7 @@ const DatabaseMaintenance = () => {
                       <div><span className="text-muted-foreground">Engine:</span> <strong>PostgreSQL</strong></div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div><span className="text-muted-foreground">Index Size:</span> <strong>~{(parseInt(table.size) * 0.15).toFixed(0) || '18'} MB</strong></div>
+                      <div><span className="text-muted-foreground">Index Size:</span> <strong>~{(parseFloat(table.size) * 0.15).toFixed(0) || '18'} MB</strong></div>
                       <div><span className="text-muted-foreground">Avg Row Size:</span> <strong>{table.records > 0 ? Math.round((parseFloat(table.size) * 1024 * 1024) / table.records) : 0} bytes</strong></div>
                       <div><span className="text-muted-foreground">Dead Tuples:</span> <strong>~{Math.round(table.records * 0.012).toLocaleString()}</strong></div>
                       <div><span className="text-muted-foreground">Status:</span> <Badge variant="default">Healthy</Badge></div>

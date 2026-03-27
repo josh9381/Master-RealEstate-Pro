@@ -57,15 +57,15 @@ const TwilioSetup = () => {
 
   // SMS Settings state
   const [smsCharLimit, setSmsCharLimit] = useState<number>(160);
-  const [enableDeliveryReceipts, setEnableDeliveryReceipts] = useState(true);
-  const [enableLinkShortening, setEnableLinkShortening] = useState(true);
+  const [enableDeliveryReceipts, setEnableDeliveryReceipts] = useState(false);
+  const [enableLinkShortening, setEnableLinkShortening] = useState(false);
   const [autoOptOut, setAutoOptOut] = useState(false);
 
   // Voice Settings state
-  const [recordingMode, setRecordingMode] = useState('record-all');
+  const [recordingMode, setRecordingMode] = useState('none');
   const [voicemailUrl, setVoicemailUrl] = useState('');
-  const [enableCallForwarding, setEnableCallForwarding] = useState(true);
-  const [enableVoicemailTranscription, setEnableVoicemailTranscription] = useState(true);
+  const [enableCallForwarding, setEnableCallForwarding] = useState(false);
+  const [enableVoicemailTranscription, setEnableVoicemailTranscription] = useState(false);
 
   // Load current user profile
   useEffect(() => {
@@ -845,6 +845,10 @@ const TwilioSetup = () => {
           <div className="pt-4 border-t">
             <Button 
               onClick={async () => {
+                if (voicemailUrl && !/^https:\/\/.+/.test(voicemailUrl)) {
+                  toast.error('Voicemail URL must start with https://');
+                  return;
+                }
                 setSaving(true);
                 try {
                   await settingsApi.updateSMSConfig({

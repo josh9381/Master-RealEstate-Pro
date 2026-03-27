@@ -1,5 +1,6 @@
 import { logger } from '../lib/logger'
 import { processTimeBasedWorkflows, getQueueStatus, getExecutionStats } from '../services/workflowExecutor.service';
+import { recoverDelayedWorkflowActions } from '../services/workflow.service';
 
 /**
  * Workflow Background Job Processor
@@ -141,6 +142,15 @@ export function startWorkflowJobs() {
   // Run initial jobs
   timeBasedWorkflowJob();
   statsReportJob();
+
+  // Recover any delayed actions that were lost during a previous restart
+  recoverDelayedWorkflowActions().then(count => {
+    if (count > 0) {
+      logger.info(`[Job Scheduler] Recovered ${count} delayed workflow execution(s) from previous run`);
+    }
+  }).catch(err => {
+    logger.error('[Job Scheduler] Failed to recover delayed workflow actions:', err);
+  });
 
   logger.info('[Job Scheduler] All background jobs started');
   logger.info(`[Job Scheduler] Time-based check: every ${INTERVALS.TIME_BASED_CHECK / 1000}s`);

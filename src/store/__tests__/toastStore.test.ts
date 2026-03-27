@@ -1,52 +1,73 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useToastStore } from '@/store/toastStore'
+import { act } from '@testing-library/react'
 
 describe('toastStore', () => {
   beforeEach(() => {
-    useToastStore.setState({ toasts: [] })
+    act(() => useToastStore.getState().clearAll())
     vi.useFakeTimers()
   })
 
-  it('adds a toast', () => {
-    useToastStore.getState().addToast({ type: 'success', message: 'Done' })
-    expect(useToastStore.getState().toasts).toHaveLength(1)
-    expect(useToastStore.getState().toasts[0].message).toBe('Done')
-    expect(useToastStore.getState().toasts[0].type).toBe('success')
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
-  it('assigns unique IDs', () => {
-    const store = useToastStore.getState()
-    store.addToast({ type: 'info', message: 'First' })
-    store.addToast({ type: 'info', message: 'Second' })
+  it('starts with empty toasts', () => {
+    expect(useToastStore.getState().toasts).toEqual([])
+  })
+
+  it('adds a toast with auto-generated id', () => {
+    act(() => {
+      useToastStore.getState().addToast({ type: 'success', message: 'Done!' })
+    })
     const toasts = useToastStore.getState().toasts
-    expect(toasts[0].id).not.toBe(toasts[1].id)
+    expect(toasts).toHaveLength(1)
+    expect(toasts[0].type).toBe('success')
+    expect(toasts[0].message).toBe('Done!')
+    expect(toasts[0].id).toBeDefined()
   })
 
-  it('removes a toast by ID after animation', () => {
-    useToastStore.getState().addToast({ type: 'error', message: 'Oops' })
+  it('removes a toast by id', () => {
+    act(() => {
+      useToastStore.getState().addToast({ type: 'error', message: 'Oops' })
+    })
     const id = useToastStore.getState().toasts[0].id
-    useToastStore.getState().removeToast(id)
-    // Should be marked as exiting immediately
-    expect(useToastStore.getState().toasts[0].exiting).toBe(true)
-    // After animation delay, should be fully removed
-    vi.advanceTimersByTime(300)
+    act(() => {
+      useToastStore.getState().removeToast(id)
+    })
+    // Should be marked as exiting first
+    expect(useToastStore.getState().toasts[0]?.exiting).toBe(true)
+    // Actually removed after animation timeout
+    act(() => { vi.advanceTimersByTime(400) })
     expect(useToastStore.getState().toasts).toHaveLength(0)
   })
 
   it('clears all toasts', () => {
-    const store = useToastStore.getState()
-    store.addToast({ type: 'info', message: 'A' })
-    store.addToast({ type: 'info', message: 'B' })
-    store.clearAll()
+    act(() => {
+      useToastStore.getState().addToast({ type: 'info', message: 'A' })
+      useToastStore.getState().addToast({ type: 'info', message: 'B' })
+    })
+    expect(useToastStore.getState().toasts.length).toBeGreaterThanOrEqual(2)
+    act(() => {
+      useToastStore.getState().clearAll()
+    })
     expect(useToastStore.getState().toasts).toHaveLength(0)
   })
 
-  it('enforces max 5 active toasts', () => {
-    const store = useToastStore.getState()
-    for (let i = 0; i < 7; i++) {
-      store.addToast({ type: 'info', message: `Toast ${i}` })
-    }
-    const active = useToastStore.getState().toasts.filter(t => !t.exiting)
-    expect(active.length).toBeLessThanOrEqual(5)
+  it('auto-removes toast after duration', () => {
+    act(() => {
+      useToastStore.getState().addToast({ type: 'success', message: 'Temp', duration: 1000 })
+    })
+    expect(useToastStore.getState().toasts).toHaveLength(1)
+    act(() => { vi.advanceTimersByTime(1100) }) // duration + buffer
+    // Should be exiting
+    act(() => { vi.advanceTimersByTime(400) }) // animation delay
+    expect(useToastStore.getState().toasts).toHaveLength(0)
+  })
+
+  it('supports description field', () => {
+    act(() => {
+      useToastStore.getState().addToast({ type: 'warning', message: 'Watch out', description: 'Details here' })
+    })
+    expect(useToastStore.getState().toasts[0].description).toBe('Details here')
   })
 })

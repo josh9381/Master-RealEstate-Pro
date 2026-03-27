@@ -27,11 +27,11 @@ const ProfileSettings = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   
   // Contact Information
-  const [company, setCompany] = useState('Acme Corporation');
-  const [address, setAddress] = useState('123 Main St');
-  const [city, setCity] = useState('San Francisco');
-  const [state, setState] = useState('CA');
-  const [zipCode, setZipCode] = useState('94105');
+  const [company, setCompany] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [country, setCountry] = useState('United States');
   
   // Preferences
@@ -58,10 +58,10 @@ const ProfileSettings = () => {
       setJobTitle(profileData.jobTitle || '');
       setCompany(profileData.company || '');
       setAddress(profileData.address || '');
-      setCity('');
-      setState('');
-      setZipCode('');
-      setCountry('United States');
+      setCity(profileData.city || '');
+      setState(profileData.state || '');
+      setZipCode(profileData.zipCode || '');
+      setCountry(profileData.country || 'United States');
       setLanguage(profileData.language || 'en');
       setTimezone(profileData.timezone || 'America/Los_Angeles');
       setDateFormat('MM/DD/YYYY');
@@ -70,6 +70,24 @@ const ProfileSettings = () => {
 
   const handleRefresh = () => {
     refetch();
+  };
+
+  const handleCancel = () => {
+    if (profileData) {
+      setFirstName(profileData.firstName || '');
+      setLastName(profileData.lastName || '');
+      setEmail(profileData.email || '');
+      setPhone(profileData.phone || '');
+      setJobTitle(profileData.jobTitle || '');
+      setCompany(profileData.company || '');
+      setAddress(profileData.address || '');
+      setCity(profileData.city || '');
+      setState(profileData.state || '');
+      setZipCode(profileData.zipCode || '');
+      setCountry(profileData.country || 'United States');
+      setLanguage(profileData.language || 'en');
+      setTimezone(profileData.timezone || 'America/Los_Angeles');
+    }
   };
   
   const handlePhotoUpload = async () => {
@@ -97,7 +115,7 @@ const ProfileSettings = () => {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone: string; jobTitle: string; company: string; address: string; timezone: string; language: string }) => {
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone: string; jobTitle: string; company: string; address: string; city: string; state: string; zipCode: string; country: string; timezone: string; language: string }) => {
       return await settingsApi.updateProfile(data);
     },
     onSuccess: () => {
@@ -111,9 +129,15 @@ const ProfileSettings = () => {
     },
   });
 
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const handleSave = () => {
     if (!firstName || !lastName || !email) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      toast.error('Please enter a valid email address');
       return;
     }
     
@@ -125,6 +149,10 @@ const ProfileSettings = () => {
       jobTitle,
       company,
       address,
+      city,
+      state,
+      zipCode,
+      country,
       timezone,
       language,
     });
@@ -427,7 +455,7 @@ const ProfileSettings = () => {
 
       {/* Actions */}
       <div className="flex justify-between">
-        <Button variant="outline">Cancel</Button>
+        <Button variant="outline" onClick={handleCancel}>Cancel</Button>
         <Button onClick={handleSave} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
         </Button>

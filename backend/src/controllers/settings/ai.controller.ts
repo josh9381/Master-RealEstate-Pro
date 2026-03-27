@@ -9,6 +9,7 @@
 
 import { Request, Response } from 'express'
 import { getOrgAISettings, updateOrgAISettings } from '../../services/ai-config.service'
+import { logger } from '../../lib/logger'
 
 /**
  * GET /api/settings/ai
@@ -24,7 +25,7 @@ export const getAISettings = async (req: Request, res: Response) => {
       data: settings,
     })
   } catch (error: any) {
-    console.error('Get AI settings error:', error)
+    logger.error('Get AI settings error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch AI settings',
@@ -93,7 +94,7 @@ export const updateAISettings = async (req: Request, res: Response) => {
       message: 'AI settings updated successfully',
     })
   } catch (error: any) {
-    console.error('Update AI settings error:', error)
+    logger.error('Update AI settings error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to update AI settings',
@@ -120,7 +121,7 @@ export const removeAPIKey = async (req: Request, res: Response) => {
       message: 'API key removed. Your organization will use the platform AI key.',
     })
   } catch (error: any) {
-    console.error('Remove API key error:', error)
+    logger.error('Remove API key error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to remove API key',

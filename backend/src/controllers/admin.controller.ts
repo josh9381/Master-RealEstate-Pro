@@ -190,12 +190,13 @@ export const runMaintenance = async (req: Request, res: Response) => {
         const filePath = path.join(backupDir, filename);
 
         // Export all org-scoped data
+        const BACKUP_LIMIT = 50000;
         const [leads, campaigns, workflows, users, activities] = await Promise.all([
-          prisma.lead.findMany({ where: { organizationId: orgId } }),
-          prisma.campaign.findMany({ where: { organizationId: orgId } }),
-          prisma.workflow.findMany({ where: { organizationId: orgId } }),
-          prisma.user.findMany({ where: { organizationId: orgId }, select: { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true, createdAt: true } }),
-          prisma.activity.findMany({ where: { organizationId: orgId }, take: 50000, orderBy: { createdAt: 'desc' } }),
+          prisma.lead.findMany({ where: { organizationId: orgId }, take: BACKUP_LIMIT }),
+          prisma.campaign.findMany({ where: { organizationId: orgId }, take: BACKUP_LIMIT }),
+          prisma.workflow.findMany({ where: { organizationId: orgId }, take: BACKUP_LIMIT }),
+          prisma.user.findMany({ where: { organizationId: orgId }, take: BACKUP_LIMIT, select: { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true, createdAt: true } }),
+          prisma.activity.findMany({ where: { organizationId: orgId }, take: BACKUP_LIMIT, orderBy: { createdAt: 'desc' } }),
         ]);
 
         const tables: Record<string, number> = {

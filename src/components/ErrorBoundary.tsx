@@ -45,7 +45,19 @@ export class ErrorBoundary extends Component<Props, State> {
       error: null,
       errorInfo: null,
     });
-    window.location.href = '/dashboard';
+    // Navigate to dashboard using full page reload to ensure clean state
+    // This clears any corrupted component trees
+    if (window.location.pathname !== '/dashboard') {
+      window.location.href = '/dashboard';
+    }
+  };
+
+  handleRetry = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+    });
   };
 
   render() {
@@ -90,7 +102,11 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div className="flex gap-3">
-              <Button onClick={this.handleReset} className="flex items-center gap-2">
+              <Button onClick={this.handleRetry} className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Try Again
+              </Button>
+              <Button variant="outline" onClick={this.handleReset} className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4" />
                 Go to Dashboard
               </Button>

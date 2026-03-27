@@ -1,13 +1,14 @@
 # Master Real Estate Pro — 100% Completion Plan
 
 > **Created:** February 28, 2026
-> **Updated:** March 10, 2026 (v35: Phase 15 complete — onboarding tour, notification sounds, recent searches, Coming Soon standardization)
+> **Updated:** March 25, 2026 (v38: E2E Playwright restored, console cleanup, test fixes — all builds & tests green)
 > **Total Estimated Days:** ~51 working days
 > **Philosophy: Build everything first, then polish and consolidate. Keep all routes/pages during building so we can see what exists. Admin/Team/Billing/Subscription deferred — decisions pending.**
 >
 > **Legend:** ⚠️ = Decision point — stop and ask user before proceeding | ✅ = Complete | 🔀 = Deferred
 >
-> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). Phase 3A complete (7/7 tasks). Phase 3B complete (8/9 tasks, 1 deferred). Phase 4 complete (14/14 tasks). Phase 5 complete (9/9 tasks). Phase 6 complete (9/9 tasks). Phase 7 complete (8/8 tasks). Phase 8 complete (3/6 tasks, 3 deferred). Phase 9 complete (18/27 tasks done, 9 deferred). Phase 10 complete (13/15 tasks done, 1 deferred, 1 skipped). Phase 11 complete (18/18 done). Phase 12 complete (18/19 done, 1 skipped). Phase 13 in progress (6/20 done). Phase 15 complete (7/7 tasks). DS-1 through DS-15 resolved. DS-11B (Phase 11) resolved.
+> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). Phase 3A complete (7/7 tasks). Phase 3B complete (8/9 tasks, 1 deferred). Phase 4 complete (14/14 tasks). Phase 5 complete (9/9 tasks). Phase 6 complete (9/9 tasks). Phase 7 complete (8/8 tasks). Phase 8 complete (3/6 tasks, 3 deferred). Phase 9 complete (18/27 tasks done, 9 deferred). Phase 10 complete (13/15 tasks done, 1 deferred, 1 skipped). Phase 11 complete (18/18 done). Phase 12 complete (18/19 done, 1 skipped). Phase 13 complete (20/20 done). Phase 14 complete (7/7 done). Phase 15 complete (7/7 tasks). Phase 16 partial (1/7 done, 6 deferred). DS-1 through DS-15 resolved. DS-11B (Phase 11) resolved.
+> **Progress:** Phase 0 complete (35/35 tasks). Phase 1 complete (12/12 tasks). Phase 2 complete (8/8 tasks). Phase 3A complete (7/7 tasks). Phase 3B complete (8/9 tasks, 1 deferred). Phase 4 complete (14/14 tasks). Phase 5 complete (9/9 tasks). Phase 6 complete (9/9 tasks). Phase 7 complete (8/8 tasks). Phase 8 complete (3/6 tasks, 3 deferred). Phase 9 complete (18/27 tasks done, 9 deferred). Phase 10 complete (13/15 tasks done, 1 deferred, 1 skipped). Phase 11 complete (18/18 done). Phase 12 complete (18/19 done, 1 skipped). Phase 13 complete (20/20 done). Phase 14 complete (7/7 done). Phase 15 complete (7/7 tasks). Phase 16 partial (4/7 done, 3 deferred — Docker/docker-compose pending). DS-1 through DS-15 resolved. DS-11B (Phase 11) resolved.
 
 ---
 
@@ -21,7 +22,7 @@
 | **DS-2** | ✅ RESOLVED | 2 | Enum values for all String→enum conversions (10 fields) — all UPPERCASE convention. Data retention: RefreshToken=0d, PasswordResetToken=7d, LoginHistory=90d, AIInsight=30d |
 | **DS-3** | ✅ RESOLVED | 4 | File upload: 10MB max, jpg/png/webp/gif. Integrations: all "Coming Soon" (no fake OAuth). Deliverability: contextual (campaign detail + email settings). Saved Reports: card grid with edit-in-place. |
 | **DS-4** | ✅ RESOLVED | 5 | Pipeline default stages (8 stages incl. Nurturing), pipeline types (Buyer/Seller/Rental/Commercial/General + Custom), follow-up delivery channels (resolved in 3.1), call logging outcomes (resolved in 3.2), lead field columns (deferred) |
-| **DS-5** | Before Phase 3B | 5 | Import duplicate criteria, relationship types, lead assignment strategy, real-estate-specific fields, deduplication behavior |
+| **DS-5** | ✅ RESOLVED | 5 | Import duplicate criteria (Email OR Phone OR First+Last Name), relationship types (deferred), lead assignment (manual only), real-estate-specific fields (9 columns), deduplication (review & merge manually) |
 | **DS-6** | ✅ RESOLVED | 5 | Editor: block-based + MJML (not WYSIWYG — clean HTML). Send-time: timezone + historical engagement. Conditions: all 4 (lead field, email opened, link clicked, time elapsed). Delay: minutes/hours/days/weeks + specific date/time. Retry: 1–3 retries, exponential backoff, notify user on failure (no silent skip). |
 | **DS-7** | ✅ RESOLVED | 4 | Attribution: all 5 models (first-touch, last-touch, linear, time-decay, U-shaped). Scheduling: Daily/Weekly/Biweekly/Monthly/Quarterly/Yearly/Custom(N days), email PDF + in-app history. Goals: 7 metrics (leads, deals, revenue, conversion, calls, appointments, response time) + custom. Recurrence: same 7 patterns as scheduling. |
 | **DS-8** | ✅ RESOLVED | 1 | Terms of Service: placeholder page at /terms-of-service, consent checkbox on registration |
@@ -966,7 +967,7 @@ Backend files (14 catches fixed):
 | 13.19 | Audit existing 15 Playwright e2e specs — determine which are real functional tests vs. navigation smoke tests (screenshot-only), decide which to keep/expand/rewrite | 1 hr | ✅ |
 | 13.20 | Verify `cache.ts` middleware degrades gracefully when `REDIS_ENABLED=false` — if not, add fallback behavior | 15 min | ✅ |
 
-**Phase Total: ~35.5 hours (4.5 days)**
+**Phase Total: ~35.5 hours (4.5 days) — ✅ COMPLETE**
 
 ---
 
@@ -982,11 +983,11 @@ Backend files (14 catches fixed):
 | 14.6 | Add `aria-live="polite"` to `ToastContainer` | 10 min | ✅ |
 | 14.7 | Detect `prefers-color-scheme: dark` for initial theme | 30 min | ✅ |
 
-**Phase Total: ~4 hours (0.5 days) — DONE**
+**Phase Total: ~4 hours (0.5 days) — ✅ COMPLETE**
 
 ---
 
-## PHASE 15: ONBOARDING + FINAL POLISH (Days 45–46)
+## PHASE 15: ONBOARDING + FINAL POLISH (Days 45–46) ✅ COMPLETE
 
 | # | Task | Time | Status |
 |---|------|------|--------|
@@ -998,7 +999,7 @@ Backend files (14 catches fixed):
 | 15.5 | Add recent searches/history to GlobalSearchModal | 1.5 hr | ✅ |
 | 15.6 | Standardize all "Coming Soon" pages — illustration + blurred preview hybrid (greyed/blurred mockup of upcoming feature with polished illustration, description, and optional "Notify me" button) | 2 hr | ✅ |
 
-**Phase Total: ~13 hours (1.5 days)**
+**Phase Total: ~13 hours (1.5 days) — ✅ COMPLETE**
 
 ---
 
@@ -1006,20 +1007,20 @@ Backend files (14 catches fixed):
 
 ---
 
-## PHASE 16: CI/CD + DEPLOYMENT (Days 49–51)
+## PHASE 16: CI/CD + DEPLOYMENT (Days 49–51) — PARTIAL (1/7 done, 6 deferred)
 *Without this, there's no way to deploy to production or ensure quality on every push.*
 
 | # | Task | Time | Status |
 |---|------|------|--------|
 | 16.1 | Set up GitHub Actions CI pipeline — Lint + TypeScript type-check + Build on every push/PR; E2E (Playwright) on PRs to main only | 4 hr | ✅ |
-| 16.2 | Create `Dockerfile` for backend (Node + Prisma + migrations) | 2 hr | ⏭️ DEFERRED — not ready for deployment |
-| 16.3 | Create `Dockerfile` for frontend (Vite build + static serve via nginx) | 1.5 hr | ⏭️ DEFERRED — not ready for deployment |
-| 16.4 | Create `docker-compose.yml` for local full-stack dev (backend, frontend, Postgres, Redis) | 2 hr | ⏭️ DEFERRED — not ready for deployment |
-| 16.5 | Add CSRF protection middleware to backend | 1 hr | ⏭️ DEFERRED — not ready for deployment |
-| 16.6 | Add per-route request size limits — AI routes, file uploads, and webhooks should have different limits than default 10MB | 30 min | ⏭️ DEFERRED — not ready for deployment |
-| 16.7 | Add developer documentation: architecture overview, API reference, setup guide in `docs/` | 3 hr | ⏭️ DEFERRED — not ready for deployment |
+| 16.2 | Create `Dockerfile` for backend (Node + Prisma + migrations) | 2 hr | 🔀 Deferred — not ready for deployment |
+| 16.3 | Create `Dockerfile` for frontend (Vite build + static serve via nginx) | 1.5 hr | 🔀 Deferred — not ready for deployment |
+| 16.4 | Create `docker-compose.yml` for local full-stack dev (backend, frontend, Postgres, Redis) | 2 hr | 🔀 Deferred — not ready for deployment |
+| 16.5 | Add CSRF protection middleware to backend — `middleware/csrf.ts`: Origin + Content-Type validation, exempts webhooks/public routes, dev-permissive | 1 hr | ✅ |
+| 16.6 | Add per-route request size limits — AI 5 MB, webhooks 1 MB, default 1 MB (was 10 MB); multer retains per-upload limits | 30 min | ✅ |
+| 16.7 | Add developer documentation — `docs/ARCHITECTURE.md`, `docs/API_REFERENCE.md`, `docs/SETUP_GUIDE.md` | 3 hr | ✅ |
 
-**Phase Total: ~14 hours (2 days)**
+**Phase Total: ~14 hours (2 days) — PARTIAL (4/7 done, 3 deferred — Docker/docker-compose pending deployment readiness)**
 
 ---
 
@@ -1200,6 +1201,34 @@ These were discovered during deep codebase analysis and are incorporated into th
 ---
 
 ## AUDIT CHANGELOG
+
+**March 25, 2026 (v38) — E2E Playwright restored, console cleanup, test fixes:**
+
+- **E2E Playwright setup restored** — `e2e/playwright.config.ts` created with Chromium, retry:2 in CI, screenshot:only-on-failure, trace:on-first-retry; `e2e/tests/auth.spec.ts` (7 tests) and `e2e/tests/navigation.spec.ts` (3 tests) written; `e2e/package.json` added with `@playwright/test ^1.58.2`
+- **14 remaining `console.*` calls replaced with `logger`** in 3 backend files:
+  - `backend/src/utils/ai-retry.ts` — 4 `console.warn` → `logger.warn` (added logger import)
+  - `backend/src/controllers/settings/ai.controller.ts` — 3 `console.error` → `logger.error` (added logger import)
+  - `backend/src/services/ai-functions.service.ts` — 6 `console.error` → `logger.error` (logger already imported)
+- **2FA test fix** — `backend/tests/utils/2fa.test.ts`: `@` is URL-encoded to `%40` in otpauthUrl; added `decodeURIComponent(result.otpauthUrl!)` assertion
+- **Verification results:** Frontend build ✅ (17.53s), Backend tsc ✅ (no errors), Frontend tests 91/91 ✅, Backend tests 125/125 ✅, E2E Playwright lists 10 tests ✅
+
+**March 25, 2026 (v37) — Phases 13, 14 complete; Phase 16 status confirmed:**
+
+- **Phase 13 complete (20/20 tasks)** — All code quality and testing tasks verified done:
+  - CommunicationInbox split into 7 modules (13.1), LeadsList split into 6 modules (13.2)
+  - 169 `any` types fixed with `getErrorMessage()` helper (13.3)
+  - 4 new controllers extracted from route files (13.4), pagination added to 3 endpoints (13.5)
+  - ESLint configured for backend (13.6), Husky pre-commit hooks (13.7), Vitest set up (13.8)
+  - Frontend + backend tests written (13.9, 13.10), modal error boundaries added (13.11)
+  - Redis consolidation confirmed done (13.12), vulnerable deps upgraded (13.13)
+  - Swagger docs polished (13.14), root package.json scripts added (13.15)
+  - Backend tsconfig fixed to include tests + seed (13.16), Playwright config updated (13.17)
+  - Backend scripts converted to .ts (13.18), e2e specs audited (13.19), cache fallback verified (13.20)
+- **Phase 14 complete (7/7 tasks)** — All accessibility tasks verified done:
+  - Skip-to-content link, nav aria-label, dialog roles, aria-expanded/haspopup, icon button labels, aria-live on toasts, prefers-color-scheme detection
+- **Phase 16 status confirmed** — 1/7 done (CI pipeline), 6 deferred (deployment not ready)
+- **DS-5 marked as resolved** — All 5 decisions made during Phase 3B work
+- Updated progress header to reflect all completed phases
 
 **March 10, 2026 (v36) — Phase 16 partial (1/7 tasks, 6 deferred):**
 

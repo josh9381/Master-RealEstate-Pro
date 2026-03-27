@@ -20,7 +20,11 @@ const LeadVelocity = () => {
   const { data: result, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['lead-velocity'],
     queryFn: async () => {
-      const response = await analyticsApi.getLeadVelocity({ months: 6 });
+      const range = dateRangeRef.current;
+      const start = new Date(range.startDate);
+      const end = new Date(range.endDate);
+      const months = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (30.44 * 24 * 60 * 60 * 1000)));
+      const response = await analyticsApi.getLeadVelocity({ months });
       return response.data;
     },
   });

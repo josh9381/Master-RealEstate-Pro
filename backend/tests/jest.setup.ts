@@ -1,11 +1,16 @@
-// Jest global setup - runs before ALL tests
-// Sets environment variables that will be used by all modules
-// DATABASE_URL is loaded from .env by dotenv (configured in jest.config.js)
-
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
-
-process.env.NODE_ENV = 'test';
-process.env.JWT_ACCESS_SECRET = 'test_access_secret_32_characters_minimum_for_security';
-process.env.JWT_REFRESH_SECRET = 'test_refresh_secret_32_characters_minimum_for_security';
-
-export {};
+// Set test environment variables before anything else loads
+process.env.NODE_ENV = 'test'
+process.env.JWT_ACCESS_SECRET = 'test-access-secret-that-is-at-least-32-chars-long'
+process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-that-is-at-least-32-chars-long'
+process.env.MASTER_ENCRYPTION_KEY = 'test-encryption-key-that-is-at-least-32-chars'
+process.env.ENCRYPTION_KEY = 'test-encryption-key-that-is-at-least-32-chars'
+process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/testdb'
+process.env.SENDGRID_API_KEY = 'SG.test-key-for-testing'
+process.env.TWILIO_ACCOUNT_SID = 'ACtest1234567890'
+process.env.TWILIO_AUTH_TOKEN = 'test-twilio-auth-token-32-chars-x'
+process.env.TWILIO_PHONE_NUMBER = '+15550001111'
+process.env.OPENAI_API_KEY = 'sk-test-openai-key-for-testing'
+process.env.STRIPE_SECRET_KEY = 'sk_test_stripe_key_for_testing'
+process.env.STRIPE_PUBLISHABLE_KEY = 'pk_test_stripe_key_for_testing'
+process.env.CORS_ORIGIN = 'http://localhost:3000'
+process.env.PORT = '8001'

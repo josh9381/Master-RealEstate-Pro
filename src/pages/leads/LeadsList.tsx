@@ -37,21 +37,25 @@ function LeadsList() {
   // Initialize state from URL params
   const initFromUrl = useCallback(() => {
     const sp = searchParams
-    return {
+  const VALID_SORT_FIELDS = new Set(['createdAt', 'updatedAt', 'firstName', 'lastName', 'email', 'score', 'status', 'source'])
+  const VALID_SORT_DIRS = new Set(['asc', 'desc'])
+  const VALID_SCORE_FILTERS = new Set(['ALL', 'HOT', 'WARM', 'COLD', 'UNSCORED'])
+
+  return {
       search: sp.get('search') || '',
       status: sp.get('status')?.split(',').filter(Boolean) || [],
       source: sp.get('source')?.split(',').filter(Boolean) || [],
-      scoreMin: parseInt(sp.get('scoreMin') || '0') || 0,
-      scoreMax: parseInt(sp.get('scoreMax') || '100') || 100,
+      scoreMin: Math.max(0, Math.min(100, parseInt(sp.get('scoreMin') || '0') || 0)),
+      scoreMax: Math.max(0, Math.min(100, parseInt(sp.get('scoreMax') || '100') || 100)),
       dateFrom: sp.get('dateFrom') || '',
       dateTo: sp.get('dateTo') || '',
       tags: sp.get('tags')?.split(',').filter(Boolean) || [],
       assignedTo: sp.get('assignedTo')?.split(',').filter(Boolean) || [],
-      page: parseInt(sp.get('page') || '1') || 1,
-      pageSize: parseInt(sp.get('pageSize') || '25') || 25,
-      sortBy: (sp.get('sortBy') || 'createdAt') as SortField,
-      sortDir: (sp.get('sortDir') || 'desc') as SortDirection,
-      scoreFilter: (sp.get('scoreFilter') || 'ALL') as ScoreFilterValue,
+      page: Math.max(1, parseInt(sp.get('page') || '1') || 1),
+      pageSize: Math.min(200, Math.max(1, parseInt(sp.get('pageSize') || '25') || 25)),
+      sortBy: (VALID_SORT_FIELDS.has(sp.get('sortBy') || '') ? sp.get('sortBy') : 'createdAt') as SortField,
+      sortDir: (VALID_SORT_DIRS.has(sp.get('sortDir') || '') ? sp.get('sortDir') : 'desc') as SortDirection,
+      scoreFilter: (VALID_SCORE_FILTERS.has(sp.get('scoreFilter') || '') ? sp.get('scoreFilter') : 'ALL') as ScoreFilterValue,
     }
   }, [searchParams])
 
@@ -548,7 +552,7 @@ function LeadsList() {
     if (!editingLead.firstName?.trim()) newErrors.firstName = 'First name is required'
     if (!editingLead.lastName?.trim()) newErrors.lastName = 'Last name is required'
     if (editingLead.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editingLead.email)) newErrors.email = 'Please enter a valid email address'
-    if (editingLead.phone && !/^[+\d\s()-]{7,20}$/.test(editingLead.phone)) newErrors.phone = 'Please enter a valid phone number'
+    if (editingLead.phone && !/^\+?[\d\s()-]{7,20}$/.test(editingLead.phone)) newErrors.phone = 'Please enter a valid phone number'
     setEditErrors(newErrors)
     if (Object.keys(newErrors).length > 0) { toast.error('Please fix the validation errors'); return }
 

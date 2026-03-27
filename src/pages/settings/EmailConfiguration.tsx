@@ -88,7 +88,9 @@ const EmailConfiguration = () => {
       setSmtpPort(String(config.smtpPort) || '587');
       setUsername(config.smtpUser || 'apikey');
       
-      const apiKeyStored = config.apiKey && config.apiKey.startsWith('••••');
+      // Prefer explicit hasApiKey flag; fall back to checking if masked key is present
+      const apiKeyStored = config.hasApiKey === true ||
+        (typeof config.apiKey === 'string' && config.apiKey.length > 0 && config.apiKey !== '');
       setHasStoredKey(apiKeyStored);
       setPassword('');
       setEncryption('tls');
@@ -203,6 +205,11 @@ const EmailConfiguration = () => {
       return;
     }
 
+    // Warn user if they are effectively clearing production mode by not providing a key
+    if (hasStoredKey && !password && configMode === 'production') {
+      // Just a note – they're keeping existing key, which is fine
+    }
+
     const updateData: Record<string, unknown> = {
       provider: 'sendgrid',
       fromEmail,
@@ -223,8 +230,11 @@ const EmailConfiguration = () => {
   };
   
   const handleVerifyDNS = async () => {
-    // TODO: Wire to real DNS verification endpoint when backend supports it
-    toast.info('DNS verification is not yet connected to a backend endpoint. Configure your DNS records manually and check back later.');
+    if (!domain) {
+      toast.error('Please enter a domain name first');
+      return;
+    }
+    toast.info('DNS verification requires manual configuration. Add the SPF, DKIM, and DMARC records shown below to your DNS provider, then re-check after propagation (up to 48 hours).');
   };
   
   return (

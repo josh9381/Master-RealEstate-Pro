@@ -1,25 +1,24 @@
-import { PrismaClient } from '@prisma/client';
+// Global test lifecycle hooks
+import { prismaMock } from './mocks/prisma'
 
-const prisma = new PrismaClient();
+// Reset mocks between tests
+afterEach(() => {
+  jest.clearAllMocks()
+})
 
-// Track organizations created by tests so we can clean ONLY test data
-export const testOrgIds: string[] = [];
+// Make prisma mock available globally
+beforeEach(() => {
+  // Reset all prisma mock return values
+  jest.clearAllMocks()
+})
 
-// Verify database connection before tests
-beforeAll(async () => {
-  await prisma.$connect();
-});
-
-// Clean up after all tests — ONLY delete data created during tests
-// Uses CASCADE via organization deletion to avoid wiping production data
-afterAll(async () => {
-  if (testOrgIds.length > 0) {
-    // Deleting test organizations cascades to all related records
-    // (users, leads, tasks, notes, messages, etc.)
-    await prisma.organization.deleteMany({
-      where: { id: { in: testOrgIds } },
-    }).catch(() => {});
-  }
-
-  await prisma.$disconnect();
-});
+// Extend expect with custom matchers if needed
+expect.extend({
+  toBeWithinRange(received: number, floor: number, ceiling: number) {
+    const pass = received >= floor && received <= ceiling
+    return {
+      pass,
+      message: () => `expected ${received} to be within range ${floor} - ${ceiling}`,
+    }
+  },
+})

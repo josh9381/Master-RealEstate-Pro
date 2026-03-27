@@ -30,10 +30,13 @@ function replaceVariables(template: string | undefined, lead?: any, eventData?: 
   if (!template) return '';
   let result = template;
 
-  // Replace lead variables
+  // Replace lead variables — escape the replacement value so it can't inject new template vars
   if (lead) {
     result = result.replace(/\{\{lead\.(\w+)\}\}/g, (_match, field) => {
-      return lead[field] ?? _match;
+      const value = lead[field];
+      if (value === undefined || value === null) return _match;
+      // Sanitize: remove {{ and }} from user data to prevent template injection
+      return String(value).replace(/\{\{/g, '{ {').replace(/\}\}/g, '} }');
     });
   }
 
@@ -41,7 +44,9 @@ function replaceVariables(template: string | undefined, lead?: any, eventData?: 
   if (eventData) {
     result = result.replace(/\{\{(\w+)\}\}/g, (_match, field) => {
       const value = eventData[field];
-      return value !== undefined ? String(value) : _match;
+      if (value === undefined) return _match;
+      // Sanitize: remove {{ and }} from event data values
+      return String(value).replace(/\{\{/g, '{ {').replace(/\}\}/g, '} }');
     });
   }
 
@@ -278,13 +283,16 @@ export async function toggleWorkflowStatus(workflowId: string, isActive: boolean
 /**
  * Get workflows by trigger type
  */
-export async function getWorkflowsByTrigger(triggerType: WorkflowTrigger) {
-  const workflows = await prisma.workflow.findMany({
-    where: {
-      isActive: true,
-      triggerType,
-    },
-  });
+export async function getWorkflowsByTrigger(triggerType: WorkflowTrigger, organizationId?: string) {
+  const where: Record<string, unknown> = {
+    isActive: true,
+    triggerType,
+  };
+  if (organizationId) {
+    where.organizationId = organizationId;
+  }
+
+  const workflows = await prisma.workflow.findMany({ where });
 
   return workflows;
 }
@@ -297,8 +305,6 @@ export async function triggerWorkflowsForLead(
   triggerType: WorkflowTrigger,
   metadata?: any
 ) {
-  const workflows = await getWorkflowsByTrigger(triggerType);
-
   // Get lead data for condition evaluation
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
@@ -310,6 +316,9 @@ export async function triggerWorkflowsForLead(
   if (!lead) {
     throw new Error('Lead not found');
   }
+
+  // Scope to lead's organization to prevent cross-tenant workflow execution
+  const workflows = await getWorkflowsByTrigger(triggerType, lead.organizationId);
 
   const results = [];
 
@@ -631,7 +640,7 @@ async function notifyWorkflowFailure(params: {
 
     const title = `Workflow "${params.workflowName}" — step failed`;
     const message = `Action "${params.actionLabel}" (${params.actionType}) failed after ${params.retries} ${params.retries === 1 ? 'attempt' : 'attempts'}: ${params.error}`;
-    const link = `/workflows/${params.workflowId}`;
+    const link = `/workflows/builder?id=${params.workflowId}`;
 
     for (const user of orgUsers) {
       const notification = await prisma.notification.create({
@@ -1098,11 +1107,21 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
       }
       break;
 
-    case 'REMOVE_TAG':
+    case 'REMOVE_TAG': {
       if (!leadId) throw new Error('Lead ID required for REMOVE_TAG action');
+      // Scope tag lookup to organization to prevent cross-tenant matches
+      let removeTagOrgId = organizationId;
+      if (!removeTagOrgId) {
+        const removeTagLead = await prisma.lead.findUnique({
+          where: { id: leadId },
+          select: { organizationId: true }
+        });
+        removeTagOrgId = removeTagLead?.organizationId;
+      }
       const tagToRemove = await prisma.tag.findFirst({
         where: {
           name: action.config.tagName,
+          ...(removeTagOrgId ? { organizationId: removeTagOrgId } : {}),
         },
       });
 
@@ -1117,6 +1136,7 @@ async function executeAction(action: WorkflowAction, leadId?: string, metadata?:
         });
       }
       break;
+    }
 
     case 'UPDATE_SCORE':
       if (!leadId) throw new Error('Lead ID required for UPDATE_SCORE action');

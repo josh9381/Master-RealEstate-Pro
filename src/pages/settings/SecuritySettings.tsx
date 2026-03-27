@@ -380,8 +380,9 @@ const SecuritySettings = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Enter verification code</label>
                 <Input
-                  type="text"
+                  type="password"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   placeholder="000000"
                   maxLength={6}
                   value={verifyCode}

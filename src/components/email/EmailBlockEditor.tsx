@@ -685,7 +685,7 @@ function BlockPreview({ block, compact }: { block: EmailBlock; compact?: boolean
       const d = block.data as TextData
       // Render content: support basic markdown-like patterns for preview
       const html = renderTextContent(d.content)
-      return <div style={{ color: d.color, textAlign: d.align, fontSize: `${d.fontSize}px`, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: html }} />
+      return <div style={{ color: d.color, textAlign: d.align, fontSize: `${d.fontSize}px`, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />
     }
 
     case 'image': {

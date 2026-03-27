@@ -12,7 +12,7 @@ import {
 export const getDashboardStats = async (req: Request, res: Response) => {
   const userId = req.user!.userId
   const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
-  const { startDate, endDate } = req.query
+  const { startDate, endDate, source, status, priority } = req.query
 
   // Build date filter
   const dateFilter: Record<string, any> = {}
@@ -22,6 +22,27 @@ export const getDashboardStats = async (req: Request, res: Response) => {
   const whereDate = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
   const orgFilter = { organizationId }  // Filter by organization
   const whereDateOrg = { ...whereDate, ...orgFilter }  // Combine filters
+
+  // Build lead-specific filters (source, status)
+  const leadFilter: Record<string, unknown> = { ...orgFilter }
+  if (source && source !== 'all') leadFilter.source = { equals: source as string, mode: 'insensitive' }
+  if (status && status !== 'all') leadFilter.status = (status as string).toUpperCase()
+  const leadDateFilter = { ...whereDate, ...leadFilter }
+
+  // Build task-specific filters (priority)
+  const taskFilter: Record<string, unknown> = { organizationId }
+  if (priority && priority !== 'all') taskFilter.priority = (priority as string).toUpperCase()
+
+  // Calculate previous period for comparison
+  let previousPeriodConversionRate: number | null = null
+  if (startDate && endDate) {
+    const start = new Date(startDate as string)
+    const end = new Date(endDate as string)
+    const periodMs = end.getTime() - start.getTime()
+    const prevStart = new Date(start.getTime() - periodMs)
+    const prevEnd = new Date(start.getTime())
+    previousPeriodConversionRate = await calculateLeadConversionRate(organizationId, { gte: prevStart, lte: prevEnd })
+  }
 
   // Fetch all statistics in parallel
   const [
@@ -46,34 +67,34 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     totalActivities,
     recentActivities
   ] = await Promise.all([
-    // Leads
-    prisma.lead.count({ where: orgFilter }),
-    prisma.lead.count({ where: whereDateOrg }),
+    // Leads — apply source/status filters
+    prisma.lead.count({ where: leadFilter }),
+    prisma.lead.count({ where: leadDateFilter }),
     prisma.lead.groupBy({
       by: ['status'],
-      where: orgFilter,
+      where: leadFilter,
       _count: true
     }),
-    calculateLeadConversionRate(organizationId),
+    calculateLeadConversionRate(organizationId, Object.keys(dateFilter).length > 0 ? dateFilter : undefined),
     
     // Campaigns
     prisma.campaign.count({ where: orgFilter }),
     prisma.campaign.count({ where: { status: 'ACTIVE', organizationId } }),
-    calculateCampaignPerformance(organizationId),
+    calculateCampaignPerformance(organizationId, Object.keys(dateFilter).length > 0 ? dateFilter : undefined),
     
-    // Tasks
-    prisma.task.count({ where: { organizationId } }),
-    prisma.task.count({ where: { status: 'COMPLETED', organizationId } }),
+    // Tasks — apply priority filter
+    prisma.task.count({ where: taskFilter }),
+    prisma.task.count({ where: { ...taskFilter, status: 'COMPLETED' } }),
     prisma.task.count({
       where: {
-        organizationId,
+        ...taskFilter,
         status: { in: ['PENDING', 'IN_PROGRESS'] },
         dueDate: { lt: new Date() }
       }
     }),
     prisma.task.count({
       where: {
-        organizationId,
+        ...taskFilter,
         status: { in: ['PENDING', 'IN_PROGRESS'] },
         dueDate: {
           gte: new Date(new Date().setHours(0, 0, 0, 0)),
@@ -132,7 +153,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         total: totalLeads,
         new: newLeads,
         byStatus: leadStats,
-        conversionRate: leadConversionRate
+        conversionRate: leadConversionRate,
+        previousConversionRate: previousPeriodConversionRate
       },
       campaigns: {
         total: totalCampaigns,
@@ -157,13 +179,18 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 // Get lead analytics
 export const getLeadAnalytics = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
-  const { startDate, endDate, groupBy = 'status' } = req.query
+  const { startDate, endDate, _groupBy = 'status', source, status, _priority } = req.query
 
-  const dateFilter: Record<string, any> = {}
+  const dateFilter: Record<string, unknown> = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
   if (endDate) dateFilter.lte = new Date(endDate as string)
 
-  const whereDate = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter, organizationId } : { organizationId }
+  const baseWhere: Record<string, unknown> = { organizationId }
+  if (Object.keys(dateFilter).length > 0) baseWhere.createdAt = dateFilter
+  if (source && source !== 'all') baseWhere.source = { equals: source as string, mode: 'insensitive' }
+  if (status && status !== 'all') baseWhere.status = (status as string).toUpperCase()
+
+  const whereDate = baseWhere
 
   const [
     totalLeads,
@@ -230,6 +257,35 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
     return acc
   }, {} as Record<string, number>)
 
+  // Build monthly lead trends (last 6 months)
+  const trendStart = new Date()
+  trendStart.setMonth(trendStart.getMonth() - 6)
+  trendStart.setDate(1)
+  trendStart.setHours(0, 0, 0, 0)
+
+  const trendLeads = await prisma.lead.findMany({
+    where: { organizationId, createdAt: { gte: trendStart } },
+    select: { status: true, createdAt: true },
+  })
+
+  const trendMap: Record<string, { month: string; newLeads: number; qualified: number; converted: number }> = {}
+  const cur = new Date(trendStart)
+  const nowDate = new Date()
+  while (cur <= nowDate) {
+    const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`
+    trendMap[key] = { month: key, newLeads: 0, qualified: 0, converted: 0 }
+    cur.setMonth(cur.getMonth() + 1)
+  }
+  trendLeads.forEach((lead) => {
+    const key = `${lead.createdAt.getFullYear()}-${String(lead.createdAt.getMonth() + 1).padStart(2, '0')}`
+    if (trendMap[key]) {
+      trendMap[key].newLeads++
+      if (lead.status === 'QUALIFIED') trendMap[key].qualified++
+      if (lead.status === 'WON') trendMap[key].converted++
+    }
+  })
+  const trends = Object.values(trendMap)
+
   res.json({
     success: true,
     data: {
@@ -239,7 +295,8 @@ export const getLeadAnalytics = async (req: Request, res: Response) => {
       wonBySource,
       conversionRate,
       averageScore: Math.round(averageLeadScore._avg.score || 0),
-      topLeads
+      topLeads,
+      trends
     }
   })
 }
@@ -612,6 +669,37 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
       }
     })
 
+    // Compute time-to-convert buckets from won leads
+    const wonLeadRecords = await prisma.lead.findMany({
+      where: {
+        ...whereDate,
+        organizationId: req.user!.organizationId,
+        status: { in: ['WON', 'won'] }
+      },
+      select: { createdAt: true, updatedAt: true }
+    })
+
+    const buckets: Record<string, number> = {
+      '0-7 days': 0,
+      '8-14 days': 0,
+      '15-30 days': 0,
+      '31-60 days': 0,
+      '60+ days': 0
+    }
+
+    wonLeadRecords.forEach(lead => {
+      const days = Math.floor(
+        (new Date(lead.updatedAt).getTime() - new Date(lead.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      )
+      if (days <= 7) buckets['0-7 days']++
+      else if (days <= 14) buckets['8-14 days']++
+      else if (days <= 30) buckets['15-30 days']++
+      else if (days <= 60) buckets['31-60 days']++
+      else buckets['60+ days']++
+    })
+
+    const timeToConvert = Object.entries(buckets).map(([days, count]) => ({ days, count }))
+
     res.json({
       success: true,
       data: {
@@ -621,7 +709,8 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
         wonLeads,
         lostLeads: funnelData.lost,
         overallConversionRate,
-        lostRate: calcLeadConversionRate(funnelData.lost, totalLeads)
+        lostRate: calcLeadConversionRate(funnelData.lost, totalLeads),
+        timeToConvert
       }
     })
   } catch (error: unknown) {
@@ -2309,5 +2398,30 @@ export async function getFollowUpAnalytics(req: Request, res: Response) {
   } catch (error: unknown) {
     logger.error('Error fetching follow-up analytics:', error)
     res.status(500).json({ success: false, message: 'Failed to fetch follow-up analytics', error: getErrorMessage(error) })
+  }
+}
+
+// Get distinct lead sources for filter dropdowns
+export const getLeadSources = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const sources = await prisma.lead.groupBy({
+      by: ['source'],
+      where: { organizationId, source: { not: null } },
+      _count: true,
+      orderBy: { _count: { source: 'desc' } },
+    })
+
+    res.json({
+      success: true,
+      data: sources.map((s) => ({
+        value: s.source,
+        label: s.source,
+        count: s._count,
+      })),
+    })
+  } catch (error: unknown) {
+    logger.error('Error fetching lead sources:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch lead sources', error: getErrorMessage(error) })
   }
 }

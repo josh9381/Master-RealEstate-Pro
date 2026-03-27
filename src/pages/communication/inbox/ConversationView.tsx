@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { AIComposer } from '@/components/ai/AIComposer'
 import { ModalErrorBoundary } from '@/components/ModalErrorBoundary'
+import { calculateSMSSegments } from '@/utils/smsSegments'
 import type { Contact, Message } from './types'
 import { formatRelativeTime } from './types'
 
@@ -123,7 +124,7 @@ export const ConversationView = ({
   enhanceTone,
   enhancingMessage,
   replyChannel,
-  templates: _templates,
+  templates,
   quickReplies,
   onReplyTextChange,
   onEmailSubjectChange,
@@ -144,7 +145,7 @@ export const ConversationView = ({
   onShowAIComposer,
   onShowAttachmentModal,
   onShowSignatureEditor,
-  onInsertTemplate: _onInsertTemplate,
+  onInsertTemplate,
   onInsertQuickReply,
   onInsertEmoji,
   onGenerateClick,
@@ -159,6 +160,23 @@ export const ConversationView = ({
   const [showChannelPicker, setShowChannelPicker] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Close all open inline menus when clicking outside
+  useEffect(() => {
+    if (!showMoreMenu && !showTemplates && !showQuickReplies && !showEmojiPicker && !showChannelPicker) return
+    const handleOutside = (e: MouseEvent) => {
+      const target = e.target as Element
+      // Don't close if click is inside one of the menu cards or their toggle buttons
+      if (target.closest('[data-menu]')) return
+      if (showMoreMenu) onShowMoreMenu(false)
+      if (showTemplates) onShowTemplates(false)
+      if (showQuickReplies) onShowQuickReplies(false)
+      if (showEmojiPicker) onShowEmojiPicker(false)
+      if (showChannelPicker) setShowChannelPicker(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [showMoreMenu, showTemplates, showQuickReplies, showEmojiPicker, showChannelPicker, onShowMoreMenu, onShowTemplates, onShowQuickReplies, onShowEmojiPicker])
+
   // Reset tab and scroll when contact changes (combined to prevent race condition)
   useEffect(() => {
     setActiveTab('all')
@@ -170,7 +188,7 @@ export const ConversationView = ({
 
   if (!selectedContact) {
     return (
-      <Card className="col-span-8 flex flex-col overflow-hidden">
+      <Card className="col-span-12 md:col-span-8 flex flex-col overflow-hidden">
         <CardContent className="flex-1 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
             <MessageSquare className="mx-auto h-12 w-12 mb-4 opacity-50" />
@@ -206,7 +224,7 @@ export const ConversationView = ({
   const availableReplyChannels = selectedContact.channels.filter(c => c === 'email' || c === 'sms') as ('email' | 'sms')[]
 
   return (
-    <Card className="col-span-8 flex flex-col overflow-hidden">
+    <Card className="col-span-12 md:col-span-8 flex flex-col overflow-hidden">
       {/* Contact Header */}
       <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -232,12 +250,12 @@ export const ConversationView = ({
           <Button size="sm" variant="ghost" onClick={() => onTrash(selectedContact.id)} title="Move to trash" aria-label="Move to trash">
             <Trash2 className="h-4 w-4" />
           </Button>
-          <div className="relative">
+          <div className="relative" data-menu>
             <Button size="sm" variant="ghost" onClick={() => onShowMoreMenu(!showMoreMenu)} aria-label="More actions" aria-expanded={showMoreMenu}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
             {showMoreMenu && (
-              <Card className="absolute top-full right-0 mt-2 w-48 z-10 shadow-lg">
+              <Card className="absolute top-full right-0 mt-2 w-48 z-10 shadow-lg" data-menu>
                 <CardContent className="p-2">
                   <div className="space-y-1">
                     {selectedContact.totalUnread > 0 ? (
@@ -350,7 +368,7 @@ export const ConversationView = ({
           </div>
         ) : (
           messages.map((message: Message) => {
-            const isFromMe = message.direction === 'OUTBOUND' || message.from.includes('you@')
+            const isFromMe = message.direction === 'OUTBOUND'
             const Icon = getChannelIcon(message.type)
             const showChannelBadge = activeTab === 'all'
 
@@ -562,43 +580,60 @@ export const ConversationView = ({
             >
               <Sparkles className="mr-2 h-4 w-4" /> Enhance with AI
             </Button>
-            <div className="relative">
+            <div className="relative" data-menu>
               <Button size="sm" variant="outline" onClick={() => onShowTemplates(!showTemplates)}>
                 <FileText className="mr-2 h-4 w-4" /> Templates
               </Button>
               {showTemplates && (
-                <Card className="absolute bottom-full left-0 mb-2 w-56 z-10 shadow-lg">
+                <Card className="absolute bottom-full left-0 mb-2 w-64 z-10 shadow-lg max-h-64 overflow-y-auto" data-menu>
                   <CardContent className="p-2">
                     <div className="space-y-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-left gap-2"
-                        onClick={() => { onShowTemplates(false); navigate('/communication/templates') }}
-                      >
-                        <Mail className="h-4 w-4 text-blue-500" />
-                        Email Templates
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-left gap-2"
-                        onClick={() => { onShowTemplates(false); navigate('/communication/sms-templates') }}
-                      >
-                        <MessageSquare className="h-4 w-4 text-green-500" />
-                        SMS Templates
-                      </Button>
+                      {templates.length > 0 ? (
+                        templates.map((template) => (
+                          <Button
+                            key={template.id}
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start text-left text-xs"
+                            onClick={() => onInsertTemplate(template.content)}
+                          >
+                            {template.name}
+                          </Button>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground p-2">No templates available</p>
+                      )}
+                      <div className="border-t pt-1 mt-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start text-left gap-2"
+                          onClick={() => { onShowTemplates(false); navigate('/communication/templates') }}
+                        >
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          Manage Email Templates
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start text-left gap-2"
+                          onClick={() => { onShowTemplates(false); navigate('/communication/sms-templates') }}
+                        >
+                          <MessageSquare className="h-4 w-4 text-green-500" />
+                          Manage SMS Templates
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
             </div>
-            <div className="relative">
+            <div className="relative" data-menu>
               <Button size="sm" variant="outline" onClick={() => onShowQuickReplies(!showQuickReplies)} title="Quick replies - instant send">
                 <Send className="mr-2 h-4 w-4" /> Quick Reply
               </Button>
               {showQuickReplies && (
-                <Card className="absolute bottom-full left-0 mb-2 w-56 z-10 shadow-lg">
+                <Card className="absolute bottom-full left-0 mb-2 w-56 z-10 shadow-lg" data-menu>
                   <CardContent className="p-2">
                     <div className="space-y-1">
                       {quickReplies.map((reply) => (
@@ -614,12 +649,12 @@ export const ConversationView = ({
             <Button size="sm" variant="ghost" onClick={() => onShowAttachmentModal(true)}>
               <Paperclip className="h-4 w-4" />
             </Button>
-            <div className="relative">
+            <div className="relative" data-menu>
               <Button size="sm" variant="ghost" onClick={() => onShowEmojiPicker(!showEmojiPicker)} aria-label="Toggle emoji picker" aria-expanded={showEmojiPicker}>
                 <Smile className="h-4 w-4" />
               </Button>
               {showEmojiPicker && (
-                <Card className="absolute bottom-full left-0 mb-2 w-64 z-10 shadow-lg" role="dialog" aria-label="Emoji picker">
+                <Card className="absolute bottom-full left-0 mb-2 w-64 z-10 shadow-lg" role="dialog" aria-label="Emoji picker" data-menu>
                   <CardContent className="p-3">
                     <div className="grid grid-cols-8 gap-2" role="grid">
                       {['😊', '👍', '❤️', '🎉', '😂', '🤔', '👏', '🔥', '✅', '⭐', '💯', '🚀', '💪', '🙏', '😎', '🎯'].map(emoji => (
@@ -640,7 +675,7 @@ export const ConversationView = ({
           </div>
 
           {/* Email subject field */}
-          {replyChannel === 'email' && emailSubject && (
+          {replyChannel === 'email' && (
             <Input
               placeholder="Subject"
               value={emailSubject}
@@ -685,6 +720,7 @@ export const ConversationView = ({
                   </Button>
                   {availableReplyChannels.length > 1 && (
                     <button
+                      data-menu
                       className="absolute right-0 top-0 bottom-0 px-1.5 border-l border-white/30 hover:bg-black/10 rounded-r-md transition"
                       onClick={() => setShowChannelPicker(!showChannelPicker)}
                       title="Switch reply channel"
@@ -695,7 +731,7 @@ export const ConversationView = ({
                     </button>
                   )}
                   {showChannelPicker && (
-                    <Card className="absolute bottom-full right-0 mb-2 w-36 z-10 shadow-lg">
+                    <Card className="absolute bottom-full right-0 mb-2 w-36 z-10 shadow-lg" data-menu>
                       <CardContent className="p-1">
                         {availableReplyChannels.map(ch => (
                           <Button
@@ -715,7 +751,7 @@ export const ConversationView = ({
                 </div>
                 {replyChannel === 'sms' && replyText.length > 0 && (
                   <span className="text-[10px] text-muted-foreground text-center whitespace-nowrap">
-                    {replyText.length}/{Math.ceil(replyText.length / 160)} seg
+                    {(() => { const seg = calculateSMSSegments(replyText); return `${seg.charCount}/${seg.segmentCount} seg` })()}
                   </span>
                 )}
               </div>
