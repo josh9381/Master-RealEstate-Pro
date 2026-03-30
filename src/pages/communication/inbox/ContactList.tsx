@@ -12,6 +12,8 @@ import {
   Archive,
   Trash2,
   Inbox,
+  FileText,
+  CalendarClock,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -20,7 +22,7 @@ import { Input } from '@/components/ui/Input'
 import type { Contact, InboxFilters } from './types'
 import { INBOX_PAGE_SIZE, formatRelativeTime } from './types'
 
-type FolderFilter = 'inbox' | 'unread' | 'starred' | 'snoozed' | 'archived' | 'trash'
+type FolderFilter = 'inbox' | 'unread' | 'starred' | 'snoozed' | 'drafts' | 'scheduled' | 'archived' | 'trash'
 
 interface ContactListProps {
   contacts: Contact[]
@@ -63,6 +65,8 @@ const folderItems: { key: FolderFilter; label: string; icon: React.ReactNode }[]
   { key: 'unread', label: 'Unread', icon: <Mail className="h-3.5 w-3.5" /> },
   { key: 'starred', label: 'Starred', icon: <Star className="h-3.5 w-3.5" /> },
   { key: 'snoozed', label: 'Snoozed', icon: <Clock className="h-3.5 w-3.5" /> },
+  { key: 'drafts', label: 'Drafts', icon: <FileText className="h-3.5 w-3.5" /> },
+  { key: 'scheduled', label: 'Scheduled', icon: <CalendarClock className="h-3.5 w-3.5" /> },
   { key: 'archived', label: 'Archived', icon: <Archive className="h-3.5 w-3.5" /> },
   { key: 'trash', label: 'Trash', icon: <Trash2 className="h-3.5 w-3.5" /> },
 ]

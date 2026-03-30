@@ -27,7 +27,15 @@ export const LoadingSkeleton = ({ rows = 3, showChart = false }: { rows?: number
           <div className="h-5 bg-muted rounded w-32" />
         </CardHeader>
         <CardContent>
-          <div className="h-64 bg-muted rounded" />
+          <div className="h-64 flex items-end gap-2 px-4 pb-4">
+            {[40, 65, 45, 80, 55, 70, 35, 90, 60, 50, 75, 42].map((h, i) => (
+              <div
+                key={i}
+                className="flex-1 bg-muted rounded-t"
+                style={{ height: `${h}%` }}
+              />
+            ))}
+          </div>
         </CardContent>
       </Card>
     )}

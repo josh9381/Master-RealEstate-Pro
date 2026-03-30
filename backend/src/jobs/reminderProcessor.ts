@@ -2,6 +2,7 @@ import { prisma } from '../config/database'
 import { logger } from '../lib/logger'
 import { pushNotification, pushReminderDue } from '../config/socket'
 import { sendPushToUser } from '../services/pushNotification.service'
+import { acquireLock, releaseLock } from '../utils/distributedLock'
 
 /**
  * Process due follow-up reminders.
@@ -16,6 +17,20 @@ import { sendPushToUser } from '../services/pushNotification.service'
  * 6. Update reminder status to FIRED
  */
 export async function processRemindersDue(): Promise<{ processed: number }> {
+  const lockAcquired = await acquireLock('lock:reminder-processor', 120)
+  if (!lockAcquired) {
+    logger.debug('[Reminders] Another instance is processing reminders, skipping')
+    return { processed: 0 }
+  }
+
+  try {
+    return await processRemindersDueInner()
+  } finally {
+    await releaseLock('lock:reminder-processor')
+  }
+}
+
+async function processRemindersDueInner(): Promise<{ processed: number }> {
   const now = new Date()
 
   // Find all PENDING or SNOOZED reminders that are past due

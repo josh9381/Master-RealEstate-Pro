@@ -28,6 +28,7 @@ import {
   Building,
   Mail,
   Target,
+  FileText,
 } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -100,12 +101,18 @@ const CallCenter = () => {
   const queryClient = useQueryClient()
   const [selectedLead, setSelectedLead] = useState<QueueLead | null>(null)
   const [callNotes, setCallNotes] = useState('')
+  const [callbackDate, setCallbackDate] = useState('')
+  const [callbackTime, setCallbackTime] = useState('')
+  const [showCallbackPicker, setShowCallbackPicker] = useState(false)
+  const [dialerStatus, setDialerStatus] = useState<'idle' | 'connecting' | 'connected' | 'ended'>('idle')
   const [callStartTime, setCallStartTime] = useState<number | null>(() => {
     const stored = sessionStorage.getItem('callCenter_startTime')
     return stored ? Number(stored) : null
   })
   const [callElapsed, setCallElapsed] = useState(0)
   const [callActive, setCallActive] = useState(() => sessionStorage.getItem('callCenter_active') === 'true')
+  const [queuePage, setQueuePage] = useState(1)
+  const QUEUE_PAGE_SIZE = 10
 
   // Restore selected lead from session on mount
   useEffect(() => {
@@ -173,7 +180,7 @@ const CallCenter = () => {
 
   // Log call mutation
   const logCallMutation = useMutation({
-    mutationFn: (data: { leadId: string; phoneNumber: string; direction: 'OUTBOUND'; outcome: string; duration?: number; notes?: string }) =>
+    mutationFn: (data: { leadId: string; phoneNumber: string; direction: 'OUTBOUND'; outcome: string; duration?: number; notes?: string; followUpDate?: string }) =>
       callsApi.logCall(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['call-queue'] })
@@ -187,6 +194,8 @@ const CallCenter = () => {
   })
 
   const queue = queueData?.queue || []
+  const queueTotalPages = Math.max(1, Math.ceil(queue.length / QUEUE_PAGE_SIZE))
+  const paginatedQueue = queue.slice((queuePage - 1) * QUEUE_PAGE_SIZE, queuePage * QUEUE_PAGE_SIZE)
 
   const handleSelectLead = (lead: QueueLead) => {
     setSelectedLead(lead)
@@ -200,30 +209,62 @@ const CallCenter = () => {
     const now = Date.now()
     setCallStartTime(now)
     setCallActive(true)
+    setDialerStatus('connecting')
     sessionStorage.setItem('callCenter_startTime', String(now))
     sessionStorage.setItem('callCenter_active', 'true')
     sessionStorage.setItem('callCenter_leadId', selectedLead.id)
+
+    // Initiate phone call via tel: URI (opens native dialer / VoIP app)
+    const cleanPhone = selectedLead.phone.replace(/[^\d+]/g, '')
+    window.open(`tel:${cleanPhone}`, '_self')
+
+    // Simulate connection after brief delay (real Twilio/WebRTC would use events)
+    setTimeout(() => setDialerStatus('connected'), 2000)
   }
 
   const handleEndCall = useCallback(() => {
     setCallActive(false)
+    setDialerStatus('ended')
     sessionStorage.removeItem('callCenter_startTime')
     sessionStorage.removeItem('callCenter_active')
     sessionStorage.removeItem('callCenter_leadId')
+    // Reset dialer status after brief display
+    setTimeout(() => setDialerStatus('idle'), 1500)
   }, [])
 
   const handleDisposition = (outcome: string) => {
     if (!selectedLead) return
+
+    // For callback scheduling, require date selection
+    if (outcome === 'CALLBACK_SCHEDULED') {
+      if (!callbackDate || !callbackTime) {
+        setShowCallbackPicker(true)
+        return
+      }
+    }
+
     const duration = callStartTime ? Math.round((Date.now() - callStartTime) / 1000) : undefined
     handleEndCall()
-    logCallMutation.mutate({
+
+    const mutationData: { leadId: string; phoneNumber: string; direction: 'OUTBOUND'; outcome: string; duration?: number; notes?: string; followUpDate?: string } = {
       leadId: selectedLead.id,
       phoneNumber: selectedLead.phone || '',
       direction: 'OUTBOUND',
       outcome,
       duration,
       notes: callNotes || undefined,
-    })
+    }
+
+    // Attach callback date if scheduling
+    if (outcome === 'CALLBACK_SCHEDULED' && callbackDate && callbackTime) {
+      mutationData.followUpDate = new Date(`${callbackDate}T${callbackTime}`).toISOString()
+    }
+
+    logCallMutation.mutate(mutationData)
+    // Reset callback state
+    setShowCallbackPicker(false)
+    setCallbackDate('')
+    setCallbackTime('')
     // Move to next lead in queue
     const idx = queue.findIndex(l => l.id === selectedLead.id)
     const next = queue[idx + 1] || null
@@ -338,7 +379,7 @@ const CallCenter = () => {
                 </div>
               ) : (
                 <div className="max-h-[600px] overflow-y-auto divide-y">
-                  {queue.map((lead) => (
+                  {paginatedQueue.map((lead) => (
                     <button
                       key={lead.id}
                       onClick={() => handleSelectLead(lead)}
@@ -366,6 +407,19 @@ const CallCenter = () => {
                       </div>
                     </button>
                   ))}
+                </div>
+              )}
+              {/* Queue Pagination */}
+              {queueTotalPages > 1 && (
+                <div className="flex items-center justify-between px-3 py-2 border-t text-xs">
+                  <span className="text-muted-foreground">
+                    {((queuePage - 1) * QUEUE_PAGE_SIZE) + 1}–{Math.min(queuePage * QUEUE_PAGE_SIZE, queue.length)} of {queue.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" disabled={queuePage <= 1} onClick={() => setQueuePage(p => p - 1)}>Prev</Button>
+                    <span className="text-muted-foreground">{queuePage}/{queueTotalPages}</span>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" disabled={queuePage >= queueTotalPages} onClick={() => setQueuePage(p => p + 1)}>Next</Button>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -408,11 +462,28 @@ const CallCenter = () => {
                       ) : (
                         <Button size="sm" onClick={handleStartCall} disabled={!selectedLead.phone}>
                           <Phone className="h-4 w-4 mr-1" />
-                          Call {selectedLead.phone || 'No phone'}
+                          {selectedLead.phone ? `Dial ${selectedLead.phone}` : 'No phone'}
                         </Button>
                       )}
                     </div>
                   </div>
+                  {/* Dialer Status Indicator */}
+                  {dialerStatus !== 'idle' && (
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium mt-3 ${
+                      dialerStatus === 'connecting' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                      dialerStatus === 'connected' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      'bg-gray-50 text-gray-600 border border-gray-200'
+                    }`}>
+                      <span className={`inline-block h-2 w-2 rounded-full ${
+                        dialerStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+                        dialerStatus === 'connected' ? 'bg-green-500 animate-pulse' :
+                        'bg-gray-400'
+                      }`} />
+                      {dialerStatus === 'connecting' && 'Dialing...'}
+                      {dialerStatus === 'connected' && `Connected — ${formatTimer(callElapsed)}`}
+                      {dialerStatus === 'ended' && 'Call Ended'}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
@@ -466,6 +537,102 @@ const CallCenter = () => {
                 </CardContent>
               </Card>
 
+              {/* Suggested Call Script */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Call Script
+                    </CardTitle>
+                    <Badge variant="outline" className={`text-xs ${
+                      selectedLead.score >= 80 ? 'border-green-300 text-green-700' :
+                      selectedLead.score >= 60 ? 'border-yellow-300 text-yellow-700' :
+                      selectedLead.score >= 40 ? 'border-orange-300 text-orange-600' :
+                      'border-blue-300 text-blue-700'
+                    }`}>
+                      {getScoreLabel(selectedLead.score)} Lead Script
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    const isCallback = selectedLead.hasCallback
+                    const firstName = selectedLead.firstName
+                    const temp = getScoreLabel(selectedLead.score)
+
+                    if (isCallback) {
+                      return (
+                        <div className="space-y-2 text-sm">
+                          <p className="font-medium text-blue-700">📞 Scheduled Callback</p>
+                          <p className="text-muted-foreground italic">"Hi {firstName}, this is [Your Name] calling back as we discussed. Is this still a good time to chat?"</p>
+                          <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-800">
+                            <p className="font-medium">Tips:</p>
+                            <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                              <li>Reference the previous conversation</li>
+                              <li>Ask about any changes since last contact</li>
+                              <li>Have specific listings/info ready to share</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )
+                    }
+
+                    if (temp === 'Hot') {
+                      return (
+                        <div className="space-y-2 text-sm">
+                          <p className="font-medium text-green-700">🔥 Hot Lead — Act Fast</p>
+                          <p className="text-muted-foreground italic">"Hi {firstName}, this is [Your Name] from [Company]. I noticed you've been {selectedLead.propertyType ? `looking at ${selectedLead.propertyType.toLowerCase()} properties` : 'active on our platform'} and I wanted to personally reach out. Do you have a moment?"</p>
+                          <div className="bg-green-50 rounded-lg p-2 text-xs text-green-800">
+                            <p className="font-medium">Tips:</p>
+                            <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                              <li>Be direct and value-focused</li>
+                              <li>Have 2-3 matching properties ready</li>
+                              <li>Push for a showing within 48 hours</li>
+                              <li>Offer a pre-approval referral if needed</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )
+                    }
+
+                    if (temp === 'Warm') {
+                      return (
+                        <div className="space-y-2 text-sm">
+                          <p className="font-medium text-yellow-700">☀️ Warm Lead — Build Rapport</p>
+                          <p className="text-muted-foreground italic">"Hi {firstName}, this is [Your Name] from [Company]. I'm reaching out because I work with {selectedLead.transactionType === 'BUYING' ? 'buyers' : 'sellers'} in the area and would love to learn about your real estate goals. Have you started your search yet?"</p>
+                          <div className="bg-yellow-50 rounded-lg p-2 text-xs text-yellow-800">
+                            <p className="font-medium">Tips:</p>
+                            <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                              <li>Ask open-ended questions about their timeline</li>
+                              <li>Understand their must-haves vs nice-to-haves</li>
+                              <li>Offer a free market report or consultation</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )
+                    }
+
+                    // Cold lead
+                    return (
+                      <div className="space-y-2 text-sm">
+                        <p className="font-medium text-blue-700">❄️ Cold Lead — Qualify First</p>
+                        <p className="text-muted-foreground italic">"Hi {firstName}, this is [Your Name] from [Company]. I noticed you {selectedLead.source ? `came to us through ${selectedLead.source}` : 'expressed interest in real estate'}. I'm just calling to see if you have any questions or if there's anything I can help with?"</p>
+                        <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-800">
+                          <p className="font-medium">Tips:</p>
+                          <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                            <li>Keep it short — qualify in under 2 minutes</li>
+                            <li>Ask: timeframe, type, budget, pre-approved?</li>
+                            <li>Offer to send relevant listings by email</li>
+                            <li>If not ready, schedule a follow-up touch</li>
+                          </ul>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
+
               {/* Call Notes */}
               <Card>
                 <CardHeader className="pb-2">
@@ -501,21 +668,29 @@ const CallCenter = () => {
                     <Button
                       variant="outline"
                       className="h-auto py-3 flex flex-col items-center gap-1 border-blue-200 hover:bg-blue-50 hover:border-blue-400 text-blue-700"
-                      onClick={() => handleDisposition('CALLBACK_SCHEDULED')}
+                      onClick={() => {
+                        if (!callbackDate || !callbackTime) {
+                          setShowCallbackPicker(true)
+                        } else {
+                          handleDisposition('CALLBACK_SCHEDULED')
+                        }
+                      }}
                       disabled={logCallMutation.isPending}
                     >
                       <PhoneForwarded className="h-5 w-5" />
                       <span className="text-xs font-medium">Callback</span>
+                      {callbackDate && callbackTime && (
+                        <span className="text-[9px] text-blue-500">{callbackDate} {callbackTime}</span>
+                      )}
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-gray-200 text-gray-400 cursor-not-allowed opacity-60"
-                      disabled={true}
-                      title="Coming Soon — Voicemail requires Twilio Voice integration"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-400 text-indigo-600"
+                      onClick={() => handleDisposition('VOICEMAIL')}
+                      disabled={logCallMutation.isPending}
                     >
                       <PhoneMissed className="h-5 w-5" />
                       <span className="text-xs font-medium">Voicemail</span>
-                      <span className="text-[9px] text-gray-400">Coming Soon</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -577,6 +752,70 @@ const CallCenter = () => {
                       Skip — Next Lead <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </div>
+
+                  {/* Callback Scheduling Picker */}
+                  {showCallbackPicker && (
+                    <div className="mt-4 p-4 border rounded-lg bg-blue-50/50 border-blue-200">
+                      <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Schedule Callback
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-medium text-blue-700 mb-1 block">Date</label>
+                          <input
+                            type="date"
+                            value={callbackDate}
+                            onChange={(e) => setCallbackDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-blue-700 mb-1 block">Time</label>
+                          <input
+                            type="time"
+                            value={callbackTime}
+                            onChange={(e) => setCallbackTime(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-3">
+                        <Button
+                          size="sm"
+                          onClick={() => handleDisposition('CALLBACK_SCHEDULED')}
+                          disabled={!callbackDate || !callbackTime || logCallMutation.isPending}
+                        >
+                          <PhoneForwarded className="h-4 w-4 mr-1" />
+                          Confirm Callback
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setShowCallbackPicker(false); setCallbackDate(''); setCallbackTime(''); }}>
+                          Cancel
+                        </Button>
+                        {/* Quick options */}
+                        <div className="flex gap-1 ml-auto">
+                          {[
+                            { label: 'Tomorrow 9am', days: 1, time: '09:00' },
+                            { label: 'Tomorrow 2pm', days: 1, time: '14:00' },
+                            { label: 'Next Week', days: 7, time: '10:00' },
+                          ].map(opt => {
+                            const d = new Date(); d.setDate(d.getDate() + opt.days);
+                            return (
+                              <button
+                                key={opt.label}
+                                type="button"
+                                onClick={() => { setCallbackDate(d.toISOString().split('T')[0]); setCallbackTime(opt.time); }}
+                                className="px-2 py-1 text-[10px] rounded border bg-white hover:bg-blue-50 text-blue-600 font-medium transition-colors"
+                              >
+                                {opt.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </>

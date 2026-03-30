@@ -18,6 +18,7 @@ interface BounceEvent {
   bounceType: BounceType
   reason: string
   timestamp: Date
+  organizationId?: string
 }
 
 interface DeliverabilityStats {
@@ -36,7 +37,16 @@ interface DeliverabilityStats {
  * Record a bounce event for a message
  */
 export async function recordBounce(event: BounceEvent): Promise<void> {
-  const { messageId, bounceType, reason, timestamp } = event
+  const { messageId, bounceType, reason, timestamp, organizationId } = event
+
+  // Verify message belongs to org if organizationId provided
+  if (organizationId) {
+    const msg = await prisma.message.findFirst({
+      where: { id: messageId, organizationId },
+      select: { id: true },
+    })
+    if (!msg) throw new Error('Message not found')
+  }
 
   await prisma.message.update({
     where: { id: messageId },
@@ -66,8 +76,18 @@ export async function recordBounce(event: BounceEvent): Promise<void> {
  */
 export async function recordSpamComplaint(
   messageId: string,
-  timestamp: Date
+  timestamp: Date,
+  organizationId?: string
 ): Promise<void> {
+  // Verify message belongs to org if organizationId provided
+  if (organizationId) {
+    const msg = await prisma.message.findFirst({
+      where: { id: messageId, organizationId },
+      select: { id: true },
+    })
+    if (!msg) throw new Error('Message not found')
+  }
+
   await prisma.message.update({
     where: { id: messageId },
     data: {
@@ -183,7 +203,8 @@ export async function getCampaignDeliverability(
  */
 export async function getOverallDeliverability(
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
+  organizationId?: string
 ): Promise<DeliverabilityStats> {
   const dateFilter = {
     ...(startDate && { gte: startDate }),
@@ -194,6 +215,7 @@ export async function getOverallDeliverability(
     where: {
       type: 'EMAIL',
       direction: 'OUTBOUND',
+      ...(organizationId && { organizationId }),
       ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
     },
     select: {
@@ -228,7 +250,7 @@ export async function getOverallDeliverability(
 /**
  * Retry failed messages
  */
-export async function retryFailedMessage(messageId: string): Promise<boolean> {
+export async function retryFailedMessage(messageId: string, organizationId?: string): Promise<boolean> {
   const message = await prisma.message.findUnique({
     where: { id: messageId },
     select: {
@@ -236,10 +258,16 @@ export async function retryFailedMessage(messageId: string): Promise<boolean> {
       maxRetries: true,
       bounceType: true,
       status: true,
+      organizationId: true,
     },
   })
 
   if (!message) {
+    throw new Error('Message not found')
+  }
+
+  // Verify org ownership if provided
+  if (organizationId && message.organizationId !== organizationId) {
     throw new Error('Message not found')
   }
 
@@ -269,7 +297,7 @@ export async function retryFailedMessage(messageId: string): Promise<boolean> {
 /**
  * Get failed messages eligible for retry
  */
-export async function getRetryableMessages(limit = 100): Promise<
+export async function getRetryableMessages(limit = 100, organizationId?: string): Promise<
   Array<{
     id: string
     toAddress: string
@@ -286,6 +314,7 @@ export async function getRetryableMessages(limit = 100): Promise<
       retryCount: {
         lt: 3,
       },
+      ...(organizationId && { organizationId }),
     },
     select: {
       id: true,
@@ -307,7 +336,7 @@ export async function getRetryableMessages(limit = 100): Promise<
 /**
  * Batch retry failed messages
  */
-export async function batchRetryMessages(messageIds: string[]): Promise<{
+export async function batchRetryMessages(messageIds: string[], organizationId?: string): Promise<{
   retried: number
   skipped: number
   errors: number
@@ -318,7 +347,7 @@ export async function batchRetryMessages(messageIds: string[]): Promise<{
 
   for (const messageId of messageIds) {
     try {
-      const success = await retryFailedMessage(messageId)
+      const success = await retryFailedMessage(messageId, organizationId)
       if (success) {
         retried++
       } else {
@@ -337,7 +366,8 @@ export async function batchRetryMessages(messageIds: string[]): Promise<{
  */
 export async function getBounceReport(
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
+  organizationId?: string
 ): Promise<Array<{ reason: string; count: number; type: string }>> {
   const dateFilter = {
     ...(startDate && { gte: startDate }),
@@ -347,6 +377,7 @@ export async function getBounceReport(
   const bounces = await prisma.message.findMany({
     where: {
       bouncedAt: Object.keys(dateFilter).length > 0 ? dateFilter : { not: null },
+      ...(organizationId && { organizationId }),
     },
     select: {
       bounceReason: true,
@@ -377,7 +408,7 @@ export async function getBounceReport(
 /**
  * Get suppressed emails (leads opted out due to bounces/complaints)
  */
-export async function getSuppressedEmails(): Promise<
+export async function getSuppressedEmails(organizationId?: string): Promise<
   Array<{
     id: string
     email: string
@@ -391,6 +422,7 @@ export async function getSuppressedEmails(): Promise<
       emailOptOutReason: {
         startsWith: 'Auto-suppressed:',
       },
+      ...(organizationId && { organizationId }),
     },
     select: {
       id: true,

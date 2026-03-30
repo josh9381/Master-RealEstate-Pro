@@ -20,6 +20,7 @@ import {
   Variable,
   Settings,
   ChevronDown,
+  Search,
 } from 'lucide-react'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -65,10 +66,15 @@ const SMSTemplatesLibrary = () => {
   const [formBody, setFormBody] = useState('')
   const [formCategory, setFormCategory] = useState('Follow-up')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [activeStep, setActiveStep] = useState<'details' | 'body'>('details')
   const [initialFormState, setInitialFormState] = useState({ name: '', body: '', category: 'Follow-up' })
   const [showSettings, setShowSettings] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
+
+  const PAGE_SIZE = 12
 
   // SMS Template settings
   interface TemplateSettings {
@@ -124,9 +130,26 @@ const SMSTemplatesLibrary = () => {
 
   const templates: SMSTemplate[] = templatesResponse?.data?.templates || templatesResponse?.templates || templatesResponse || []
 
-  const filteredTemplates = activeCategory === 'All'
-    ? templates
-    : templates.filter(t => t.category === activeCategory)
+  const filteredTemplates = (() => {
+    let result = activeCategory === 'All'
+      ? templates
+      : templates.filter(t => t.category === activeCategory)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(t =>
+        (t.name || '').toLowerCase().includes(query) ||
+        (t.body || '').toLowerCase().includes(query)
+      )
+    }
+    return result
+  })()
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE))
+  const paginatedTemplates = filteredTemplates.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1) }, [activeCategory, searchQuery])
 
   const resetForm = () => {
     setFormName('')
@@ -198,6 +221,16 @@ const SMSTemplatesLibrary = () => {
     }
   }
 
+  const handleDuplicate = async (id: string) => {
+    try {
+      await templatesApi.duplicateSMSTemplate(id)
+      queryClient.invalidateQueries({ queryKey: ['sms-templates'] })
+      toast.success('Template duplicated')
+    } catch {
+      toast.error('Failed to duplicate template')
+    }
+  }
+
   // Escape key handler — use ref to avoid stale closure
   const handleCloseRef = useRef(handleCloseCreateModal)
   handleCloseRef.current = handleCloseCreateModal
@@ -251,6 +284,7 @@ const SMSTemplatesLibrary = () => {
   }, [showCreateModal, activeStep])
 
   const handleDelete = async (id: string) => {
+    setDeleting(true)
     try {
       await templatesApi.deleteSMSTemplate(id)
       queryClient.invalidateQueries({ queryKey: ['sms-templates'] })
@@ -258,6 +292,8 @@ const SMSTemplatesLibrary = () => {
       setDeleteConfirmId(null)
     } catch {
       toast.error('Failed to delete template')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -281,6 +317,27 @@ const SMSTemplatesLibrary = () => {
         <Link to="/communication/templates"><Button variant="outline" size="sm"><FileText className="mr-2 h-4 w-4" />Email Templates</Button></Link>
         <Link to="/communication/sms-templates"><Button variant="default" size="sm"><MessageSquare className="mr-2 h-4 w-4" />SMS Templates</Button></Link>
         <Link to="/communication/calls"><Button variant="outline" size="sm"><Phone className="mr-2 h-4 w-4" />Cold Call Hub</Button></Link>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search SMS templates by name or body..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 pr-10"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Category Filter */}
@@ -314,15 +371,18 @@ const SMSTemplatesLibrary = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No SMS templates yet. Create your first one!</p>
-            <Button className="mt-4" onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" /> Create Template
-            </Button>
+            <p className="text-muted-foreground">{searchQuery ? `No templates matching "${searchQuery}".` : 'No SMS templates yet. Create your first one!'}</p>
+            {!searchQuery && (
+              <Button className="mt-4" onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" /> Create Template
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTemplates.map(template => (
+          {paginatedTemplates.map(template => (
             <Card key={template.id} className="flex flex-col">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -349,8 +409,11 @@ const SMSTemplatesLibrary = () => {
                     <Button size="sm" variant="ghost" onClick={() => {
                       navigator.clipboard.writeText(template.body)
                       toast.success('Copied to clipboard')
-                    }} title="Copy">
+                    }} title="Copy Text">
                       <Copy className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDuplicate(template.id)} title="Duplicate Template">
+                      <RefreshCw className="h-3 w-3" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setDeleteConfirmId(template.id)} title="Delete">
                       <Trash2 className="h-3 w-3 text-red-500" />
@@ -361,6 +424,45 @@ const SMSTemplatesLibrary = () => {
             </Card>
           ))}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filteredTemplates.length)} of {filteredTemplates.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                const show = page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1
+                if (!show) {
+                  const prevShow = page - 1 === 1 || page - 1 === totalPages || Math.abs(page - 1 - currentPage) <= 1
+                  if (prevShow) return <span key={page} className="px-1 text-muted-foreground text-sm">…</span>
+                  return null
+                }
+                return (
+                  <Button
+                    key={page}
+                    variant={page === currentPage ? 'default' : 'outline'}
+                    size="sm"
+                    className="min-w-[36px]"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              })}
+              <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* Delete Confirmation Modal — M5: shows template name */}
@@ -371,8 +473,10 @@ const SMSTemplatesLibrary = () => {
               <h3 className="text-lg font-semibold mb-2">Delete Template</h3>
               <p className="text-muted-foreground mb-4">Are you sure you want to delete <strong>&ldquo;{templates.find(t => t.id === deleteConfirmId)?.name || 'this template'}&rdquo;</strong>? This action cannot be undone.</p>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
-                <Button variant="destructive" onClick={() => handleDelete(deleteConfirmId)}>Delete</Button>
+                <Button variant="outline" onClick={() => setDeleteConfirmId(null)} disabled={deleting}>Cancel</Button>
+                <Button variant="destructive" onClick={() => handleDelete(deleteConfirmId)} disabled={deleting}>
+                  {deleting ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Deleting...</> : 'Delete'}
+                </Button>
               </div>
             </CardContent>
           </Card>

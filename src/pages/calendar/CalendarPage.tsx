@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ModalErrorBoundary } from '@/components/ModalErrorBoundary'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { appointmentsApi, CreateAppointmentData, UpdateAppointmentData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
@@ -340,10 +341,7 @@ export default function CalendarPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Calendar</h1>
-          <p className="text-muted-foreground">Manage your schedule and meetings</p>
-        </div>
+        <PageHeader title="Calendar" subtitle="Manage your schedule and meetings" />
         <LoadingSkeleton rows={5} showChart />
       </div>
     )
@@ -352,10 +350,7 @@ export default function CalendarPage() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Calendar</h1>
-          <p className="text-muted-foreground">Manage your schedule and meetings</p>
-        </div>
+        <PageHeader title="Calendar" subtitle="Manage your schedule and meetings" />
         <ErrorBanner message={`Failed to load calendar: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
       </div>
     )
@@ -364,16 +359,16 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Calendar</h1>
-          <p className="text-muted-foreground">Manage your schedule and meetings</p>
-        </div>
-        <Button onClick={() => openCreateModal()}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Event
-        </Button>
-      </div>
+      <PageHeader
+        title="Calendar"
+        subtitle="Manage your schedule and meetings"
+        actions={
+          <Button onClick={() => openCreateModal()}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Event
+          </Button>
+        }
+      />
 
       {/* Calendar Controls */}
       <Card className="p-4">
@@ -472,10 +467,10 @@ export default function CalendarPage() {
             <div className="grid grid-cols-8 gap-px bg-border rounded-lg overflow-hidden min-w-[800px]">
               {/* Header row */}
               <div className="bg-muted p-2 text-center text-xs font-semibold" />
-              {getWeekDates().map((date, i) => {
+              {getWeekDates().map((date) => {
                 const isTodayDate = date.toDateString() === today.toDateString()
                 return (
-                  <div key={i} className={`bg-muted p-2 text-center text-xs font-semibold ${isTodayDate ? 'text-primary' : ''}`}>
+                  <div key={date.toISOString()} className={`bg-muted p-2 text-center text-xs font-semibold ${isTodayDate ? 'text-primary' : ''}`}>
                     {DAYS[date.getDay()]} {date.getDate()}
                   </div>
                 )

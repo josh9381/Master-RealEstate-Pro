@@ -13,7 +13,8 @@ export async function getNotifications(req: Request, res: Response): Promise<voi
   }
 
   const { page = 1, limit = 20, read } = req.query;
-  const skip = (Number(page) - 1) * Number(limit);
+  const safeLimit = Math.min(Number(limit) || 20, 200);
+  const skip = (Number(page) - 1) * safeLimit;
 
   const where: {
     userId: string;
@@ -34,7 +35,7 @@ export async function getNotifications(req: Request, res: Response): Promise<voi
       where,
       orderBy: { createdAt: 'desc' },
       skip,
-      take: Number(limit)
+      take: safeLimit
     }),
     prisma.notification.count({ where }),
     prisma.notification.count({
@@ -53,9 +54,9 @@ export async function getNotifications(req: Request, res: Response): Promise<voi
       unreadCount,
       pagination: {
         page: Number(page),
-        limit: Number(limit),
+        limit: safeLimit,
         total,
-        pages: Math.ceil(total / Number(limit))
+        pages: Math.ceil(total / safeLimit)
       }
     }
   });

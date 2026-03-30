@@ -314,9 +314,9 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                     </button>
                   </div>
                   <div className="space-y-0.5">
-                    {recentSearches.map((query, i) => (
+                    {recentSearches.map((query) => (
                       <button
-                        key={i}
+                        key={query}
                         onClick={() => handleRecentSearchClick(query)}
                         className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-left hover:bg-accent transition-colors"
                       >

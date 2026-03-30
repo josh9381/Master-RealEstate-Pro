@@ -739,7 +739,7 @@ async function executeActionSequence(
       // Schedule remaining actions for later execution
       const remainingActions = actions.slice(i + 1);
       if (remainingActions.length > 0) {
-        scheduleDelayedActions(remainingActions, delayMs, leadId, metadata, organizationId, executionId);
+        await scheduleDelayedActions(remainingActions, delayMs, leadId, metadata, organizationId, executionId);
       }
       return; // Stop current execution - remaining actions will run after delay
     }
@@ -882,34 +882,44 @@ function calculateDelayMs(config: any): number {
 /**
  * Schedule delayed actions using setTimeout and persist to database for recovery
  */
-function scheduleDelayedActions(
+async function scheduleDelayedActions(
   actions: WorkflowAction[],
   delayMs: number,
   leadId?: string,
   metadata?: any,
   organizationId?: string,
   executionId?: string
-): void {
+): Promise<void> {
   // Cap delay to prevent overflow (max ~24 days with setTimeout)
   const cappedDelay = Math.min(delayMs, 2147483647);
   
   // Store the scheduled job info in the execution metadata for recovery
   if (executionId) {
-    prisma.workflowExecution.update({
-      where: { id: executionId },
-      data: {
-        metadata: {
-          ...(metadata || {}),
-          scheduledActions: actions,
-          scheduledAt: new Date().toISOString(),
-          scheduledFor: new Date(Date.now() + cappedDelay).toISOString(),
-        } as any,
-      },
-    }).catch(err => {
-      // This is a fire-and-forget persistence write for recovery data.
-      // Log with execution ID so it can be investigated if delayed actions fail.
-      logger.error(`[Workflow] Failed to save scheduled actions for execution ${executionId}:`, err);
-    });
+    // Use await (not fire-and-forget) to ensure recovery data is persisted
+    // before scheduling the setTimeout. If persistence fails, retry once.
+    const persistData = {
+      ...(metadata || {}),
+      scheduledActions: actions,
+      scheduledAt: new Date().toISOString(),
+      scheduledFor: new Date(Date.now() + cappedDelay).toISOString(),
+    };
+    
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await prisma.workflowExecution.update({
+          where: { id: executionId },
+          data: { metadata: persistData as any },
+        });
+        break; // Success
+      } catch (err) {
+        if (attempt === 0) {
+          logger.warn(`[Workflow] Delay persistence attempt 1 failed for ${executionId}, retrying...`);
+          await new Promise(r => setTimeout(r, 500));
+        } else {
+          logger.error(`[Workflow] Failed to persist scheduled actions for execution ${executionId} after 2 attempts. Delay may be lost on restart.`, err);
+        }
+      }
+    }
   }
 
   setTimeout(async () => {
@@ -1575,7 +1585,7 @@ export async function recoverDelayedWorkflowActions(): Promise<number> {
         // Still in the future — reschedule via setTimeout
         const remainingMs = scheduledFor.getTime() - now.getTime();
         logger.info(`[Workflow Recovery] Rescheduling ${actions.length} actions for execution ${exec.id} (${Math.round(remainingMs / 60000)}min from now)`);
-        scheduleDelayedActions(actions, remainingMs, exec.leadId || undefined, meta, orgId, exec.id);
+        await scheduleDelayedActions(actions, remainingMs, exec.leadId || undefined, meta, orgId, exec.id);
         recovered++;
       }
     }

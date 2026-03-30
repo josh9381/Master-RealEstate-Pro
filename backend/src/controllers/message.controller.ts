@@ -77,7 +77,7 @@ export const getMessages = async (req: Request, res: Response) => {
   }
 
   const pageNum = Number(page)
-  const limitNum = Number(limit)
+  const limitNum = Math.min(Number(limit) || 20, 200)
   const skip = (pageNum - 1) * limitNum
 
   // Cap the max fetch to prevent memory spikes on large inboxes

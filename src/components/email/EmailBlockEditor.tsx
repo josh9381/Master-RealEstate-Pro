@@ -208,9 +208,9 @@ export function EmailBlockEditor({
           </Button>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {STARTER_TEMPLATES.map((template, i) => (
+          {STARTER_TEMPLATES.map((template) => (
             <button
-              key={i}
+              key={template.name}
               onClick={() => loadTemplate(template)}
               className="text-left border rounded-lg p-4 hover:border-primary hover:bg-primary/5 transition-colors"
             >
@@ -276,8 +276,8 @@ export function EmailBlockEditor({
         {compiledHtml ? (
           <EmailPreviewFrame html={compiledHtml} />
         ) : (
-          <div className="p-6 bg-gray-100 min-h-[300px]">
-            <div className="max-w-[600px] mx-auto bg-white rounded-lg shadow-sm overflow-hidden p-4">
+          <div className="p-6 bg-gray-100 dark:bg-gray-900 min-h-[300px]">
+            <div className="max-w-[600px] mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden p-4">
               {blocks.map(block => (
                 <BlockPreview key={block.id} block={block} />
               ))}
@@ -347,7 +347,7 @@ export function EmailBlockEditor({
       </div>
 
       {/* Canvas */}
-      <div className="p-4 space-y-1 bg-gray-50/50">
+      <div className="p-4 space-y-1 bg-gray-50/50 dark:bg-gray-900/50">
         {blocks.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Plus className="h-8 w-8 mb-2 opacity-50" />
@@ -371,8 +371,8 @@ export function EmailBlockEditor({
             onClick={() => setSelectedBlockId(block.id)}
             className={`group relative rounded-md border transition-all ${
               selectedBlockId === block.id
-                ? 'border-primary ring-1 ring-primary/30 bg-white'
-                : 'border-transparent hover:border-border bg-white'
+                ? 'border-primary ring-1 ring-primary/30 bg-white dark:bg-gray-800'
+                : 'border-transparent hover:border-border bg-white dark:bg-gray-800'
             } ${dragOverIndex === idx ? 'border-dashed border-primary/50 bg-primary/5' : ''}`}
           >
             {/* Block header bar */}
@@ -743,8 +743,8 @@ function BlockPreview({ block, compact }: { block: EmailBlock; compact?: boolean
       return (
         <div style={{ textAlign: d.align, padding: '8px 0' }}>
           <div className="flex gap-3 justify-center flex-wrap" style={{ justifyContent: d.align === 'center' ? 'center' : d.align === 'right' ? 'flex-end' : 'flex-start' }}>
-            {d.networks.map((n, i) => (
-              <span key={i} className="inline-flex items-center gap-1 text-xs text-primary font-medium">
+            {d.networks.map((n) => (
+              <span key={n.name} className="inline-flex items-center gap-1 text-xs text-primary font-medium">
                 {getSocialEmoji(n.name)} {n.name}
               </span>
             ))}

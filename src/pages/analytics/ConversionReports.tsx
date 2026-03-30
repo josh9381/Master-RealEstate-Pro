@@ -1,11 +1,12 @@
 import { logger } from '@/lib/logger'
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Activity, TrendingUp, Users, Target, RefreshCw } from 'lucide-react';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { CHART_COLORS } from '@/lib/chartColors';
 import { analyticsApi } from '@/lib/api';
 import { formatRate, calcRate } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
@@ -38,11 +39,13 @@ const ConversionReports = () => {
       ]);
       // Conversion funnel is optional — don't fail entire query if unavailable
       let funnelData = null;
+      let funnelFailed = false;
       try {
         funnelData = await analyticsApi.getConversionFunnel(params);
       } catch (funnelErr) {
         logger.error('Conversion funnel endpoint unavailable:', funnelErr)
-        // Optional endpoint
+        funnelFailed = true;
+        // Optional endpoint — continue without funnel data
       }
       const leadResult = leads?.data || leads;
       if (funnelData?.data?.timeToConvert) {
@@ -51,12 +54,14 @@ const ConversionReports = () => {
       return {
         leadData: leadResult,
         campaignData: campaigns?.data || campaigns,
+        funnelUnavailable: funnelFailed,
       };
     },
   });
 
   const leadData = conversionResult?.leadData ?? null;
   const campaignData = conversionResult?.campaignData ?? null;
+  const funnelUnavailable = conversionResult?.funnelUnavailable ?? false;
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
@@ -82,7 +87,7 @@ const ConversionReports = () => {
   const totalConversions = leadData?.byStatus?.won || leadData?.byStatus?.WON || 0;
   const overallConversionRate = leadData?.conversionRate || 0;
   const wonBySource: Record<string, number> = leadData?.wonBySource || {};
-  const sourceConversion = leadData?.bySource
+  const sourceConversion = useMemo(() => leadData?.bySource
     ? (Object.entries(leadData.bySource) as [string, number][]).map(([source, count]) => {
         const converted = wonBySource[source] || 0;
         return {
@@ -92,18 +97,18 @@ const ConversionReports = () => {
           rate: calcRate(converted, count)
         };
       })
-    : [];
+    : [], [leadData?.bySource, wonBySource]);
 
 
   // Time to convert — use real API data if available
-  const COLORS_TTC = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-  const timeToConvert: { days: string; count: number; color: string }[] = leadData?.timeToConvert
+  const COLORS_TTC = CHART_COLORS;
+  const timeToConvert: { days: string; count: number; color: string }[] = useMemo(() => leadData?.timeToConvert
     ? leadData.timeToConvert.map((item: { days: string; count: number }, i: number) => ({
         days: item.days,
         count: item.count,
         color: COLORS_TTC[i % COLORS_TTC.length],
       })).filter((d: { count: number }) => d.count > 0)
-    : [];
+    : [], [leadData?.timeToConvert, COLORS_TTC]);
 
   if (loading) {
     return (
@@ -143,14 +148,18 @@ const ConversionReports = () => {
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
           <Button variant="outline" onClick={() => {
-            const data = JSON.stringify({ conversionFunnel, sourceConversion, timeToConvert }, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'conversion-report.json';
-            a.click();
-            URL.revokeObjectURL(url);
+            try {
+              const data = JSON.stringify({ conversionFunnel, sourceConversion, timeToConvert }, null, 2);
+              const blob = new Blob([data], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'conversion-report.json';
+              a.click();
+              URL.revokeObjectURL(url);
+            } catch {
+              // Export failed — data may be malformed
+            }
           }}>Export Report</Button>
         </div>
       </div>
@@ -214,9 +223,14 @@ const ConversionReports = () => {
           <CardDescription>Lead journey from first touch to conversion</CardDescription>
         </CardHeader>
         <CardContent>
+          {funnelUnavailable && (
+            <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
+              Funnel enrichment data temporarily unavailable. Showing status-based funnel.
+            </div>
+          )}
           <div className="space-y-4">
             {conversionFunnel.length > 0 ? conversionFunnel.map((stage, index) => (
-              <div key={stage.stage} className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/leads?status=${stage.stage.toUpperCase()}`)}>
+              <div key={stage.stage} className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" role="link" tabIndex={0} aria-label={`View ${stage.stage} leads: ${stage.count} leads, ${stage.percentage}% of total`} onClick={() => navigate(`/leads?status=${encodeURIComponent(stage.stage.toUpperCase())}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/leads?status=${encodeURIComponent(stage.stage.toUpperCase())}`); } }}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-white text-sm font-bold">
@@ -258,6 +272,7 @@ const ConversionReports = () => {
           <CardContent>
             {sourceConversion.length > 0 ? (
             <>
+            <div aria-label="Conversion by source bar chart">
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={sourceConversion}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -267,6 +282,7 @@ const ConversionReports = () => {
                 <Bar dataKey="rate" fill="#3b82f6" />
               </BarChart>
             </ResponsiveContainer>
+            </div>
             <div className="mt-4 space-y-2">
               {sourceConversion.map((source) => (
                 <div key={source.source} className="flex items-center justify-between text-sm">
@@ -295,6 +311,7 @@ const ConversionReports = () => {
           <CardContent>
             {timeToConvert.length > 0 ? (
             <>
+            <div aria-label="Time to convert pie chart">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -307,13 +324,14 @@ const ConversionReports = () => {
                   fill="#8884d8"
                   dataKey="count"
                 >
-                  {timeToConvert.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  {timeToConvert.map((entry) => (
+                    <Cell key={`ttc-${entry.days}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
+            </div>
             <div className="mt-4 space-y-2">
               {timeToConvert.map((item) => (
                 <div key={item.days} className="flex items-center justify-between text-sm">

@@ -302,7 +302,7 @@ export const getWorkflowExecutions = async (req: Request, res: Response) => {
   }
 
   const pageNum = Number(page)
-  const limitNum = Number(limit)
+  const limitNum = Math.min(Number(limit) || 20, 200)
   const skip = (pageNum - 1) * limitNum
 
   const [executions, total] = await Promise.all([

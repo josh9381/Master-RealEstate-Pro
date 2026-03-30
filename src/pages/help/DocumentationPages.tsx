@@ -156,7 +156,7 @@ const DocumentationPages = () => {
         ) : (
           <div className="space-y-3">
             {articles.map((art) => (
-              <Card key={art.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openArticle(art.slug)}>
+              <Card key={art.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openArticle(art.slug)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openArticle(art.slug) } }}>
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
@@ -277,7 +277,7 @@ const DocumentationPages = () => {
         ) : (
           <div className="grid gap-4 md:grid-cols-3">
             {categories.map((cat) => (
-              <Card key={cat.name} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openCategory(cat.name)}>
+              <Card key={cat.name} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openCategory(cat.name)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCategory(cat.name) } }}>
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-3">

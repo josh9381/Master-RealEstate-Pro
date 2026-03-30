@@ -54,8 +54,9 @@ export const getTasks = async (req: Request, res: Response) => {
   where.organizationId = req.user!.organizationId;
 
   // Calculate pagination
-  const skip = (Number(page) - 1) * Number(limit);
-  const take = Number(limit);
+  const safeLimit = Math.min(Number(limit) || 20, 200);
+  const skip = (Number(page) - 1) * safeLimit;
+  const take = safeLimit;
 
   // Build orderBy
   const orderBy = {
@@ -96,9 +97,9 @@ export const getTasks = async (req: Request, res: Response) => {
       tasks: tasksWithOverdue,
       pagination: {
         page: Number(page),
-        limit: Number(limit),
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: Math.ceil(total / safeLimit),
       },
     },
   });

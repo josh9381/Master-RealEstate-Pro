@@ -327,7 +327,7 @@ export async function inviteMember(req: Request, res: Response): Promise<void> {
     const team = await prisma.team.findUnique({ where: { id }, select: { name: true } });
     const inviter = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { firstName: true, lastName: true } });
     const inviterName = `${inviter?.firstName || ''} ${inviter?.lastName || ''}`.trim() || 'A team member';
-    const APP_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+    const APP_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
     await sendEmail({
       to: invitedUser.email,
       subject: `You've been invited to join ${team?.name || 'a team'}`,

@@ -28,6 +28,16 @@ const ComplianceSettings = () => {
   const [ccpaDoNotSell, setCcpaDoNotSell] = useState(true);
   const [ccpaConsumerRequests, setCcpaConsumerRequests] = useState(true);
   const [ccpaDisclosePractices, setCcpaDisclosePractices] = useState(false);
+  const [dncListProvider, setDncListProvider] = useState('national');
+  const [maintainConsentRecords, setMaintainConsentRecords] = useState(true);
+  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState('');
+  const [termsUrl, setTermsUrl] = useState('');
+  const [cookiePolicyUrl, setCookiePolicyUrl] = useState('');
+  const [consentEmailMarketing, setConsentEmailMarketing] = useState(true);
+  const [consentSmsMarketing, setConsentSmsMarketing] = useState(true);
+  const [consentPhoneCalls, setConsentPhoneCalls] = useState(true);
+  const [consentDataProcessing, setConsentDataProcessing] = useState(true);
+  const [consentThirdPartySharing, setConsentThirdPartySharing] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -57,6 +67,16 @@ const ComplianceSettings = () => {
         if (data.ccpaDoNotSell !== undefined) setCcpaDoNotSell(data.ccpaDoNotSell);
         if (data.ccpaConsumerRequests !== undefined) setCcpaConsumerRequests(data.ccpaConsumerRequests);
         if (data.ccpaDisclosePractices !== undefined) setCcpaDisclosePractices(data.ccpaDisclosePractices);
+        if (data.dncListProvider !== undefined) setDncListProvider(data.dncListProvider);
+        if (data.maintainConsentRecords !== undefined) setMaintainConsentRecords(data.maintainConsentRecords);
+        if (data.privacyPolicyUrl !== undefined) setPrivacyPolicyUrl(data.privacyPolicyUrl);
+        if (data.termsUrl !== undefined) setTermsUrl(data.termsUrl);
+        if (data.cookiePolicyUrl !== undefined) setCookiePolicyUrl(data.cookiePolicyUrl);
+        if (data.consentEmailMarketing !== undefined) setConsentEmailMarketing(data.consentEmailMarketing);
+        if (data.consentSmsMarketing !== undefined) setConsentSmsMarketing(data.consentSmsMarketing);
+        if (data.consentPhoneCalls !== undefined) setConsentPhoneCalls(data.consentPhoneCalls);
+        if (data.consentDataProcessing !== undefined) setConsentDataProcessing(data.consentDataProcessing);
+        if (data.consentThirdPartySharing !== undefined) setConsentThirdPartySharing(data.consentThirdPartySharing);
       }
       if (isRefresh) toast.success('Settings refreshed');
     } catch (error) {
@@ -82,9 +102,11 @@ const ComplianceSettings = () => {
         tcpaEnabled,
         requireConsent,
         blockRevokedConsent,
+        maintainConsentRecords,
         dncEnabled,
         autoCheckDnc,
         blockDncNumbers,
+        dncListProvider,
         gdprEnabled,
         rightToErasure,
         dataPortability,
@@ -95,6 +117,14 @@ const ComplianceSettings = () => {
         ccpaDoNotSell,
         ccpaConsumerRequests,
         ccpaDisclosePractices,
+        privacyPolicyUrl,
+        termsUrl,
+        cookiePolicyUrl,
+        consentEmailMarketing,
+        consentSmsMarketing,
+        consentPhoneCalls,
+        consentDataProcessing,
+        consentThirdPartySharing,
       });
       toast.success('Settings Saved', 'Compliance settings have been updated successfully.');
     } catch (error) {
@@ -111,6 +141,33 @@ const ComplianceSettings = () => {
     enabled: auditEnabled,
   });
   const auditLogs = (auditLogsData?.activities || []).slice(0, 6);
+
+  const handleResetDefaults = () => {
+    setTcpaEnabled(true);
+    setRequireConsent(true);
+    setBlockRevokedConsent(true);
+    setMaintainConsentRecords(true);
+    setDncEnabled(true);
+    setAutoCheckDnc(true);
+    setBlockDncNumbers(true);
+    setDncListProvider('national');
+    setGdprEnabled(true);
+    setRightToErasure(true);
+    setDataPortability(true);
+    setRetentionDays('365');
+    setAuditEnabled(true);
+    setLogAllChanges(true);
+    setCcpaEnabled(true);
+    setCcpaDoNotSell(true);
+    setCcpaConsumerRequests(true);
+    setCcpaDisclosePractices(false);
+    setConsentEmailMarketing(true);
+    setConsentSmsMarketing(true);
+    setConsentPhoneCalls(true);
+    setConsentDataProcessing(true);
+    setConsentThirdPartySharing(false);
+    toast.success('Settings reset to defaults');
+  };
 
   return (
     <div className="space-y-6">
@@ -259,7 +316,12 @@ const ComplianceSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={maintainConsentRecords}
+                onChange={(e) => setMaintainConsentRecords(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm font-medium">
                 Maintain consent records for 4 years
               </span>
@@ -287,8 +349,34 @@ const ComplianceSettings = () => {
             </label>
           </div>
           <div>
+            <label className="flex items-center space-x-2 cursor-pointer mb-4">
+              <input 
+                type="checkbox" 
+                checked={autoCheckDnc}
+                onChange={(e) => setAutoCheckDnc(e.target.checked)}
+                className="rounded" 
+              />
+              <span className="text-sm font-medium">Automatically check DNC registry before calls</span>
+            </label>
+          </div>
+          <div>
+            <label className="flex items-center space-x-2 cursor-pointer mb-4">
+              <input 
+                type="checkbox" 
+                checked={blockDncNumbers}
+                onChange={(e) => setBlockDncNumbers(e.target.checked)}
+                className="rounded" 
+              />
+              <span className="text-sm font-medium">Block calls to DNC-registered numbers</span>
+            </label>
+          </div>
+          <div>
             <label className="text-sm font-medium mb-2 block">DNC List Provider</label>
-            <select className="w-full px-3 py-2 border rounded-lg" defaultValue="national">
+            <select 
+              className="w-full px-3 py-2 border rounded-lg bg-background" 
+              value={dncListProvider}
+              onChange={(e) => setDncListProvider(e.target.value)}
+            >
               <option value="national">National DNC Registry</option>
               <option value="state">State DNC Lists</option>
               <option value="internal">Internal DNC List Only</option>
@@ -300,7 +388,7 @@ const ComplianceSettings = () => {
               <label className="text-sm font-medium mb-2 block">Last Registry Update</label>
               <input
                 type="text"
-                value="January 15, 2024"
+                value="Not configured"
                 disabled
                 className="w-full px-3 py-2 border rounded-lg bg-muted"
               />
@@ -309,15 +397,15 @@ const ComplianceSettings = () => {
               <label className="text-sm font-medium mb-2 block">Blocked Numbers</label>
               <input
                 type="text"
-                value="45,678"
+                value="—"
                 disabled
                 className="w-full px-3 py-2 border rounded-lg bg-muted"
               />
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button>Update DNC Registry</Button>
-            <Button variant="outline">Upload Internal List</Button>
+            <Button onClick={() => toast.info('DNC registry update will be available when connected to a DNC provider')}>Update DNC Registry</Button>
+            <Button variant="outline" onClick={() => toast.info('Internal DNC list upload coming soon')}>Upload Internal List</Button>
           </div>
         </CardContent>
       </Card>
@@ -344,19 +432,6 @@ const ComplianceSettings = () => {
             <label className="flex items-center space-x-2 cursor-pointer">
               <input 
                 type="checkbox" 
-                checked={autoCheckDnc}
-                onChange={(e) => setAutoCheckDnc(e.target.checked)}
-                className="rounded" 
-              />
-              <span className="text-sm">
-                Automatically check Do Not Call registry
-              </span>
-            </label>
-          </div>
-          <div>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input 
-                type="checkbox" 
                 checked={rightToErasure}
                 onChange={(e) => setRightToErasure(e.target.checked)}
                 className="rounded" 
@@ -376,19 +451,6 @@ const ComplianceSettings = () => {
               />
               <span className="text-sm">
                 Allow users to export their data (Data Portability)
-              </span>
-            </label>
-          </div>
-          <div>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={blockDncNumbers}
-                onChange={(e) => setBlockDncNumbers(e.target.checked)}
-                className="rounded" 
-              />
-              <span className="text-sm">
-                Require explicit consent for data processing
               </span>
             </label>
           </div>
@@ -452,15 +514,15 @@ const ComplianceSettings = () => {
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-green-600">3,456</p>
+              <p className="text-3xl font-bold text-green-600">—</p>
               <p className="text-sm text-muted-foreground mt-1">Active Consents</p>
             </div>
             <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-orange-600">234</p>
+              <p className="text-3xl font-bold text-orange-600">—</p>
               <p className="text-sm text-muted-foreground mt-1">Pending Renewals</p>
             </div>
             <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-red-600">89</p>
+              <p className="text-3xl font-bold text-red-600">—</p>
               <p className="text-sm text-muted-foreground mt-1">Withdrawn</p>
             </div>
           </div>
@@ -468,17 +530,22 @@ const ComplianceSettings = () => {
             <label className="text-sm font-medium mb-2 block">Consent Types</label>
             <div className="space-y-2">
               {[
-                { type: 'Email Marketing', enabled: true },
-                { type: 'SMS Marketing', enabled: true },
-                { type: 'Phone Calls', enabled: true },
-                { type: 'Data Processing', enabled: true },
-                { type: 'Third-party Sharing', enabled: false },
-              ].map((consent, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                { type: 'Email Marketing', checked: consentEmailMarketing, onChange: setConsentEmailMarketing },
+                { type: 'SMS Marketing', checked: consentSmsMarketing, onChange: setConsentSmsMarketing },
+                { type: 'Phone Calls', checked: consentPhoneCalls, onChange: setConsentPhoneCalls },
+                { type: 'Data Processing', checked: consentDataProcessing, onChange: setConsentDataProcessing },
+                { type: 'Third-party Sharing', checked: consentThirdPartySharing, onChange: setConsentThirdPartySharing },
+              ].map((consent) => (
+                <div key={consent.type} className="flex items-center justify-between p-3 border rounded-lg">
                   <span className="text-sm">{consent.type}</span>
                   <label className="relative inline-block w-12 h-6">
-                    <input type="checkbox" defaultChecked={consent.enabled} className="sr-only peer" />
-                    <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <input 
+                      type="checkbox" 
+                      checked={consent.checked} 
+                      onChange={(e) => consent.onChange(e.target.checked)}
+                      className="sr-only peer" 
+                    />
+                    <div className="w-12 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white dark:after:bg-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
               ))}
@@ -502,7 +569,7 @@ const ComplianceSettings = () => {
                 onChange={(e) => setAuditEnabled(e.target.checked)}
                 className="sr-only peer" 
               />
-              <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-12 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white dark:after:bg-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </CardHeader>
@@ -540,7 +607,7 @@ const ComplianceSettings = () => {
             )}
           </div>
           <div className="mt-4">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => toast.info('Full audit log viewer coming soon')}>
               View All Audit Logs
             </Button>
           </div>
@@ -559,8 +626,9 @@ const ComplianceSettings = () => {
             <input
               type="text"
               placeholder="https://yourcompany.com/privacy"
-              defaultValue="https://yourcrm.com/privacy"
-              className="w-full px-3 py-2 border rounded-lg"
+              value={privacyPolicyUrl}
+              onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg bg-background"
             />
           </div>
           <div>
@@ -568,8 +636,9 @@ const ComplianceSettings = () => {
             <input
               type="text"
               placeholder="https://yourcompany.com/terms"
-              defaultValue="https://yourcrm.com/terms"
-              className="w-full px-3 py-2 border rounded-lg"
+              value={termsUrl}
+              onChange={(e) => setTermsUrl(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg bg-background"
             />
           </div>
           <div>
@@ -577,17 +646,18 @@ const ComplianceSettings = () => {
             <input
               type="text"
               placeholder="https://yourcompany.com/cookies"
-              defaultValue="https://yourcrm.com/cookies"
-              className="w-full px-3 py-2 border rounded-lg"
+              value={cookiePolicyUrl}
+              onChange={(e) => setCookiePolicyUrl(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg bg-background"
             />
           </div>
-          <Button>Save Policy URLs</Button>
+          <Button onClick={handleSave}>Save Policy URLs</Button>
         </CardContent>
       </Card>
 
       {/* Save Settings */}
       <div className="flex justify-end space-x-2">
-        <Button variant="outline">Reset to Defaults</Button>
+        <Button variant="outline" onClick={handleResetDefaults}>Reset to Defaults</Button>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? 'Saving...' : 'Save All Settings'}
         </Button>

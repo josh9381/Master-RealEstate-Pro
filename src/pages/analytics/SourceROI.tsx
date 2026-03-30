@@ -12,8 +12,7 @@ import {
 import { analyticsApi } from '@/lib/api';
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
-
-const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#84cc16'];
+import { CHART_COLORS as COLORS } from '@/lib/chartColors';
 
 const formatCurrency = fmtMoney;
 
@@ -29,7 +28,7 @@ const SourceROI = () => {
     },
   });
 
-  const handleDateChange = (range: DateRange, _preset?: any) => {
+  const handleDateChange = (range: DateRange, _preset?: string) => {
     dateRangeRef.current = range;
     refetch();
   };
@@ -50,7 +49,7 @@ const SourceROI = () => {
   if (isError) {
     return (
       <div className="p-6">
-        <ErrorBanner message={(error as Error)?.message || 'Failed to load source ROI data'} retry={refetch} />
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load source ROI data'} retry={refetch} />
       </div>
     );
   }
@@ -114,6 +113,7 @@ const SourceROI = () => {
             <CardDescription>Total revenue generated from leads by their original source</CardDescription>
           </CardHeader>
           <CardContent>
+            <div aria-label="Revenue by source bar chart">
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={sources} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
@@ -121,12 +121,13 @@ const SourceROI = () => {
                 <YAxis type="category" dataKey="source" width={120} tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
                 <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
-                  {sources.map((_: any, i: number) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  {sources.map((entry: { source: string }, i: number) => (
+                    <Cell key={entry.source || `source-${i}`} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -142,18 +143,18 @@ const SourceROI = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b dark:border-gray-700">
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Source</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Leads</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Won</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Lost</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Conv. Rate</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Revenue</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Avg Deal</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Rev/Lead</th>
+                    <th scope="col" className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Source</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Leads</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Won</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Lost</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Conv. Rate</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Revenue</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Avg Deal</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Rev/Lead</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sources.map((s: any, i: number) => (
+                  {sources.map((s: { source: string; totalLeads: number; wonLeads: number; lostLeads: number; conversionRate: number; revenue: number; avgDealSize: number; revenuePerLead: number }, i: number) => (
                     <tr key={s.source} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">

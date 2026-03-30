@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageEmptyState } from '@/components/ui/PageEmptyState'
 import { activitiesApi, leadsApi } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
 import type { ActivityRecord } from '@/types'
@@ -160,16 +162,16 @@ export default function ActivityPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Activity Feed</h1>
-          <p className="text-muted-foreground">Track all activities across your CRM</p>
-        </div>
-        <Button variant="outline" onClick={handleExport}>
-          <Download className="h-4 w-4 mr-2" />
-          Export
-        </Button>
-      </div>
+      <PageHeader
+        title="Activity Feed"
+        subtitle="Track all activities across your CRM"
+        actions={
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+        }
+      />
 
       {isError && (
         <ErrorBanner message={`Failed to load activities: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
@@ -252,8 +254,9 @@ export default function ActivityPage() {
         {showMoreFilters && (
           <div className="flex items-end gap-4 pt-2 border-t">
             <div className="flex-1">
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Lead</label>
+              <label htmlFor="activity-lead-filter" className="text-xs font-medium text-muted-foreground mb-1 block">Lead</label>
               <select
+                id="activity-lead-filter"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={selectedLeadId}
                 onChange={(e) => { setSelectedLeadId(e.target.value); setPage(1) }}
@@ -265,16 +268,18 @@ export default function ActivityPage() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">From</label>
+              <label htmlFor="activity-date-from" className="text-xs font-medium text-muted-foreground mb-1 block">From</label>
               <Input
+                id="activity-date-from"
                 type="date"
                 value={dateFrom}
                 onChange={(e) => { setDateFrom(e.target.value); setPage(1) }}
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">To</label>
+              <label htmlFor="activity-date-to" className="text-xs font-medium text-muted-foreground mb-1 block">To</label>
               <Input
+                id="activity-date-to"
                 type="date"
                 value={dateTo}
                 onChange={(e) => { setDateTo(e.target.value); setPage(1) }}
@@ -347,9 +352,11 @@ export default function ActivityPage() {
         </div>
 
         {filteredActivities.length === 0 && !isLoading && (
-          <div className="text-center py-12 text-muted-foreground">
-            No activities found matching your filters
-          </div>
+          <PageEmptyState
+            icon={<Activity className="h-12 w-12" />}
+            title="No activities found"
+            description="No activities found matching your filters"
+          />
         )}
       </Card>
 

@@ -411,7 +411,7 @@ export const getChatHistory = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId
     const organizationId = req.user!.organizationId
-    const limit = parseInt(req.query.limit as string) || 50
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200)
 
     const messages = await prisma.chatMessage.findMany({
       where: { userId, organizationId },

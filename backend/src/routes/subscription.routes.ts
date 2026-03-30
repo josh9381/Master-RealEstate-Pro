@@ -6,6 +6,7 @@ import {
   getUsageStats,
 } from '../controllers/subscription.controller';
 import { requireAdmin } from '../middleware/admin';
+import { sensitiveLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 
@@ -38,6 +39,6 @@ router.get('/usage', getUsageStats);
  * @desc    Change subscription plan (manual upgrade/downgrade)
  * @access  Private (Admin only)
  */
-router.post('/change-plan', requireAdmin, changePlan);
+router.post('/change-plan', requireAdmin, sensitiveLimiter, changePlan);
 
 export default router;

@@ -238,7 +238,7 @@ export function AdvancedAudienceFilters({
           const operators = getOperators(field?.type || 'text')
 
           return (
-            <div key={index} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
+            <div key={`${filter.field}-${index}`} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
               {/* Field Selection */}
               <select
                 value={filter.field}

@@ -224,22 +224,33 @@ router.post('/2fa/disable', validateBody(disable2FASchema), asyncHandler(disable
 // SERVICE SETTINGS
 // ============================================
 
+import { requireAdmin } from '../middleware/admin';
+
+const ALLOWED_SERVICES = ['sendgrid', 'twilio', 'openai', 'stripe', 'google', 'zapier', 'storage'];
+
 /**
  * @route   PUT /api/settings/services/:service
- * @desc    Update service configuration
- * @access  Private
+ * @desc    Update service configuration (stub — returns success, no persistence yet)
+ * @access  Private (Admin only)
  */
-router.put('/services/:service', asyncHandler(async (req: any, res: any) => {
-  res.json({ success: true, message: `${req.params.service} settings updated` });
+router.put('/services/:service', requireAdmin, asyncHandler(async (req: any, res: any) => {
+  const service = req.params.service;
+  if (!ALLOWED_SERVICES.includes(service)) {
+    return res.status(400).json({ success: false, error: 'Unknown service' });
+  }
+  res.json({ success: true, message: `${service} settings updated` });
 }));
 
 /**
  * @route   POST /api/settings/services/:service/test
- * @desc    Test service connection
- * @access  Private
+ * @desc    Test service connection (stub — returns success, no real test yet)
+ * @access  Private (Admin only)
  */
-router.post('/services/:service/test', asyncHandler(async (req: any, res: any) => {
+router.post('/services/:service/test', requireAdmin, asyncHandler(async (req: any, res: any) => {
   const service = req.params.service;
+  if (!ALLOWED_SERVICES.includes(service)) {
+    return res.status(400).json({ success: false, error: 'Unknown service' });
+  }
   res.json({ success: true, message: `${service} connection test passed`, data: { status: 'ok' } });
 }));
 

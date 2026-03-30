@@ -597,7 +597,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             {contentType === 'email-sequence' && generatedContent.emails && (
               <div className="space-y-4">
                 {generatedContent.emails.map((email: any, index: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
-                  <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div key={email.subject || `email-${index}`} className="bg-white rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-500">
                         Email {index + 1} • Day {email.dayOffset || index * 3}

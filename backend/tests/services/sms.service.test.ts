@@ -48,6 +48,8 @@ describe('sendSMS', () => {
     mockReset(mockPrisma)
     mockPrisma.sMSConfig.findUnique.mockResolvedValue(null)
     mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as never)
+    // Mock per-phone rate limit check (allow sends by default)
+    mockPrisma.message.count.mockResolvedValue(0)
     // Set up Twilio mock to return a valid message
     getTwilioCreate().mockReset()
     getTwilioCreate().mockResolvedValue({ sid: 'SM_test_123', status: 'queued', numSegments: '1' })
@@ -113,6 +115,7 @@ describe('sendTemplateSMS', () => {
     mockReset(mockPrisma)
     mockPrisma.sMSConfig.findUnique.mockResolvedValue(null)
     mockPrisma.message.create.mockResolvedValue({ id: 'msg-1' } as never)
+    mockPrisma.message.count.mockResolvedValue(0)
     mockPrisma.sMSTemplate.update.mockResolvedValue({} as never)
     getTwilioCreate().mockReset()
     getTwilioCreate().mockResolvedValue({ sid: 'SM_test_123', status: 'queued', numSegments: '1' })

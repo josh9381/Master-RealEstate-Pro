@@ -470,7 +470,7 @@ export const getTaskAnalytics = async (req: Request, res: Response) => {
 export const getActivityFeed = async (req: Request, res: Response) => {
   const { limit = 20, page = 1, startDate, endDate } = req.query
   
-  const limitNum = Number(limit)
+  const limitNum = Math.min(Number(limit) || 20, 200)
   const pageNum = Number(page)
   const skip = (pageNum - 1) * limitNum
 
@@ -674,7 +674,7 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
       where: {
         ...whereDate,
         organizationId: req.user!.organizationId,
-        status: { in: ['WON', 'won'] }
+        status: 'WON'
       },
       select: { createdAt: true, updatedAt: true }
     })

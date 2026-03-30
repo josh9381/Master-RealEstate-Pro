@@ -2,12 +2,29 @@ import { logger } from '../lib/logger'
 import { Request, Response } from 'express';
 import { Role, ActivityType } from '@prisma/client';
 import { prisma } from '../config/database';
+import { getRedisClient, isRedisConnected } from '../config/redis';
 import path from 'path';
 import fs from 'fs/promises';
 
-// In-memory store for system settings (per organization)
-// In production, this would be a database table
-const systemSettingsStore: Record<string, any> = {};
+const DEFAULT_SETTINGS = {
+  general: {
+    systemName: process.env.APP_NAME || 'Master RealEstate Pro',
+    systemUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    systemDescription: 'Customer Relationship Management System for sales and marketing teams',
+    language: 'en',
+    timezone: 'America/New_York',
+    dateFormat: 'MM/DD/YYYY',
+    timeFormat: '12',
+  },
+  security: {
+    strongPasswords: true,
+    enable2FA: true,
+    require2FAAdmins: true,
+    sessionTimeout: 60,
+    maxLoginAttempts: 5,
+    lockoutDuration: 30,
+  },
+};
 
 /**
  * Get system settings for the organization
@@ -16,25 +33,13 @@ export const getSystemSettings = async (req: Request, res: Response) => {
   try {
     const organizationId = req.user!.organizationId;
     
-    const settings = systemSettingsStore[organizationId] || {
-      general: {
-        systemName: process.env.APP_NAME || 'Master RealEstate Pro',
-        systemUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-        systemDescription: 'Customer Relationship Management System for sales and marketing teams',
-        language: 'en',
-        timezone: 'America/New_York',
-        dateFormat: 'MM/DD/YYYY',
-        timeFormat: '12',
-      },
-      security: {
-        strongPasswords: true,
-        enable2FA: true,
-        require2FAAdmins: true,
-        sessionTimeout: 60,
-        maxLoginAttempts: 5,
-        lockoutDuration: 30,
-      },
-    };
+    const record = await prisma.systemSettings.findUnique({
+      where: { organizationId },
+    });
+
+    const settings = record
+      ? { ...DEFAULT_SETTINGS, ...(record.settings as Record<string, unknown>) }
+      : DEFAULT_SETTINGS;
 
     res.json({ success: true, data: settings });
   } catch (error) {
@@ -55,19 +60,29 @@ export const updateSystemSettings = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Section and data are required' });
     }
 
-    if (!systemSettingsStore[organizationId]) {
-      systemSettingsStore[organizationId] = {
-        general: {},
-        security: {},
-      };
-    }
+    // Read existing settings
+    const existing = await prisma.systemSettings.findUnique({
+      where: { organizationId },
+    });
 
-    systemSettingsStore[organizationId][section] = {
-      ...systemSettingsStore[organizationId][section],
+    const currentSettings = existing
+      ? (existing.settings as Record<string, any>)
+      : { ...DEFAULT_SETTINGS };
+
+    // Merge the updated section
+    currentSettings[section] = {
+      ...currentSettings[section],
       ...data,
     };
 
-    res.json({ success: true, data: systemSettingsStore[organizationId] });
+    // Upsert to database
+    const updated = await prisma.systemSettings.upsert({
+      where: { organizationId },
+      create: { organizationId, settings: currentSettings },
+      update: { settings: currentSettings },
+    });
+
+    res.json({ success: true, data: updated.settings });
   } catch (error) {
     logger.error('Error updating system settings:', error);
     res.status(500).json({ success: false, message: 'Failed to update system settings' });
@@ -107,16 +122,44 @@ export const healthCheck = async (req: Request, res: Response) => {
       name: 'API Server',
       status: 'healthy',
       latency: `${Date.now() - dbStart}ms`,
-      uptime: '99.9%',
+      uptime: 'N/A',
     });
 
-    // Report other services as unknown (would need actual checks in production)
-    services.push(
-      { name: 'Cache (Redis)', status: 'checking', latency: 'N/A', uptime: 'N/A' },
-      { name: 'Email Service', status: 'checking', latency: 'N/A', uptime: 'N/A' },
-      { name: 'Storage (S3)', status: 'checking', latency: 'N/A', uptime: 'N/A' },
-      { name: 'Search (Elasticsearch)', status: 'checking', latency: 'N/A', uptime: 'N/A' },
-    );
+    // Check Redis (real probe)
+    const redisStart = Date.now();
+    try {
+      const redis = getRedisClient();
+      if (redis && isRedisConnected()) {
+        await redis.ping();
+        const redisLatency = Date.now() - redisStart;
+        services.push({
+          name: 'Cache (Redis)',
+          status: redisLatency > 500 ? 'degraded' : 'healthy',
+          latency: `${redisLatency}ms`,
+          uptime: 'N/A',
+        });
+      } else {
+        services.push({ name: 'Cache (Redis)', status: 'not configured', latency: 'N/A', uptime: 'N/A' });
+      }
+    } catch {
+      services.push({ name: 'Cache (Redis)', status: 'down', latency: 'N/A', uptime: 'N/A' });
+    }
+
+    // Check Email Service (SendGrid API key configured)
+    services.push({
+      name: 'Email Service (SendGrid)',
+      status: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured',
+      latency: 'N/A',
+      uptime: 'N/A',
+    });
+
+    // Check SMS Service (Twilio configured)
+    services.push({
+      name: 'SMS Service (Twilio)',
+      status: process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN ? 'configured' : 'not configured',
+      latency: 'N/A',
+      uptime: 'N/A',
+    });
 
     res.json({
       success: true,
@@ -358,16 +401,26 @@ export const downloadBackup = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Backup not found' });
     }
 
+    // Validate the file path is within the expected backups directory
+    const backupsRoot = path.resolve(process.cwd(), 'backups');
+    const resolvedPath = path.resolve(backup.filePath);
+    if (!resolvedPath.startsWith(backupsRoot + path.sep)) {
+      logger.error('[ADMIN] Backup path traversal attempt:', { filePath: backup.filePath, backupsRoot });
+      return res.status(403).json({ success: false, message: 'Invalid backup file path' });
+    }
+
     try {
-      await fs.access(backup.filePath);
+      await fs.access(resolvedPath);
     } catch (error) {
       logger.error('[ADMIN] Backup file not found on disk:', error)
       return res.status(404).json({ success: false, message: 'Backup file no longer available on disk' });
     }
 
+    // Sanitize filename for Content-Disposition header (strip control chars / newlines)
+    const safeFilename = path.basename(backup.filename).replace(/[^\w\-. ]/g, '_');
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${backup.filename}"`);
-    const fileStream = await fs.readFile(backup.filePath);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+    const fileStream = await fs.readFile(resolvedPath);
     return res.send(fileStream);
   } catch (error) {
     logger.error('Error downloading backup:', error);

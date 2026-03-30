@@ -53,7 +53,7 @@ export const remove = async (req: Request, res: Response) => {
 
 export const members = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1
-  const limit = parseInt(req.query.limit as string) || 50
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 200)
   const result = await getSegmentMembers(req.params.id, req.user!.organizationId, { page, limit })
   res.json({ success: true, data: result })
 }

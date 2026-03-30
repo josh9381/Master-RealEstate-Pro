@@ -218,8 +218,8 @@ const AIAnalytics = () => {
         <CardContent>
           {modelComparison.length > 0 ? (
           <div className="space-y-4">
-            {modelComparison.map((model, index) => (
-              <div key={index} className="space-y-2">
+            {modelComparison.map((model) => (
+              <div key={model.model} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{model.model}</span>
                   <div className="flex gap-4">

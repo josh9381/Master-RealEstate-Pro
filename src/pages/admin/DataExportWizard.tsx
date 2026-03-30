@@ -449,9 +449,9 @@ const DataExportWizard = () => {
                 date: '1 week ago',
                 size: '1.8 MB',
               },
-            ].map((exportItem, index) => (
+            ].map((exportItem) => (
               <div
-                key={index}
+                key={exportItem.type}
                 className="flex items-center justify-between p-3 border rounded-lg"
               >
                 <div className="flex items-center space-x-3">

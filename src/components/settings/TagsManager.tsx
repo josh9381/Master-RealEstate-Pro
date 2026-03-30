@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { useConfirm } from '@/hooks/useConfirm'
 import { Input } from '@/components/ui/Input'
+import { TAG_PICKER_COLORS } from '@/lib/chartColors'
 import {
   Table,
   TableBody,
@@ -503,7 +504,7 @@ export function TagsManager() {
               <label className="text-sm font-medium">Segment color palette</label>
               <p className="text-xs text-muted-foreground mb-2">Default colors available when creating segments</p>
               <div className="flex gap-2 flex-wrap">
-                {['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#6366F1'].map(c => (
+                {TAG_PICKER_COLORS.map(c => (
                   <div key={c} className="w-8 h-8 rounded-full border" style={{ backgroundColor: c }} title={c} />
                 ))}
               </div>

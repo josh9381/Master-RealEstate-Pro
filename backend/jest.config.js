@@ -19,6 +19,7 @@ module.exports = {
   },
   setupFiles: ['<rootDir>/tests/jest.setup.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  forceExit: true,
   testTimeout: 10000,
   verbose: true,
 };

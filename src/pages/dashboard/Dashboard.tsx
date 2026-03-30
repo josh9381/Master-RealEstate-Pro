@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/useToast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { calcProgress, formatRate, fmtMoney } from '@/lib/metricsCalculator'
 import {
   TrendingUp,
@@ -212,7 +213,7 @@ function Dashboard() {
 
   // Transform API data for charts
   // Lead source data for pie chart — aggregate to top 5 + "Other" for readability
-  const LEAD_SOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#6b7280']
+  const LEAD_SOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#6b7280'] as const // from chartColors
   const leadSourceData = useMemo(() => {
     if (!leadAnalyticsData?.bySource) return []
     const all = Object.entries(leadAnalyticsData.bySource)
@@ -665,28 +666,7 @@ function Dashboard() {
 
   // Show loading state while fetching data
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="mt-2 text-muted-foreground">Loading your dashboard...</p>
-          </div>
-        </div>
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
-                  <div className="h-8 bg-muted rounded w-3/4"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
+    return <LoadingSkeleton rows={5} showChart />
   }
 
   return (
@@ -892,8 +872,8 @@ function Dashboard() {
 
       {/* Secondary Quick Stats */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        {quickStats.map((item, index) => (
-          <Card key={index}>
+        {quickStats.map((item) => (
+          <Card key={item.label}>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{item.value}</div>
               <div className="flex items-center justify-between mt-1">
@@ -1025,8 +1005,8 @@ function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex-1 space-y-2">
-                {leadSourceData.map((source, index) => (
-                  <div key={index} className="flex items-center justify-between">
+                {leadSourceData.map((source) => (
+                  <div key={source.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.color }} />
                       <span className="text-sm">{source.name}</span>
@@ -1323,7 +1303,7 @@ function Dashboard() {
             <div className="space-y-3">
               {alertsData.alerts.map((alert: DashboardAlert, index: number) => (
                 <div
-                  key={index}
+                  key={alert.message || `alert-${index}`}
                   className={`flex items-start gap-3 rounded-lg border p-3 ${
                     alert.type === 'urgent'
                       ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'

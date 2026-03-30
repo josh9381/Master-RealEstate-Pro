@@ -55,8 +55,9 @@ export const getCampaigns = async (req: Request, res: Response) => {
   }
 
   // Calculate pagination
-  const skip = (Number(page) - 1) * Number(limit);
-  const take = Number(limit);
+  const safeLimit = Math.min(Number(limit) || 20, 200);
+  const skip = (Number(page) - 1) * safeLimit;
+  const take = safeLimit;
 
   // Build orderBy — whitelist allowed sort fields for safety
   const allowedSortFields = ['createdAt', 'updatedAt', 'name', 'status', 'type', 'startDate', 'endDate', 'sent', 'opened', 'clicked', 'revenue', 'budget'];
@@ -117,9 +118,9 @@ export const getCampaigns = async (req: Request, res: Response) => {
       campaigns: campaignsWithMetrics,
       pagination: {
         page: Number(page),
-        limit: Number(limit),
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: Math.ceil(total / safeLimit),
       },
     },
   });

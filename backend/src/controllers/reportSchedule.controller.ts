@@ -207,7 +207,7 @@ export async function getReportHistory(req: Request, res: Response) {
     const organizationId = req.user!.organizationId
     const { id } = req.params
     const page = parseInt(req.query.page as string) || 1
-    const limit = parseInt(req.query.limit as string) || 20
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 200)
 
     const [history, total] = await Promise.all([
       prisma.reportHistory.findMany({

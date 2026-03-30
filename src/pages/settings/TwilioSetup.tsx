@@ -62,7 +62,7 @@ const TwilioSetup = () => {
   const [autoOptOut, setAutoOptOut] = useState(false);
 
   // Voice Settings state
-  const [recordingMode, setRecordingMode] = useState('none');
+  const [recordingMode, setRecordingMode] = useState('do-not-record');
   const [voicemailUrl, setVoicemailUrl] = useState('');
   const [enableCallForwarding, setEnableCallForwarding] = useState(false);
   const [enableVoicemailTranscription, setEnableVoicemailTranscription] = useState(false);
@@ -135,6 +135,21 @@ const TwilioSetup = () => {
     setConnected(!!config.isActive && credentialsExist);
     setIsConfigured(config.isActive && credentialsExist);
     setConfigMode(credentialsExist ? 'production' : 'mock');
+    
+    // Sync SMS sub-settings
+    if (config.smsCharLimit != null) setSmsCharLimit(config.smsCharLimit);
+    if (config.enableDeliveryReceipts != null) setEnableDeliveryReceipts(config.enableDeliveryReceipts);
+    if (config.enableLinkShortening != null) setEnableLinkShortening(config.enableLinkShortening);
+    if (config.autoOptOut != null) setAutoOptOut(config.autoOptOut);
+    
+    // Sync Voice sub-settings
+    if (config.voiceSettings) {
+      const vs = config.voiceSettings;
+      if (vs.recordingMode) setRecordingMode(vs.recordingMode);
+      if (vs.voicemailUrl != null) setVoicemailUrl(vs.voicemailUrl);
+      if (vs.enableCallForwarding != null) setEnableCallForwarding(vs.enableCallForwarding);
+      if (vs.enableVoicemailTranscription != null) setEnableVoicemailTranscription(vs.enableVoicemailTranscription);
+    }
   }, [twilioConfigData]);
 
   // Sync usage stats to state
@@ -294,6 +309,15 @@ const TwilioSetup = () => {
 
   const handleAddNumber = () => {
     toast.info('Add Number', 'Opening Twilio phone number purchase flow...');
+  };
+
+  const getBackendUrl = (path: string) => {
+    const url = new URL(window.location.href);
+    url.port = '8000';
+    url.pathname = path;
+    url.search = '';
+    url.hash = '';
+    return url.toString();
   };
 
   return (
@@ -544,7 +568,7 @@ const TwilioSetup = () => {
               <input
                 type="text"
                 readOnly
-                value={userId ? `${window.location.protocol}//${window.location.hostname.replace('3000', '8000')}/api/webhooks/twilio/sms/${userId}` : 'Loading webhook URL...'}
+                value={userId ? getBackendUrl(`/api/webhooks/twilio/sms/${userId}`) : 'Loading webhook URL...'}
                 className="flex-1 px-3 py-2 bg-white border rounded-lg font-mono text-xs"
               />
               <Button
@@ -555,7 +579,7 @@ const TwilioSetup = () => {
                     toast.error('User ID not loaded yet. Please refresh the page.');
                     return;
                   }
-                  const webhookUrl = `${window.location.protocol}//${window.location.hostname.replace('3000', '8000')}/api/webhooks/twilio/sms/${userId}`;
+                  const webhookUrl = getBackendUrl(`/api/webhooks/twilio/sms/${userId}`);
                   navigator.clipboard.writeText(webhookUrl);
                   toast.success('Webhook URL copied to clipboard!');
                 }}
@@ -601,7 +625,7 @@ const TwilioSetup = () => {
                 size="sm"
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    `${window.location.protocol}//${window.location.hostname.replace('3000', '8000')}/api/webhooks/twilio/status`
+                    getBackendUrl('/api/webhooks/twilio/status')
                   );
                   toast.success('Status callback URL copied!');
                 }}

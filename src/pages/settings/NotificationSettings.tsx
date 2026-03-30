@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
 import { settingsApi } from '@/lib/api';
-import { calcRate } from '@/lib/metricsCalculator';
 import { useAuthStore } from '@/store/authStore';
 import { getSoundSettings, saveSoundSettings, playPreviewSound, type SoundSettings } from '@/lib/notificationSounds';
 
@@ -57,7 +56,7 @@ const NotificationSettings = () => {
   // Channel toggles
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(true);
-  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(true);
   
   // Quiet hours
   const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
@@ -135,15 +134,13 @@ const NotificationSettings = () => {
     refetch();
   };
 
-  const toggleNotification = (categoryIndex: number, settingIndex: number, channel: 'email' | 'push' | 'sms') => {
+  const handleToggleNotification = (categoryIndex: number, settingIndex: number, channel: 'email' | 'push' | 'sms') => {
     setNotificationCategories(prev => {
       const updated = [...prev];
       updated[categoryIndex].settings[settingIndex][channel] = !updated[categoryIndex].settings[settingIndex][channel];
       return updated;
     });
   };
-
-  const handleToggleNotification = toggleNotification;
 
   const saveMutation = useMutation({
     mutationFn: async (data: { emailEnabled: boolean; pushEnabled: boolean; smsEnabled: boolean; quietHoursEnabled: boolean; quietStart: string; quietEnd: string; categories: NotificationCategory[] }) => {
@@ -188,56 +185,61 @@ const NotificationSettings = () => {
     setQuietStart('22:00');
     setQuietEnd('08:00');
     
-    // Reset all notification settings to defaults
-    setNotificationCategories([
-      {
-        icon: Users,
-        title: 'Lead Notifications',
-        description: 'Get notified about new leads and lead activities',
-        settings: [
-          { id: 'new-lead', label: 'New lead created', email: true, push: true, sms: false },
-          { id: 'lead-updated', label: 'Lead status updated', email: true, push: false, sms: false },
-          { id: 'lead-assigned', label: 'Lead assigned to you', email: true, push: true, sms: true },
-          { id: 'lead-converted', label: 'Lead converted to customer', email: true, push: true, sms: false },
-        ],
-      },
-      {
-        icon: TrendingUp,
-        title: 'Campaign Notifications',
-        description: 'Stay updated on your campaign performance',
-        settings: [
-          { id: 'campaign-sent', label: 'Campaign sent successfully', email: true, push: false, sms: false },
-          { id: 'campaign-milestone', label: 'Campaign milestone reached', email: true, push: true, sms: false },
-          { id: 'campaign-issue', label: 'Campaign issues or errors', email: true, push: true, sms: true },
-        ],
-      },
-      {
-        icon: MessageSquare,
-        title: 'Communication',
-        description: 'Notifications for messages and responses',
-        settings: [
-          { id: 'new-message', label: 'New message received', email: true, push: true, sms: false },
-          { id: 'message-replied', label: 'Someone replied to your message', email: true, push: true, sms: false },
-          { id: 'missed-call', label: 'Missed call notification', email: false, push: true, sms: true },
-        ],
-      },
-      {
-        icon: Calendar,
-        title: 'Reminders & Tasks',
-        description: 'Get reminded about important tasks',
-        settings: [
-          { id: 'task-due', label: 'Task due date approaching', email: true, push: true, sms: false },
-          { id: 'followup-reminder', label: 'Follow-up reminder', email: true, push: true, sms: true },
-          { id: 'meeting-reminder', label: 'Meeting reminder', email: true, push: true, sms: true },
-        ],
-      },
-    ]);
+    // Re-sync categories from API data if available, otherwise use initial defaults
+    if (notificationData?.categories) {
+      setNotificationCategories(notificationData.categories);
+    } else {
+      // Reset all notification settings to defaults
+      setNotificationCategories([
+        {
+          icon: Users,
+          title: 'Lead Notifications',
+          description: 'Get notified about new leads and lead activities',
+          settings: [
+            { id: 'new-lead', label: 'New lead created', email: true, push: true, sms: false },
+            { id: 'lead-updated', label: 'Lead status updated', email: true, push: false, sms: false },
+            { id: 'lead-assigned', label: 'Lead assigned to you', email: true, push: true, sms: true },
+            { id: 'lead-converted', label: 'Lead converted to customer', email: true, push: true, sms: false },
+          ],
+        },
+        {
+          icon: TrendingUp,
+          title: 'Campaign Notifications',
+          description: 'Stay updated on your campaign performance',
+          settings: [
+            { id: 'campaign-sent', label: 'Campaign sent successfully', email: true, push: false, sms: false },
+            { id: 'campaign-milestone', label: 'Campaign milestone reached', email: true, push: true, sms: false },
+            { id: 'campaign-issue', label: 'Campaign issues or errors', email: true, push: true, sms: true },
+          ],
+        },
+        {
+          icon: MessageSquare,
+          title: 'Communication',
+          description: 'Notifications for messages and responses',
+          settings: [
+            { id: 'new-message', label: 'New message received', email: true, push: true, sms: false },
+            { id: 'message-replied', label: 'Someone replied to your message', email: true, push: true, sms: false },
+            { id: 'missed-call', label: 'Missed call notification', email: false, push: true, sms: true },
+          ],
+        },
+        {
+          icon: Calendar,
+          title: 'Reminders & Tasks',
+          description: 'Get reminded about important tasks',
+          settings: [
+            { id: 'task-due', label: 'Task due date approaching', email: true, push: true, sms: false },
+            { id: 'followup-reminder', label: 'Follow-up reminder', email: true, push: true, sms: true },
+            { id: 'meeting-reminder', label: 'Meeting reminder', email: true, push: true, sms: true },
+          ],
+        },
+      ]);
+    }
     
     toast.success('Reset to default preferences');
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Notification Settings</h1>
@@ -306,7 +308,7 @@ const NotificationSettings = () => {
                 </div>
                 <div>
                   <h4 className="font-semibold">SMS</h4>
-                  <p className="text-sm text-muted-foreground">+1 (555) 123-4567</p>
+                  <p className="text-sm text-muted-foreground">Via your phone number</p>
                 </div>
               </div>
               <label className="flex items-center space-x-2 cursor-pointer">
@@ -425,7 +427,7 @@ const NotificationSettings = () => {
                 className="flex-1 h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
               />
               <Volume2 className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground w-8">{calcRate(soundSettings.volume, 1, 0)}%</span>
+              <span className="text-xs text-muted-foreground w-8">{Math.round(soundSettings.volume * 100)}%</span>
             </div>
 
             {/* Per-event sound toggles */}

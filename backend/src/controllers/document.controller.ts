@@ -97,7 +97,7 @@ export async function getDocuments(req: Request, res: Response) {
   }
 
   const documents = await prisma.leadDocument.findMany({
-    where: { leadId },
+    where: { leadId, lead: { organizationId } },
     include: {
       uploadedBy: { select: { id: true, firstName: true, lastName: true } },
     },

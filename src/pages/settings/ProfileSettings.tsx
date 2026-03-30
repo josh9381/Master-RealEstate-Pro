@@ -1,8 +1,9 @@
 import { logger } from '@/lib/logger'
-import { Camera, RefreshCw, Lock } from 'lucide-react';
+import { Camera, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { LoadingSpinner } from '@/components/shared/LoadingSkeleton';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
@@ -19,20 +20,9 @@ const ProfileSettings = () => {
   const [phone, setPhone] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [avatar, setAvatar] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
-  // Password Change
-  const [showPasswordSection, setShowPasswordSection] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // Contact Information
-  const [company, setCompany] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [zipCode, setZipCode] = useState('');
-  const [country, setCountry] = useState('United States');
+
   
   // Preferences
   const [language, setLanguage] = useState('en');
@@ -56,15 +46,9 @@ const ProfileSettings = () => {
       setAvatar(profileData.avatar || '');
       setPhone(profileData.phone || '');
       setJobTitle(profileData.jobTitle || '');
-      setCompany(profileData.company || '');
-      setAddress(profileData.address || '');
-      setCity(profileData.city || '');
-      setState(profileData.state || '');
-      setZipCode(profileData.zipCode || '');
-      setCountry(profileData.country || 'United States');
       setLanguage(profileData.language || 'en');
       setTimezone(profileData.timezone || 'America/Los_Angeles');
-      setDateFormat('MM/DD/YYYY');
+      setDateFormat(profileData.dateFormat || 'MM/DD/YYYY');
     }
   }, [profileData]);
 
@@ -79,14 +63,10 @@ const ProfileSettings = () => {
       setEmail(profileData.email || '');
       setPhone(profileData.phone || '');
       setJobTitle(profileData.jobTitle || '');
-      setCompany(profileData.company || '');
-      setAddress(profileData.address || '');
-      setCity(profileData.city || '');
-      setState(profileData.state || '');
-      setZipCode(profileData.zipCode || '');
-      setCountry(profileData.country || 'United States');
       setLanguage(profileData.language || 'en');
       setTimezone(profileData.timezone || 'America/Los_Angeles');
+      setDateFormat(profileData.dateFormat || 'MM/DD/YYYY');
+      setAvatar(profileData.avatar || '');
     }
   };
   
@@ -115,7 +95,7 @@ const ProfileSettings = () => {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone: string; jobTitle: string; company: string; address: string; city: string; state: string; zipCode: string; country: string; timezone: string; language: string }) => {
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone: string; jobTitle: string; timezone: string; language: string; dateFormat: string }) => {
       return await settingsApi.updateProfile(data);
     },
     onSuccess: () => {
@@ -132,12 +112,14 @@ const ProfileSettings = () => {
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const handleSave = () => {
-    if (!firstName || !lastName || !email) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    if (!EMAIL_RE.test(email)) {
-      toast.error('Please enter a valid email address');
+    const errors: Record<string, string> = {};
+    if (!firstName) errors.firstName = 'First name is required';
+    if (!lastName) errors.lastName = 'Last name is required';
+    if (!email) errors.email = 'Email is required';
+    else if (!EMAIL_RE.test(email)) errors.email = 'Please enter a valid email address';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix the highlighted fields');
       return;
     }
     
@@ -147,72 +129,20 @@ const ProfileSettings = () => {
       email,
       phone,
       jobTitle,
-      company,
-      address,
-      city,
-      state,
-      zipCode,
-      country,
       timezone,
       language,
+      dateFormat,
     });
   };
 
-  const changePasswordMutation = useMutation({
-    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-      return await settingsApi.changePassword(data);
-    },
-    onSuccess: () => {
-      toast.success('Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowPasswordSection(false);
-    },
-    onError: (error) => {
-      logger.error('Failed to change password:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to change password';
-      toast.error(errorMessage);
-    },
-  });
 
-  const handleChangePassword = () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error('Please fill in all password fields');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters long');
-      return;
-    }
-
-    changePasswordMutation.mutate({
-      currentPassword,
-      newPassword,
-    });
-  };
 
   if (loading) {
-    return (
-      <div className="space-y-6 max-w-4xl">
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading profile settings...</p>
-          </div>
-        </Card>
-      </div>
-    );
+    return <LoadingSpinner text="Loading profile settings..." />;
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Profile Settings</h1>
@@ -271,16 +201,19 @@ const ProfileSettings = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">First Name</label>
-              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <Input value={firstName} onChange={(e) => { setFirstName(e.target.value); setFieldErrors(prev => ({ ...prev, firstName: '' })) }} className={fieldErrors.firstName ? 'border-destructive' : ''} />
+              {fieldErrors.firstName && <p className="text-sm text-destructive mt-1">{fieldErrors.firstName}</p>}
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Last Name</label>
-              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              <Input value={lastName} onChange={(e) => { setLastName(e.target.value); setFieldErrors(prev => ({ ...prev, lastName: '' })) }} className={fieldErrors.lastName ? 'border-destructive' : ''} />
+              {fieldErrors.lastName && <p className="text-sm text-destructive mt-1">{fieldErrors.lastName}</p>}
             </div>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Email</label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setFieldErrors(prev => ({ ...prev, email: '' })) }} className={fieldErrors.email ? 'border-destructive' : ''} />
+            {fieldErrors.email && <p className="text-sm text-destructive mt-1">{fieldErrors.email}</p>}
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Phone</label>
@@ -293,43 +226,7 @@ const ProfileSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Contact Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Contact Information</CardTitle>
-          <CardDescription>Your business contact details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Company</label>
-            <Input value={company} onChange={(e) => setCompany(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Address</label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">City</label>
-              <Input value={city} onChange={(e) => setCity(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">State</label>
-              <Input value={state} onChange={(e) => setState(e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">ZIP Code</label>
-              <Input value={zipCode} onChange={(e) => setZipCode(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Country</label>
-              <Input value={country} onChange={(e) => setCountry(e.target.value)} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Preferences */}
       <Card>
@@ -382,74 +279,6 @@ const ProfileSettings = () => {
               <option>YYYY-MM-DD</option>
             </select>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Password & Security */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Password & Security</CardTitle>
-          <CardDescription>Manage your password and security settings</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!showPasswordSection ? (
-            <Button 
-              variant="outline" 
-              onClick={() => setShowPasswordSection(true)}
-            >
-              <Lock className="mr-2 h-4 w-4" />
-              Change Password
-            </Button>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Current Password</label>
-                <Input 
-                  type="password" 
-                  value={currentPassword} 
-                  onChange={(e) => setCurrentPassword(e.target.value)} 
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">New Password</label>
-                <Input 
-                  type="password" 
-                  value={newPassword} 
-                  onChange={(e) => setNewPassword(e.target.value)} 
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Must be at least 8 characters long
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Confirm New Password</label>
-                <Input 
-                  type="password" 
-                  value={confirmPassword} 
-                  onChange={(e) => setConfirmPassword(e.target.value)} 
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleChangePassword} 
-                  disabled={changePasswordMutation.isPending}
-                >
-                  {changePasswordMutation.isPending ? 'Changing...' : 'Change Password'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setShowPasswordSection(false);
-                    setCurrentPassword('');
-                    setNewPassword('');
-                    setConfirmPassword('');
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 

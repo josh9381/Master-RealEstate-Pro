@@ -190,8 +190,8 @@ const InvoiceDetail = () => {
                 </tr>
               </thead>
               <tbody>
-                {invoice.lineItems.map((item, index) => (
-                  <tr key={index} className="border-b">
+                {invoice.lineItems.map((item) => (
+                  <tr key={item.description} className="border-b">
                     <td className="py-4">
                       <div>
                         <p className="font-medium">{item.description}</p>
@@ -255,8 +255,8 @@ const InvoiceDetail = () => {
                 method: 'Visa •••• 4242',
                 status: 'Succeeded',
               },
-            ].map((payment, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+            ].map((payment) => (
+              <div key={payment.date} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="p-2 bg-green-100 rounded-full">
                     <CheckCircle className="h-5 w-5 text-green-600" />
@@ -292,8 +292,8 @@ const InvoiceDetail = () => {
               { number: 'INV-2024-002', date: 'Nov 1, 2024', amount: 99.0, status: 'Paid' },
               { number: 'INV-2024-003', date: 'Oct 1, 2024', amount: 99.0, status: 'Paid' },
               { number: 'INV-2024-004', date: 'Sep 1, 2024', amount: 99.0, status: 'Paid' },
-            ].map((inv, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+            ].map((inv) => (
+              <div key={inv.number} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                 <div className="flex items-center space-x-3">
                   <FileText className="h-5 w-5 text-muted-foreground" />
                   <div>

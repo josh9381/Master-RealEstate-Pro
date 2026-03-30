@@ -3,6 +3,7 @@ import { CreditCard, Crown, TrendingUp, AlertTriangle, Download, CheckCircle2, R
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
 import { useSearchParams } from 'react-router-dom';
@@ -180,13 +181,11 @@ const BillingPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <CreditCard className="w-8 h-8" />
-          Billing & Subscription
-        </h1>
-        <p className="text-muted-foreground mt-2">Manage your plan, usage, and payment information</p>
-      </div>
+      <PageHeader
+        title="Billing & Subscription"
+        subtitle="Manage your plan, usage, and payment information"
+        icon={<CreditCard className="h-6 w-6" />}
+      />
 
       {/* Stripe Not Configured Banner */}
       {subStatus && !subStatus.stripeConfigured && (
@@ -351,8 +350,8 @@ const BillingPage = () => {
                     )}
                   </div>
                   <ul className="space-y-2 mb-6">
-                    {plan.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-sm">
                         <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                         <span>{f}</span>
                       </li>

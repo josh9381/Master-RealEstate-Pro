@@ -1,9 +1,7 @@
 import { Request, Response } from 'express'
-import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 import type { SegmentRule } from '../services/segmentation.service'
-
-const prisma = new PrismaClient()
+import { prisma } from '../config/database'
 
 /**
  * Convert SavedFilterView filterConfig to SegmentRule[] format.

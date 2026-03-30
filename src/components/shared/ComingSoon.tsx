@@ -92,7 +92,7 @@ export function ComingSoon({
               <div className="space-y-3">
                 {previewItems.map((item, i) => (
                   <div
-                    key={i}
+                    key={item}
                     className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/30"
                   >
                     <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground text-xs font-bold">

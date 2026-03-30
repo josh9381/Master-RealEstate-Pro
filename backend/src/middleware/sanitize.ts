@@ -56,7 +56,9 @@ export const sanitizeInput = (req: Request, _res: Response, next: NextFunction) 
   next()
 }
 
-function sanitizeObject(obj: any, checkHtmlFields: boolean) {
+function sanitizeObject(obj: any, checkHtmlFields: boolean, depth = 0) {
+  // Guard against deeply nested payloads causing stack overflow
+  if (depth > 20) return;
   for (const key in obj) {
     if (typeof obj[key] === 'string') {
       // Use relaxed sanitization for known HTML content fields (#93)
@@ -69,11 +71,11 @@ function sanitizeObject(obj: any, checkHtmlFields: boolean) {
         if (typeof item === 'string') {
           obj[key][index] = sanitizeHtml(item, STRICT_OPTIONS)
         } else if (typeof item === 'object' && item !== null) {
-          sanitizeObject(item, checkHtmlFields)
+          sanitizeObject(item, checkHtmlFields, depth + 1)
         }
       })
     } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-      sanitizeObject(obj[key], checkHtmlFields)
+      sanitizeObject(obj[key], checkHtmlFields, depth + 1)
     }
   }
 }

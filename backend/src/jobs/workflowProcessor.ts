@@ -1,6 +1,7 @@
 import { logger } from '../lib/logger'
 import { processTimeBasedWorkflows, getQueueStatus, getExecutionStats } from '../services/workflowExecutor.service';
 import { recoverDelayedWorkflowActions } from '../services/workflow.service';
+import { acquireLock, releaseLock } from '../utils/distributedLock';
 
 /**
  * Workflow Background Job Processor
@@ -32,12 +33,20 @@ const INTERVALS = {
  * This should run frequently (e.g., every minute) to check for scheduled workflows
  */
 async function timeBasedWorkflowJob() {
+  const lockAcquired = await acquireLock('lock:workflow-time-based', 90);
+  if (!lockAcquired) {
+    logger.debug('[Job] Another instance is processing time-based workflows, skipping');
+    return;
+  }
+
   try {
     logger.info('[Job] Processing time-based workflows...');
     await processTimeBasedWorkflows();
     logger.info('[Job] Time-based workflow processing complete');
   } catch (error) {
     logger.error('[Job] Error processing time-based workflows:', error);
+  } finally {
+    await releaseLock('lock:workflow-time-based');
   }
 }
 

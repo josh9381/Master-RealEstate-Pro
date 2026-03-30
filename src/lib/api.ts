@@ -1520,6 +1520,11 @@ export const templatesApi = {
     return response.data
   },
 
+  duplicateSMSTemplate: async (id: string) => {
+    const response = await api.post(`/sms-templates/${id}/duplicate`)
+    return response.data
+  },
+
 }
 
 // Message Templates API (inbox templates + quick replies)

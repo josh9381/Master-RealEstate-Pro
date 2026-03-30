@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Clock, Users, Zap, RefreshCw } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -48,59 +48,63 @@ const UsageAnalytics = () => {
   };
 
   // Usage data derived from activity feed
-  const usageData = activityData.length > 0
-    ? Object.values(
-        activityData.reduce((acc: Record<string, { date: string; users: number; activities: number; storage: number; _userSet: Set<string> }>, activity: any) => {
-          const date = (activity.createdAt || activity.time || '').split('T')[0];
-          if (!date) return acc;
-          if (!acc[date]) {
-            acc[date] = { date, users: 0, activities: 0, storage: 0, _userSet: new Set() };
-          }
-          acc[date].activities++;
-          const userId = activity.userId || activity.user?.id || activity.userName || 'unknown';
-          acc[date]._userSet.add(userId);
-          acc[date].users = acc[date]._userSet.size;
-          return acc;
-        }, {})
-      ).map(({ date, users, activities, storage }: any) => ({ date, users, activities, storage })).slice(-14) as { date: string; users: number; activities: number; storage: number }[]
-    : [];
+  const usageData = useMemo(() => {
+    if (activityData.length === 0) return [];
+    interface DayBucket { date: string; users: number; activities: number; storage: number; _userSet: Set<string> }
+    const buckets = activityData.reduce((acc: Record<string, DayBucket>, activity: Record<string, unknown>) => {
+      const date = ((activity.createdAt as string) || (activity.time as string) || '').split('T')[0];
+      if (!date) return acc;
+      if (!acc[date]) {
+        acc[date] = { date, users: 0, activities: 0, storage: 0, _userSet: new Set() };
+      }
+      acc[date].activities++;
+      const userId = (activity.userId as string) || ((activity.user as Record<string, string>)?.id) || (activity.userName as string) || 'unknown';
+      acc[date]._userSet.add(userId);
+      acc[date].users = acc[date]._userSet.size;
+      return acc;
+    }, {});
+    return (Object.values(buckets) as DayBucket[])
+      .map(({ date, users, activities, storage }) => ({ date, users, activities, storage }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-14);
+  }, [activityData]);
 
   // Active users derived from activity data
-  const topUsers = activityData.length > 0
-    ? Object.values(
-        activityData.reduce((acc: Record<string, { name: string; logins: number; actions: number; lastActive: string }>, activity: any) => {
-          const user = activity.user;
-          const name = activity.userName
-            || (typeof user === 'object' && user !== null
-                ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name
-                : user)
-            || 'Unknown';
-          if (!acc[name]) {
-            acc[name] = { name, logins: 0, actions: 0, lastActive: '' };
-          }
-          acc[name].actions++;
-          acc[name].lastActive = activity.createdAt || activity.time || '';
-          return acc;
-        }, {})
-      ).slice(0, 4) as { name: string; logins: number; actions: number; lastActive: string }[]
-    : [];
+  const topUsers = useMemo(() => {
+    if (activityData.length === 0) return [];
+    return Object.values(
+      activityData.reduce((acc: Record<string, { name: string; logins: number; actions: number; lastActive: string }>, activity: Record<string, unknown>) => {
+        const user = activity.user;
+        const name = (activity.userName as string)
+          || (typeof user === 'object' && user !== null
+              ? `${(user as Record<string, string>).firstName || ''} ${(user as Record<string, string>).lastName || ''}`.trim() || (user as Record<string, string>).name
+              : user as string)
+          || 'Unknown';
+        if (!acc[name]) {
+          acc[name] = { name, logins: 0, actions: 0, lastActive: '' };
+        }
+        acc[name].actions++;
+        acc[name].lastActive = (activity.createdAt as string) || (activity.time as string) || '';
+        return acc;
+      }, {})
+    ).slice(0, 4) as { name: string; logins: number; actions: number; lastActive: string }[];
+  }, [activityData]);
 
   // Feature usage — derived from activity types
-  const featureUsage = activityData.length > 0
-    ? (() => {
-        const typeCounts: Record<string, number> = {};
-        activityData.forEach((a: any) => {
-          const type = a.type || a.activityType || 'other';
-          typeCounts[type] = (typeCounts[type] || 0) + 1;
-        });
-        const total = activityData.length;
-        return Object.entries(typeCounts).map(([feature, usage]) => ({
-          feature: feature.charAt(0).toUpperCase() + feature.slice(1).replace(/_/g, ' '),
-          usage,
-          percentage: calcRate(usage, total, 0)
-        })).sort((a, b) => b.usage - a.usage).slice(0, 8);
-      })()
-    : [] as { feature: string; usage: number; percentage: number }[];
+  const featureUsage = useMemo(() => {
+    if (activityData.length === 0) return [] as { feature: string; usage: number; percentage: number }[];
+    const typeCounts: Record<string, number> = {};
+    activityData.forEach((a: Record<string, unknown>) => {
+      const type = (a.type as string) || (a.activityType as string) || 'other';
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    const total = activityData.length;
+    return Object.entries(typeCounts).map(([feature, usage]) => ({
+      feature: feature.charAt(0).toUpperCase() + feature.slice(1).replace(/_/g, ' '),
+      usage,
+      percentage: calcRate(usage, total, 0)
+    })).sort((a, b) => b.usage - a.usage).slice(0, 8);
+  }, [activityData]);
 
   if (loading) {
     return <LoadingSkeleton rows={4} showChart={true} />;
@@ -184,6 +188,7 @@ const UsageAnalytics = () => {
         </CardHeader>
         <CardContent>
           {usageData.length > 0 ? (
+          <div aria-label="Usage trends chart">
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={usageData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -213,6 +218,7 @@ const UsageAnalytics = () => {
               />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
           ) : (
             <div className="flex items-center justify-center h-[300px] text-muted-foreground">
               No usage trend data yet
@@ -230,8 +236,8 @@ const UsageAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topUsers.length > 0 ? topUsers.map((user, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+              {topUsers.length > 0 ? topUsers.map((user) => (
+                <div key={`user-${user.name}`} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 font-bold text-primary">
                       {(user.name || 'U').charAt(0)}
@@ -363,23 +369,23 @@ const UsageAnalytics = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {activityData.length > 0 ? activityData.slice(0, 5).map((activity: any, index: number) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+            {activityData.length > 0 ? activityData.slice(0, 5).map((activity: Record<string, unknown>) => (
+              <div key={(activity.id as string) || `activity-${(activity.createdAt as string) || Math.random()}`} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted text-sm font-medium">
-                    {(activity.userName || (typeof activity.user === 'object' && activity.user !== null ? activity.user.firstName || activity.user.name : activity.user) || 'S').toString().charAt(0)}
+                    {((activity.userName as string) || (typeof activity.user === 'object' && activity.user !== null ? (activity.user as Record<string, string>).firstName || (activity.user as Record<string, string>).name : activity.user as string) || 'S').toString().charAt(0)}
                   </div>
                   <div>
                     <p className="text-sm">
-                      <span className="font-medium">{activity.userName || (typeof activity.user === 'object' && activity.user !== null ? `${activity.user.firstName || ''} ${activity.user.lastName || ''}`.trim() || activity.user.name : activity.user) || 'System'}</span>{' '}
-                      {activity.description || activity.action || 'performed an action'}
+                      <span className="font-medium">{(activity.userName as string) || (typeof activity.user === 'object' && activity.user !== null ? `${(activity.user as Record<string, string>).firstName || ''} ${(activity.user as Record<string, string>).lastName || ''}`.trim() || (activity.user as Record<string, string>).name : activity.user as string) || 'System'}</span>{' '}
+                      {(activity.description as string) || (activity.action as string) || 'performed an action'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {activity.createdAt ? new Date(activity.createdAt).toLocaleString() : activity.time || ''}
+                      {activity.createdAt ? new Date(activity.createdAt as string).toLocaleString() : (activity.time as string) || ''}
                     </p>
                   </div>
                 </div>
-                <Badge variant="secondary">{activity.type || 'action'}</Badge>
+                <Badge variant="secondary">{(activity.type as string) || 'action'}</Badge>
               </div>
             )) : (
               <div className="flex items-center justify-center h-24 text-muted-foreground">

@@ -98,7 +98,7 @@ export function EmailPreviewFrame({
 
         {/* Email header simulation */}
         {(subject || previewText) && (
-          <div className="px-4 py-3 border-b bg-white flex-shrink-0">
+          <div className="px-4 py-3 border-b bg-white dark:bg-gray-800 flex-shrink-0">
             <div className="max-w-[600px] mx-auto">
               {subject && (
                 <div className="flex items-start gap-2">
@@ -117,7 +117,7 @@ export function EmailPreviewFrame({
         )}
 
         {/* Preview frame */}
-        <div className="flex-1 overflow-auto bg-gray-100 p-6">
+        <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900 p-6">
           <div
             className="mx-auto transition-all duration-300 ease-in-out"
             style={{ maxWidth: `${frameWidth}px` }}
@@ -125,7 +125,7 @@ export function EmailPreviewFrame({
             {html ? (
               <iframe
                 srcDoc={buildIframeSrcDoc(html)}
-                className="w-full bg-white rounded shadow-sm border-0"
+                className="w-full bg-white dark:bg-gray-800 rounded shadow-sm border-0"
                 style={{
                   width: `${frameWidth}px`,
                   minHeight: '500px',
@@ -147,7 +147,7 @@ export function EmailPreviewFrame({
                 }}
               />
             ) : (
-              <div className="bg-white rounded shadow-sm p-12 text-center text-muted-foreground">
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-12 text-center text-muted-foreground">
                 <p className="text-sm">No email content to preview</p>
                 <p className="text-xs mt-1">Build your email using the block editor first</p>
               </div>

@@ -281,8 +281,8 @@ const HealthCheckDashboard = () => {
                 time: '3 hours ago',
                 status: 'resolved',
               },
-            ].map((incident, index) => (
-              <div key={index} className="flex items-start justify-between p-3 border rounded-lg">
+            ].map((incident) => (
+              <div key={`${incident.time}-${incident.severity}`} className="flex items-start justify-between p-3 border rounded-lg">
                 <div className="flex items-start space-x-3">
                   <div
                     className={`h-2 w-2 rounded-full mt-2 ${

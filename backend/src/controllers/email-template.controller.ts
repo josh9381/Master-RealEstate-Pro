@@ -49,8 +49,9 @@ export async function getEmailTemplates(req: Request, res: Response): Promise<vo
   }
 
   // Calculate pagination
-  const skip = (Number(page) - 1) * Number(limit);
-  const take = Number(limit);
+  const safeLimit = Math.min(Number(limit) || 20, 200);
+  const skip = (Number(page) - 1) * safeLimit;
+  const take = safeLimit;
 
   // Execute queries
   const [templates, total] = await Promise.all([
@@ -70,8 +71,8 @@ export async function getEmailTemplates(req: Request, res: Response): Promise<vo
       pagination: {
         total,
         page: Number(page),
-        limit: Number(limit),
-        pages: Math.ceil(total / Number(limit)),
+        limit: safeLimit,
+        pages: Math.ceil(total / safeLimit),
       },
     }
   });

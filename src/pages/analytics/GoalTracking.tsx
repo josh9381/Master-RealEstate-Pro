@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useToast } from '@/hooks/useToast';
 import { goalsApi } from '@/lib/api';
 import { calcRateClamped } from '@/lib/metricsCalculator';
 
@@ -59,6 +60,7 @@ const defaultForm: GoalFormData = {
 const GoalTracking = () => {
   const queryClient = useQueryClient();
   const showConfirm = useConfirm();
+  const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<GoalFormData>(defaultForm);
@@ -72,7 +74,7 @@ const GoalTracking = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => goalsApi.create(data),
+    mutationFn: (data: Parameters<typeof goalsApi.create>[0]) => goalsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       setShowForm(false);
@@ -81,7 +83,7 @@ const GoalTracking = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => goalsApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => goalsApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       setEditingId(null);
@@ -96,10 +98,19 @@ const GoalTracking = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const targetNum = parseFloat(form.targetValue);
+    if (isNaN(targetNum) || targetNum <= 0) {
+      toast.error('Target value must be a positive number');
+      return;
+    }
+    if (form.endDate && form.startDate && new Date(form.endDate) <= new Date(form.startDate)) {
+      toast.error('End date must be after start date');
+      return;
+    }
     const payload = {
       name: form.name,
       metricType: form.metricType,
-      targetValue: parseFloat(form.targetValue),
+      targetValue: targetNum,
       startDate: form.startDate,
       endDate: form.endDate,
       period: form.period,
@@ -113,23 +124,23 @@ const GoalTracking = () => {
     }
   };
 
-  const startEdit = (goal: any) => {
+  const startEdit = (goal: Record<string, unknown>) => {
     setForm({
-      name: goal.name,
-      metricType: goal.metricType,
+      name: (goal.name as string) || '',
+      metricType: (goal.metricType as string) || 'LEADS_GENERATED',
       targetValue: String(goal.targetValue),
-      startDate: goal.startDate?.split('T')[0] || '',
-      endDate: goal.endDate?.split('T')[0] || '',
-      period: goal.period || 'MONTHLY',
-      notes: goal.notes || '',
+      startDate: ((goal.startDate as string) || '').split('T')[0] || '',
+      endDate: ((goal.endDate as string) || '').split('T')[0] || '',
+      period: (goal.period as string) || 'MONTHLY',
+      notes: (goal.notes as string) || '',
     });
-    setEditingId(goal.id);
+    setEditingId(goal.id as string);
     setShowForm(true);
   };
 
   const goals = result || [];
-  const activeGoals = goals.filter((g: any) => g.isActive);
-  const completedGoals = goals.filter((g: any) => g.completedAt || (g.progress && g.progress >= 100));
+  const activeGoals = goals.filter((g: Record<string, unknown>) => g.isActive);
+  const completedGoals = goals.filter((g: Record<string, unknown>) => g.completedAt || (typeof g.progress === 'number' && g.progress >= 100));
 
   if (isLoading) {
     return (
@@ -147,7 +158,7 @@ const GoalTracking = () => {
   if (isError) {
     return (
       <div className="p-6">
-        <ErrorBanner message={(error as Error)?.message || 'Failed to load goals'} retry={refetch} />
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load goals'} retry={refetch} />
       </div>
     );
   }
@@ -193,7 +204,7 @@ const GoalTracking = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">Avg Progress</p>
             <p className="text-2xl font-bold text-blue-600">
               {activeGoals.length > 0
-                ? Math.round(activeGoals.reduce((s: number, g: any) => s + (g.progress || 0), 0) / activeGoals.length)
+                ? Math.round(activeGoals.reduce((s: number, g: Record<string, unknown>) => s + ((g.progress as number) || 0), 0) / activeGoals.length)
                 : 0}%
             </p>
           </CardContent>
@@ -264,6 +275,7 @@ const GoalTracking = () => {
                   <input
                     type="date"
                     required
+                    min={form.startDate || undefined}
                     value={form.endDate}
                     onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white"
@@ -296,7 +308,7 @@ const GoalTracking = () => {
               </div>
               <div className="flex gap-2">
                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingId ? 'Update Goal' : 'Create Goal'}
+                  {(createMutation.isPending || updateMutation.isPending) ? 'Saving...' : editingId ? 'Update Goal' : 'Create Goal'}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>
                   Cancel
@@ -312,15 +324,16 @@ const GoalTracking = () => {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Active Goals</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {activeGoals.map((goal: any) => {
+            {activeGoals.map((goal: Record<string, unknown>) => {
               const metric = METRIC_TYPES.find((m) => m.value === goal.metricType) || METRIC_TYPES[METRIC_TYPES.length - 1];
               const Icon = metric.icon;
-              const progress = goal.progress || (goal.targetValue > 0 ? calcRateClamped(goal.currentValue, goal.targetValue) : 0);
+              const progress = (goal.progress as number) || ((goal.targetValue as number) > 0 ? calcRateClamped(goal.currentValue as number, goal.targetValue as number) : 0);
               const isCompleted = progress >= 100;
-              const daysLeft = Math.max(0, Math.ceil((new Date(goal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+              const endMs = new Date(goal.endDate as string).getTime();
+              const daysLeft = isNaN(endMs) ? 0 : Math.max(0, Math.ceil((endMs - Date.now()) / (1000 * 60 * 60 * 24)));
 
               return (
-                <Card key={goal.id} className={isCompleted ? 'border-green-500 dark:border-green-600' : ''}>
+                <Card key={goal.id as string} className={isCompleted ? 'border-green-500 dark:border-green-600' : ''}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
@@ -331,8 +344,8 @@ const GoalTracking = () => {
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900 dark:text-white">{goal.name}</h3>
-                          <p className="text-xs text-gray-500">{metric.label} · {goal.period}</p>
+                          <h3 className="font-medium text-gray-900 dark:text-white">{goal.name as string}</h3>
+                          <p className="text-xs text-gray-500">{metric.label} · {goal.period as string}</p>
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -340,7 +353,7 @@ const GoalTracking = () => {
                           <Edit2 className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={async () => { if (await showConfirm({ title: 'Delete Goal', message: 'Delete this goal?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMutation.mutate(goal.id); }}
+                          onClick={async () => { if (await showConfirm({ title: 'Delete Goal', message: 'Delete this goal?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMutation.mutate(goal.id as string); }}
                           className="p-1 text-gray-400 hover:text-red-500"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -352,7 +365,7 @@ const GoalTracking = () => {
                     <div className="mb-3">
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-600 dark:text-gray-400">
-                          {formatValue(goal.currentValue, goal.metricType)} / {formatValue(goal.targetValue, goal.metricType)}
+                          {formatValue(goal.currentValue as number, goal.metricType as string)} / {formatValue(goal.targetValue as number, goal.metricType as string)}
                         </span>
                         <span className={`font-medium ${isCompleted ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
                           {progress}%
@@ -360,6 +373,11 @@ const GoalTracking = () => {
                       </div>
                       <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div
+                          role="progressbar"
+                          aria-valuenow={Math.min(100, progress)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${(goal.name as string)} progress: ${progress}%`}
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${Math.min(100, progress)}%`,
@@ -393,21 +411,21 @@ const GoalTracking = () => {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Completed Goals</h2>
           <div className="space-y-2">
-            {completedGoals.map((goal: any) => {
+            {completedGoals.map((goal: Record<string, unknown>) => {
               const metric = METRIC_TYPES.find((m) => m.value === goal.metricType) || METRIC_TYPES[METRIC_TYPES.length - 1];
               return (
-                <div key={goal.id} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div key={goal.id as string} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                   <div className="flex items-center gap-3">
                     <Trophy className="h-5 w-5 text-green-600" />
                     <div>
-                      <span className="font-medium text-gray-900 dark:text-white">{goal.name}</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{goal.name as string}</span>
                       <span className="text-sm text-gray-500 ml-2">
-                        {formatValue(goal.targetValue, goal.metricType)} {metric.label}
+                        {formatValue(goal.targetValue as number, goal.metricType as string)} {metric.label}
                       </span>
                     </div>
                   </div>
                   <button
-                    onClick={async () => { if (await showConfirm({ title: 'Delete Goal', message: 'Delete this goal?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMutation.mutate(goal.id); }}
+                    onClick={async () => { if (await showConfirm({ title: 'Delete Goal', message: 'Delete this goal?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMutation.mutate(goal.id as string); }}
                     className="p-1 text-gray-400 hover:text-red-500"
                   >
                     <Trash2 className="h-4 w-4" />

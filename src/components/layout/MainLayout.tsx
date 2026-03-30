@@ -53,8 +53,10 @@ export function MainLayout() {
         <Header />
 
         <main id="main-content" className="flex-1 overflow-y-auto bg-muted/10 p-6">
-          <Breadcrumbs />
-          <Outlet />
+          <div className="mx-auto max-w-screen-2xl">
+            <Breadcrumbs />
+            <Outlet />
+          </div>
         </main>
       </div>
       

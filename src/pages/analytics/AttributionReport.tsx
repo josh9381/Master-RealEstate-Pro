@@ -13,6 +13,7 @@ import {
 import { analyticsApi } from '@/lib/api';
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { CHART_COLORS as COLORS } from '@/lib/chartColors';
 
 type AttributionModel = 'first-touch' | 'last-touch' | 'linear' | 'time-decay' | 'u-shaped';
 
@@ -23,8 +24,6 @@ const MODEL_OPTIONS: { value: AttributionModel; label: string; description: stri
   { value: 'time-decay', label: 'Time Decay', description: 'More credit to recent touchpoints (7-day half-life)' },
   { value: 'u-shaped', label: 'U-Shaped', description: '40% first, 40% last, 20% split among middle touches' },
 ];
-
-const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#84cc16'];
 
 const formatCurrency = fmtMoney;
 
@@ -42,7 +41,7 @@ const AttributionReport = () => {
     },
   });
 
-  const handleDateChange = (range: DateRange, _preset?: any) => {
+  const handleDateChange = (range: DateRange, _preset?: string) => {
     dateRangeRef.current = range;
     refetch();
   };
@@ -64,7 +63,7 @@ const AttributionReport = () => {
   if (isError) {
     return (
       <div className="p-6">
-        <ErrorBanner message={(error as Error)?.message || 'Failed to load attribution report'} retry={refetch} />
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load attribution report'} retry={refetch} />
       </div>
     );
   }
@@ -179,6 +178,7 @@ const AttributionReport = () => {
               </CardHeader>
               <CardContent>
                 {data.byChannel && data.byChannel.length > 0 ? (
+                  <div aria-label="Revenue by channel bar chart">
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={data.byChannel}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -188,6 +188,7 @@ const AttributionReport = () => {
                       <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
+                  </div>
                 ) : (
                   <p className="text-gray-500 text-center py-8">No channel data available</p>
                 )}
@@ -205,6 +206,7 @@ const AttributionReport = () => {
               </CardHeader>
               <CardContent>
                 {data.bySource && data.bySource.length > 0 ? (
+                  <div aria-label="Revenue by source pie chart">
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -214,15 +216,16 @@ const AttributionReport = () => {
                         outerRadius={100}
                         dataKey="revenue"
                         nameKey="name"
-                        label={({ name, percent }: any) => `${name} (${formatRate(percent * 100, 0)}%)`}
+                        label={({ name, percent }: { name: string; percent: number }) => `${name} (${formatRate(percent * 100, 0)}%)`}
                       >
-                        {data.bySource.map((_: any, i: number) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        {data.bySource.map((entry: { name: string }, i: number) => (
+                          <Cell key={entry.name || `source-${i}`} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     </PieChart>
                   </ResponsiveContainer>
+                  </div>
                 ) : (
                   <p className="text-gray-500 text-center py-8">No source data available</p>
                 )}
@@ -244,15 +247,15 @@ const AttributionReport = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b dark:border-gray-700">
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Campaign</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Attributed Credit</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Attributed Revenue</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Conversions</th>
+                        <th scope="col" className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Campaign</th>
+                        <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Attributed Credit</th>
+                        <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Attributed Revenue</th>
+                        <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Conversions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.byCampaign.map((c: any) => (
-                        <tr key={c.campaignId} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      {data.byCampaign.map((c: { campaignId: string; name: string; credit: number; revenue: number; conversions: number }) => (
+                        <tr key={c.campaignId || c.name} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                           <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">{c.name}</td>
                           <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{formatRate(c.credit)}</td>
                           <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(c.revenue)}</td>
@@ -274,7 +277,7 @@ const AttributionReport = () => {
                 <CardDescription>Individual lead paths to conversion with touchpoint credits</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                {data.leads.slice(0, 20).map((lead: any) => (
+                {data.leads.slice(0, 20).map((lead: { leadId: string; name: string; source: string; touchpoints: number; revenue: number; credits?: { channel: string; weight: number }[] }) => (
                   <div key={lead.leadId} className="border dark:border-gray-700 rounded-lg">
                     <button
                       className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -293,11 +296,13 @@ const AttributionReport = () => {
                         {expandedLead === lead.leadId ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </div>
                     </button>
-                    {expandedLead === lead.leadId && lead.credits && (
+                    {expandedLead === lead.leadId && lead.credits && lead.credits.length > 0 && (() => {
+                      const credits = lead.credits;
+                      return (
                       <div className="px-4 pb-4 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {lead.credits.map((c: any, i: number) => (
-                            <div key={i} className="flex items-center gap-1">
+                          {credits.map((c: { channel: string; weight: number }, i: number) => (
+                            <div key={c.channel} className="flex items-center gap-1">
                               <div
                                 className="text-xs px-2 py-1 rounded font-medium"
                                 style={{
@@ -305,14 +310,15 @@ const AttributionReport = () => {
                                   color: COLORS[i % COLORS.length],
                                 }}
                               >
-                                {c.channel} ({formatRate(c.credit * 100, 0)}%)
+                                {c.channel} ({formatRate(c.weight * 100, 0)}%)
                               </div>
-                              {i < lead.credits.length - 1 && <ArrowRight className="h-3 w-3 text-gray-300" />}
+                              {i < credits.length - 1 && <ArrowRight className="h-3 w-3 text-gray-300" />}
                             </div>
                           ))}
                         </div>
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 ))}
               </CardContent>

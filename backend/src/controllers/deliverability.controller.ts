@@ -1,6 +1,7 @@
 import { logger } from '../lib/logger'
 import { Request, Response } from 'express'
 import { BounceType } from '@prisma/client'
+import { prisma } from '../config/database'
 import {
   recordBounce,
   recordSpamComplaint,
@@ -44,6 +45,7 @@ export async function handleBounce(req: Request, res: Response): Promise<void> {
       bounceType: normalizedBounceType,
       reason,
       timestamp: timestamp ? new Date(timestamp) : new Date(),
+      organizationId: req.user!.organizationId,
     })
 
     res.status(200).json({
@@ -82,7 +84,8 @@ export async function handleSpamComplaint(
 
     await recordSpamComplaint(
       messageId,
-      timestamp ? new Date(timestamp) : new Date()
+      timestamp ? new Date(timestamp) : new Date(),
+      req.user!.organizationId
     )
 
     res.status(200).json({
@@ -110,6 +113,17 @@ export async function getCampaignStats(
 ): Promise<void> {
   try {
     const { campaignId } = req.params
+    const organizationId = req.user!.organizationId
+
+    // Verify campaign belongs to user's organization
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: campaignId, organizationId },
+      select: { id: true },
+    })
+    if (!campaign) {
+      res.status(404).json({ success: false, message: 'Campaign not found' })
+      return
+    }
 
     const stats = await getCampaignDeliverability(campaignId)
 
@@ -135,10 +149,12 @@ export async function getCampaignStats(
 export async function getStats(req: Request, res: Response): Promise<void> {
   try {
     const { startDate, endDate } = req.query
+    const organizationId = req.user!.organizationId
 
     const stats = await getOverallDeliverability(
       startDate ? new Date(startDate as string) : undefined,
-      endDate ? new Date(endDate as string) : undefined
+      endDate ? new Date(endDate as string) : undefined,
+      organizationId
     )
 
     res.status(200).json({
@@ -163,8 +179,9 @@ export async function getStats(req: Request, res: Response): Promise<void> {
 export async function getRetryable(req: Request, res: Response): Promise<void> {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 100
+    const organizationId = req.user!.organizationId
 
-    const messages = await getRetryableMessages(limit)
+    const messages = await getRetryableMessages(Math.min(limit, 500), organizationId)
 
     res.status(200).json({
       success: true,
@@ -189,8 +206,9 @@ export async function getRetryable(req: Request, res: Response): Promise<void> {
 export async function retryMessage(req: Request, res: Response): Promise<void> {
   try {
     const { messageId } = req.params
+    const organizationId = req.user!.organizationId
 
-    const success = await retryFailedMessage(messageId)
+    const success = await retryFailedMessage(messageId, organizationId)
 
     if (success) {
       res.status(200).json({
@@ -230,7 +248,15 @@ export async function batchRetry(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const result = await batchRetryMessages(messageIds)
+    if (messageIds.length > 100) {
+      res.status(400).json({
+        success: false,
+        message: 'Maximum 100 messages per batch retry',
+      })
+      return
+    }
+
+    const result = await batchRetryMessages(messageIds, req.user!.organizationId)
 
     res.status(200).json({
       success: true,
@@ -261,7 +287,8 @@ export async function getBounceReportData(
 
     const report = await getBounceReport(
       startDate ? new Date(startDate as string) : undefined,
-      endDate ? new Date(endDate as string) : undefined
+      endDate ? new Date(endDate as string) : undefined,
+      req.user!.organizationId
     )
 
     res.status(200).json({
@@ -285,7 +312,7 @@ export async function getBounceReportData(
  */
 export async function getSuppressed(req: Request, res: Response): Promise<void> {
   try {
-    const emails = await getSuppressedEmails()
+    const emails = await getSuppressedEmails(req.user!.organizationId)
 
     res.status(200).json({
       success: true,

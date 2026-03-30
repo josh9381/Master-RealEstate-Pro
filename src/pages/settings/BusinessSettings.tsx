@@ -19,6 +19,7 @@ const BusinessSettings = () => {
   const [companySize, setCompanySize] = useState('');
   const [taxId, setTaxId] = useState('');
   const [website, setWebsite] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
   // Contact Information
   const [email, setEmail] = useState('');
@@ -86,6 +87,7 @@ const BusinessSettings = () => {
       setTimezone(businessData.timezone || 'America/Los_Angeles');
       setDateFormat(businessData.dateFormat || 'MM/DD/YYYY');
       setCurrency(businessData.currency || 'USD');
+      setLogo(businessData.logo || businessData.settings?.logo || '');
     }
   };
   
@@ -128,13 +130,13 @@ const BusinessSettings = () => {
   });
 
   const handleSave = () => {
-    if (!companyName || !email) {
-      toast.error('Please fill in required fields');
-      return;
-    }
-
-    if (website && !/^https?:\/\/.+/.test(website)) {
-      toast.error('Website must start with http:// or https://');
+    const errors: Record<string, string> = {};
+    if (!companyName) errors.companyName = 'Company name is required';
+    if (!email) errors.email = 'Email is required';
+    if (website && !/^https?:\/\/.+/.test(website)) errors.website = 'Website must start with http:// or https://';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix the highlighted fields');
       return;
     }
     
@@ -162,7 +164,7 @@ const BusinessSettings = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Business Settings</h1>
@@ -208,13 +210,14 @@ const BusinessSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Company Name</label>
-            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+            <Input value={companyName} onChange={(e) => { setCompanyName(e.target.value); setFieldErrors(prev => ({ ...prev, companyName: '' })) }} className={fieldErrors.companyName ? 'border-destructive' : ''} />
+            {fieldErrors.companyName && <p className="text-sm text-destructive mt-1">{fieldErrors.companyName}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Industry</label>
               <select 
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background"
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
               >
@@ -237,7 +240,7 @@ const BusinessSettings = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Company Size</label>
               <select 
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background"
                 value={companySize}
                 onChange={(e) => setCompanySize(e.target.value)}
               >
@@ -255,7 +258,8 @@ const BusinessSettings = () => {
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Website</label>
-            <Input value={website} onChange={(e) => setWebsite(e.target.value)} />
+            <Input value={website} onChange={(e) => { setWebsite(e.target.value); setFieldErrors(prev => ({ ...prev, website: '' })) }} className={fieldErrors.website ? 'border-destructive' : ''} />
+            {fieldErrors.website && <p className="text-sm text-destructive mt-1">{fieldErrors.website}</p>}
           </div>
         </CardContent>
       </Card>
@@ -274,12 +278,9 @@ const BusinessSettings = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Email</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setFieldErrors(prev => ({ ...prev, email: '' })) }} className={fieldErrors.email ? 'border-destructive' : ''} />
+              {fieldErrors.email && <p className="text-sm text-destructive mt-1">{fieldErrors.email}</p>}
             </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Website</label>
-            <Input value={website} onChange={(e) => setWebsite(e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -313,7 +314,7 @@ const BusinessSettings = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Country</label>
               <select 
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
               >
@@ -338,7 +339,7 @@ const BusinessSettings = () => {
           <div>
             <label className="text-sm font-medium mb-2 block">Timezone</label>
             <select 
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background"
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
             >
@@ -346,12 +347,16 @@ const BusinessSettings = () => {
               <option value="America/Denver">Mountain Time (MT)</option>
               <option value="America/Chicago">Central Time (CT)</option>
               <option value="America/New_York">Eastern Time (ET)</option>
+              <option value="Europe/London">London (GMT)</option>
+              <option value="Europe/Paris">Paris (CET)</option>
+              <option value="Asia/Tokyo">Tokyo (JST)</option>
+              <option value="Australia/Sydney">Sydney (AEDT)</option>
             </select>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Date Format</label>
             <select 
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background"
               value={dateFormat}
               onChange={(e) => setDateFormat(e.target.value)}
             >
@@ -363,7 +368,7 @@ const BusinessSettings = () => {
           <div>
             <label className="text-sm font-medium mb-2 block">Currency</label>
             <select 
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-background"
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
             >

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { useConfirm } from '@/hooks/useConfirm'
 import { tasksApi, usersApi, CreateTaskData } from '@/lib/api'
@@ -327,16 +328,16 @@ export default function TasksPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Tasks</h1>
-          <p className="text-muted-foreground">Manage your to-do list and assignments</p>
-        </div>
-        <Button onClick={openCreateModal} disabled={isMutating}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Task
-        </Button>
-      </div>
+      <PageHeader
+        title="Tasks"
+        subtitle="Manage your to-do list and assignments"
+        actions={
+          <Button onClick={openCreateModal} disabled={isMutating}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">

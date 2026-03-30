@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken } from '../utils/jwt';
+import { verifyAccessToken, isTokenDenied } from '../utils/jwt';
 
 // Extend Express Request type to include user with organizationId
 declare global {
@@ -19,7 +19,7 @@ declare global {
  * Middleware to authenticate requests using JWT tokens
  * Expects: Authorization: Bearer <token>
  */
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
@@ -46,6 +46,20 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 
     // Verify the token
     const payload = verifyAccessToken(token);
+
+    // Check if token has been denied (logged out)
+    try {
+      const denied = await isTokenDenied(token);
+      if (denied) {
+        res.status(401).json({
+          success: false,
+          error: 'Token has been revoked'
+        });
+        return;
+      }
+    } catch {
+      // Fail-open: if denylist check fails, allow the request through
+    }
 
     // Attach user info to request object (including organizationId for multi-tenancy)
     req.user = {

@@ -403,8 +403,8 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
                       {activity.details.tags && activity.details.tags.length > 0 && (
                         <div className="flex items-center gap-2 flex-wrap">
                           <Tag className="h-4 w-4 text-muted-foreground" />
-                          {activity.details.tags.map((tag, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">
+                          {activity.details.tags.map((tag) => (
+                            <Badge key={tag} variant="outline" className="text-xs">
                               {tag}
                             </Badge>
                           ))}

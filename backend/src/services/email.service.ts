@@ -414,24 +414,35 @@ export async function sendBulkEmails(
     failed: 0,
   };
 
-  for (const email of emails) {
-    const result = await sendEmail({
-      ...email,
-      campaignId,
-      userId,
-      organizationId: organizationId || 'clz0000000000000000000000',
-      trackOpens: true,
-      trackClicks: true,
-    });
+  // Process in concurrent batches for better throughput
+  const CONCURRENT = 5;
+  for (let i = 0; i < emails.length; i += CONCURRENT) {
+    const batch = emails.slice(i, i + CONCURRENT);
+    const batchResults = await Promise.allSettled(
+      batch.map((email) =>
+        sendEmail({
+          ...email,
+          campaignId,
+          userId,
+          organizationId: organizationId || 'clz0000000000000000000000',
+          trackOpens: true,
+          trackClicks: true,
+        })
+      )
+    );
 
-    if (result.success) {
-      results.success++;
-    } else {
-      results.failed++;
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled' && result.value.success) {
+        results.success++;
+      } else {
+        results.failed++;
+      }
     }
 
-    // Add small delay to avoid rate limiting
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Small delay between batches to respect rate limits
+    if (i + CONCURRENT < emails.length) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
   }
 
   return results;

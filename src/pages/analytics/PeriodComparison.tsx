@@ -67,7 +67,7 @@ const PeriodComparison = () => {
   if (isError) {
     return (
       <div className="p-6">
-        <ErrorBanner message={(error as Error)?.message || 'Failed to load comparison data'} retry={refetch} />
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load comparison data'} retry={refetch} />
       </div>
     );
   }
@@ -87,17 +87,19 @@ const PeriodComparison = () => {
     { key: 'appointmentsSet', label: 'Appointments Set' },
   ];
 
-  const formatVal = (val: number, isCurrency?: boolean) =>
-    isCurrency
-      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val || 0)
-      : (val || 0).toLocaleString();
+  const formatVal = (val: unknown, isCurrency?: boolean) => {
+    const num = Number(val) || 0;
+    return isCurrency
+      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num)
+      : num.toLocaleString();
+  };
 
   const chartData = metrics
-    .filter((m) => (current[m.key] || 0) > 0 || (previous[m.key] || 0) > 0)
+    .filter((m) => (Number(current[m.key]) || 0) > 0 || (Number(previous[m.key]) || 0) > 0)
     .map((m) => ({
       name: m.label,
-      'Current Period': current[m.key] || 0,
-      'Previous Period': previous[m.key] || 0,
+      'Current Period': Number(current[m.key]) || 0,
+      'Previous Period': Number(previous[m.key]) || 0,
     }));
 
   return (
@@ -135,7 +137,9 @@ const PeriodComparison = () => {
             <input
               type="date"
               value={customStart}
+              max={customEnd || undefined}
               onChange={(e) => setCustomStart(e.target.value)}
+              aria-label="Start date"
               className="px-3 py-1.5 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white"
             />
           </div>
@@ -143,7 +147,9 @@ const PeriodComparison = () => {
           <input
             type="date"
             value={customEnd}
+            min={customStart || undefined}
             onChange={(e) => setCustomEnd(e.target.value)}
+            aria-label="End date"
             className="px-3 py-1.5 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white"
           />
         </div>
@@ -188,7 +194,7 @@ const PeriodComparison = () => {
             <CardDescription>Current vs previous period metrics</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px]">
+            <div className="h-[400px]" aria-label="Period comparison bar chart">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />

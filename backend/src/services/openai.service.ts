@@ -17,6 +17,43 @@ import { buildCacheKey, getOrCompute } from './ai-cache.service';
  * Integrates with ai-config.service for org-level key/model resolution (Phase 3)
  */
 
+// Circuit breaker state for OpenAI calls
+const circuitBreaker = {
+  failures: 0,
+  lastFailure: 0,
+  isOpen: false,
+  threshold: 5,        // Open circuit after 5 consecutive failures
+  resetTimeout: 60000, // Try again after 60 seconds
+};
+
+function checkCircuitBreaker(): void {
+  if (!circuitBreaker.isOpen) return;
+  // Allow a probe if enough time has passed
+  if (Date.now() - circuitBreaker.lastFailure > circuitBreaker.resetTimeout) {
+    circuitBreaker.isOpen = false;
+    circuitBreaker.failures = 0;
+    return;
+  }
+  throw new Error('OpenAI circuit breaker is open — service temporarily unavailable. Try again shortly.');
+}
+
+function recordCircuitSuccess(): void {
+  circuitBreaker.failures = 0;
+  circuitBreaker.isOpen = false;
+}
+
+function recordCircuitFailure(): void {
+  circuitBreaker.failures++;
+  circuitBreaker.lastFailure = Date.now();
+  if (circuitBreaker.failures >= circuitBreaker.threshold) {
+    circuitBreaker.isOpen = true;
+    logger.warn(`[OpenAI] Circuit breaker OPEN after ${circuitBreaker.failures} consecutive failures`);
+  }
+}
+
+/** Default timeout for OpenAI requests (45 seconds) */
+const OPENAI_TIMEOUT_MS = parseInt(process.env.OPENAI_TIMEOUT_MS || '45000', 10);
+
 // Tone system for AI assistant personality
 export const ASSISTANT_TONES = {
   PROFESSIONAL: {
@@ -105,6 +142,7 @@ export class OpenAIService {
     this.client = new OpenAI({
       apiKey: apiKey || 'sk-not-configured',
       organization: process.env.OPENAI_ORG_ID,
+      timeout: OPENAI_TIMEOUT_MS,
     });
 
     this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -142,6 +180,7 @@ export class OpenAIService {
     _userId: string,
     _organizationId: string
   ): Promise<ChatResponse> {
+    checkCircuitBreaker();
     const { startTime } = aiLogger.start({ method: 'chat', model: 'pending', organizationId: _organizationId, userId: _userId });
     try {
       const { client, model, config } = await this.resolveClientForOrg(_organizationId, 'chat');
@@ -171,8 +210,10 @@ export class OpenAIService {
 
       aiLogger.success({ method: 'chat', model, modelUsed, organizationId: _organizationId, userId: _userId, tokens, inputTokens: completion.usage?.prompt_tokens, outputTokens: completion.usage?.completion_tokens, cost, startTime });
 
+      recordCircuitSuccess();
       return { response, tokens, cost };
     } catch (error: unknown) {
+      recordCircuitFailure();
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       aiLogger.error({ method: 'chat', model: 'unknown', organizationId: _organizationId, userId: _userId, error, startTime });
       throw new Error(`AI chat failed: ${errorMessage}`);
@@ -193,6 +234,7 @@ export class OpenAIService {
     _userId: string,
     _organizationId: string
   ): Promise<ChatResponse> {
+    checkCircuitBreaker();
     try {
       const { client, model, config } = await this.resolveClientForOrg(_organizationId, 'chat');
 
@@ -252,8 +294,10 @@ export class OpenAIService {
 
       // Regular response
       const response = choice?.message?.content || '';
+      recordCircuitSuccess();
       return { response, tokens, cost };
     } catch (error: unknown) {
+      recordCircuitFailure();
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('OpenAI chat with functions error:', error);
       throw new Error(`AI chat with functions failed: ${errorMessage}`);

@@ -34,7 +34,7 @@ export function OrganizationHeader() {
   }
   
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="bg-white dark:bg-card border-b border-gray-200 dark:border-border px-6 py-4">
       <div className="flex items-center justify-between">
         {/* Left: Organization Info */}
         <div className="flex items-center gap-4">
@@ -51,8 +51,8 @@ export function OrganizationHeader() {
           )}
           
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">{name}</h2>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground">{name}</h2>
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-muted-foreground">
               <Users className="w-4 h-4" />
               <span>{memberCount || 1} {memberCount === 1 ? 'member' : 'members'}</span>
             </div>

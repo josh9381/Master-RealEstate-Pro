@@ -3,12 +3,48 @@ import { prisma } from '../config/database';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/errorHandler';
 
 /**
- * Calculate character count for SMS (accounting for variables)
+ * GSM 7-bit basic character set
  */
-function calculateSMSLength(text: string): { characters: number; segments: number } {
-  const length = text.length;
-  const segments = Math.ceil(length / 160);
-  return { characters: length, segments };
+const GSM_BASIC = new Set(
+  '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ ÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+  'ÄÖÑÜabcdefghijklmnopqrstuvwxyzäöñüà'
+);
+
+/** GSM extended chars cost 2 septets each */
+const GSM_EXTENDED = new Set('|^€{}[]~\\');
+
+function isGSMEncoding(text: string): boolean {
+  for (const char of text) {
+    if (!GSM_BASIC.has(char) && !GSM_EXTENDED.has(char)) return false;
+  }
+  return true;
+}
+
+/**
+ * Calculate character count and segment count for SMS
+ * using proper GSM-7 / UCS-2 encoding detection.
+ */
+function calculateSMSLength(text: string): { characters: number; segments: number; encoding: 'GSM-7' | 'UCS-2' } {
+  if (!text) return { characters: 0, segments: 0, encoding: 'GSM-7' };
+
+  if (isGSMEncoding(text)) {
+    // GSM-7: extended chars count as 2 septets
+    let chars = 0;
+    for (const char of text) {
+      chars += GSM_EXTENDED.has(char) ? 2 : 1;
+    }
+    const singleLimit = 160;
+    const multiLimit = 153;
+    const segments = chars <= singleLimit ? 1 : Math.ceil(chars / multiLimit);
+    return { characters: chars, segments, encoding: 'GSM-7' };
+  } else {
+    // UCS-2: each UTF-16 code unit counts as 1
+    const chars = text.length;
+    const singleLimit = 70;
+    const multiLimit = 67;
+    const segments = chars <= singleLimit ? 1 : Math.ceil(chars / multiLimit);
+    return { characters: chars, segments, encoding: 'UCS-2' };
+  }
 }
 
 /**
@@ -58,8 +94,9 @@ export async function getSMSTemplates(req: Request, res: Response): Promise<void
   }
 
   // Calculate pagination
-  const skip = (Number(page) - 1) * Number(limit);
-  const take = Number(limit);
+  const safeLimit = Math.min(Number(limit) || 20, 200);
+  const skip = (Number(page) - 1) * safeLimit;
+  const take = safeLimit;
 
   // Execute queries
   const [templates, total] = await Promise.all([
@@ -85,8 +122,8 @@ export async function getSMSTemplates(req: Request, res: Response): Promise<void
       pagination: {
         total,
         page: Number(page),
-        limit: Number(limit),
-        pages: Math.ceil(total / Number(limit)),
+        limit: safeLimit,
+        pages: Math.ceil(total / safeLimit),
       },
     }
   });

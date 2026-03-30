@@ -5,6 +5,7 @@ import { Book, Video, MessageCircle, Search, Keyboard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { KeyboardShortcutsModal } from '@/components/help/KeyboardShortcutsModal';
 import { docsApi } from '@/lib/api';
 
@@ -108,12 +109,10 @@ const HelpCenter = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Help Center</h1>
-        <p className="text-muted-foreground mt-2">
-          Find answers, tutorials, and documentation
-        </p>
-      </div>
+      <PageHeader
+        title="Help Center"
+        subtitle="Find answers, tutorials, and documentation"
+      />
 
       {/* Search */}
       <Card>
@@ -133,8 +132,8 @@ const HelpCenter = () => {
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
             <span className="text-sm text-muted-foreground">Popular searches:</span>
-            {['campaigns', 'leads', 'integrations', 'billing'].map((tag, index) => (
-              <Button key={index} variant="ghost" size="sm" onClick={() => navigate(`/help/docs?search=${encodeURIComponent(tag)}`)}>
+            {['campaigns', 'leads', 'integrations', 'billing'].map((tag) => (
+              <Button key={tag} variant="ghost" size="sm" onClick={() => navigate(`/help/docs?search=${encodeURIComponent(tag)}`)}>
                 {tag}
               </Button>
             ))}
@@ -144,7 +143,7 @@ const HelpCenter = () => {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/docs')}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/docs')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/docs') } }}>
           <CardContent className="pt-6">
             <Book className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Documentation</h3>
@@ -157,7 +156,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/videos')}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/videos')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/videos') } }}>
           <CardContent className="pt-6">
             <Video className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Video Tutorials</h3>
@@ -170,7 +169,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/support')}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/support')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/support') } }}>
           <CardContent className="pt-6">
             <MessageCircle className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Contact Support</h3>
@@ -183,7 +182,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowShortcuts(true)}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowShortcuts(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowShortcuts(true) } }}>
           <CardContent className="pt-6">
             <Keyboard className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Keyboard Shortcuts</h3>
@@ -205,11 +204,11 @@ const HelpCenter = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category, index) => {
+            {categories.map((category) => {
               const Icon = category.icon;
               return (
                 <div
-                  key={index}
+                  key={category.title}
                   className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
                 >
                   <div className="flex items-center space-x-3 mb-2">
@@ -239,9 +238,9 @@ const HelpCenter = () => {
         </CardHeader>
         <CardContent>
           <ul className="space-y-3">
-            {popularArticles.map((article, index) => (
+            {popularArticles.map((article) => (
               <li
-                key={index}
+                key={article}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
               >
                 <div className="flex items-center space-x-3">
@@ -265,9 +264,9 @@ const HelpCenter = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {videos.map((video, index) => (
+            {videos.map((video) => (
               <div
-                key={index}
+                key={video.title}
                 className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
               >
                 <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">

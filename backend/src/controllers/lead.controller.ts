@@ -1096,44 +1096,75 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  // Enforce max row limit to prevent OOM and gateway timeouts
+  const MAX_IMPORT_ROWS = parseInt(process.env.MAX_IMPORT_ROWS || '10000', 10);
+  if (records.length > MAX_IMPORT_ROWS) {
+    res.status(400).json({
+      success: false,
+      message: `Import exceeds maximum of ${MAX_IMPORT_ROWS.toLocaleString()} rows. Your file has ${records.length.toLocaleString()} rows. Please split into smaller files.`,
+    });
+    return;
+  }
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   let imported = 0;
   let skipped = 0;
   const errors: string[] = [];
 
+  // Process imports in batches for better DB performance
+  const BATCH_SIZE = 500;
+  const validLeads: any[] = [];
+
   for (let i = 0; i < records.length; i++) {
-    try {
-      const row = records[i];
+    const row = records[i];
 
-      const leadData = {
-        firstName: row['first name'] || row['firstname'] || row['first_name'] || row['name']?.split(' ')[0] || '',
-        lastName: row['last name'] || row['lastname'] || row['last_name'] || row['name']?.split(' ').slice(1).join(' ') || '',
-        email: row['email'] || '',
-        phone: row['phone'] || row['phone number'] || row['phonenumber'] || '',
-        source: row['source'] || 'IMPORT',
-        status: 'NEW' as const,
-        organizationId,
-        assignedToId: req.user!.userId,
-      };
+    const leadData = {
+      firstName: row['first name'] || row['firstname'] || row['first_name'] || row['name']?.split(' ')[0] || '',
+      lastName: row['last name'] || row['lastname'] || row['last_name'] || row['name']?.split(' ').slice(1).join(' ') || '',
+      email: row['email'] || '',
+      phone: row['phone'] || row['phone number'] || row['phonenumber'] || '',
+      source: row['source'] || 'IMPORT',
+      status: 'NEW' as const,
+      organizationId,
+      assignedToId: req.user!.userId,
+    };
 
-      if (!leadData.firstName && !leadData.email) {
-        skipped++;
-        errors.push(`Row ${i + 2}: Missing name and email`);
-        continue;
-      }
-
-      if (leadData.email && !emailRegex.test(leadData.email)) {
-        skipped++;
-        errors.push(`Row ${i + 2}: Invalid email format "${leadData.email}"`);
-        continue;
-      }
-
-      await prisma.lead.create({ data: leadData as any });
-      imported++;
-    } catch (err: unknown) {
+    if (!leadData.firstName && !leadData.email) {
       skipped++;
-      errors.push(`Row ${i}: ${getErrorMessage(err)}`);
+      errors.push(`Row ${i + 2}: Missing name and email`);
+      continue;
+    }
+
+    if (leadData.email && !emailRegex.test(leadData.email)) {
+      skipped++;
+      errors.push(`Row ${i + 2}: Invalid email format "${leadData.email}"`);
+      continue;
+    }
+
+    validLeads.push(leadData);
+  }
+
+  // Batch insert valid leads using createMany for performance
+  for (let batch = 0; batch < validLeads.length; batch += BATCH_SIZE) {
+    const chunk = validLeads.slice(batch, batch + BATCH_SIZE);
+    try {
+      const result = await prisma.lead.createMany({
+        data: chunk as any,
+        skipDuplicates: true,
+      });
+      imported += result.count;
+    } catch (err: unknown) {
+      // Fall back to individual creates for this batch so partial failures are captured
+      for (const leadData of chunk) {
+        try {
+          await prisma.lead.create({ data: leadData as any });
+          imported++;
+        } catch (innerErr: unknown) {
+          skipped++;
+          errors.push(`Row: ${getErrorMessage(innerErr)}`);
+        }
+      }
     }
   }
 

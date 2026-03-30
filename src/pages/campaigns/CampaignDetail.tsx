@@ -30,8 +30,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { calcRate, calcOpenRate, calcClickRate, calcConversionRate, calcUnsubscribeRate, formatRate, fmtMoney } from '@/lib/metricsCalculator'
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+import { CHART_COLORS as COLORS } from '@/lib/chartColors'
 
 function CampaignDetail() {
   const { id } = useParams()

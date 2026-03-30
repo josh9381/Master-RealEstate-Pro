@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useId } from 'react'
+import React, { useEffect, useRef, useCallback, useId, useState } from 'react'
 import { Button } from './Button'
 
 // Context for passing dialog label id from DialogContent to DialogTitle
@@ -32,6 +32,23 @@ interface DialogFooterProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
+  const [mounted, setMounted] = useState(false)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      // Trigger enter animation on next frame
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setVisible(true))
+      })
+    } else {
+      setVisible(false)
+      const timer = setTimeout(() => setMounted(false), 150)
+      return () => clearTimeout(timer)
+    }
+  }, [open])
+
   // Close on Escape key
   useEffect(() => {
     if (!open) return;
@@ -42,19 +59,23 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onOpenChange]);
 
-  if (!open) return null
+  if (!mounted) return null
 
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-50"
+        className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`}
         onClick={() => onOpenChange(false)}
         aria-hidden="true"
       />
       {/* Dialog */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {children}
+        <div
+          className={`transition-all duration-150 ease-out ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+        >
+          {children}
+        </div>
       </div>
     </>
   )

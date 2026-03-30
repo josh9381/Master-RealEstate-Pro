@@ -106,7 +106,7 @@ export async function executeCampaign(
 
     // Get leads to send to
     const campaignTagId = campaign.tags && campaign.tags.length > 0 ? campaign.tags[0].id : null;
-    const leads = await getTargetLeads(campaign.organizationId, leadIds, filters, campaignTagId);
+    let leads = await getTargetLeads(campaign.organizationId, leadIds, filters, campaignTagId);
 
     if (leads.length === 0) {
       return {
@@ -115,6 +115,31 @@ export async function executeCampaign(
         sent: 0,
         failed: 0,
         errors: ['No leads found matching criteria'],
+      };
+    }
+
+    // Resume support: Filter out leads already sent in a previous execution attempt.
+    // This prevents duplicate messages if the campaign was interrupted mid-send and re-executed.
+    const alreadySent = await prisma.campaignLead.findMany({
+      where: { campaignId, status: 'SENT' },
+      select: { leadId: true },
+    });
+    if (alreadySent.length > 0) {
+      const sentIds = new Set(alreadySent.map((cl) => cl.leadId));
+      const before = leads.length;
+      leads = leads.filter((l) => !sentIds.has(l.id));
+      if (before !== leads.length) {
+        logger.info(`[CAMPAIGN] Resume: skipped ${before - leads.length} already-sent leads`);
+      }
+    }
+
+    if (leads.length === 0) {
+      return {
+        success: true,
+        totalLeads: alreadySent.length,
+        sent: 0,
+        failed: 0,
+        errors: ['All leads have already been sent to'],
       };
     }
 

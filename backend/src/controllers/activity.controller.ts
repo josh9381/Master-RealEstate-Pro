@@ -359,7 +359,7 @@ export const getLeadActivities = async (req: Request, res: Response) => {
   const { page = 1, limit = 20 } = req.query
 
   const pageNum = Number(page)
-  const limitNum = Number(limit)
+  const limitNum = Math.min(Number(limit) || 20, 200)
   const skip = (pageNum - 1) * limitNum
 
   // Verify lead exists and belongs to user's organization
@@ -426,7 +426,7 @@ export const getCampaignActivities = async (req: Request, res: Response) => {
   const { page = 1, limit = 20 } = req.query
 
   const pageNum = Number(page)
-  const limitNum = Number(limit)
+  const limitNum = Math.min(Number(limit) || 20, 200)
   const skip = (pageNum - 1) * limitNum
 
   // Verify campaign exists and belongs to user's organization

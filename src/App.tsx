@@ -5,6 +5,10 @@ import { AuthLayout } from './components/layout/AuthLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { RequireAdmin } from './components/auth/RequireRole'
 import { PageErrorBoundary } from './components/PageErrorBoundary'
+import { SettingsLayout } from './components/settings/SettingsLayout'
+import { LeadsLayout } from './components/leads/LeadsLayout'
+import { CampaignsLayout } from './components/campaigns/CampaignsLayout'
+import { AIHubLayout } from './components/ai/AIHubLayout'
 import { lazyWithRetry } from './lib/lazyWithRetry'
 
 // Loading fallback for lazy components
@@ -126,7 +130,7 @@ const APIIntegrationsPage = lazyWithRetry(() => import('./pages/integrations/API
 const CalendarPage = lazyWithRetry(() => import('./pages/calendar/CalendarPage'))
 const ActivityPage = lazyWithRetry(() => import('./pages/activity/ActivityPage'))
 const TasksPage = lazyWithRetry(() => import('./pages/tasks/TasksPage'))
-const PasswordSecurityPage = lazyWithRetry(() => import('./pages/settings/PasswordSecurityPage'))
+
 
 // Phase 5 - Components (lazy loaded)
 const TagsManager = lazyWithRetry(() => import('./components/settings/TagsManager').then(m => ({ default: m.TagsManager })))
@@ -158,16 +162,16 @@ function App() {
         <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Dashboard"><Dashboard /></PageErrorBoundary></Suspense>} />
         
         {/* Leads */}
-        <Route path="/leads" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Leads List"><LeadsList /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/create" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Create Lead"><LeadCreate /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/:id" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Detail"><LeadDetail /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/pipeline" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Pipeline"><LeadsPipeline /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/import" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Import Leads"><LeadsImport /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/export" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Export Leads"><LeadsExport /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/followups" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Follow-ups"><LeadsFollowups /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/history" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead History"><LeadHistory /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/merge" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Merge Leads"><LeadsMerge /></PageErrorBoundary></Suspense>} />
-        <Route path="/leads/segments" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Segmentation"><Segmentation /></PageErrorBoundary></Suspense>} />
+        <Route path="/leads" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Leads List"><LeadsList /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/create" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Create Lead"><LeadCreate /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/:id" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Detail"><LeadDetail /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/pipeline" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Pipeline"><LeadsPipeline /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/import" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Import Leads"><LeadsImport /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/export" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Export Leads"><LeadsExport /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/followups" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Follow-ups"><LeadsFollowups /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/history" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead History"><LeadHistory /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/merge" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Merge Leads"><LeadsMerge /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/segments" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Segmentation"><Segmentation /></PageErrorBoundary></Suspense></LeadsLayout>} />
         
         {/* Calendar & Tasks */}
         <Route path="/calendar" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Calendar"><CalendarPage /></PageErrorBoundary></Suspense>} />
@@ -175,29 +179,29 @@ function App() {
         <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Tasks"><TasksPage /></PageErrorBoundary></Suspense>} />
         
         {/* Campaigns */}
-        <Route path="/campaigns" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaigns"><CampaignsList /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/create" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Create Campaign"><CampaignCreate /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/:id" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Detail"><CampaignDetail /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/:id/edit" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Edit Campaign"><CampaignEdit /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/templates" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Templates"><CampaignTemplates /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/schedule" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Schedule"><CampaignSchedule /></PageErrorBoundary></Suspense>} />
-        <Route path="/campaigns/reports" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Reports"><CampaignReports /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaigns"><CampaignsList /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns/create" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Create Campaign"><CampaignCreate /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns/:id" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Detail"><CampaignDetail /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns/:id/edit" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Edit Campaign"><CampaignEdit /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns/templates" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Templates"><CampaignTemplates /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns/schedule" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Schedule"><CampaignSchedule /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns/reports" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Reports"><CampaignReports /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         <Route path="/campaigns/email" element={<Navigate to="/campaigns?type=email" replace />} />
         <Route path="/campaigns/sms" element={<Navigate to="/campaigns?type=sms" replace />} />
         <Route path="/campaigns/phone" element={<Navigate to="/campaigns?type=phone" replace />} />
-        <Route path="/campaigns/ab-testing" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="A/B Testing"><ABTesting /></PageErrorBoundary></Suspense>} />
+        <Route path="/campaigns/ab-testing" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="A/B Testing"><ABTesting /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         
         {/* AI Hub */}
-        <Route path="/ai" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Hub"><AIHub /></PageErrorBoundary></Suspense>} />
-        <Route path="/ai/lead-scoring" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Scoring"><LeadScoring /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Hub"><AIHub /></PageErrorBoundary></Suspense></AIHubLayout>} />
+        <Route path="/ai/lead-scoring" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Scoring"><LeadScoring /></PageErrorBoundary></Suspense></AIHubLayout>} />
         <Route path="/ai/segmentation" element={<Navigate to="/leads/segments" replace />} />
-        <Route path="/ai/intelligence" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Hub"><IntelligenceHub /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/intelligence" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Hub"><IntelligenceHub /></PageErrorBoundary></Suspense></AIHubLayout>} />
         <Route path="/ai/predictive" element={<Navigate to="/ai/intelligence" replace />} />
         <Route path="/ai/insights" element={<Navigate to="/ai/intelligence" replace />} />
-        <Route path="/ai/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary></Suspense>} />
-        <Route path="/ai/settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Settings"><AISettings /></PageErrorBoundary></Suspense>} />
-        <Route path="/ai/org-settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Org AI Settings"><OrgAISettings /></PageErrorBoundary></Suspense>} />
-        <Route path="/ai/cost-dashboard" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Cost Dashboard"><AICostDashboard /></PageErrorBoundary></Suspense>} />
+        <Route path="/ai/analytics" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Analytics"><AIAnalytics /></PageErrorBoundary></Suspense></AIHubLayout>} />
+        <Route path="/ai/settings" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Settings"><AISettings /></PageErrorBoundary></Suspense></AIHubLayout>} />
+        <Route path="/ai/org-settings" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Org AI Settings"><OrgAISettings /></PageErrorBoundary></Suspense></AIHubLayout>} />
+        <Route path="/ai/cost-dashboard" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Cost Dashboard"><AICostDashboard /></PageErrorBoundary></Suspense></AIHubLayout>} />
         
         {/* Analytics */}
         <Route path="/analytics" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Analytics Dashboard"><AnalyticsDashboard /></PageErrorBoundary></Suspense>} />
@@ -228,20 +232,20 @@ function App() {
         <Route path="/workflows/builder" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Workflow Builder"><WorkflowBuilder /></PageErrorBoundary></Suspense>} />
         
         {/* Settings */}
-        <Route path="/settings" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Settings"><SettingsHub /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/profile" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Profile"><ProfileSettings /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/business" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Business Settings"><BusinessSettings /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Settings"><SettingsHub /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/profile" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Profile"><ProfileSettings /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/business" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Business Settings"><BusinessSettings /></PageErrorBoundary></Suspense></SettingsLayout>} />
         <Route path="/settings/team" element={<Navigate to="/admin/team" replace />} />
-        <Route path="/settings/email" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Config"><EmailConfiguration /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/notifications" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Notification Settings"><NotificationSettings /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/security" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Security"><SecuritySettings /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/compliance" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Compliance"><ComplianceSettings /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/google" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Google Integration"><GoogleIntegration /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/twilio" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Twilio Setup"><TwilioSetup /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/services" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Services"><ServiceConfiguration /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/tags" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Tags"><TagsManager /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/custom-fields" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Custom Fields"><CustomFieldsManager /></PageErrorBoundary></Suspense>} />
-        <Route path="/settings/security/password" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Password Security"><PasswordSecurityPage /></PageErrorBoundary></Suspense>} />
+        <Route path="/settings/email" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Email Config"><EmailConfiguration /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/notifications" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Notification Settings"><NotificationSettings /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/security" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Security"><SecuritySettings /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/compliance" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Compliance"><ComplianceSettings /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/google" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Google Integration"><GoogleIntegration /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/twilio" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Twilio Setup"><TwilioSetup /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/services" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Services"><ServiceConfiguration /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/tags" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Tags"><TagsManager /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/custom-fields" element={<SettingsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Custom Fields"><CustomFieldsManager /></PageErrorBoundary></Suspense></SettingsLayout>} />
+        <Route path="/settings/security/password" element={<Navigate to="/settings/security" replace />} />
         
         {/* Notifications */}
         <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Notifications"><NotificationsPage /></PageErrorBoundary></Suspense>} />

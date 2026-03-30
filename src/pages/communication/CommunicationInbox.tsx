@@ -107,6 +107,8 @@ const CommunicationInbox = () => {
       // M7: Push starred/snoozed filtering to backend
       if (folderFilter === 'starred') params.starred = 'true'
       if (folderFilter === 'snoozed') params.snoozed = 'true'
+      if (folderFilter === 'drafts') params.status = 'draft'
+      if (folderFilter === 'scheduled') params.status = 'scheduled'
       const response = await messagesApi.getMessages(params)
       const contactsList = response?.data?.contacts || []
       return Array.isArray(contactsList) ? contactsList as Contact[] : []
@@ -246,6 +248,8 @@ const CommunicationInbox = () => {
     if (folderFilter === 'unread' && contact.totalUnread === 0) return false
     if (folderFilter === 'starred' && !allMessages.some(m => m.starred)) return false
     if (folderFilter === 'snoozed' && !allMessages.some(m => m.snoozedUntil && new Date(m.snoozedUntil).getTime() > Date.now())) return false
+    if (folderFilter === 'drafts') return allMessages.some(m => m.status === 'draft')
+    if (folderFilter === 'scheduled') return allMessages.some(m => m.status === 'scheduled')
     if (folderFilter === 'archived') return allMessages.every(m => m.archived) && !allMessages.some(m => m.trashed)
     if (folderFilter === 'trash') return allMessages.some(m => m.trashed)
 

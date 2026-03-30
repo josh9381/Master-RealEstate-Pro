@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog'
+import { LINE_CHART_COLORS } from '@/lib/chartColors'
 import {
   Plus, Mail, MessageSquare, Phone, MoreHorizontal, Search,
   TrendingUp, DollarSign, Users, Target, Calendar as CalendarIcon,
@@ -398,7 +399,7 @@ function CampaignsList() {
     toast.success(`Exported ${selectedCampaignsData.length} campaign(s)`)
   }
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6']
+  const COLORS = LINE_CHART_COLORS
 
   // Shared row menu actions for CampaignRowMenu component
   const rowMenuActions: CampaignRowMenuActions = {

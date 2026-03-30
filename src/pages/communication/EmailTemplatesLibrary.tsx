@@ -44,6 +44,7 @@ const EmailTemplatesLibrary = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'usage'>('date')
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -338,7 +339,7 @@ const EmailTemplatesLibrary = () => {
     return templates.find(t => t.id === showDeleteConfirm)?.name || 'this template'
   }, [showDeleteConfirm, templates])
 
-  // Search + category filtering
+  // Search + category filtering + sorting
   const filteredTemplates = useMemo(() => {
     let result = templates
     if (activeCategory !== 'All Templates') {
@@ -348,18 +349,31 @@ const EmailTemplatesLibrary = () => {
       const query = searchQuery.toLowerCase()
       result = result.filter(t =>
         (t.name || '').toLowerCase().includes(query) ||
-        (t.subject || '').toLowerCase().includes(query)
+        (t.subject || '').toLowerCase().includes(query) ||
+        (t.body || '').toLowerCase().includes(query)
       )
     }
+    // Sort
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return (a.name || '').localeCompare(b.name || '')
+        case 'usage':
+          return (b.usageCount || 0) - (a.usageCount || 0)
+        case 'date':
+        default:
+          return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()
+      }
+    })
     return result
-  }, [templates, activeCategory, searchQuery])
+  }, [templates, activeCategory, searchQuery, sortBy])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE))
   const paginatedTemplates = filteredTemplates.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   // Reset page when filters change
-  useEffect(() => { setCurrentPage(1) }, [activeCategory, searchQuery])
+  useEffect(() => { setCurrentPage(1) }, [activeCategory, searchQuery, sortBy])
 
   return (
     <div className="space-y-6">
@@ -386,11 +400,21 @@ const EmailTemplatesLibrary = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search templates by name or subject..."
+          placeholder="Search templates by name, subject, or body content..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className="pl-10 pr-10"
         />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -482,6 +506,15 @@ const EmailTemplatesLibrary = () => {
               </CardDescription>
             </div>
             <div className="flex space-x-2">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'usage')}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="date">Sort: Recently Updated</option>
+                <option value="name">Sort: Name A–Z</option>
+                <option value="usage">Sort: Most Used</option>
+              </select>
               <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('grid')}>
                 <Layout className="h-4 w-4 mr-2" />
                 Grid
@@ -523,7 +556,10 @@ const EmailTemplatesLibrary = () => {
                   </div>
                   <p className="text-sm text-muted-foreground mb-1 truncate">{template.subject}</p>
                   <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-                    <span>{template.usageCount || 0} uses</span>
+                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                      <Send className="h-3 w-3" />
+                      {template.usageCount || 0} sends
+                    </span>
                     <span>{template.updatedAt ? `Updated ${new Date(template.updatedAt).toLocaleDateString()}` : ''}</span>
                   </div>
                   <div className="flex space-x-2">
@@ -563,7 +599,10 @@ const EmailTemplatesLibrary = () => {
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{template.subject}</p>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                    <span>{template.usageCount || 0} uses</span>
+                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                      <Send className="h-3 w-3" />
+                      {template.usageCount || 0} sends
+                    </span>
                     <span>{template.updatedAt ? `Updated ${new Date(template.updatedAt).toLocaleDateString()}` : ''}</span>
                   </div>
                 </div>
@@ -601,12 +640,32 @@ const EmailTemplatesLibrary = () => {
               <p className="text-sm text-muted-foreground">
                 Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filteredTemplates.length)} of {filteredTemplates.length}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Previous
                 </Button>
-                <span className="text-sm font-medium px-2">Page {currentPage} of {totalPages}</span>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                  // Show first, last, current, and adjacent pages; ellipsis for gaps
+                  const show = page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1
+                  if (!show) {
+                    // Show ellipsis only once per gap
+                    const prevShow = page - 1 === 1 || page - 1 === totalPages || Math.abs(page - 1 - currentPage) <= 1
+                    if (prevShow) return <span key={page} className="px-1 text-muted-foreground text-sm">…</span>
+                    return null
+                  }
+                  return (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? 'default' : 'outline'}
+                      size="sm"
+                      className="min-w-[36px]"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  )
+                })}
                 <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
                   Next
                   <ChevronRight className="h-4 w-4 ml-1" />
@@ -935,6 +994,32 @@ const EmailTemplatesLibrary = () => {
               <Button variant="ghost" size="sm" onClick={() => { setShowPreviewModal(false); setPreviewTemplate(null); }}>
                 <X className="h-5 w-5" />
               </Button>
+            </div>
+            {/* Template Metadata */}
+            <div className="px-6 pt-4 pb-2">
+              <div className="flex flex-wrap gap-3 text-xs">
+                <div className="flex items-center gap-1.5 bg-muted rounded-full px-3 py-1.5">
+                  <Badge variant={previewTemplate.isActive !== false ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                    {previewTemplate.isActive !== false ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1.5 bg-muted rounded-full px-3 py-1.5">
+                  <FileText className="h-3 w-3 text-muted-foreground" />
+                  <span>{previewTemplate.category || 'Uncategorized'}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 rounded-full px-3 py-1.5 font-medium">
+                  <Send className="h-3 w-3" />
+                  <span>{previewTemplate.usageCount || 0} sends</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-muted rounded-full px-3 py-1.5">
+                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  <span>Created {previewTemplate.createdAt ? new Date(previewTemplate.createdAt).toLocaleDateString() : '—'}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-muted rounded-full px-3 py-1.5">
+                  <RefreshCw className="h-3 w-3 text-muted-foreground" />
+                  <span>Updated {previewTemplate.updatedAt ? new Date(previewTemplate.updatedAt).toLocaleDateString() : '—'}</span>
+                </div>
+              </div>
             </div>
             <div className="p-6">
               <div className="border rounded-lg p-6 bg-white">

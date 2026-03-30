@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { campaignsApi, analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { LINE_CHART_COLORS } from '@/lib/chartColors';
 import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
@@ -545,10 +546,10 @@ function OverviewTab() {
         description="Sent, opened, clicked, and converted over time"
         data={campaignPerformance}
         lines={[
-          { dataKey: 'sent', stroke: '#8b5cf6' },
-          { dataKey: 'opened', stroke: '#3b82f6' },
-          { dataKey: 'clicked', stroke: '#10b981' },
-          { dataKey: 'converted', stroke: '#f59e0b' },
+          { dataKey: 'sent', stroke: LINE_CHART_COLORS[3] },
+          { dataKey: 'opened', stroke: LINE_CHART_COLORS[0] },
+          { dataKey: 'clicked', stroke: LINE_CHART_COLORS[1] },
+          { dataKey: 'converted', stroke: LINE_CHART_COLORS[2] },
         ]}
         emptyMessage="No campaign performance data yet"
       />
@@ -871,10 +872,10 @@ function DetailedReportsTab() {
         data={performanceData}
         height={300}
         lines={[
-          { dataKey: 'sent', stroke: '#3b82f6', name: 'Sent' },
-          { dataKey: 'delivered', stroke: '#10b981', name: 'Delivered' },
-          { dataKey: 'opened', stroke: '#f59e0b', name: 'Opened' },
-          { dataKey: 'clicked', stroke: '#8b5cf6', name: 'Clicked' },
+          { dataKey: 'sent', stroke: LINE_CHART_COLORS[0], name: 'Sent' },
+          { dataKey: 'delivered', stroke: LINE_CHART_COLORS[1], name: 'Delivered' },
+          { dataKey: 'opened', stroke: LINE_CHART_COLORS[2], name: 'Opened' },
+          { dataKey: 'clicked', stroke: LINE_CHART_COLORS[3], name: 'Clicked' },
         ]}
         emptyMessage="No performance data for this range"
       />

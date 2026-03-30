@@ -6,6 +6,9 @@ import {
   Send,
   FileText,
   Sparkles,
+  Clock,
+  Calendar,
+  ChevronDown,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -32,7 +35,7 @@ interface ComposeModalProps {
   onBodyChange: (body: string) => void
   onLeadChange: (leadId: string) => void
   onEnhance: (body: string, tone: string) => Promise<string>
-  onSend: () => void
+  onSend: (scheduledAt?: string) => void
   onClose: () => void
 }
 
@@ -57,6 +60,9 @@ export const ComposeModal = ({
   const [showTemplates, setShowTemplates] = useState(false)
   const [showAIComposer, setShowAIComposer] = useState(false)
   const [enhancing, setEnhancing] = useState(false)
+  const [showScheduler, setShowScheduler] = useState(false)
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduleTime, setScheduleTime] = useState('')
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {}
@@ -79,6 +85,20 @@ export const ComposeModal = ({
 
   const handleSend = () => {
     if (validate()) onSend()
+  }
+
+  const handleScheduleSend = () => {
+    if (!validate()) return
+    if (!scheduleDate || !scheduleTime) return
+    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString()
+    onSend(scheduledAt)
+  }
+
+  const applyQuickSchedule = (daysAhead: number, time: string) => {
+    const d = new Date()
+    d.setDate(d.getDate() + daysAhead)
+    setScheduleDate(d.toISOString().split('T')[0])
+    setScheduleTime(time)
   }
 
   const handleMessageGenerated = (message: string, subject?: string) => {
@@ -262,6 +282,67 @@ export const ComposeModal = ({
 
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={onClose}>Cancel</Button>
+
+              {/* Schedule Send */}
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowScheduler(!showScheduler)}
+                  type="button"
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  {scheduleDate && scheduleTime
+                    ? `Scheduled: ${scheduleDate} ${scheduleTime}`
+                    : 'Schedule'}
+                  <ChevronDown className="ml-1 h-3 w-3" />
+                </Button>
+                {showScheduler && (
+                  <Card className="absolute bottom-full right-0 mb-2 w-80 z-20 shadow-xl">
+                    <CardContent className="p-4 space-y-3">
+                      <p className="text-sm font-medium">Schedule Send</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-muted-foreground">Date</label>
+                          <input
+                            type="date"
+                            value={scheduleDate}
+                            onChange={(e) => setScheduleDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full px-2 py-1.5 border rounded text-sm bg-background"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground">Time</label>
+                          <input
+                            type="time"
+                            value={scheduleTime}
+                            onChange={(e) => setScheduleTime(e.target.value)}
+                            className="w-full px-2 py-1.5 border rounded text-sm bg-background"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-wrap">
+                        <button type="button" onClick={() => applyQuickSchedule(0, '17:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent text-muted-foreground">Today 5pm</button>
+                        <button type="button" onClick={() => applyQuickSchedule(1, '09:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent text-muted-foreground">Tomorrow 9am</button>
+                        <button type="button" onClick={() => applyQuickSchedule(1, '14:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent text-muted-foreground">Tomorrow 2pm</button>
+                        <button type="button" onClick={() => { const d = new Date(); const daysUntilMon = (8 - d.getDay()) % 7 || 7; applyQuickSchedule(daysUntilMon, '09:00') }} className="px-2 py-1 text-[11px] rounded border hover:bg-accent text-muted-foreground">Next Monday</button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => { handleScheduleSend(); setShowScheduler(false) }} disabled={!scheduleDate || !scheduleTime}>
+                          <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                          Schedule
+                        </Button>
+                        {scheduleDate && (
+                          <Button size="sm" variant="ghost" onClick={() => { setScheduleDate(''); setScheduleTime(''); }}>
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
               <Button onClick={handleSend}>
                 <Send className="mr-2 h-4 w-4" />
                 Send {composeType === 'email' ? 'Email' : composeType === 'sms' ? 'SMS' : 'Note'}

@@ -31,10 +31,7 @@ const PIPELINE_TYPE_OPTIONS = [
   { value: 'CUSTOM', label: 'Custom' },
 ] as const
 
-const STAGE_COLORS = [
-  '#6B7280', '#3B82F6', '#06B6D4', '#8B5CF6', '#EC4899',
-  '#F59E0B', '#EF4444', '#F97316', '#10B981', '#14B8A6',
-]
+import { PIPELINE_STAGE_COLORS as STAGE_COLORS } from '@/lib/chartColors'
 
 interface PipelineManagerProps {
   pipelines: PipelineData[]

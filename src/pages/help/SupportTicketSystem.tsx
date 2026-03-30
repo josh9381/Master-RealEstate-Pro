@@ -258,8 +258,9 @@ const SupportTicketSystem = () => {
             >
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Category</label>
+                  <label htmlFor="ticket-category" className="text-sm font-medium">Category</label>
                   <select
+                    id="ticket-category"
                     className="w-full px-3 py-2 border rounded-lg"
                     value={newTicket.category}
                     onChange={(e) => setNewTicket(s => ({ ...s, category: e.target.value }))}
@@ -269,8 +270,9 @@ const SupportTicketSystem = () => {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Priority</label>
+                  <label htmlFor="ticket-priority" className="text-sm font-medium">Priority</label>
                   <select
+                    id="ticket-priority"
                     className="w-full px-3 py-2 border rounded-lg"
                     value={newTicket.priority}
                     onChange={(e) => setNewTicket(s => ({ ...s, priority: e.target.value }))}
@@ -283,8 +285,9 @@ const SupportTicketSystem = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Subject</label>
+                <label htmlFor="ticket-subject" className="text-sm font-medium">Subject</label>
                 <input
+                  id="ticket-subject"
                   type="text"
                   placeholder="Brief description of your issue"
                   className="w-full px-3 py-2 border rounded-lg"
@@ -294,8 +297,9 @@ const SupportTicketSystem = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
+                <label htmlFor="ticket-description" className="text-sm font-medium">Description</label>
                 <textarea
+                  id="ticket-description"
                   placeholder="Provide detailed information about your issue..."
                   rows={6}
                   className="w-full px-3 py-2 border rounded-lg"
@@ -421,11 +425,25 @@ const SupportTicketSystem = () => {
 
       {/* Tickets List */}
       {isLoading ? (
-        <Card>
-          <CardContent className="pt-6 text-center text-muted-foreground">
-            Loading tickets...
-          </CardContent>
-        </Card>
+        <div className="space-y-4 animate-pulse">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-5 bg-muted rounded w-48" />
+                      <div className="h-5 bg-muted rounded w-16" />
+                      <div className="h-5 bg-muted rounded w-16" />
+                    </div>
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/3" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : tickets.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center">
@@ -447,7 +465,7 @@ const SupportTicketSystem = () => {
       ) : (
         <div className="space-y-4">
           {tickets.map((ticket) => (
-            <Card key={ticket.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openTicket(ticket.id)}>
+            <Card key={ticket.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openTicket(ticket.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTicket(ticket.id) } }}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

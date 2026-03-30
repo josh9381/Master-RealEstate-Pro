@@ -65,8 +65,8 @@ export function PasswordStrengthIndicator({ password, showRequirements = true }:
       {/* Requirements checklist */}
       {showRequirements && (
         <div className="space-y-1">
-          {requirements.map((req, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-xs">
+          {requirements.map((req) => (
+            <div key={req.text} className="flex items-center gap-1.5 text-xs">
               {req.met ? (
                 <CheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" />
               ) : (

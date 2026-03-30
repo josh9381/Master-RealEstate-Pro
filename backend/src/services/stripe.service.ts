@@ -296,8 +296,8 @@ export class StripeService {
   }
 
   /**
-   * Get usage-based billing meters (for AI/call usage tracking)
-   * Phase 4 implementation
+   * Record usage for metered billing (e.g., AI calls, SMS sends).
+   * Creates a usage record against a subscription item for usage-based pricing.
    */
   async recordUsage(
     subscriptionItemId: string,
@@ -305,10 +305,15 @@ export class StripeService {
     _action = 'increment'
   ): Promise<void> {
     try {
-      // Usage records API - implementation depends on Stripe version
-      // This will be implemented in Phase 4 with proper Stripe SDK version
-      logger.info(`Recording usage: ${subscriptionItemId}, quantity: ${quantity}`);
-      throw new Error('Usage recording not yet implemented - Phase 4');
+      await (this.stripe.subscriptionItems as any).createUsageRecord(
+        subscriptionItemId,
+        {
+          quantity,
+          timestamp: Math.floor(Date.now() / 1000),
+          action: 'increment',
+        }
+      );
+      logger.info(`Stripe usage recorded: ${subscriptionItemId}, quantity: ${quantity}`);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Stripe record usage error:', error);

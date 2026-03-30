@@ -1,7 +1,6 @@
 import { Request, Response } from 'express'
-import { PrismaClient, PipelineType } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { PipelineType } from '@prisma/client'
+import { prisma } from '../config/database'
 
 // Default stages per pipeline type
 const DEFAULT_PIPELINE_STAGES: Record<string, Array<{ name: string; order: number; color: string; isWinStage?: boolean; isLostStage?: boolean }>> = {

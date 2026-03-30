@@ -514,7 +514,7 @@ export function CustomFieldsManager() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {newField.options.map((option: string, index: number) => (
-                        <Badge key={index} variant="secondary" className="gap-2">
+                        <Badge key={option} variant="secondary" className="gap-2">
                           {option}
                           <button
                             onClick={() => handleRemoveOption(index)}

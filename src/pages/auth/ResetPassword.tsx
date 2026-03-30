@@ -113,8 +113,8 @@ const ResetPassword = () => {
           {/* Password Requirements */}
           <div className="p-3 bg-muted rounded-lg space-y-2">
             <p className="text-sm font-medium mb-2">Password requirements:</p>
-            {passwordRequirements.map((req, index) => (
-              <div key={index} className="flex items-center space-x-2 text-sm">
+            {passwordRequirements.map((req) => (
+              <div key={req.text} className="flex items-center space-x-2 text-sm">
                 <CheckCircle
                   className={`h-4 w-4 ${req.met ? 'text-green-600' : 'text-muted-foreground'}`}
                 />

@@ -23,6 +23,9 @@ const MONTH_OPTIONS = [
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: '#6b7280', MEDIUM: '#3b82f6', HIGH: '#f59e0b', URGENT: '#ef4444',
 };
+const PRIORITY_LABELS: Record<string, string> = {
+  LOW: '○ Low', MEDIUM: '◐ Medium', HIGH: '◑ High', URGENT: '● Urgent',
+};
 
 const FollowUpAnalytics = () => {
   const [months, setMonths] = useState(3);
@@ -51,7 +54,7 @@ const FollowUpAnalytics = () => {
   if (isError) {
     return (
       <div className="p-6">
-        <ErrorBanner message={(error as Error)?.message || 'Failed to load follow-up analytics'} retry={refetch} />
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load follow-up analytics'} retry={refetch} />
       </div>
     );
   }
@@ -161,6 +164,7 @@ const FollowUpAnalytics = () => {
           </CardHeader>
           <CardContent>
             {statusData.length > 0 ? (
+              <div aria-label="Follow-up status distribution pie chart">
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
@@ -170,15 +174,16 @@ const FollowUpAnalytics = () => {
                     outerRadius={90}
                     dataKey="value"
                     nameKey="name"
-                    label={({ name, percent }: any) => `${name} (${formatRate(percent * 100, 0)}%)`}
+                    label={({ name, percent }: { name: string; percent: number }) => `${name} (${formatRate(percent * 100, 0)}%)`}
                   >
-                    {statusData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
+                    {statusData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
+              </div>
             ) : (
               <p className="text-gray-500 text-center py-8">No data</p>
             )}
@@ -195,6 +200,7 @@ const FollowUpAnalytics = () => {
             <CardDescription>How follow-ups are delivered</CardDescription>
           </CardHeader>
           <CardContent>
+            <div aria-label="Follow-up channel usage bar chart">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={channelData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -204,6 +210,7 @@ const FollowUpAnalytics = () => {
                 <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -219,6 +226,7 @@ const FollowUpAnalytics = () => {
             <CardDescription>Follow-up creation vs completion over time</CardDescription>
           </CardHeader>
           <CardContent>
+            <div aria-label="Monthly follow-up trend line chart">
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={monthlyTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -231,6 +239,7 @@ const FollowUpAnalytics = () => {
                 <Line type="monotone" dataKey="fired" stroke="#f59e0b" strokeWidth={2} name="Fired" />
               </LineChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -243,10 +252,10 @@ const FollowUpAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {byPriority.map((p: any) => (
+              {byPriority.map((p: { priority: string; completed: number; total: number; completionRate: number }) => (
                 <div key={p.priority} className="flex items-center gap-4">
                   <div className="w-20 text-sm font-medium" style={{ color: PRIORITY_COLORS[p.priority] || '#6b7280' }}>
-                    {p.priority}
+                    {PRIORITY_LABELS[p.priority] || p.priority}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-1">

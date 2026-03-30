@@ -2,6 +2,7 @@ import { Shield, Database, Settings, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { RoleBasedSection } from '@/components/auth/RoleBasedLayout';
@@ -35,12 +36,10 @@ const AdminPanel = () => {
       <OrganizationHeader />
 
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Admin Panel</h1>
-        <p className="text-muted-foreground mt-2">
-          Organization overview, statistics, and system administration
-        </p>
-      </div>
+      <PageHeader
+        title="Admin Panel"
+        subtitle="Organization overview, statistics, and system administration"
+      />
 
       {/* Real-time Stats */}
       <AdminStats />

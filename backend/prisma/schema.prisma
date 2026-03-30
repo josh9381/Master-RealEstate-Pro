@@ -1073,9 +1073,21 @@ model Organization {
   SupportTicket    SupportTicket[]
   DataBackup       DataBackup[]
   MessageTemplate  MessageTemplate[]
+  SystemSettings   SystemSettings?
 
   @@index([isActive])
   @@index([slug])
+}
+
+model SystemSettings {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  settings       Json         @default("{}")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model Subscription {

@@ -93,6 +93,7 @@ export interface SMSOptions {
   userId?: string; // User ID to fetch custom config
   organizationId: string; // Organization ID for multi-tenancy
   mediaUrl?: string[]; // For MMS
+  skipRateLimit?: boolean; // Skip per-phone rate limit (e.g., for system notifications)
 }
 
 export interface SMSResult {
@@ -101,11 +102,35 @@ export interface SMSResult {
   error?: string;
 }
 
+/** Max SMS messages per phone number per day (prevents spam) */
+const SMS_PER_PHONE_DAILY_LIMIT = parseInt(process.env.SMS_PER_PHONE_DAILY_LIMIT || '10', 10);
+
+/**
+ * Check per-phone-number daily rate limit
+ */
+async function checkPerPhoneRateLimit(phone: string, organizationId: string): Promise<{ allowed: boolean; sent: number }> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const sent = await prisma.message.count({
+    where: {
+      type: 'SMS',
+      direction: 'OUTBOUND',
+      toAddress: phone,
+      organizationId,
+      createdAt: { gte: startOfDay },
+      status: { in: ['SENT', 'PENDING', 'DELIVERED'] },
+    },
+  });
+
+  return { allowed: sent < SMS_PER_PHONE_DAILY_LIMIT, sent };
+}
+
 /**
  * Send an SMS via Twilio
  */
 export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
-  const { to, message, leadId, campaignId, userId, organizationId, mediaUrl } = options;
+  const { to, message, leadId, campaignId, userId, organizationId, mediaUrl, skipRateLimit } = options;
 
   try {
     // Check SMS opt-out / suppression before sending (#20)
@@ -117,6 +142,16 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
       if (lead?.smsOptOutAt) {
         logger.warn(`[SMS] Lead ${leadId} has opted out of SMS. Blocking send.`);
         return { success: false, error: 'Lead has opted out of SMS communications' };
+      }
+    }
+
+    // Per-phone-number daily rate limit to prevent SMS spam
+    if (!skipRateLimit) {
+      const cleanedTo = to.replace(/[\s-()]/g, '');
+      const rateCheck = await checkPerPhoneRateLimit(cleanedTo, organizationId);
+      if (!rateCheck.allowed) {
+        logger.warn(`[SMS] Per-phone daily limit reached for ${cleanedTo} (${rateCheck.sent}/${SMS_PER_PHONE_DAILY_LIMIT})`);
+        return { success: false, error: `Daily SMS limit reached for this phone number (${rateCheck.sent}/${SMS_PER_PHONE_DAILY_LIMIT})` };
       }
     }
 

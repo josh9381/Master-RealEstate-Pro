@@ -18,7 +18,7 @@ router.use(webhookLimiter);
 router.post('/twilio/sms/:userId', verifyTwilioSignature, handleTwilioSms);
 router.post('/twilio/status', verifyTwilioSignature, handleTwilioStatus);
 router.post('/sendgrid', verifySendGridSignature, handleSendGridEvent);
-router.post('/sendgrid/inbound', handleSendGridInbound);
+router.post('/sendgrid/inbound', verifySendGridSignature, handleSendGridInbound);
 router.post('/workflow/:webhookKey', handleWorkflowTrigger);
 router.post('/stripe', handleStripeWebhook);
 

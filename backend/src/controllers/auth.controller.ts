@@ -722,6 +722,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
  * Logout (#85)
  * POST /api/auth/logout
  * Revokes the refresh token server-side so it cannot be reused.
+ * Also denies the current access token to prevent use after logout.
  */
 export async function logout(req: Request, res: Response): Promise<void> {
   const { refreshToken } = req.body;
@@ -730,6 +731,16 @@ export async function logout(req: Request, res: Response): Promise<void> {
     await revokeRefreshToken(refreshToken);
   } else if (req.user) {
     await revokeAllUserTokens(req.user.userId);
+  }
+
+  // Deny the current access token so it can't be used after logout
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+    if (token) {
+      const { denyAccessToken } = await import('../utils/jwt');
+      await denyAccessToken(token).catch(() => {}); // Non-blocking
+    }
   }
 
   // Audit: logout

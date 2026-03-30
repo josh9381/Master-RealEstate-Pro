@@ -1139,8 +1139,8 @@ const WorkflowBuilder = () => {
                   <div className="flex-1">
                     <h4 className="text-sm font-semibold text-yellow-900 mb-1">Workflow Validation Issues</h4>
                     <ul className="text-xs text-yellow-800 space-y-1">
-                      {validationErrors.map((error, index) => (
-                        <li key={index}>• {error}</li>
+                      {validationErrors.map((error) => (
+                        <li key={error}>• {error}</li>
                       ))}
                     </ul>
                   </div>

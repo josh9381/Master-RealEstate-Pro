@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageEmptyState } from '@/components/ui/PageEmptyState'
 import {
   Bell,
   Check,
@@ -21,7 +23,6 @@ import {
   Calendar,
   Search,
   Archive,
-  Loader2,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
@@ -215,10 +216,10 @@ export function NotificationsPage() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <p className="mt-2 text-muted-foreground">Stay updated with all your activities and updates</p>
-        </div>
+        <PageHeader
+          title="Notifications"
+          subtitle="Stay updated with all your activities and updates"
+        />
         <ErrorBanner
           message={error instanceof Error ? error.message : 'Failed to load notifications'}
           retry={() => refetch()}
@@ -230,34 +231,32 @@ export function NotificationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <p className="mt-2 text-muted-foreground">
-            Stay updated with all your activities and updates
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {selectedIds.length > 0 && (
-            <>
-              <Button variant="outline" onClick={handleMarkSelectedAsRead}>
-                <Check className="mr-2 h-4 w-4" />
-                Mark as Read ({selectedIds.length})
+      <PageHeader
+        title="Notifications"
+        subtitle="Stay updated with all your activities and updates"
+        actions={
+          <div className="flex gap-2">
+            {selectedIds.length > 0 && (
+              <>
+                <Button variant="outline" onClick={handleMarkSelectedAsRead}>
+                  <Check className="mr-2 h-4 w-4" />
+                  Mark as Read ({selectedIds.length})
+                </Button>
+                <Button variant="outline" onClick={handleDeleteSelected}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete ({selectedIds.length})
+                </Button>
+              </>
+            )}
+            {unreadCount > 0 && selectedIds.length === 0 && (
+              <Button onClick={handleMarkAllAsRead}>
+                <CheckCheck className="mr-2 h-4 w-4" />
+                Mark All Read
               </Button>
-              <Button variant="outline" onClick={handleDeleteSelected}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete ({selectedIds.length})
-              </Button>
-            </>
-          )}
-          {unreadCount > 0 && selectedIds.length === 0 && (
-            <Button onClick={handleMarkAllAsRead}>
-              <CheckCheck className="mr-2 h-4 w-4" />
-              Mark All Read
-            </Button>
-          )}
-        </div>
-      </div>
+            )}
+          </div>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -389,16 +388,24 @@ export function NotificationsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin opacity-50" />
-              <p className="text-lg font-medium">Loading notifications...</p>
+            <div className="space-y-4 animate-pulse">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="flex items-start gap-4 p-4 rounded-lg border">
+                  <div className="h-10 w-10 bg-muted rounded-full shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                  </div>
+                  <div className="h-3 bg-muted rounded w-16" />
+                </div>
+              ))}
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">No notifications</p>
-              <p className="text-sm mt-1">You're all caught up!</p>
-            </div>
+            <PageEmptyState
+              icon={<Bell className="h-12 w-12" />}
+              title="No notifications"
+              description="You're all caught up!"
+            />
           ) : (
             <div className="space-y-2">
               {filteredNotifications.map((notification: Notification) => (

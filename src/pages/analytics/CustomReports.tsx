@@ -35,7 +35,7 @@ interface ReportWidget {
   value?: number;
 }
 
-const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#6366F1'];
+import { CHART_COLORS } from '@/lib/chartColors';
 
 const FREQUENCIES = [
   { value: 'DAILY', label: 'Daily' },
@@ -59,6 +59,7 @@ const DAY_OPTIONS = [
 const ScheduledReportsSection = () => {
   const queryClient = useQueryClient();
   const showConfirm = useConfirm();
+  const { toast } = useToast();
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({
     reportType: 'leads' as string,
@@ -79,7 +80,7 @@ const ScheduledReportsSection = () => {
   });
 
   const createMut = useMutation({
-    mutationFn: (data: any) => reportSchedulesApi.create(data),
+    mutationFn: (data: Parameters<typeof reportSchedulesApi.create>[0]) => reportSchedulesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['report-schedules'] });
       setShowScheduleForm(false);
@@ -87,7 +88,7 @@ const ScheduledReportsSection = () => {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => reportSchedulesApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => reportSchedulesApi.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['report-schedules'] }),
   });
 
@@ -100,20 +101,25 @@ const ScheduledReportsSection = () => {
 
   const handleCreateSchedule = (e: React.FormEvent) => {
     e.preventDefault();
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const recipients = scheduleForm.recipients.split(',').map((r: string) => r.trim()).filter(Boolean);
+    const invalid = recipients.filter(r => !EMAIL_RE.test(r));
+    if (invalid.length > 0) {
+      toast.error(`Invalid email(s): ${invalid.join(', ')}`);
+      return;
+    }
     createMut.mutate({
-      reportType: scheduleForm.reportType,
+      savedReportId: scheduleForm.reportType,
       frequency: scheduleForm.frequency,
       timeOfDay: scheduleForm.timeOfDay,
       dayOfWeek: scheduleForm.dayOfWeek,
       dayOfMonth: scheduleForm.dayOfMonth,
       recipients,
-      isActive: true,
     });
   };
 
-  const toggleActive = (sched: any) => {
-    updateMut.mutate({ id: sched.id, data: { isActive: !sched.isActive } });
+  const toggleActive = (sched: Record<string, unknown>) => {
+    updateMut.mutate({ id: sched.id as string, data: { isActive: !sched.isActive } });
   };
 
   return (
@@ -217,28 +223,28 @@ const ScheduledReportsSection = () => {
           {schedules.length === 0 && !showScheduleForm && (
             <p className="text-sm text-gray-500 text-center py-4">No scheduled reports yet. Click "New Schedule" to create one.</p>
           )}
-          {schedules.map((sched: any) => (
-            <div key={sched.id} className={`flex items-center justify-between p-4 border rounded-lg ${!sched.isActive ? 'opacity-60' : ''}`}>
+          {schedules.map((sched: Record<string, unknown>) => (
+            <div key={sched.id as string} className={`flex items-center justify-between p-4 border rounded-lg ${!sched.isActive ? 'opacity-60' : ''}`}>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="font-semibold capitalize">{sched.reportType || sched.savedReport?.name || 'Report'} Report</h4>
+                  <h4 className="font-semibold capitalize">{(sched.reportType as string) || ((sched.savedReport as Record<string, string>)?.name) || 'Report'} Report</h4>
                   <Badge variant={sched.isActive ? 'success' : 'secondary'}>
                     {sched.isActive ? 'Active' : 'Paused'}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {sched.frequency} at {sched.timeOfDay || '08:00'}
+                  {sched.frequency as string} at {(sched.timeOfDay as string) || '08:00'}
                   {sched.dayOfWeek != null && (sched.frequency === 'WEEKLY' || sched.frequency === 'BIWEEKLY')
                     ? ` on ${DAY_OPTIONS.find(d => d.value === sched.dayOfWeek)?.label || ''}`
                     : ''}
                 </p>
                 <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
-                  {sched.recipients?.length > 0 && <span>To: {sched.recipients.join(', ')}</span>}
-                  {sched.nextRunAt && (
+                  {Array.isArray(sched.recipients) && sched.recipients.length > 0 && <span>To: {(sched.recipients as string[]).join(', ')}</span>}
+                  {!!sched.nextRunAt && (
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      Next: {new Date(sched.nextRunAt).toLocaleDateString()}
+                      Next: {new Date(sched.nextRunAt as string).toLocaleDateString()}
                     </span>
                   )}
                 </div>
@@ -251,7 +257,7 @@ const ScheduledReportsSection = () => {
                   variant="ghost"
                   size="sm"
                   className="text-red-500 hover:text-red-700"
-                  onClick={async () => { if (await showConfirm({ title: 'Delete Schedule', message: 'Delete this schedule?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMut.mutate(sched.id); }}
+                  onClick={async () => { if (await showConfirm({ title: 'Delete Schedule', message: 'Delete this schedule?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMut.mutate(sched.id as string); }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -539,8 +545,8 @@ const CustomReports = () => {
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={chartData} cx="50%" cy="50%" outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                {chartData.map((_: ChartDataPoint, i: number) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                {chartData.map((d: ChartDataPoint, i: number) => (
+                  <Cell key={d.name || `cell-${i}`} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip />
@@ -560,7 +566,7 @@ const CustomReports = () => {
           </ResponsiveContainer>
         );
       case 'gauge': {
-        const gaugeValue = widget.value || (chartData[0]?.value ?? 0);
+        const gaugeValue = Math.min(100, Math.max(0, widget.value || (chartData[0]?.value ?? 0)));
         return (
           <div className="h-32 flex flex-col items-center justify-center">
             <div className="relative w-24 h-24">
@@ -579,10 +585,10 @@ const CustomReports = () => {
         return (
           <div className="overflow-x-auto max-h-48">
             <table className="w-full text-xs">
-              <thead><tr className="border-b">{Object.keys(chartData[0] || {}).map(k => <th key={k} className="text-left p-1 font-medium">{k}</th>)}</tr></thead>
+              <thead><tr className="border-b">{Object.keys(chartData[0] || {}).map(k => <th key={k} scope="col" className="text-left p-1 font-medium">{k}</th>)}</tr></thead>
               <tbody>
                 {chartData.slice(0, 10).map((row: ChartDataPoint, i: number) => (
-                  <tr key={i} className="border-b">{Object.values(row).map((v: string | number, j: number) => <td key={j} className="p-1">{v}</td>)}</tr>
+                  <tr key={row.name || `row-${i}`} className="border-b">{Object.values(row).map((v: string | number, j: number) => <td key={j} className="p-1">{v}</td>)}</tr>
                 ))}
               </tbody>
             </table>
@@ -593,7 +599,7 @@ const CustomReports = () => {
         return (
           <div className="space-y-1 py-2">
             {chartData.map((d: ChartDataPoint, i: number) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={d.name || `funnel-${i}`} className="flex items-center gap-2">
                 <span className="text-xs w-16 truncate">{d.name}</span>
                 <div className="flex-1 h-6 bg-muted rounded overflow-hidden">
                   <div className="h-full rounded" style={{ width: `${(d.value / maxFunnel) * 100}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
@@ -632,12 +638,12 @@ const CustomReports = () => {
         if (parsed.name) setReportName(parsed.name);
         if (parsed.category) setReportCategory(parsed.category);
         if (Array.isArray(parsed.widgets)) {
-          const imported: ReportWidget[] = parsed.widgets.map((w: any, i: number) => {
+          const imported: ReportWidget[] = parsed.widgets.map((w: Record<string, unknown>, i: number) => {
             const widget: ReportWidget = {
               id: `widget-import-${Date.now()}-${i}`,
-              type: w.type || 'bar-chart',
-              dataSource: w.dataSource || null,
-              label: w.label || 'Imported Widget',
+              type: ((w.type as string) || 'bar-chart') as WidgetType,
+              dataSource: ((w.dataSource as string) || null) as DataSourceType | null,
+              label: (w.label as string) || 'Imported Widget',
               data: null,
               value: undefined,
             };
@@ -789,30 +795,30 @@ const CustomReports = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {savedReports.length > 0 ? savedReports.map((report: any) => (
-                  <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {savedReports.length > 0 ? savedReports.map((report: Record<string, unknown>) => (
+                  <div key={report.id as string} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
                         <BarChart3 className="h-6 w-6 text-blue-600" />
                       </div>
                       <div>
-                        <h4 className="font-semibold">{report.name}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">{report.description}</p>
+                        <h4 className="font-semibold">{report.name as string}</h4>
+                        <p className="text-sm text-muted-foreground mt-1">{report.description as string}</p>
                         <div className="flex items-center space-x-2 mt-2">
-                          <Badge variant="secondary">{(report as any).type || 'leads'}</Badge>
+                          <Badge variant="secondary">{(report.type as string) || 'leads'}</Badge>
                           <span className="text-xs text-muted-foreground">
-                            Updated: {new Date((report as any).updatedAt || (report as any).lastRun || '').toLocaleDateString()}
+                            Updated: {new Date(((report.updatedAt as string) || (report.lastRun as string) || '')).toLocaleDateString()}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            by {(report as any).user?.firstName ? `${(report as any).user.firstName} ${(report as any).user.lastName}` : (report as any).creator || 'Unknown'}
+                            by {(report.user as Record<string, unknown>)?.firstName ? `${(report.user as Record<string, unknown>).firstName} ${(report.user as Record<string, unknown>).lastName}` : (report.creator as string) || 'Unknown'}
                           </span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button variant="outline" size="sm" onClick={() => {
-                        const config = (report as any).config || {};
-                        const results: Record<string, unknown> = { name: report.name, type: config.type || report.type, generatedAt: new Date().toISOString() };
+                        const config = (report.config as Record<string, unknown>) || {};
+                        const results: Record<string, unknown> = { name: report.name, type: (config.type as string) || report.type, generatedAt: new Date().toISOString() };
                         if (config.type === 'leads' || report.type === 'leads') {
                           results.totalLeads = leadData?.total || 0;
                           results.conversionRate = leadData?.conversionRate || 0;
@@ -828,22 +834,22 @@ const CustomReports = () => {
                         Run Report
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => {
-                        const config = (report as any).config || {};
+                        const config = (report.config as Record<string, unknown>) || {};
                         setReportConfig({
-                          name: report.name,
-                          type: config.type || report.type || 'leads',
-                          groupBy: config.groupBy || 'none',
-                          metrics: config.metrics || [],
-                          dateRange: config.dateRange || '30d',
+                          name: report.name as string,
+                          type: (config.type as string) || (report.type as string) || 'leads',
+                          groupBy: (config.groupBy as string) || 'none',
+                          metrics: (config.metrics as string[]) || [],
+                          dateRange: (config.dateRange as string) || '30d',
                         });
-                        setEditingReportId(report.id);
+                        setEditingReportId(report.id as string);
                         // Scroll to the Quick Report Builder
                         document.getElementById('report-builder')?.scrollIntoView({ behavior: 'smooth' });
                         toast.info(`Editing: ${report.name}`);
                       }}>
                         Edit
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => deleteReport(report.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => deleteReport(report.id as string)}>
                         Delete
                       </Button>
                     </div>

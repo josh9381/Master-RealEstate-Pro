@@ -281,9 +281,9 @@ export function OnboardingTour({ forceShow, onComplete }: OnboardingTourProps) {
 
         {/* Progress dots */}
         <div className="flex items-center gap-1.5 mb-4">
-          {TOUR_STEPS.map((_, i) => (
+          {TOUR_STEPS.map((step, i) => (
             <div
-              key={i}
+              key={step.id}
               className={`h-1.5 rounded-full transition-all duration-300 ${
                 i === currentStep
                   ? 'w-6 bg-primary'

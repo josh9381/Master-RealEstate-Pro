@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { leadsApi, aiApi } from '@/lib/api';
 import { calcRate, formatRate } from '@/lib/metricsCalculator';
+import { CHART_COLORS } from '@/lib/chartColors';
 import { useToast } from '@/hooks/useToast';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -553,8 +554,8 @@ const LeadScoring = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {scoreFactors.map((factor, index) => (
-                <div key={index} className="space-y-2">
+              {scoreFactors.map((factor) => (
+                <div key={factor.factor} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{factor.factor}</span>
                     <Badge variant="outline">{factor.weight}%</Badge>
@@ -679,12 +680,12 @@ const LeadScoring = () => {
 
                 {/* Component bars */}
                 <div className="space-y-3">
-                  {factorBreakdown.data.components?.map((c: { name: string; count: number; weight: number; points: number }, i: number) => {
+                  {factorBreakdown.data.components?.map((c: { name: string; count: number; weight: number; points: number }) => {
                     const maxPoints = 50 // Scale bar to reasonable max
                     const barWidth = Math.min(100, calcRate(Math.abs(c.points), maxPoints, 0))
                     const isNegative = c.points < 0
                     return (
-                      <div key={i} className="space-y-1">
+                      <div key={c.name} className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-medium">{c.name}</span>
                           <span className={`font-bold tabular-nums ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
@@ -822,7 +823,7 @@ const LeadScoring = () => {
                         dataKey="value"
                       >
                         {chartsData.featureImportance.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color || ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'][index % 6]} />
+                          <Cell key={`cell-${index}`} fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip />
@@ -844,8 +845,8 @@ const LeadScoring = () => {
             <CardContent>
               {chartsData?.dataQuality && chartsData.dataQuality.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-4">
-                  {chartsData.dataQuality.map((item, index) => (
-                    <div key={index} className="space-y-2">
+                  {chartsData.dataQuality.map((item) => (
+                    <div key={item.metric} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">{item.metric}</span>
                         {item.status === 'excellent' ? (
@@ -982,8 +983,8 @@ const LeadScoring = () => {
             <CardContent>
               {trainingData && trainingData.length > 0 ? (
                 <div className="space-y-4">
-                  {trainingData.map((model, index) => (
-                    <div key={index} className="space-y-2">
+                  {trainingData.map((model) => (
+                    <div key={model.name} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Activity className="h-4 w-4 text-muted-foreground" />

@@ -130,7 +130,7 @@ export function Breadcrumbs() {
         <Home className="h-4 w-4" />
       </Link>
       {displayItems.map((item, i) => (
-        <span key={i} className="flex items-center gap-1.5">
+        <span key={`${item.path}-${item.label}`} className="flex items-center gap-1.5">
           <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
           {item.path && i < displayItems.length - 1 ? (
             <Link to={item.path} className="hover:text-foreground transition-colors">

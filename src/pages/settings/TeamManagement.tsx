@@ -19,6 +19,9 @@ const TeamManagement = () => {
   const [showActivityLogs, setShowActivityLogs] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<{ id: number; name: string; email: string; role: string } | null>(null);
+  const [editRole, setEditRole] = useState('Sales Rep');
   const [searchQuery, setSearchQuery] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Sales Rep');
@@ -114,13 +117,32 @@ const TeamManagement = () => {
   const editMember = (id: number) => {
     const member = teamMembers.find(m => m.id === id);
     if (member) {
-      toast.info(`Opening edit dialog for ${member.name}`);
-      // TODO: Implement edit member modal
+      setEditingMember(member);
+      setEditRole(member.role);
+      setShowEditModal(true);
+    }
+  };
+
+  const handleEditMemberSave = async () => {
+    if (!editingMember) return;
+    setSaving(true);
+    try {
+      await teamsApi.updateMemberRole('1', String(editingMember.id), editRole);
+      setTeamMembers(teamMembers.map(m => m.id === editingMember.id ? { ...m, role: editRole } : m));
+      toast.success(`Updated ${editingMember.name}'s role to ${editRole}`);
+      setShowEditModal(false);
+      setEditingMember(null);
+      queryClient.invalidateQueries({ queryKey: ['team', 'members'] });
+    } catch (error) {
+      logger.error('Failed to update member:', error);
+      toast.error('Failed to update team member');
+    } finally {
+      setSaving(false);
     }
   };
 
   const bulkImportUsers = () => {
-    toast.success('3 users imported successfully');
+    toast.info('Bulk import functionality coming soon');
     setShowBulkImport(false);
   };
 
@@ -157,6 +179,53 @@ const TeamManagement = () => {
         <LoadingSkeleton rows={5} />
       ) : (
         <>
+      {/* Edit Member Modal */}
+      {showEditModal && editingMember && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Edit Team Member</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => { setShowEditModal(false); setEditingMember(null); }}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Name</label>
+                <Input value={editingMember.name} disabled />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Email</label>
+                <Input value={editingMember.email} disabled />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Role</label>
+                <select
+                  className="w-full px-4 py-2 border rounded-md"
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
+                >
+                  <option>Sales Rep</option>
+                  <option>Manager</option>
+                  <option>Admin</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={handleEditMemberSave} disabled={saving}>
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button variant="outline" onClick={() => { setShowEditModal(false); setEditingMember(null); }} disabled={saving}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Invite Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -522,8 +591,8 @@ const TeamManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {activityLogs.map((log, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+              {activityLogs.length > 0 ? activityLogs.map((log) => (
+                <div key={`${log.user}-${log.time}`} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <Activity className="h-4 w-4 text-primary" />
                     <div>
@@ -533,7 +602,12 @@ const TeamManagement = () => {
                   </div>
                   <span className="text-xs text-muted-foreground">{log.time}</span>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No recent activity logged</p>
+                </div>
+              )}
             </div>
             <Button variant="outline" className="w-full mt-4">
               View All Activity
@@ -558,8 +632,8 @@ const TeamManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {leaderboardData.map((member, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+              {leaderboardData.length > 0 ? leaderboardData.map((member, index) => (
+                <div key={member.name} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-bold">
                       {index + 1}
@@ -578,7 +652,12 @@ const TeamManagement = () => {
                   </div>
                   {index === 0 && <Award className="h-6 w-6 text-yellow-500" />}
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Award className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No performance data available yet</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

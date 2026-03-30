@@ -33,6 +33,8 @@ const GoogleIntegration = () => {
   const [contactsEnabled, setContactsEnabled] = useState(false);
   const [syncContacts, setSyncContacts] = useState(false);
   const [autoImport, setAutoImport] = useState(false);
+  const [syncDirection, setSyncDirection] = useState('crm-to-google');
+  const [includeCompanyInfo, setIncludeCompanyInfo] = useState(false);
 
   const { data: integrationData, isLoading: loading, isFetching, refetch } = useQuery({
     queryKey: ['settings', 'integration', 'google'],
@@ -65,6 +67,8 @@ const GoogleIntegration = () => {
           setContactsEnabled(s.contacts.enabled ?? false);
           setSyncContacts(s.contacts.syncContacts ?? false);
           setAutoImport(s.contacts.autoImport ?? false);
+          if (s.contacts.syncDirection) setSyncDirection(s.contacts.syncDirection);
+          if (s.contacts.includeCompanyInfo != null) setIncludeCompanyInfo(s.contacts.includeCompanyInfo);
         }
       }
     }
@@ -109,7 +113,7 @@ const GoogleIntegration = () => {
       await settingsApi.updateIntegrationSettings('google', {
         gmail: { enabled: gmailEnabled, syncEmails, trackEmails, createLeads },
         calendar: { enabled: calendarEnabled, syncCalendar, autoCreateEvents },
-        contacts: { enabled: contactsEnabled, syncContacts, autoImport },
+        contacts: { enabled: contactsEnabled, syncContacts, autoImport, syncDirection, includeCompanyInfo },
       });
       toast.success('Google integration settings saved');
       queryClient.invalidateQueries({ queryKey: ['settings', 'integration', 'google'] });
@@ -215,7 +219,7 @@ const GoogleIntegration = () => {
                       onChange={(e) => setGmailEnabled(e.target.checked)}
                       className="sr-only peer" 
                     />
-                    <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-12 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white dark:after:bg-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
               </div>
@@ -299,7 +303,7 @@ const GoogleIntegration = () => {
                   onChange={(e) => setCalendarEnabled(e.target.checked)}
                   className="sr-only peer" 
                 />
-                <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-12 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white dark:after:bg-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           </div>
@@ -388,7 +392,7 @@ const GoogleIntegration = () => {
                   onChange={(e) => setContactsEnabled(e.target.checked)}
                   className="sr-only peer" 
                 />
-                <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-12 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white dark:after:bg-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           </div>
@@ -401,10 +405,14 @@ const GoogleIntegration = () => {
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Sync Direction</label>
-            <select className="w-full px-3 py-2 border rounded-lg">
-              <option>CRM to Google only</option>
-              <option>Google to CRM only</option>
-              <option>Two-way sync</option>
+            <select 
+              value={syncDirection}
+              onChange={(e) => setSyncDirection(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="crm-to-google">CRM to Google only</option>
+              <option value="google-to-crm">Google to CRM only</option>
+              <option value="two-way">Two-way sync</option>
             </select>
           </div>
           <div>
@@ -420,7 +428,12 @@ const GoogleIntegration = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input 
+                type="checkbox" 
+                checked={includeCompanyInfo}
+                onChange={(e) => setIncludeCompanyInfo(e.target.checked)}
+                className="rounded" 
+              />
               <span className="text-sm">Include company information</span>
             </label>
           </div>
@@ -484,15 +497,17 @@ const GoogleIntegration = () => {
                 'https://www.googleapis.com/auth/gmail.send',
                 'https://www.googleapis.com/auth/calendar',
                 'https://www.googleapis.com/auth/contacts.readonly',
-              ].map((scope, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+              ].map((scope) => (
+                <div key={scope} className="flex items-center justify-between p-2 bg-muted rounded">
                   <span className="text-xs font-mono">{scope}</span>
                   <Badge variant="success">Authorized</Badge>
                 </div>
               ))}
             </div>
           </div>
-          <Button>Update API Settings</Button>
+          <Button onClick={() => toast.info('API Configuration', 'API credentials are managed through OAuth connection above.')}>
+            Update API Settings
+          </Button>
         </CardContent>
       </Card>
 
@@ -503,19 +518,10 @@ const GoogleIntegration = () => {
           <CardDescription>Google API usage this month</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-blue-600">2,345</p>
-              <p className="text-sm text-muted-foreground mt-1">Gmail API Calls</p>
-            </div>
-            <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-green-600">1,567</p>
-              <p className="text-sm text-muted-foreground mt-1">Calendar API Calls</p>
-            </div>
-            <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-purple-600">890</p>
-              <p className="text-sm text-muted-foreground mt-1">Contacts API Calls</p>
-            </div>
+          <div className="p-4 bg-muted rounded-lg text-center">
+            <p className="text-sm text-muted-foreground">
+              Usage statistics will be available once Google API tracking is configured.
+            </p>
           </div>
         </CardContent>
       </Card>

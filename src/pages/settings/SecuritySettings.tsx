@@ -274,8 +274,8 @@ const SecuritySettings = () => {
         <CardContent>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-green-100 rounded-full">
-                <Shield className="h-6 w-6 text-green-600" />
+              <div className={`p-3 ${securityScore >= 80 ? 'bg-green-100' : securityScore >= 50 ? 'bg-yellow-100' : 'bg-red-100'} rounded-full`}>
+                <Shield className={`h-6 w-6 ${securityScore >= 80 ? 'text-green-600' : securityScore >= 50 ? 'text-yellow-600' : 'text-red-600'}`} />
               </div>
               <div>
                 <div className="text-3xl font-bold">{securityScore || '—'}/100</div>
@@ -298,7 +298,7 @@ const SecuritySettings = () => {
               </span>
             </div>
             <div className="flex items-center justify-between text-muted-foreground">
-              <span>✓ Strong password</span>
+              <span>{lastPasswordChange && (Date.now() - new Date(lastPasswordChange).getTime()) < 90 * 24 * 60 * 60 * 1000 ? '✓ Strong password' : '⚠ Consider updating your password'}</span>
             </div>
             <div className="flex items-center justify-between text-warning">
               <span>⚠ Last password change: {lastPasswordChange ? new Date(lastPasswordChange).toLocaleDateString() : 'Unknown'}</span>
@@ -380,7 +380,7 @@ const SecuritySettings = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Enter verification code</label>
                 <Input
-                  type="password"
+                  type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   placeholder="000000"
@@ -452,7 +452,7 @@ const SecuritySettings = () => {
                       Your account is protected with two-factor authentication
                     </p>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => { setShow2FASetup(false); handleStart2FASetup(); }}>
+                      <Button variant="outline" size="sm" onClick={() => handleStart2FASetup()}>
                         Reconfigure
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setShowDisable2FA(true)}>

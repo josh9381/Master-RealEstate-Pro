@@ -110,7 +110,7 @@ export function LeadsTable({
               </div>
             </TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
+            <TableHead className="hidden lg:table-cell">Phone</TableHead>
             <TableHead className="cursor-pointer" onClick={() => onSort('score')}>
               <div className="flex items-center">
                 Score
@@ -123,14 +123,14 @@ export function LeadsTable({
                 {getSortIcon('status')}
               </div>
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => onSort('source')}>
+            <TableHead className="hidden md:table-cell cursor-pointer" onClick={() => onSort('source')}>
               <div className="flex items-center">
                 Source
                 {getSortIcon('source')}
               </div>
             </TableHead>
-            <TableHead>Tags</TableHead>
-            <TableHead>Assigned To</TableHead>
+            <TableHead className="hidden lg:table-cell">Tags</TableHead>
+            <TableHead className="hidden xl:table-cell">Assigned To</TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -171,7 +171,7 @@ export function LeadsTable({
                 </TableCell>
                 <TableCell>{lead.company}</TableCell>
                 <TableCell className="text-muted-foreground">{lead.email}</TableCell>
-                <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
+                <TableCell className="hidden lg:table-cell text-muted-foreground">{lead.phone}</TableCell>
                 <TableCell>
                   <ScoreBadge score={lead.score || 0} size="sm" />
                 </TableCell>
@@ -180,8 +180,8 @@ export function LeadsTable({
                     {lead.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="capitalize">{lead.source}</TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell capitalize">{lead.source}</TableCell>
+                <TableCell className="hidden lg:table-cell">
                   <div className="flex flex-wrap gap-1">
                     {(lead.tags || []).slice(0, 2).map((tag: string | TagObject, idx: number) => {
                       const tagName = typeof tag === 'string' ? tag : tag?.name || 'Unknown'
@@ -203,7 +203,7 @@ export function LeadsTable({
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden xl:table-cell">
                   {(() => {
                     if (typeof lead.assignedTo === 'string') {
                       return lead.assignedTo

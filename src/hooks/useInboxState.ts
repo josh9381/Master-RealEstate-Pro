@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store/authStore'
 import { getUserItem } from '@/lib/userStorage'
 import type { Contact, InboxFilters } from '@/pages/communication/inbox'
 
-export type FolderFilter = 'inbox' | 'unread' | 'starred' | 'snoozed' | 'archived' | 'trash'
+export type FolderFilter = 'inbox' | 'unread' | 'starred' | 'snoozed' | 'drafts' | 'scheduled' | 'archived' | 'trash'
 
 /** Groups the ~31 useState hooks from CommunicationInbox into logical clusters. */
 export function useInboxState() {

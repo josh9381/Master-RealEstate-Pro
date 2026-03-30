@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express'
 import { authenticate } from '../../src/middleware/auth'
-import { verifyAccessToken } from '../../src/utils/jwt'
+import { verifyAccessToken, isTokenDenied } from '../../src/utils/jwt'
 
 jest.mock('../../src/utils/jwt')
 
 const mockVerify = verifyAccessToken as jest.MockedFunction<typeof verifyAccessToken>
+const mockIsTokenDenied = isTokenDenied as jest.MockedFunction<typeof isTokenDenied>
 
 function mockReqResNext() {
   const req = { headers: {} } as unknown as Request
@@ -48,12 +49,15 @@ describe('authenticate middleware', () => {
     expect(next).not.toHaveBeenCalled()
   })
 
-  it('attaches user and calls next() on valid token', () => {
+  it('attaches user and calls next() on valid token', async () => {
     const { req, res, next } = mockReqResNext()
     req.headers.authorization = 'Bearer valid-token'
     const payload = { userId: 'u1', email: 'a@b.com', role: 'ADMIN', organizationId: 'org-1' }
     mockVerify.mockReturnValue(payload)
+    mockIsTokenDenied.mockResolvedValue(false)
     authenticate(req, res, next)
+    // Wait for async denylist check to resolve
+    await new Promise(process.nextTick)
     expect(req.user).toEqual(payload)
     expect(next).toHaveBeenCalled()
   })
@@ -63,6 +67,7 @@ describe('authenticate middleware', () => {
     req.headers.authorization = 'Bearer my-jwt-token'
     const payload = { userId: 'u1', email: 'a@b.com', role: 'USER', organizationId: 'org-1' }
     mockVerify.mockReturnValue(payload)
+    mockIsTokenDenied.mockResolvedValue(false)
     authenticate(req, res, next)
     expect(mockVerify).toHaveBeenCalledWith('my-jwt-token')
   })

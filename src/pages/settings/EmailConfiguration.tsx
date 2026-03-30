@@ -437,7 +437,7 @@ const EmailConfiguration = () => {
             <Button onClick={handleSaveSettings} disabled={saveSettingsMutation.isPending}>
               {saveSettingsMutation.isPending ? 'Saving...' : 'Save Settings'}
             </Button>
-            <Button variant="outline" onClick={handleTestConnection} disabled={testingConnection}>
+            <Button variant="outline" onClick={handleTestConnection} disabled={testingConnection || !hasStoredKey} title={!hasStoredKey ? 'Save your API key first' : ''}>
               {testingConnection ? 'Testing...' : 'Send Test Email'}
             </Button>
           </div>

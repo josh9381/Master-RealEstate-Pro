@@ -1,11 +1,14 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { BarChart3, TrendingUp, Users, DollarSign, Mail, ClipboardCheck, Target, RefreshCw, ArrowRightLeft, Activity, FileBarChart, ChevronRight, Gauge, Crosshair, PiggyBank, PhoneForwarded, CalendarRange } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BarChart3, TrendingUp, Users, DollarSign, Mail, ClipboardCheck, Target, ArrowRightLeft, Activity, FileBarChart, ChevronRight, Gauge, Crosshair, PiggyBank, PhoneForwarded, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { CHART_COLORS } from '@/lib/chartColors';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   AreaChart,
   Area,
@@ -28,7 +31,6 @@ import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const AnalyticsDashboard = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
-  const navigate = useNavigate();
 
   const { data: analyticsResult, isLoading: loading, isError: analyticsError, error: analyticsErrorObj, refetch } = useQuery({
     queryKey: ['analytics-dashboard'],
@@ -63,11 +65,11 @@ const AnalyticsDashboard = () => {
   };
 
   // Revenue data from revenue timeline endpoint
-  const revenueData = revenueTimeline.map((m: any) => ({
+  const revenueData = useMemo(() => revenueTimeline.map((m: { month: string; totalRevenue?: number }) => ({
     month: m.month,
     revenue: m.totalRevenue || 0,
-  }));
-  const totalRevenue = campaignAnalytics?.performance?.totalRevenue || revenueTimeline.reduce((sum: number, m: any) => sum + (m.totalRevenue || 0), 0);
+  })), [revenueTimeline]);
+  const totalRevenue = campaignAnalytics?.performance?.totalRevenue || (revenueTimeline.length > 0 ? revenueTimeline.reduce((sum: number, m: { totalRevenue?: number }) => sum + (m.totalRevenue || 0), 0) : 0);
   const totalLeads = dashboardData?.leads?.total || leadAnalytics?.total || 0;
   const conversionRate = leadAnalytics?.conversionRate || dashboardData?.leads?.conversionRate || 0;
   const wonLeads = leadAnalytics?.byStatus?.WON || 0;
@@ -76,13 +78,13 @@ const AnalyticsDashboard = () => {
   const pipelineValue = leadAnalytics?.pipelineValue ?? (avgDealSize > 0 ? pipelineLeads * avgDealSize : 0);
 
   // Channel data from lead sources
-  const channelData = leadAnalytics?.bySource 
-    ? Object.entries(leadAnalytics.bySource).map(([name, value]: [string, any], index) => ({
+  const channelData = useMemo(() => leadAnalytics?.bySource 
+    ? Object.entries(leadAnalytics.bySource).map(([name, value]: [string, unknown], index) => ({
         name,
-        value: calcRate(value, totalLeads),
-        color: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899'][index] || '#6b7280'
+        value: calcRate(Number(value) || 0, totalLeads),
+        color: CHART_COLORS[index % CHART_COLORS.length]
       }))
-    : [];
+    : [], [leadAnalytics?.bySource, totalLeads]);
 
   // Conversion funnel from lead status data
   const conversionFunnel = leadAnalytics?.byStatus
@@ -103,11 +105,7 @@ const AnalyticsDashboard = () => {
   const emailConversionRate = campaignAnalytics?.performance?.conversionRate || 0;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingSkeleton rows={3} showChart />;
   }
 
   if (analyticsError) {
@@ -124,81 +122,87 @@ const AnalyticsDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Comprehensive view of your business performance
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <DateRangePicker onChange={handleDateChange} />
-          <Button variant="outline" onClick={() => refetch()}>Refresh</Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Analytics Dashboard"
+        subtitle="Comprehensive view of your business performance"
+        actions={
+          <div className="flex items-center space-x-2">
+            <DateRangePicker onChange={handleDateChange} />
+            <Button variant="outline" onClick={() => refetch()}>Refresh</Button>
+          </div>
+        }
+      />
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/campaigns')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Total Revenue
-              <HelpTooltip text="Sum of all deal values from won leads plus campaign revenue. This reflects recognized revenue within the selected date range." />
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${(totalRevenue / 1000).toFixed(0)}K</div>
-            <p className="text-xs text-muted-foreground">
-              {campaignAnalytics?.total || 0} campaigns
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/leads')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Total Leads
-              <HelpTooltip text="Total number of leads in your CRM for the selected period." />
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalLeads.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {leadAnalytics?.byStatus?.NEW || 0} new this period
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/leads')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Conversion Rate
-              <HelpTooltip text="Percentage of leads that reached 'Won' status. Higher is better — aim for 15–25% with qualified leads." />
-            </CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatRate(conversionRate)}%</div>
-            <p className="text-xs text-muted-foreground">
-              {leadAnalytics?.byStatus?.WON || 0} won deals
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/leads')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Avg Deal Size
-              <HelpTooltip text="Average value of won deals. Calculated by dividing total revenue by the number of won leads." />
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${avgDealSize.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-            <p className="text-xs text-muted-foreground">
-              {leadAnalytics?.averageScore || 0} avg score
-            </p>
-          </CardContent>
-        </Card>
+        <Link to="/campaigns" className="block">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+                Total Revenue
+                <HelpTooltip text="Sum of all deal values from won leads plus campaign revenue. This reflects recognized revenue within the selected date range." />
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${(totalRevenue / 1000).toFixed(0)}K</div>
+              <p className="text-xs text-muted-foreground">
+                {campaignAnalytics?.total || 0} campaigns
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to="/leads" className="block">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+                Total Leads
+                <HelpTooltip text="Total number of leads in your CRM for the selected period." />
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalLeads.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                {leadAnalytics?.byStatus?.NEW || 0} new this period
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to="/analytics/leads" className="block">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+                Conversion Rate
+                <HelpTooltip text="Percentage of leads that reached 'Won' status. Higher is better — aim for 15–25% with qualified leads." />
+              </CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatRate(conversionRate)}%</div>
+              <p className="text-xs text-muted-foreground">
+                {leadAnalytics?.byStatus?.WON || 0} won deals
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to="/analytics/leads" className="block">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+                Avg Deal Size
+                <HelpTooltip text="Average value of won deals. Calculated by dividing total revenue by the number of won leads." />
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${avgDealSize.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+              <p className="text-xs text-muted-foreground">
+                {leadAnalytics?.averageScore || 0} avg score
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Page-level empty state when no data exists */}
@@ -215,6 +219,7 @@ const AnalyticsDashboard = () => {
           </CardHeader>
           <CardContent>
             {revenueData.length > 0 ? (
+            <div aria-label="Revenue trend chart">
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -232,6 +237,7 @@ const AnalyticsDashboard = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
+            </div>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                 No revenue data yet
@@ -247,6 +253,7 @@ const AnalyticsDashboard = () => {
           </CardHeader>
           <CardContent>
             {channelData.length > 0 ? (
+            <div aria-label="Lead sources distribution pie chart">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -259,13 +266,14 @@ const AnalyticsDashboard = () => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {channelData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  {channelData.map((entry, i) => (
+                    <Cell key={`cell-${i}-${entry.name}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
+            </div>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                 No lead source data yet
@@ -283,6 +291,7 @@ const AnalyticsDashboard = () => {
         </CardHeader>
         <CardContent>
           {conversionFunnel.length > 0 ? (
+          <div aria-label="Conversion funnel chart">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={conversionFunnel} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
@@ -292,6 +301,7 @@ const AnalyticsDashboard = () => {
               <Bar dataKey="count" fill="hsl(var(--primary))" />
             </BarChart>
           </ResponsiveContainer>
+          </div>
           ) : (
             <div className="flex items-center justify-center h-[300px] text-muted-foreground">
               No conversion data yet
@@ -308,11 +318,11 @@ const AnalyticsDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {teamPerformance.length > 0 ? teamPerformance.map((member: { name: string; deals: number; revenue?: number; leads?: number; [k: string]: unknown }, index: number) => (
-              <div key={index} className="flex items-center justify-between">
+            {teamPerformance.length > 0 ? teamPerformance.map((member: { name: string; deals: number; revenue?: number; leads?: number; [k: string]: unknown }, idx: number) => (
+              <div key={`member-${member.name}`} className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="font-semibold text-lg text-muted-foreground w-6">
-                    #{index + 1}
+                    #{idx + 1}
                   </div>
                   <div>
                     <p className="font-medium">{member.name}</p>
@@ -335,30 +345,32 @@ const AnalyticsDashboard = () => {
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/conversions')}>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Mail className="h-4 w-4 mr-2" />
-              Email Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm">Open Rate</span>
-                <span className="font-semibold">{formatRate(emailOpenRate)}%</span>
+        <Link to="/analytics/conversions" className="block">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Mail className="h-4 w-4 mr-2" />
+                Email Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm">Open Rate</span>
+                  <span className="font-semibold">{formatRate(emailOpenRate)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Click Rate</span>
+                  <span className="font-semibold">{formatRate(emailClickRate)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Conversion Rate</span>
+                  <span className="font-semibold">{formatRate(emailConversionRate)}%</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Click Rate</span>
-                <span className="font-semibold">{formatRate(emailClickRate)}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Conversion Rate</span>
-                <span className="font-semibold">{formatRate(emailConversionRate)}%</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card>
           <CardHeader>
@@ -385,11 +397,12 @@ const AnalyticsDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/leads/pipeline')}>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Pipeline Health
+        <Link to="/leads/pipeline" className="block">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Pipeline Health
               <HelpTooltip text="Open Opportunities = leads at Qualified, Contacted, Negotiation, and Proposal stages. Pipeline Value = total estimated value of all deals in progress. A healthy pipeline should have 3–5x your revenue target in open opportunities." />
             </CardTitle>
           </CardHeader>
@@ -410,146 +423,39 @@ const AnalyticsDashboard = () => {
             </div>
           </CardContent>
         </Card>
+        </Link>
       </div>
 
       {/* Explore More Analytics */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Explore More Analytics</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/conversions')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <ArrowRightLeft className="h-6 w-6 text-green-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Conversion Reports</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Funnel analysis, conversion rates & drop-off points
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/usage')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <Activity className="h-6 w-6 text-purple-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Usage Analytics</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Platform usage, feature adoption & user activity
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/custom-reports')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-orange-500/10 rounded-lg">
-                  <FileBarChart className="h-6 w-6 text-orange-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Custom Reports</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Build & save custom reports tailored to your needs
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/attribution')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-cyan-500/10 rounded-lg">
-                  <Crosshair className="h-6 w-6 text-cyan-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Attribution Report</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Multi-touch attribution & channel performance
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/velocity')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-amber-500/10 rounded-lg">
-                  <Gauge className="h-6 w-6 text-amber-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Lead Velocity</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Pipeline speed, stage durations & bottlenecks
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/source-roi')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <PiggyBank className="h-6 w-6 text-emerald-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Source ROI</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Revenue efficiency per lead source
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/goals')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-rose-500/10 rounded-lg">
-                  <Target className="h-6 w-6 text-rose-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Goal Tracking</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Set, track & measure your business goals
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/follow-ups')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-indigo-500/10 rounded-lg">
-                  <PhoneForwarded className="h-6 w-6 text-indigo-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Follow-Up Analytics</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Completion rates, channels & response trends
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => navigate('/analytics/comparison')}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-sky-500/10 rounded-lg">
-                  <CalendarRange className="h-6 w-6 text-sky-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mt-3">Period Comparison</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Compare metrics across different time periods
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { to: '/analytics/conversions', icon: ArrowRightLeft, color: 'green', title: 'Conversion Reports', desc: 'Funnel analysis, conversion rates & drop-off points' },
+            { to: '/analytics/usage', icon: Activity, color: 'purple', title: 'Usage Analytics', desc: 'Platform usage, feature adoption & user activity' },
+            { to: '/analytics/custom-reports', icon: FileBarChart, color: 'orange', title: 'Custom Reports', desc: 'Build & save custom reports tailored to your needs' },
+            { to: '/analytics/attribution', icon: Crosshair, color: 'cyan', title: 'Attribution Report', desc: 'Multi-touch attribution & channel performance' },
+            { to: '/analytics/velocity', icon: Gauge, color: 'amber', title: 'Lead Velocity', desc: 'Pipeline speed, stage durations & bottlenecks' },
+            { to: '/analytics/source-roi', icon: PiggyBank, color: 'emerald', title: 'Source ROI', desc: 'Revenue efficiency per lead source' },
+            { to: '/analytics/goals', icon: Target, color: 'rose', title: 'Goal Tracking', desc: 'Set, track & measure your business goals' },
+            { to: '/analytics/follow-ups', icon: PhoneForwarded, color: 'indigo', title: 'Follow-Up Analytics', desc: 'Completion rates, channels & response trends' },
+            { to: '/analytics/comparison', icon: CalendarRange, color: 'sky', title: 'Period Comparison', desc: 'Compare metrics across different time periods' },
+          ].map(({ to, icon: Icon, color, title, desc }) => (
+            <Link key={to} to={to} className="block">
+              <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 h-full">
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div className={`p-2 bg-${color}-500/10 rounded-lg`}>
+                      <Icon className={`h-6 w-6 text-${color}-500`} />
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-semibold mt-3">{title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{desc}</p>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

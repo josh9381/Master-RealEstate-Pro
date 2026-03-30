@@ -118,7 +118,7 @@ export async function getCalls(req: Request, res: Response) {
         calledBy: { select: { id: true, firstName: true, lastName: true } },
       },
       orderBy: { [sortBy || 'createdAt']: sortOrder || 'desc' },
-      take: Number(limit) || 50,
+      take: Math.min(Number(limit) || 50, 200),
       skip: Number(offset) || 0,
     }),
     prisma.call.count({ where }),
@@ -129,7 +129,7 @@ export async function getCalls(req: Request, res: Response) {
     data: {
       calls,
       total,
-      limit: Number(limit) || 50,
+      limit: Math.min(Number(limit) || 50, 200),
       offset: Number(offset) || 0,
     },
   });
@@ -222,7 +222,7 @@ export async function deleteCall(req: Request, res: Response) {
  */
 export async function getCallQueue(req: Request, res: Response) {
   const organizationId = (req as any).user!.organizationId;
-  const limit = Number(req.query.limit) || 25;
+  const limit = Math.min(Number(req.query.limit) || 25, 200);
 
   // Get leads that have a phone, are not DNC, sorted by score desc + recently active
   const leads = await prisma.lead.findMany({

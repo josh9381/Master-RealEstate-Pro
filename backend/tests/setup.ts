@@ -12,6 +12,19 @@ beforeEach(() => {
   jest.clearAllMocks()
 })
 
+// Clean up open handles after all tests
+afterAll(async () => {
+  // Disconnect real Prisma client if it was accidentally initialized
+  try {
+    const { prisma } = await import('../src/config/database')
+    if (prisma && typeof prisma.$disconnect === 'function') {
+      await prisma.$disconnect()
+    }
+  } catch {
+    // Ignore — module may be mocked or unavailable
+  }
+})
+
 // Extend expect with custom matchers if needed
 expect.extend({
   toBeWithinRange(received: number, floor: number, ceiling: number) {

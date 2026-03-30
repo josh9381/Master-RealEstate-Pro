@@ -1,6 +1,7 @@
 import { logger } from '../lib/logger'
 import jwt from "jsonwebtoken";
 import { UnauthorizedError } from "../middleware/errorHandler";
+import { getRedisClient } from '../config/redis';
 
 // JWT configuration - Validate secrets at startup
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET;
@@ -136,4 +137,60 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
  */
 export function decodeToken(token: string): jwt.JwtPayload | string | null {
   return jwt.decode(token);
+}
+
+// ===================================
+// Access Token Denylist (Redis-backed)
+// Prevents stolen access tokens from being used after logout.
+// Falls back to in-memory Set when Redis is unavailable.
+// ===================================
+
+const DENYLIST_PREFIX = 'token:deny:';
+const inMemoryDenylist = new Set<string>();
+
+/** Access token TTL in seconds (must match ACCESS_TOKEN_EXPIRY) */
+const ACCESS_TOKEN_TTL_SECONDS = 15 * 60; // 15 minutes
+
+/**
+ * Add an access token to the denylist.
+ * The entry auto-expires after the token's remaining TTL.
+ */
+export async function denyAccessToken(token: string): Promise<void> {
+  try {
+    // Decode without verify to get expiry (token is already verified at this point)
+    const decoded = jwt.decode(token) as jwt.JwtPayload | null;
+    const ttl = decoded?.exp
+      ? Math.max(decoded.exp - Math.floor(Date.now() / 1000), 0)
+      : ACCESS_TOKEN_TTL_SECONDS;
+
+    if (ttl <= 0) return; // Already expired, no need to deny
+
+    const redis = getRedisClient();
+    if (redis) {
+      await redis.set(`${DENYLIST_PREFIX}${token}`, '1', 'EX', ttl);
+    } else {
+      inMemoryDenylist.add(token);
+      // Auto-cleanup after TTL
+      setTimeout(() => inMemoryDenylist.delete(token), ttl * 1000);
+    }
+  } catch (err) {
+    logger.warn('Failed to add token to denylist:', err);
+    // Non-blocking — worst case the token remains valid for its remaining TTL
+  }
+}
+
+/**
+ * Check if an access token has been denied (logged out).
+ */
+export async function isTokenDenied(token: string): Promise<boolean> {
+  try {
+    const redis = getRedisClient();
+    if (redis) {
+      const result = await redis.get(`${DENYLIST_PREFIX}${token}`);
+      return result !== null;
+    }
+    return inMemoryDenylist.has(token);
+  } catch {
+    return false; // Fail-open: if Redis is down, allow the token
+  }
 }
