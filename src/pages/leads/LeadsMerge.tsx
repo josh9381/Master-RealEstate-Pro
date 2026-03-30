@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { leadsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
 
 interface LeadData {
   id: number | string;
@@ -183,7 +182,6 @@ const LeadsMerge = () => {
 
   return (
     <div className="space-y-6">
-      <LeadsSubNav />
 
       <div className="flex items-center justify-between">
         <div>

@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Edit, Pause, Trash2, Copy, ShieldCheck, AlertTriangle, ShieldAlert, ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, analyticsApi, deliverabilityApi, CreateCampaignData } from '@/lib/api'
-import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { CampaignExecutionStatus } from '@/components/campaigns/CampaignExecutionStatus'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import type { TimelineDataPoint, HourlyEngagementEntry, DeviceBreakdownEntry, GeoBreakdownEntry } from '@/types'
@@ -338,7 +337,6 @@ function CampaignDetail() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <CampaignsSubNav />
         <ErrorBanner 
           message={`Failed to load campaign: ${error instanceof Error ? error.message : 'Unknown error'}`}
           retry={refetch}
@@ -372,7 +370,6 @@ function CampaignDetail() {
 
   return (
     <div className="space-y-6">
-      <CampaignsSubNav />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -873,7 +870,7 @@ function CampaignDetail() {
                         <select
                           className="w-full rounded-md border border-input bg-background px-3 py-2"
                           value={editForm.status}
-                          onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
+                          onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                         >
                           {options.map(s => (
                             <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>
@@ -1121,8 +1118,8 @@ function ABTestResultsSection({ campaignId }: { campaignId: string }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
-          {renderVariantCard('A', variantA, (test?.variantA as any)?.subject || 'Original')}
-          {renderVariantCard('B', variantB, (test?.variantB as any)?.subject || 'Variant')}
+          {renderVariantCard('A', variantA, (test?.variantA as Record<string, unknown>)?.subject as string || 'Original')}
+          {renderVariantCard('B', variantB, (test?.variantB as Record<string, unknown>)?.subject as string || 'Variant')}
         </div>
 
         {/* Summary bar */}
@@ -1170,7 +1167,7 @@ function RecipientActivitySection({ campaignId }: { campaignId: string }) {
   const totalPages = data?.data?.totalPages || 1
   const statusSummary = data?.data?.statusSummary || {}
 
-  const formatDate = (d: string | null) => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'
+  const formatDate = (d: string | null | undefined) => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -1235,7 +1232,7 @@ function RecipientActivitySection({ campaignId }: { campaignId: string }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {recipients.map((r: any) => {
+                    {recipients.map((r: { id: string; status: string; lead?: { firstName?: string; lastName?: string; email?: string; phone?: string }; sentAt?: string | null; deliveredAt?: string | null; openedAt?: string | null; clickedAt?: string | null }) => {
                       const badge = STATUS_BADGES[r.status] || STATUS_BADGES.PENDING
                       return (
                         <tr key={r.id} className="border-b last:border-0">

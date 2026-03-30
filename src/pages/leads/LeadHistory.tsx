@@ -6,7 +6,6 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { activitiesApi } from '@/lib/api';
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
 import type { ActivityRecord } from '@/types';
 
 // Map backend ActivityType enum values to UI categories
@@ -195,8 +194,6 @@ const LeadHistory = () => {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <LeadsSubNav />
 
       <div className="flex items-center justify-between">
         <div>

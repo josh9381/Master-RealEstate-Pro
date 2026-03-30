@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
-import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 import { formatRate, calcRate } from '@/lib/metricsCalculator';
 
 interface CampaignRecord {
@@ -228,8 +227,6 @@ const CampaignSchedule = () => {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <CampaignsSubNav />
 
       {isLoading && scheduledCampaigns.length === 0 && (
         <div className="space-y-4">

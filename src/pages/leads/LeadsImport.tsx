@@ -9,7 +9,6 @@ import {
 import { useState, useRef, useCallback } from 'react'
 import { useToast } from '@/hooks/useToast'
 import { leadsApi, pipelinesApi, type PipelineData } from '@/lib/api'
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -115,6 +114,7 @@ function LeadsImport() {
       return false
     }
     return true
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,7 +300,6 @@ function LeadsImport() {
 
   return (
     <div className="space-y-6">
-      <LeadsSubNav />
 
       <div>
         <h1 className="text-3xl font-bold">Import Leads</h1>

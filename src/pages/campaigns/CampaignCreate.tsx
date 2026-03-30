@@ -16,7 +16,6 @@ import { MessageEnhancerModal } from '@/components/ai/MessageEnhancerModal'
 import { ContentGeneratorWizard } from '@/components/ai/ContentGeneratorWizard'
 import { DaysOfWeekPicker } from '@/components/ui/DaysOfWeekPicker'
 import { AdvancedAudienceFilters } from '@/components/campaigns/AdvancedAudienceFilters'
-import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
 import type { CampaignPreviewData, EmailTemplateResponse } from '@/types'
 
@@ -233,11 +232,11 @@ function CampaignCreate() {
       return response.data || response.segments || []
     },
   })
-  const savedSegments = (segmentsData || []).map((s: any) => ({
+  const savedSegments = (segmentsData || []).map((s: Record<string, unknown>) => ({
     id: s.id,
     name: s.name,
-    filters: (s.rules || []).map((r: any) => ({ field: r.field, operator: r.operator, value: r.value })),
-    leadCount: s.memberCount || 0,
+    filters: ((s.rules as Array<Record<string, unknown>>) || []).map((r) => ({ field: r.field, operator: r.operator, value: r.value })),
+    leadCount: (s.memberCount as number) || 0,
   }))
 
   // Fetch filtered lead count when filters change
@@ -562,7 +561,6 @@ function CampaignCreate() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <CampaignsSubNav />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -1463,7 +1461,7 @@ function CampaignCreate() {
                               name="sendTimeOpt"
                               value={opt.value}
                               checked={formData.sendTimeOptimization === opt.value}
-                              onChange={() => updateFormData({ sendTimeOptimization: opt.value as any })}
+                              onChange={() => updateFormData({ sendTimeOptimization: opt.value as typeof formData.sendTimeOptimization })}
                               className="sr-only"
                             />
                             <span className="text-sm font-medium">{opt.label}</span>

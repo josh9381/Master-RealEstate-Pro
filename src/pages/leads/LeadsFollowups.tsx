@@ -21,7 +21,6 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { leadsApi, tasksApi } from '@/lib/api'
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import type { Lead } from '@/types'
 
 interface FollowUp {
@@ -239,8 +238,6 @@ function LeadsFollowups() {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <LeadsSubNav />
 
       {/* Header */}
       <div className="flex items-center justify-between">

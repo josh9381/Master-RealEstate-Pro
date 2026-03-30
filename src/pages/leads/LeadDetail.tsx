@@ -29,7 +29,6 @@ import { LeadTasks } from '@/components/leads/LeadTasks'
 import { FollowUpReminders } from '@/components/leads/FollowUpReminders'
 import { LogCallDialog } from '@/components/leads/LogCallDialog'
 import { PredictionBadge } from '@/components/ai/PredictionBadge'
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import intelligenceService, { type LeadPrediction, type EngagementAnalysis, type NextActionSuggestion } from '@/services/intelligenceService'
 import { aiApi } from '@/lib/api'
 import { Lead } from '@/types'
@@ -73,8 +72,9 @@ function LeadDocumentsTab({ leadId }: { leadId: string }) {
       await documentsApi.uploadDocuments(leadId, files)
       queryClient.invalidateQueries({ queryKey: ['lead-documents', leadId] })
       toast.success(`${files.length} document(s) uploaded`)
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Upload failed')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
+      toast.error(message)
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -380,13 +380,13 @@ function LeadDetail() {
     }
 
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, lead])
 
   // Show loading state
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <LeadsSubNav />
         <div className="animate-pulse">
           <div className="h-10 bg-muted rounded w-1/3 mb-2" />
           <div className="h-6 bg-muted rounded w-1/4" />
@@ -414,7 +414,6 @@ function LeadDetail() {
   if (!lead) {
     return (
       <div className="space-y-6">
-        <LeadsSubNav />
         <div className="text-center py-12">
           <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h2 className="text-2xl font-bold mb-2">Lead not found</h2>
@@ -549,8 +548,6 @@ function LeadDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <LeadsSubNav />
 
       {/* Back button */}
       <Button

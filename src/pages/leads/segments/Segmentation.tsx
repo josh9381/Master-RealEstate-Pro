@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { segmentsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface SegmentRule {
@@ -224,7 +223,6 @@ const Segmentation = () => {
 
   return (
     <div className="space-y-6">
-      <LeadsSubNav />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Customer Segmentation</h1>

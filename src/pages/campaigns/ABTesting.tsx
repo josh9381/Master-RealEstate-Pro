@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { useToast } from '@/hooks/useToast';
-import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 import * as abtestService from '@/services/abtestService';
 import type { ABTestResult, StatisticalAnalysis } from '@/services/abtestService';
 
@@ -177,7 +176,6 @@ const ABTesting = () => {
   if (isLoading && tests.length === 0) {
     return (
       <div className="space-y-6">
-        <CampaignsSubNav />
         <div className="animate-pulse space-y-4">
           <div className="h-10 bg-muted rounded w-32" />
           <div className="grid gap-4 md:grid-cols-4">
@@ -191,8 +189,6 @@ const ABTesting = () => {
 
   return (
     <div className="space-y-4">
-      {/* Sub Navigation */}
-      <CampaignsSubNav />
 
       <div className="flex items-center justify-between">
         <div>

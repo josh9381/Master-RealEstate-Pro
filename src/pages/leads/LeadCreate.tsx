@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/Badge'
 import { leadsApi, usersApi, CreateLeadData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 
 export default function LeadCreate() {
   const navigate = useNavigate()
@@ -174,8 +173,6 @@ export default function LeadCreate() {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <LeadsSubNav hideAddButton />
 
       {/* Header */}
       <div className="flex items-center justify-between">

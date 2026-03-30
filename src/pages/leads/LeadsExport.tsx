@@ -8,7 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import { leadsApi, usersApi, exportApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav';
 import type { Lead, TeamMember } from '@/types';
 
 const selectClasses = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
@@ -205,7 +204,7 @@ const LeadsExport = () => {
   const activeFilters: string[] = [];
   if (exportFilters.status !== 'all') activeFilters.push(`Status: ${exportFilters.status}`);
   if (exportFilters.assignedTo !== 'all') {
-    const member = teamMembers.find((m: any) => m.id === exportFilters.assignedTo);
+    const member = teamMembers.find((m: TeamMember) => m.id === exportFilters.assignedTo);
     activeFilters.push(`Assigned: ${member?.name || member?.firstName || 'Selected'}`);
   }
   if (exportFilters.dateFrom) activeFilters.push(`From: ${exportFilters.dateFrom}`);
@@ -224,7 +223,7 @@ const LeadsExport = () => {
         if (selectedFields.size < ALL_FIELDS.length) {
           filters.fields = Array.from(selectedFields).map(f => FIELD_TO_KEY[f]).filter(Boolean);
         }
-        await exportApi.download('leads', 'xlsx', filters as any);
+        await exportApi.download('leads', 'xlsx', filters as Record<string, string | string[]>);
         toast.success('Excel export downloaded successfully');
         setExportHistory(prev => [{
           id: Date.now(),
@@ -246,8 +245,6 @@ const LeadsExport = () => {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <LeadsSubNav />
 
       <div>
         <h1 className="text-3xl font-bold">Export Leads</h1>

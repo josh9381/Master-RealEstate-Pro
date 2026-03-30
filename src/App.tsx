@@ -33,6 +33,7 @@ import VerifyEmail from './pages/auth/VerifyEmail'
 import { UnsubscribePage } from './pages/unsubscribe/UnsubscribePage'
 
 // Leads (lazy loaded)
+const LeadsOverview = lazyWithRetry(() => import('./pages/leads/LeadsOverview'))
 const LeadsList = lazyWithRetry(() => import('./pages/leads/LeadsList'))
 const LeadDetail = lazyWithRetry(() => import('./pages/leads/LeadDetail'))
 const LeadsPipeline = lazyWithRetry(() => import('./pages/leads/LeadsPipeline'))
@@ -162,7 +163,8 @@ function App() {
         <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Dashboard"><Dashboard /></PageErrorBoundary></Suspense>} />
         
         {/* Leads */}
-        <Route path="/leads" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Leads List"><LeadsList /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Leads Overview"><LeadsOverview /></PageErrorBoundary></Suspense></LeadsLayout>} />
+        <Route path="/leads/all" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="All Leads"><LeadsList /></PageErrorBoundary></Suspense></LeadsLayout>} />
         <Route path="/leads/create" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Create Lead"><LeadCreate /></PageErrorBoundary></Suspense></LeadsLayout>} />
         <Route path="/leads/:id" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Detail"><LeadDetail /></PageErrorBoundary></Suspense></LeadsLayout>} />
         <Route path="/leads/pipeline" element={<LeadsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Pipeline"><LeadsPipeline /></PageErrorBoundary></Suspense></LeadsLayout>} />

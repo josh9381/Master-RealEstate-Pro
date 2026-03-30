@@ -10,7 +10,6 @@ import { campaignsApi } from '@/lib/api';
 import api from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useNavigate } from 'react-router-dom';
-import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor';
 
@@ -318,8 +317,6 @@ const CampaignTemplates = () => {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <CampaignsSubNav />
 
       <div className="flex items-center justify-between">
         <div>

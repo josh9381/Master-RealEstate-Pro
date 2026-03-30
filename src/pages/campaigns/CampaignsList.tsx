@@ -15,7 +15,6 @@ import {
   Copy, ClipboardList, Tag,
   ChevronLeft, ChevronRight
 } from 'lucide-react'
-import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 import { CampaignRowMenu } from '@/components/campaigns/CampaignRowMenu'
 import type { CampaignRowMenuActions } from '@/components/campaigns/CampaignRowMenu'
 import { getStatusVariant } from '@/lib/campaignUtils'
@@ -32,7 +31,7 @@ type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE'
 function CampaignsList() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -53,14 +52,6 @@ function CampaignsList() {
   }, [])
 
   const typeFilter = (searchParams.get('type')?.toUpperCase() || 'all') as CampaignType
-  const setTypeFilter = (type: CampaignType) => {
-    if (type === 'all') {
-      searchParams.delete('type')
-    } else {
-      searchParams.set('type', type.toLowerCase())
-    }
-    setSearchParams(searchParams, { replace: true })
-  }
   const [activeTab, setActiveTab] = useState<'all' | 'DRAFT' | 'ACTIVE' | 'SCHEDULED' | 'SENDING' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'>('all')
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'calendar'>('list')
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([])
@@ -450,7 +441,6 @@ function CampaignsList() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <CampaignsSubNav campaigns={allCampaignsForStats} typeFilter={typeFilter} onTypeFilterChange={setTypeFilter} />
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-destructive font-medium">Failed to load campaigns</p>
@@ -463,8 +453,6 @@ function CampaignsList() {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <CampaignsSubNav campaigns={allCampaignsForStats} typeFilter={typeFilter} onTypeFilterChange={setTypeFilter} />
 
 
 

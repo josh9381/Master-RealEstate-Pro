@@ -9,7 +9,6 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { campaignsApi, analyticsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { LINE_CHART_COLORS } from '@/lib/chartColors';
-import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { DateRangePicker, DateRange, DateRangePreset, computeDateRange } from '@/components/shared/DateRangePicker';
@@ -762,7 +761,7 @@ function DetailedReportsTab() {
     },
   });
 
-  const campaigns = reportData?.campaigns ?? [];
+  const campaigns = useMemo(() => reportData?.campaigns ?? [], [reportData]);
   const stats = reportData?.stats ?? { totalSent: 0, deliveryRate: 0, openRate: 0, clickRate: 0, revenue: 0 };
   const performanceData = reportData?.performanceData ?? [];
 
@@ -965,7 +964,6 @@ const CampaignReports = () => {
 
   return (
     <div className="space-y-6">
-      <CampaignsSubNav />
 
       <div>
         <h1 className="text-3xl font-bold">Campaign Reports & Analytics</h1>

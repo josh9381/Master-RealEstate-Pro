@@ -12,6 +12,7 @@ import {
   Search,
   ChevronRight,
   Plus,
+  LayoutList,
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -38,6 +39,14 @@ const leadsNav: NavGroup[] = [
     id: 'views',
     label: 'Views',
     items: [
+      {
+        id: 'all-leads',
+        label: 'All Leads',
+        path: '/leads/all',
+        icon: LayoutList,
+        description: 'View & manage all leads',
+        keywords: ['all', 'list', 'table', 'grid', 'leads'],
+      },
       {
         id: 'pipeline',
         label: 'Pipeline',
@@ -181,7 +190,7 @@ export const LeadsLayout = ({ children }: LeadsLayoutProps) => {
                 )}
               >
                 <Users className="h-4 w-4" />
-                All Leads
+                Overview
               </Link>
             </div>
 

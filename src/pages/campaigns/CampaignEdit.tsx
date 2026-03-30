@@ -8,7 +8,6 @@ import { ArrowLeft, Save } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { campaignsApi, CreateCampaignData } from '@/lib/api'
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
-import { CampaignsSubNav } from '@/components/campaigns/CampaignsSubNav'
 
 function CampaignEdit() {
   const { id } = useParams()
@@ -153,8 +152,6 @@ function CampaignEdit() {
 
   return (
     <div className="space-y-6">
-      {/* Sub Navigation */}
-      <CampaignsSubNav />
 
       {/* Header */}
       <div className="flex items-center justify-between">

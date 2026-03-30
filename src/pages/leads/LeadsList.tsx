@@ -19,14 +19,11 @@ import { exportToCSV, leadExportColumns } from '@/lib/exportService'
 import { Lead } from '@/types'
 import type { AssignedUser } from '@/types'
 import { useAuthStore } from '@/store/authStore'
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import { SavedFilterViews } from '@/components/leads/SavedFilterViews'
 import type { SavedFilterView } from '@/lib/api'
 
 import type { FilterConfig, SortField, SortDirection, ScoreFilterValue } from './list/types'
 import { getTimeAgo } from './list/types'
-import { LeadStatsCards } from './list/LeadStatsCards'
-import { LeadCharts } from './list/LeadCharts'
 import { MassEmailModal, TagsModal, StatusModal, AssignModal, BulkDeleteModal, EditLeadModal } from './list/LeadModals'
 import { LeadsTable } from './list/LeadsTable'
 import { LeadsGrid } from './list/LeadsGrid'
@@ -205,23 +202,6 @@ function LeadsList() {
     staleTime: 30_000,
   })
 
-  // Global stats (unfiltered) for "X of Y" display
-  const { data: globalStatsData } = useQuery({
-    queryKey: ['leads-global-stats'],
-    queryFn: async () => {
-      try {
-        const response = await leadsApi.getStats()
-        return response.data?.stats || null
-      } catch {
-        // Fallback to basic count
-        const response = await leadsApi.getLeads({ page: 1, limit: 1 })
-        const data = response.data
-        return { total: data?.pagination?.total || 0 }
-      }
-    },
-    staleTime: 60_000,
-  })
-
   // ── MUTATIONS ──
 
   const deleteMutation = useMutation({
@@ -272,7 +252,7 @@ function LeadsList() {
   const allTags: string[] = (() => {
     const raw = allTagsData?.data?.tags || allTagsData?.data || allTagsData?.tags || allTagsData || []
     if (!Array.isArray(raw)) return []
-    return raw.map((t: any) => t.name as string)
+    return raw.map((t: { name: string }) => t.name as string)
   })()
 
   const pipelines: PipelineData[] = Array.isArray(pipelinesData) ? pipelinesData : []
@@ -286,35 +266,6 @@ function LeadsList() {
   }, [leadsResponse])
 
   const [leadNotes, setLeadNotes] = useState<Record<number, string[]>>({})
-
-  // Use global stats for charts when available (all leads, not just current page)
-  const sourceData = useMemo(() => {
-    if (globalStatsData?.bySource) {
-      return Object.entries(globalStatsData.bySource as Record<string, number>).map(([name, value]) => ({
-        name: name.charAt(0).toUpperCase() + name.slice(1), value,
-      }))
-    }
-    const sources: Record<string, number> = {}
-    leads.forEach((lead: Lead) => { sources[lead.source] = (sources[lead.source] || 0) + 1 })
-    return Object.entries(sources).map(([name, value]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1), value,
-    }))
-  }, [leads, globalStatsData])
-
-  const scoreData = useMemo(() => {
-    if (globalStatsData?.scoreDistribution) {
-      return globalStatsData.scoreDistribution as Array<{ range: string; count: number }>
-    }
-    const ranges = { '0-59': 0, '60-70': 0, '71-80': 0, '81-90': 0, '91-100': 0 }
-    leads.forEach((lead: Lead) => {
-      if (lead.score >= 91) ranges['91-100']++
-      else if (lead.score >= 81) ranges['81-90']++
-      else if (lead.score >= 71) ranges['71-80']++
-      else if (lead.score >= 60) ranges['60-70']++
-      else ranges['0-59']++
-    })
-    return Object.entries(ranges).map(([range, count]) => ({ range, count }))
-  }, [leads, globalStatsData])
 
   const filteredAndSortedLeads = useMemo(() => {
     // Score filter is now server-side; only apply client-side sort fallback when no server pagination
@@ -439,7 +390,7 @@ function LeadsList() {
 
   const handleSaveAsSegment = async () => {
     if (!saveSegmentName.trim()) { toast.error('Please enter a segment name'); return }
-    const rules: { field: string; operator: string; value: any }[] = []
+    const rules: { field: string; operator: string; value: string[] | { min: number; max: number } }[] = []
     if (filters.status.length > 0) rules.push({ field: 'status', operator: 'in', value: filters.status })
     if (filters.source.length > 0) rules.push({ field: 'source', operator: 'in', value: filters.source })
     if (filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100) rules.push({ field: 'score', operator: 'between', value: { min: filters.scoreRange[0], max: filters.scoreRange[1] } })
@@ -626,9 +577,9 @@ function LeadsList() {
   }
 
   const getRecentActivities = (leadId: number) => {
-    const apiActivities = (expandedActivitiesData?.data?.activities || []).map((a: any) => ({
-      type: a.type || 'note', desc: a.description || a.type || 'Activity',
-      time: getTimeAgo(a.createdAt), details: a.metadata ? JSON.stringify(a.metadata) : '',
+    const apiActivities = (expandedActivitiesData?.data?.activities || []).map((a: Record<string, unknown>) => ({
+      type: (a.type as string) || 'note', desc: (a.description as string) || (a.type as string) || 'Activity',
+      time: getTimeAgo(a.createdAt as string), details: a.metadata ? JSON.stringify(a.metadata) : '',
     }))
     const localNotes = (leadNotes[leadId] || []).map((note) => ({
       type: 'note', desc: note, time: 'Just now', details: '',
@@ -653,11 +604,6 @@ function LeadsList() {
 
   return (
     <div className="space-y-6">
-      {/* Statistics Cards */}
-      <LeadStatsCards backendStats={globalStatsData} totalLeads={totalLeads} globalTotal={globalStatsData?.total || totalLeads} currentPage={currentPage} totalPages={totalPages} hasActiveFilters={hasActiveFilters} />
-
-      {/* Charts */}
-      <LeadCharts sourceData={sourceData} scoreData={scoreData} pageCount={leads.length} totalCount={totalLeads} isGlobalData={!!globalStatsData?.bySource} />
 
       {/* Bulk Actions Bar */}
       {selectedLeads.length > 0 && (
@@ -755,9 +701,6 @@ function LeadsList() {
           onLeadChange={setEditingLead} onSave={handleSaveEdit}
         />
       )}
-
-      {/* Sub Navigation */}
-      <LeadsSubNav />
 
       {/* Header */}
       <div className="flex items-center justify-between">

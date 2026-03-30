@@ -22,7 +22,6 @@ import {
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { pipelinesApi, leadsApi, type PipelineData } from '@/lib/api'
-import { LeadsSubNav } from '@/components/leads/LeadsSubNav'
 import { PipelineManager } from '@/components/leads/PipelineManager'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 
@@ -101,6 +100,7 @@ function LeadsPipeline() {
         setSelectedPipelineId(defaultPipeline.id)
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pipelines.length, selectedPipelineId])
 
   // Fetch leads for the active pipeline
@@ -344,7 +344,6 @@ function LeadsPipeline() {
 
   return (
     <div className="space-y-6">
-      <LeadsSubNav />
 
       {/* Header with Pipeline Switcher */}
       <div className="flex items-center justify-between">
