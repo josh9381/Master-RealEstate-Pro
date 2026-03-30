@@ -623,8 +623,8 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         
         {/* AI Processing Status */}
         {initializing && (
-          <div className="flex flex-col items-center justify-center py-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-            <RefreshCw className="h-6 w-6 animate-spin text-gray-500 mb-2" />
+          <div className="flex flex-col items-center justify-center py-4 bg-muted/50 dark:bg-gray-900 rounded-lg">
+            <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground mb-2" />
             <span className="text-sm text-muted-foreground">Loading composer...</span>
           </div>
         )}

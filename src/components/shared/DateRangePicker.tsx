@@ -82,7 +82,7 @@ export function DateRangePicker({
     <div className={`flex items-center gap-2 ${className}`}>
       <Calendar className="h-4 w-4 text-muted-foreground" />
       <select
-        className="px-3 py-2 text-sm border rounded-md bg-background"
+        className="px-3 py-2 text-sm border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-ring transition-colors bg-background"
         value={preset}
         onChange={(e) => handlePresetChange(e.target.value as DateRangePreset)}
       >

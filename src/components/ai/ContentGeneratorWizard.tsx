@@ -179,7 +179,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
     if (step === 'type') {
       return (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Choose Content Type</h3>
+          <h3 className="text-lg font-semibold text-foreground">Choose Content Type</h3>
           <div className="grid grid-cols-2 gap-4">
             {contentTypes.map((type) => {
               const Icon = type.icon;
@@ -190,11 +190,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     setContentType(type.value as ContentType);
                     setStep('details');
                   }}
-                  className="p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                  className="p-4 border-2 border-border rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
                 >
                   <Icon className="h-6 w-6 text-purple-600 mb-2" />
-                  <div className="font-medium text-gray-900">{type.label}</div>
-                  <div className="text-sm text-gray-500">{type.description}</div>
+                  <div className="font-medium text-foreground">{type.label}</div>
+                  <div className="text-sm text-muted-foreground">{type.description}</div>
                 </button>
               );
             })}
@@ -207,7 +207,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
       return (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Content Details</h3>
+            <h3 className="text-lg font-semibold text-foreground">Content Details</h3>
             <button
               onClick={() => setStep('type')}
               className="text-sm text-purple-600 hover:text-purple-700"
@@ -219,7 +219,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           {contentType === 'email-sequence' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Lead Name (Optional)
                 </label>
                 <input
@@ -227,11 +227,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={leadName}
                   onChange={(e) => setLeadName(e.target.value)}
                   placeholder="John Smith"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Property Type (Optional)
                 </label>
                 <input
@@ -239,11 +239,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
                   placeholder="Single Family Home"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Campaign Goal *
                 </label>
                 <input
@@ -251,16 +251,16 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   placeholder="e.g., nurture new leads, re-engage cold leads"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tone</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Tone</label>
                 <select
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   {toneOptions.map((t) => (
                     <option key={t} value={t}>
@@ -270,7 +270,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Number of Emails
                 </label>
                 <input
@@ -279,7 +279,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   onChange={(e) => setSequenceLength(parseInt(e.target.value))}
                   min="3"
                   max="7"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
             </>
@@ -288,7 +288,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           {contentType === 'sms' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Lead Name (Optional)
                 </label>
                 <input
@@ -296,11 +296,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={leadName}
                   onChange={(e) => setLeadName(e.target.value)}
                   placeholder="John Smith"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Message Goal *
                 </label>
                 <input
@@ -308,16 +308,16 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   placeholder="e.g., schedule showing, confirm appointment"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tone</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Tone</label>
                 <select
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   {toneOptions.map((t) => (
                     <option key={t} value={t}>
@@ -332,18 +332,18 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           {contentType === 'property-description' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Address *</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="123 Main Street, City, State"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Property Type *
                 </label>
                 <input
@@ -351,13 +351,13 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
                   placeholder="Single Family Home"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Bedrooms
                   </label>
                   <input
@@ -365,11 +365,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     value={bedrooms}
                     onChange={(e) => setBedrooms(e.target.value)}
                     placeholder="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Bathrooms
                   </label>
                   <input
@@ -377,13 +377,13 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     value={bathrooms}
                     onChange={(e) => setBathrooms(e.target.value)}
                     placeholder="2"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Square Feet
                   </label>
                   <input
@@ -391,22 +391,22 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     value={squareFeet}
                     onChange={(e) => setSquareFeet(e.target.value)}
                     placeholder="2000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Price</label>
                   <input
                     type="number"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     placeholder="500000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Key Features (comma-separated)
                 </label>
                 <input
@@ -414,11 +414,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={features}
                   onChange={(e) => setFeatures(e.target.value)}
                   placeholder="Pool, Updated Kitchen, Hardwood Floors"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Neighborhood
                 </label>
                 <input
@@ -426,7 +426,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={neighborhood}
                   onChange={(e) => setNeighborhood(e.target.value)}
                   placeholder="Downtown, near schools and parks"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
             </>
@@ -435,18 +435,18 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           {contentType === 'social-posts' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Topic *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Topic *</label>
                 <input
                   type="text"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="e.g., new listing, open house, market update"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Property Address (Optional)
                 </label>
                 <input
@@ -454,11 +454,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="123 Main Street"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Platforms *
                 </label>
                 <div className="space-y-2">
@@ -474,19 +474,19 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                             setPlatforms(platforms.filter((p) => p !== platform.value));
                           }
                         }}
-                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-border rounded"
                       />
-                      <span className="ml-2 text-sm text-gray-700">{platform.label}</span>
+                      <span className="ml-2 text-sm text-foreground">{platform.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tone</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Tone</label>
                 <select
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   {toneOptions.map((t) => (
                     <option key={t} value={t}>
@@ -501,18 +501,18 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           {contentType === 'listing-presentation' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Address *</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="123 Main Street, City, State"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Property Type *
                 </label>
                 <input
@@ -520,12 +520,12 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
                   placeholder="Single Family Home"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Estimated Value
                 </label>
                 <input
@@ -533,11 +533,11 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={estimatedValue}
                   onChange={(e) => setEstimatedValue(e.target.value)}
                   placeholder="500000"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Market Trends (Optional)
                 </label>
                 <textarea
@@ -545,7 +545,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   onChange={(e) => setMarketTrends(e.target.value)}
                   placeholder="e.g., Sellers market, low inventory, prices up 5%"
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
             </>
@@ -554,7 +554,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           <div className="flex justify-end space-x-3 pt-4">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
             >
               Cancel
             </button>
@@ -584,7 +584,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
       return (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Generated Content</h3>
+            <h3 className="text-lg font-semibold text-foreground">Generated Content</h3>
             <button
               onClick={() => setStep('details')}
               className="text-sm text-purple-600 hover:text-purple-700"
@@ -597,9 +597,9 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             {contentType === 'email-sequence' && generatedContent.emails && (
               <div className="space-y-4">
                 {generatedContent.emails.map((email: any, index: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
-                  <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div key={index} className="bg-white rounded-lg p-4 border border-border">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-500">
+                      <span className="text-sm font-medium text-muted-foreground">
                         Email {index + 1} • Day {email.dayOffset || index * 3}
                       </span>
                       <button
@@ -609,19 +609,19 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
                     </div>
-                    <div className="font-semibold text-gray-900 mb-2">
+                    <div className="font-semibold text-foreground mb-2">
                       Subject: {email.subject}
                     </div>
-                    <div className="text-gray-700 whitespace-pre-wrap">{email.body}</div>
+                    <div className="text-foreground whitespace-pre-wrap">{email.body}</div>
                   </div>
                 ))}
               </div>
             )}
 
             {contentType === 'sms' && generatedContent.message && (
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="bg-white rounded-lg p-4 border border-border">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-500">
+                  <span className="text-sm font-medium text-muted-foreground">
                     SMS ({generatedContent.length} characters)
                   </span>
                   <button
@@ -631,14 +631,14 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
                 </div>
-                <div className="text-gray-900">{generatedContent.message}</div>
+                <div className="text-foreground">{generatedContent.message}</div>
               </div>
             )}
 
             {contentType === 'property-description' && generatedContent.description && (
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="bg-white rounded-lg p-4 border border-border">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-500">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Property Description ({generatedContent.wordCount} words)
                   </span>
                   <button
@@ -648,7 +648,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
                 </div>
-                <div className="text-gray-900 whitespace-pre-wrap">
+                <div className="text-foreground whitespace-pre-wrap">
                   {generatedContent.description}
                 </div>
               </div>
@@ -657,9 +657,9 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             {contentType === 'social-posts' && generatedContent.posts && (
               <div className="space-y-4">
                 {Object.entries(generatedContent.posts).map(([platform, post]: [string, any]) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
-                  <div key={platform} className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div key={platform} className="bg-white rounded-lg p-4 border border-border">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-500 capitalize">
+                      <span className="text-sm font-medium text-muted-foreground capitalize">
                         {platform}
                       </span>
                       <button
@@ -669,7 +669,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
                     </div>
-                    <div className="text-gray-900 whitespace-pre-wrap">{post}</div>
+                    <div className="text-foreground whitespace-pre-wrap">{post}</div>
                   </div>
                 ))}
               </div>
@@ -684,9 +684,9 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   { key: 'marketingPlan', label: 'Marketing Plan' },
                   { key: 'nextSteps', label: 'Next Steps' },
                 ].map(({ key, label }) => (
-                  <div key={key} className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div key={key} className="bg-white rounded-lg p-4 border border-border">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-500">{label}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{label}</span>
                       <button
                         onClick={() => handleCopy(generatedContent[key])}
                         className="text-purple-600 hover:text-purple-700"
@@ -694,7 +694,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
                     </div>
-                    <div className="text-gray-900 whitespace-pre-wrap">
+                    <div className="text-foreground whitespace-pre-wrap">
                       {generatedContent[key]}
                     </div>
                   </div>
@@ -706,7 +706,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           <div className="flex justify-end space-x-3 pt-4">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
             >
               Close
             </button>

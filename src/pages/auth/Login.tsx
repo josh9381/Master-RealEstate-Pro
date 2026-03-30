@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-do
 import { Shield } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card'
+
 import { useToast } from '@/hooks/useToast'
 import { useAuthStore } from '@/store/authStore'
 import { authApi } from '@/lib/api'
@@ -120,63 +120,74 @@ function Login() {
   // 2FA Challenge Step
   if (requires2FA) {
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex justify-center mb-2">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Shield className="h-8 w-8 text-primary" />
+      <div
+      className="rounded-2xl p-8"
+      style={{
+        background: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
+        boxShadow: '0 20px 40px -10px rgb(0 0 0 / 0.1)',
+      }}
+    >
+        <div className="mb-6 text-center">
+          <div className="flex justify-center mb-3">
+            <div className="p-3 rounded-xl" style={{ background: 'hsl(var(--primary) / 0.1)', border: '1px solid hsl(var(--primary) / 0.2)' }}>
+              <Shield className="h-8 w-8" style={{ color: 'hsl(var(--primary))' }} />
             </div>
           </div>
-          <CardTitle className="text-center">Two-Factor Authentication</CardTitle>
-          <CardDescription className="text-center">
+          <h2 className="text-xl font-bold tracking-tight">Two-Factor Authentication</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Enter the 6-digit code from your authenticator app
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handle2FAVerify} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="twoFactorCode" className="text-sm font-medium">
-                Authentication Code
-              </label>
-              <Input
-                id="twoFactorCode"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                maxLength={6}
-                value={twoFactorCode}
-                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
-                className="text-center text-2xl tracking-widest font-mono"
-                autoFocus
-                disabled={loading}
-              />
-            </div>
+          </p>
+        </div>
+        <form onSubmit={handle2FAVerify} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="twoFactorCode" className="text-sm font-medium">
+              Authentication Code
+            </label>
+            <Input
+              id="twoFactorCode"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              maxLength={6}
+              value={twoFactorCode}
+              onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+              className="text-center text-2xl tracking-widest font-mono"
+              autoFocus
+              disabled={loading}
+            />
+          </div>
 
-            <Button type="submit" className="w-full" disabled={loading || twoFactorCode.length < 6}>
-              {loading ? 'Verifying...' : 'Verify & Sign In'}
-            </Button>
+          <Button type="submit" className="w-full" disabled={loading || twoFactorCode.length < 6}>
+            {loading ? 'Verifying...' : 'Verify & Sign In'}
+          </Button>
 
-            <Button type="button" variant="ghost" className="w-full" onClick={handleBack}>
-              Back to Login
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <Button type="button" variant="ghost" className="w-full" onClick={handleBack}>
+            Back to Login
+          </Button>
+        </form>
+      </div>
     )
   }
 
   // Normal Login Step
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Welcome Back</CardTitle>
-        <CardDescription>Sign in to your account to continue</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div
+      className="rounded-2xl p-8"
+      style={{
+        background: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
+        boxShadow: '0 20px 40px -10px rgb(0 0 0 / 0.1)',
+      }}
+    >
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">Sign in to your account to continue</p>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">
+            <label htmlFor="email" className="text-sm font-medium text-foreground">
               Email
             </label>
             <Input
@@ -191,7 +202,7 @@ function Login() {
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">
+            <label htmlFor="password" className="text-sm font-medium text-foreground">
               Password
             </label>
             <Input
@@ -223,20 +234,17 @@ function Login() {
             </Link>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading || isLoading}>
+          <Button type="submit" className="w-full h-10" disabled={loading || isLoading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
-        </form>
-      </CardContent>
-      <CardFooter className="flex-col space-y-4">
-        <div className="text-center text-sm text-muted-foreground">
-          Don't have an account?{' '}
-          <Link to="/auth/register" className="text-primary hover:underline">
-            Sign up
-          </Link>
-        </div>
-      </CardFooter>
-    </Card>
+      </form>
+      <div className="mt-6 text-center text-sm text-muted-foreground">
+        Don't have an account?{' '}
+        <Link to="/auth/register" className="text-primary font-medium hover:underline">
+          Sign up
+        </Link>
+      </div>
+    </div>
   )
 }
 

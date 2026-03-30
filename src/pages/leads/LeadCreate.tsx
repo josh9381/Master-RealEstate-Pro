@@ -189,7 +189,7 @@ export default function LeadCreate() {
             Back to Leads
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Create New Lead</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Create New Lead</h1>
             <p className="text-muted-foreground">Add a new lead to your pipeline</p>
           </div>
         </div>

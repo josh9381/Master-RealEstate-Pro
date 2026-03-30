@@ -560,7 +560,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 <button
                   key={suggestion.id}
                   onClick={suggestion.action}
-                  className="w-full rounded-lg border bg-background p-3 text-left transition-all hover:border-primary hover:shadow-md"
+                  className="w-full rounded-lg border bg-background p-3 text-left transition-all hover:border-primary hover:shadow-lg"
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">

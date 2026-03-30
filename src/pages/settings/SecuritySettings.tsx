@@ -252,7 +252,7 @@ const SecuritySettings = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Security Settings</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Security Settings</h1>
           <p className="text-muted-foreground mt-2">Manage your account security and authentication</p>
         </div>
         <Button 
@@ -278,7 +278,7 @@ const SecuritySettings = () => {
                 <Shield className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <div className="text-3xl font-bold">{securityScore || '—'}/100</div>
+                <div className="text-2xl font-bold tracking-tight">{securityScore || '—'}/100</div>
                 <p className="text-sm text-muted-foreground">
                   {securityScore >= 80 ? 'Strong' : securityScore >= 50 ? 'Moderate' : securityScore > 0 ? 'Weak' : '—'}
                 </p>

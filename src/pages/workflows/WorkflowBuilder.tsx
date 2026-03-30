@@ -797,7 +797,7 @@ const WorkflowBuilder = () => {
           <Input
             value={workflowName}
             onChange={(e) => setWorkflowName(e.target.value)}
-            className="text-lg font-bold p-1 h-auto w-52 focus-visible:ring-1 border border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:border-primary bg-transparent hover:bg-muted/50"
+            className="text-lg font-bold p-1 h-auto w-52 focus-visible:ring-1 border border-dashed border-border dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:border-primary bg-transparent hover:bg-muted/50"
             placeholder="Workflow name"
             aria-label="Workflow name"
           />
@@ -953,7 +953,7 @@ const WorkflowBuilder = () => {
                   return matchesSearch && matchesFilter;
                 })
                 .map((template) => (
-                <Card key={template.name} className="hover:border-primary hover:shadow-md transition-all group">
+                <Card key={template.name} className="hover:border-primary hover:shadow-lg transition-all group">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
@@ -1033,7 +1033,7 @@ const WorkflowBuilder = () => {
               id="notifyOnFailure"
               checked={notifyOnFailure}
               onChange={(e) => setNotifyOnFailure(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-gray-300"
+              className="h-3.5 w-3.5 rounded border-border"
             />
             <label htmlFor="notifyOnFailure" className="text-xs text-muted-foreground cursor-pointer">
               Notify on failure

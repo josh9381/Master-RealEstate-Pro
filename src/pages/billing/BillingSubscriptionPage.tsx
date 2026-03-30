@@ -144,7 +144,7 @@ export default function BillingSubscriptionPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Subscription & Billing</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Subscription & Billing</h1>
         <p className="text-muted-foreground">Manage your subscription and billing details</p>
       </div>
 
@@ -213,7 +213,7 @@ export default function BillingSubscriptionPage() {
                 <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
 
                 <div className="flex items-baseline gap-2 mb-6">
-                  <span className="text-3xl font-bold">${plan.price}</span>
+                  <span className="text-2xl font-bold tracking-tight">${plan.price}</span>
                   <span className="text-muted-foreground">/ {plan.interval}</span>
                 </div>
 

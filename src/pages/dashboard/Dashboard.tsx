@@ -669,7 +669,7 @@ function Dashboard() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
             <p className="mt-2 text-muted-foreground">Loading your dashboard...</p>
           </div>
         </div>
@@ -694,8 +694,8 @@ function Dashboard() {
       {/* Page Header with Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Welcome back! Here's what's happening with your business.
           </p>
         </div>
@@ -714,7 +714,7 @@ function Dashboard() {
               Export
             </Button>
             {showExportMenu && (
-              <div className="absolute right-0 mt-1 w-40 bg-card border rounded-md shadow-lg z-10" role="menu" aria-label="Export options" onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Escape') { setShowExportMenu(false) } }}>
+              <div className="absolute right-0 mt-1 w-44 bg-card border rounded-xl shadow-xl z-10 overflow-hidden" role="menu" aria-label="Export options" onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Escape') { setShowExportMenu(false) } }}>
                 <button
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-t-md focus:bg-accent focus:outline-none"
                   onClick={handleExportCSV}
@@ -738,7 +738,7 @@ function Dashboard() {
             )}
           </div>
           <select
-            className="px-3 py-2 text-sm border rounded-md"
+            className="px-3 py-2 text-sm border rounded-lg bg-card transition-colors hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring"
             value={dateRange}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDateRange(e.target.value)}
             aria-label="Select date range for dashboard data"
@@ -760,7 +760,7 @@ function Dashboard() {
                 <label className="text-sm font-medium mb-1 block" htmlFor="filter-source">Lead Source</label>
                 <select
                   id="filter-source"
-                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  className="w-full px-3 py-2 text-sm border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                   value={filterSource}
                   onChange={(e) => setFilterSource(e.target.value)}
                   aria-label="Filter by lead source"
@@ -775,7 +775,7 @@ function Dashboard() {
                 <label className="text-sm font-medium mb-1 block" htmlFor="filter-status">Status</label>
                 <select
                   id="filter-status"
-                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  className="w-full px-3 py-2 text-sm border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   aria-label="Filter by status"
@@ -792,7 +792,7 @@ function Dashboard() {
                 <label className="text-sm font-medium mb-1 block" htmlFor="filter-priority">Priority</label>
                 <select
                   id="filter-priority"
-                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  className="w-full px-3 py-2 text-sm border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                   value={filterPriority}
                   onChange={(e) => setFilterPriority(e.target.value)}
                   aria-label="Filter by priority"
@@ -825,22 +825,54 @@ function Dashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Button onClick={() => navigate('/leads/create')} className="h-auto py-4 flex-col gap-2">
-          <Plus className="h-5 w-5" />
-          <span>New Lead</span>
-        </Button>
-        <Button onClick={() => navigate('/campaigns/create')} variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Megaphone className="h-5 w-5" />
-          <span>New Campaign</span>
-        </Button>
-        <Button onClick={() => navigate('/communication')} variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Mail className="h-5 w-5" />
-          <span>Send Email</span>
-        </Button>
-        <Button onClick={() => navigate('/calendar')} variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Calendar className="h-5 w-5" />
-          <span>Schedule Meeting</span>
-        </Button>
+        {[
+          { label: 'New Lead', icon: Plus, href: '/leads/create', primary: true },
+          { label: 'New Campaign', icon: Megaphone, href: '/campaigns/create', primary: false },
+          { label: 'Send Email', icon: Mail, href: '/communication', primary: false },
+          { label: 'Schedule Meeting', icon: Calendar, href: '/calendar', primary: false },
+        ].map((action) => (
+          <button
+            key={action.label}
+            onClick={() => navigate(action.href)}
+            className="group flex flex-col items-center justify-center gap-2.5 rounded-xl p-4 text-sm font-medium transition-all duration-150 border"
+            style={action.primary ? {
+              background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.85) 100%)',
+              color: 'white',
+              border: 'none',
+              boxShadow: '0 4px 14px hsl(var(--primary) / 0.3)',
+            } : {
+              background: 'hsl(var(--card))',
+              color: 'hsl(var(--foreground))',
+              borderColor: 'hsl(var(--border))',
+            }}
+            onMouseEnter={(e) => {
+              if (!action.primary) {
+                (e.currentTarget as HTMLElement).style.background = 'hsl(var(--accent))'
+                ;(e.currentTarget as HTMLElement).style.borderColor = 'hsl(var(--primary) / 0.3)'
+              } else {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px hsl(var(--primary) / 0.4)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!action.primary) {
+                (e.currentTarget as HTMLElement).style.background = 'hsl(var(--card))'
+                ;(e.currentTarget as HTMLElement).style.borderColor = 'hsl(var(--border))'
+              } else {
+                (e.currentTarget as HTMLElement).style.transform = ''
+                ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px hsl(var(--primary) / 0.3)'
+              }
+            }}
+          >
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition-transform duration-150 group-hover:scale-110"
+              style={action.primary ? { background: 'rgba(255,255,255,0.2)' } : { background: 'hsl(var(--primary) / 0.1)', border: '1px solid hsl(var(--primary) / 0.2)' }}
+            >
+              <action.icon style={{ width: '18px', height: '18px', color: action.primary ? 'white' : 'hsl(var(--primary))' }} />
+            </div>
+            <span>{action.label}</span>
+          </button>
+        ))}
       </div>
 
       {/* Main Stats Cards with Progress */}
@@ -854,54 +886,75 @@ function Dashboard() {
       ) : (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.name} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-                {stat.name}
-                {stat.helpText && <HelpTooltip text={stat.helpText} />}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center justify-between mt-2">
-                <p className="flex items-center text-xs text-muted-foreground">
-                  {stat.trend === 'up' ? (
-                    <TrendingUp className="mr-1 h-4 w-4 text-green-500" />
-                  ) : (
-                    <TrendingDown className="mr-1 h-4 w-4 text-red-500" />
-                  )}
-                  <span className={stat.trend === 'up' ? 'text-green-500' : 'text-red-500'}>
-                    {stat.change}
-                  </span>
+          <div
+            key={stat.name}
+            className="premium-card rounded-xl p-5 relative overflow-hidden group"
+          >
+            <div
+              className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.08) 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+            />
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  {stat.name}
+                  {stat.helpText && <HelpTooltip text={stat.helpText} />}
                 </p>
-                <span className="text-xs text-muted-foreground">Goal: {stat.target}</span>
+                <p className="text-3xl font-bold mt-1.5 tracking-tight">{stat.value}</p>
               </div>
-              {/* Progress Bar */}
-              <div className="mt-3 h-2 w-full bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-500"
-                  style={{ width: `${stat.progress}%` }}
-                />
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+                style={{ background: 'hsl(var(--primary) / 0.1)', border: '1px solid hsl(var(--primary) / 0.2)' }}
+              >
+                <stat.icon className="h-5 w-5" style={{ color: 'hsl(var(--primary))' }} />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="flex items-center gap-1 text-xs font-medium">
+                {stat.trend === 'up' ? (
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                ) : (
+                  <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+                )}
+                <span className={stat.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                  {stat.change}
+                </span>
+                <span className="text-muted-foreground font-normal">vs last period</span>
+              </p>
+              <span className="text-xs text-muted-foreground">Goal: {stat.target}</span>
+            </div>
+            <div className="mt-3 h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'hsl(var(--muted))' }}>
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${stat.progress}%`, background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))' }}
+              />
+            </div>
+          </div>
         ))}
       </div>
       )}
 
       {/* Secondary Quick Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
         {quickStats.map((item, index) => (
-          <Card key={index}>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{item.value}</div>
-              <div className="flex items-center justify-between mt-1">
-                <p className="text-sm text-muted-foreground">{item.label}</p>
-{item.change && <Badge variant="secondary" className="text-xs">{item.change}</Badge>}
-              </div>
-            </CardContent>
-          </Card>
+          <div
+            key={index}
+            className="rounded-xl p-4 border transition-all duration-150 hover:border-primary/30"
+            style={{ background: 'hsl(var(--card))' }}
+          >
+            <div className="text-2xl font-bold tracking-tight">{item.value}</div>
+            <div className="flex items-center justify-between mt-1.5">
+              <p className="text-xs text-muted-foreground">{item.label}</p>
+              {item.change && (
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                  style={{ background: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }}
+                >
+                  {item.change}
+                </span>
+              )}
+            </div>
+          </div>
         ))}
       </div>
 

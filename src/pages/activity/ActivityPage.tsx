@@ -76,7 +76,7 @@ export default function ActivityPage() {
     note: 'text-yellow-500',
     sms: 'text-orange-500',
     lead: 'text-indigo-500',
-    status_change: 'text-gray-500',
+    status_change: 'text-muted-foreground',
   }
 
   function getRelativeTime(dateStr: string): string {
@@ -111,7 +111,7 @@ export default function ActivityPage() {
       timestamp: a.createdAt ? getRelativeTime(a.createdAt) : 'Unknown',
       rawDate: a.createdAt || '',
       icon: iconMap[(a.type || 'note').toLowerCase()] || Activity,
-      color: colorMap[(a.type || 'note').toLowerCase()] || 'text-gray-500',
+      color: colorMap[(a.type || 'note').toLowerCase()] || 'text-muted-foreground',
       leadName: a.lead ? `${a.lead.firstName || ''} ${a.lead.lastName || ''}`.trim() : undefined,
     }))
   }, [rawActivities])
@@ -162,7 +162,7 @@ export default function ActivityPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Activity Feed</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Activity Feed</h1>
           <p className="text-muted-foreground">Track all activities across your CRM</p>
         </div>
         <Button variant="outline" onClick={handleExport}>

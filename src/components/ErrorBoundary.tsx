@@ -63,17 +63,17 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-muted/50 flex items-center justify-center p-4">
           <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-red-100 rounded-full">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-foreground">
                   Something went wrong
                 </h1>
-                <p className="text-gray-600 mt-1">
+                <p className="text-muted-foreground mt-1">
                   We're sorry, but there was an error loading this page.
                 </p>
               </div>
@@ -92,10 +92,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
             {this.state.errorInfo && (
               <details className="mb-6">
-                <summary className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+                <summary className="text-sm font-medium text-foreground cursor-pointer hover:text-foreground">
                   Stack Trace
                 </summary>
-                <pre className="mt-2 text-xs bg-gray-100 p-4 rounded overflow-auto max-h-60 text-gray-800">
+                <pre className="mt-2 text-xs bg-muted p-4 rounded overflow-auto max-h-60 text-gray-800">
                   {this.state.errorInfo.componentStack}
                 </pre>
               </details>

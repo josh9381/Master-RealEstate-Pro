@@ -104,7 +104,7 @@ const IntegrationsHub = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Integrations</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Integrations</h1>
           <p className="text-muted-foreground mt-2">
             Connect your favorite tools and services
           </p>
@@ -242,7 +242,7 @@ const IntegrationsHub = () => {
       {/* Integrations Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {integrations.map((integration) => (
-          <Card key={integration.id} className="hover:shadow-md transition-shadow">
+          <Card key={integration.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">

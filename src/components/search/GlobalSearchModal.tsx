@@ -249,8 +249,8 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
       case 'campaign': return 'bg-purple-100 text-purple-700'
       case 'workflow': return 'bg-green-100 text-green-700'
       case 'contact': return 'bg-orange-100 text-orange-700'
-      case 'page': return 'bg-gray-100 text-gray-700'
-      default: return 'bg-gray-100 text-gray-700'
+      case 'page': return 'bg-muted text-foreground'
+      default: return 'bg-muted text-foreground'
     }
   }
 

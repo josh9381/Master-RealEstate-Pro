@@ -39,9 +39,9 @@ const FollowUpAnalytics = () => {
     return (
       <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+          <div className="h-8 bg-muted dark:bg-gray-700 rounded w-1/3" />
           <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />)}
+            {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-muted dark:bg-gray-700 rounded" />)}
           </div>
         </div>
       </div>
@@ -80,11 +80,11 @@ const FollowUpAnalytics = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground dark:text-white flex items-center gap-2">
             <Bell className="h-7 w-7 text-indigo-600" />
             Follow-Up Analytics
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground dark:text-muted-foreground mt-1">
             Track follow-up completion rates, response times, and trends
           </p>
         </div>
@@ -108,8 +108,8 @@ const FollowUpAnalytics = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Follow-Ups</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{summary.total || 0}</p>
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">Total Follow-Ups</p>
+                <p className="text-2xl font-bold text-foreground dark:text-white">{summary.total || 0}</p>
               </div>
               <BellRing className="h-8 w-8 text-indigo-500 opacity-40" />
             </div>
@@ -119,7 +119,7 @@ const FollowUpAnalytics = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Completion Rate</p>
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">Completion Rate</p>
                 <p className="text-2xl font-bold text-green-600">{formatRate(summary.completionRate || 0)}%</p>
               </div>
               <CheckCircle2 className="h-8 w-8 text-green-500 opacity-40" />
@@ -130,7 +130,7 @@ const FollowUpAnalytics = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Avg Response Time</p>
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">Avg Response Time</p>
                 <p className="text-2xl font-bold text-blue-600">{summary.avgResponseHours || 0}h</p>
               </div>
               <Clock className="h-8 w-8 text-blue-500 opacity-40" />
@@ -141,7 +141,7 @@ const FollowUpAnalytics = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">Overdue</p>
                 <p className="text-2xl font-bold text-red-600">{summary.overdue || 0}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-500 opacity-40" />
@@ -180,7 +180,7 @@ const FollowUpAnalytics = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-gray-500 text-center py-8">No data</p>
+              <p className="text-muted-foreground text-center py-8">No data</p>
             )}
           </CardContent>
         </Card>
@@ -249,11 +249,11 @@ const FollowUpAnalytics = () => {
                     {p.priority}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                       <span>{p.completed} / {p.total} completed</span>
                       <span>{formatRate(p.completionRate)}%</span>
                     </div>
-                    <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-3 bg-muted dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
@@ -273,9 +273,9 @@ const FollowUpAnalytics = () => {
       {summary.total === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <Bell className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Follow-Up Data</h3>
-            <p className="text-gray-500 dark:text-gray-400">
+            <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground dark:text-muted-foreground mb-2">No Follow-Up Data</h3>
+            <p className="text-muted-foreground dark:text-muted-foreground">
               Analytics will appear once you start creating follow-up reminders on your leads.
             </p>
           </CardContent>

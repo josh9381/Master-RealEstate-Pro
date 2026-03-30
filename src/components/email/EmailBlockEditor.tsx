@@ -276,7 +276,7 @@ export function EmailBlockEditor({
         {compiledHtml ? (
           <EmailPreviewFrame html={compiledHtml} />
         ) : (
-          <div className="p-6 bg-gray-100 min-h-[300px]">
+          <div className="p-6 bg-muted min-h-[300px]">
             <div className="max-w-[600px] mx-auto bg-white rounded-lg shadow-sm overflow-hidden p-4">
               {blocks.map(block => (
                 <BlockPreview key={block.id} block={block} />
@@ -347,7 +347,7 @@ export function EmailBlockEditor({
       </div>
 
       {/* Canvas */}
-      <div className="p-4 space-y-1 bg-gray-50/50">
+      <div className="p-4 space-y-1 bg-muted/50/50">
         {blocks.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Plus className="h-8 w-8 mb-2 opacity-50" />

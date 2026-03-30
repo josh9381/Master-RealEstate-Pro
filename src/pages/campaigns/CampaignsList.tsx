@@ -483,7 +483,7 @@ function CampaignsList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Campaigns</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Campaigns</h1>
           <p className="mt-2 text-muted-foreground">
             Create and manage your marketing campaigns
           </p>
@@ -516,7 +516,7 @@ function CampaignsList() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
             <div className="rounded-full bg-blue-100 p-2.5">
@@ -524,12 +524,12 @@ function CampaignsList() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.active}</div>
+            <div className="text-2xl font-bold tracking-tight">{stats.active}</div>
             <p className="mt-1 text-xs text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Messages Sent</CardTitle>
             <div className="rounded-full bg-green-100 p-2.5">
@@ -537,12 +537,12 @@ function CampaignsList() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.totalSent.toLocaleString()}</div>
+            <div className="text-2xl font-bold tracking-tight">{stats.totalSent.toLocaleString()}</div>
             <p className="mt-1 text-xs text-muted-foreground">Across all campaigns</p>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <div className="rounded-full bg-purple-100 p-2.5">
@@ -550,12 +550,12 @@ function CampaignsList() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{fmtMoney(stats.totalRevenue)}</div>
+            <div className="text-2xl font-bold tracking-tight">{fmtMoney(stats.totalRevenue)}</div>
             <p className="mt-1 text-xs text-muted-foreground">Total generated</p>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average ROI</CardTitle>
             <div className="rounded-full bg-orange-100 p-2.5">
@@ -563,14 +563,14 @@ function CampaignsList() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.avgROI}%</div>
+            <div className="text-2xl font-bold tracking-tight">{stats.avgROI}%</div>
             <p className="mt-1 text-xs text-muted-foreground">Return on investment</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Budget vs Spent Tracker */}
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle className="text-lg">Budget Overview</CardTitle>
         </CardHeader>
@@ -605,7 +605,7 @@ function CampaignsList() {
 
       {/* Performance by Type Charts */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle className="text-lg">Performance by Campaign Type</CardTitle>
           </CardHeader>
@@ -625,7 +625,7 @@ function CampaignsList() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle className="text-lg">Revenue by Campaign Type</CardTitle>
           </CardHeader>
@@ -1213,7 +1213,7 @@ function CampaignsList() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Link to="/campaigns/create?type=EMAIL&template=newsletter">
-              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
+              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-lg hover:border-primary/30">
                 <div className="rounded-full bg-blue-100 p-2.5 w-fit mb-3">
                   <Mail className="h-5 w-5 text-blue-600" />
                 </div>
@@ -1222,7 +1222,7 @@ function CampaignsList() {
               </div>
             </Link>
             <Link to="/campaigns/create?type=EMAIL&template=promotional">
-              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
+              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-lg hover:border-primary/30">
                 <div className="rounded-full bg-green-100 p-2.5 w-fit mb-3">
                   <Tag className="h-5 w-5 text-green-600" />
                 </div>
@@ -1231,7 +1231,7 @@ function CampaignsList() {
               </div>
             </Link>
             <Link to="/campaigns/create?type=SMS&template=open-house">
-              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
+              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-lg hover:border-primary/30">
                 <div className="rounded-full bg-purple-100 p-2.5 w-fit mb-3">
                   <CalendarIcon className="h-5 w-5 text-purple-600" />
                 </div>
@@ -1240,7 +1240,7 @@ function CampaignsList() {
               </div>
             </Link>
             <Link to="/campaigns/create?type=EMAIL&template=survey">
-              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
+              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-lg hover:border-primary/30">
                 <div className="rounded-full bg-orange-100 p-2.5 w-fit mb-3">
                   <ClipboardList className="h-5 w-5 text-orange-600" />
                 </div>

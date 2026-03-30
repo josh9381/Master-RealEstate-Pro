@@ -46,7 +46,7 @@ const InvoiceDetail = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Invoice {invoice.number}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Invoice {invoice.number}</h1>
           <p className="text-muted-foreground mt-2">Issued on {invoice.date}</p>
         </div>
         <div className="flex items-center space-x-3">
@@ -138,7 +138,7 @@ const InvoiceDetail = () => {
           <div className="border-b pb-6 mb-6">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-3xl font-bold">INVOICE</h2>
+                <h2 className="text-2xl font-bold tracking-tight">INVOICE</h2>
                 <p className="text-muted-foreground mt-2">Invoice #{invoice.number}</p>
               </div>
               <div className="text-right">
@@ -293,7 +293,7 @@ const InvoiceDetail = () => {
               { number: 'INV-2024-003', date: 'Oct 1, 2024', amount: 99.0, status: 'Paid' },
               { number: 'INV-2024-004', date: 'Sep 1, 2024', amount: 99.0, status: 'Paid' },
             ].map((inv, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+              <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                 <div className="flex items-center space-x-3">
                   <FileText className="h-5 w-5 text-muted-foreground" />
                   <div>

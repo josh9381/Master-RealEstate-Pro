@@ -172,7 +172,7 @@ function CommunicationHistory({
       case 'CALL':
         return 'text-purple-600 bg-purple-50 dark:bg-purple-950/30'
       default:
-        return 'text-gray-600 bg-gray-50 dark:bg-gray-950/30'
+        return 'text-muted-foreground bg-muted/50 dark:bg-gray-950/30'
     }
   }
 

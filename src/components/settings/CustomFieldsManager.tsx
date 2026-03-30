@@ -256,7 +256,7 @@ export function CustomFieldsManager() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Custom Fields Manager</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Custom Fields Manager</h1>
           <p className="mt-2 text-muted-foreground">Create and manage custom fields for your leads</p>
         </div>
         <ErrorBanner message={`Failed to load custom fields: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
@@ -277,7 +277,7 @@ export function CustomFieldsManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Custom Fields Manager</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Custom Fields Manager</h1>
           <p className="mt-2 text-muted-foreground">
             Create and manage custom fields for your leads
           </p>

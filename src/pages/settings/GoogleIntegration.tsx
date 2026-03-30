@@ -135,7 +135,7 @@ const GoogleIntegration = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Google Workspace Integration</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Google Workspace Integration</h1>
           <p className="text-muted-foreground mt-2">
             Connect Google services for enhanced functionality
           </p>
@@ -215,7 +215,7 @@ const GoogleIntegration = () => {
                       onChange={(e) => setGmailEnabled(e.target.checked)}
                       className="sr-only peer" 
                     />
-                    <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-12 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
               </div>
@@ -299,7 +299,7 @@ const GoogleIntegration = () => {
                   onChange={(e) => setCalendarEnabled(e.target.checked)}
                   className="sr-only peer" 
                 />
-                <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-12 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           </div>
@@ -388,7 +388,7 @@ const GoogleIntegration = () => {
                   onChange={(e) => setContactsEnabled(e.target.checked)}
                   className="sr-only peer" 
                 />
-                <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-12 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           </div>

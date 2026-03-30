@@ -36,7 +36,7 @@ export const PredictionBadge = ({
         variant="outline"
         className={cn(
           'border font-medium inline-flex items-center gap-1.5',
-          'bg-gray-100 text-gray-500 border-gray-200',
+          'bg-muted text-muted-foreground border-border',
           size === 'sm' ? 'text-xs px-2 py-0.5' : size === 'lg' ? 'text-base px-3 py-1.5' : 'text-sm px-2.5 py-1',
           className
         )}
@@ -95,7 +95,7 @@ export const PredictionBadge = ({
       default:
         return {
           icon: TrendingUp,
-          color: 'bg-gray-100 text-gray-700 border-gray-200',
+          color: 'bg-muted text-foreground border-border',
           label: label || '',
           displayValue: value?.toString() || 'N/A',
         };

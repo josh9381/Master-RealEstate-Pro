@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { Breadcrumbs } from './Breadcrumbs'
@@ -16,6 +18,7 @@ import { cn } from '@/lib/utils'
 export function MainLayout() {
   const { sidebarOpen } = useUIStore()
   const { toast } = useToast()
+  const location = useLocation()
 
   // Subscribe to real-time WebSocket events (lead/campaign/workflow updates)
   useRealtimeUpdates()
@@ -42,22 +45,49 @@ export function MainLayout() {
         Skip to main content
       </a>
 
+      {/* Sidebar */}
       <Sidebar />
 
+      {/* Main Content Area */}
       <div
         className={cn(
           'flex flex-1 flex-col overflow-hidden transition-all duration-300',
-          sidebarOpen ? 'ml-64' : 'ml-0'
+          sidebarOpen ? 'lg:ml-64' : 'ml-0'
         )}
       >
         <Header />
 
-        <main id="main-content" className="flex-1 overflow-y-auto bg-muted/10 p-6">
-          <Breadcrumbs />
-          <Outlet />
+        <main
+          id="main-content"
+          className="flex-1 overflow-y-auto scrollbar-thin"
+          style={{ background: 'hsl(var(--background))' }}
+        >
+          {/* Mesh gradient background */}
+          <div
+            className="sticky top-0 left-0 right-0 h-0 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.04) 0%, transparent 60%)',
+            }}
+          />
+
+          <div className="p-5 lg:p-6">
+            <Breadcrumbs />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </main>
       </div>
-      
+
+      {/* Global UI Elements */}
       <ToastContainer />
       <ConfirmDialog />
       <FloatingAIButton />

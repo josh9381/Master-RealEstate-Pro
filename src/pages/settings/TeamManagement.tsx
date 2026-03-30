@@ -243,7 +243,7 @@ const TeamManagement = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Team Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
           <p className="text-muted-foreground mt-2">Manage your team members and their permissions</p>
         </div>
         <div className="flex gap-2">

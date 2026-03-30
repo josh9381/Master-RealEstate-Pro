@@ -100,11 +100,11 @@ export function UpgradePrompt({
                 <AlertTriangle className="w-6 h-6 text-orange-600" />
               </div>
               
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl font-bold text-foreground mb-2">
                 Limit Reached
               </h3>
               
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 You've reached your {currentTier} plan limit of{' '}
                 <strong>{limit.toLocaleString()} {resourceLabel}</strong>.
                 <br />

@@ -193,7 +193,7 @@ const DocumentationPages = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Documentation</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Documentation</h1>
         <p className="text-muted-foreground mt-2">
           Comprehensive guides and resources to help you succeed
         </p>

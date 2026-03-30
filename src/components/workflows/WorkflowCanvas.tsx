@@ -339,7 +339,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <button
                       onClick={() => onTemplateSelect?.('New Lead Welcome Series')}
-                      className="p-4 text-left border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
                     >
                       <Mail className="h-6 w-6 text-blue-600 mb-2" />
                       <h5 className="font-semibold text-sm mb-1">Lead Welcome</h5>
@@ -349,7 +349,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                     
                     <button
                       onClick={() => onTemplateSelect?.('Lead Score & Notify')}
-                      className="p-4 text-left border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group"
+                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group"
                     >
                       <TrendingUp className="h-6 w-6 text-green-600 mb-2" />
                       <h5 className="font-semibold text-sm mb-1">Lead Scoring</h5>
@@ -359,7 +359,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                     
                     <button
                       onClick={() => onTemplateSelect?.('Follow-up Automation')}
-                      className="p-4 text-left border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group"
+                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group"
                     >
                       <Calendar className="h-6 w-6 text-purple-600 mb-2" />
                       <h5 className="font-semibold text-sm mb-1">Auto Follow-up</h5>
@@ -409,7 +409,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 <div className="flex justify-center my-4">
                   <div className="flex flex-col items-center">
                     <div className="w-px h-8 bg-gray-300"></div>
-                    <div className="bg-gray-100 border border-gray-300 rounded-full px-3 py-1 text-xs text-gray-600 font-medium">
+                    <div className="bg-muted border border-border rounded-full px-3 py-1 text-xs text-muted-foreground font-medium">
                       Then
                     </div>
                     <div className="w-px h-8 bg-gray-300"></div>
@@ -574,7 +574,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
       {/* Mode Indicator Badge */}
       <div className="absolute top-4 left-4 z-20">
-        <div className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-md ${
+        <div className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg ${
           mode === 'drag' 
             ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' 
             : 'bg-green-100 text-green-700 border-2 border-green-300'
@@ -623,7 +623,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
             <CardContent className="p-2">
               <div className="text-xs font-semibold mb-2 text-muted-foreground">Mini-Map</div>
               <div 
-                className="relative w-48 h-32 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 overflow-hidden"
+                className="relative w-48 h-32 bg-muted/50 dark:bg-gray-900 rounded border border-border overflow-hidden"
                 style={{ cursor: 'pointer' }}
               >
                 {/* Mini-map nodes */}

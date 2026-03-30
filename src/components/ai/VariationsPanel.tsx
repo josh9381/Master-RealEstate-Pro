@@ -52,7 +52,7 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <h4 className="text-sm font-semibold text-foreground dark:text-gray-100">
           3 Tone Variations
         </h4>
         <Badge variant="secondary" className="text-xs">
@@ -69,12 +69,12 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
           return (
             <Card 
               key={variation.id}
-              className={`cursor-pointer transition-all hover:shadow-md ${
+              className={`cursor-pointer transition-all hover:shadow-lg ${
                 isSelected 
                   ? 'border-blue-500 border-2 shadow-lg' 
                   : isBest 
                   ? 'border-green-500 border-2' 
-                  : 'border-gray-200 dark:border-gray-700'
+                  : 'border-border dark:border-gray-700'
               }`}
               onClick={() => onSelect(variation)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(variation); } }}
@@ -115,18 +115,18 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
                 {/* Subject Line (for emails) */}
                 {variation.message.subject && (
                   <div className="space-y-1">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground">
                       Subject
                     </span>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                    <p className="text-sm font-semibold text-foreground dark:text-gray-100 line-clamp-1">
                       {variation.message.subject}
                     </p>
                   </div>
                 )}
                 
                 {/* Message Preview */}
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3 whitespace-pre-wrap">
+                <div className="bg-muted/50 dark:bg-gray-900 rounded-lg p-3">
+                  <p className="text-sm text-foreground dark:text-muted-foreground line-clamp-3 whitespace-pre-wrap">
                     {variation.message.body}
                   </p>
                 </div>
@@ -134,7 +134,7 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
                 {/* AI Reasoning */}
                 <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950 rounded-lg p-2">
                   <span className="text-xs">💡</span>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 flex-1">
+                  <p className="text-xs text-muted-foreground dark:text-muted-foreground flex-1">
                     <strong>Why {formatRate(variation.predictedResponseRate)}%:</strong> {variation.reasoning}
                   </p>
                 </div>
@@ -168,7 +168,7 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
       </div>
 
       {/* Footer Help Text */}
-      <div className="text-xs text-gray-500 dark:text-gray-400 text-center pt-2 border-t border-gray-200 dark:border-gray-700">
+      <div className="text-xs text-muted-foreground dark:text-muted-foreground text-center pt-2 border-t border-border dark:border-gray-700">
         💡 Tip: Predictions based on lead engagement history, message quality, and timing factors
       </div>
     </div>

@@ -109,7 +109,7 @@ const HelpCenter = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Help Center</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Help Center</h1>
         <p className="text-muted-foreground mt-2">
           Find answers, tutorials, and documentation
         </p>
@@ -144,7 +144,7 @@ const HelpCenter = () => {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/docs')}>
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/help/docs')}>
           <CardContent className="pt-6">
             <Book className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Documentation</h3>
@@ -157,7 +157,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/videos')}>
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/help/videos')}>
           <CardContent className="pt-6">
             <Video className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Video Tutorials</h3>
@@ -170,7 +170,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/support')}>
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/help/support')}>
           <CardContent className="pt-6">
             <MessageCircle className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Contact Support</h3>
@@ -183,7 +183,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowShortcuts(true)}>
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setShowShortcuts(true)}>
           <CardContent className="pt-6">
             <Keyboard className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Keyboard Shortcuts</h3>
@@ -268,7 +268,7 @@ const HelpCenter = () => {
             {videos.map((video, index) => (
               <div
                 key={index}
-                className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
               >
                 <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                   <Video className="h-12 w-12 text-primary" />

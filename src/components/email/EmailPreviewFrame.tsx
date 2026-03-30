@@ -117,7 +117,7 @@ export function EmailPreviewFrame({
         )}
 
         {/* Preview frame */}
-        <div className="flex-1 overflow-auto bg-gray-100 p-6">
+        <div className="flex-1 overflow-auto bg-muted p-6">
           <div
             className="mx-auto transition-all duration-300 ease-in-out"
             style={{ maxWidth: `${frameWidth}px` }}

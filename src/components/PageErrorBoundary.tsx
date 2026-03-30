@@ -66,10 +66,10 @@ export class PageErrorBoundary extends Component<Props, State> {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
                 <RefreshCw className="h-8 w-8 text-blue-600" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
+              <h2 className="text-xl font-bold text-foreground mb-2">
                 Update Available
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 A newer version of this page is available. Please reload to continue.
               </p>
               <button
@@ -92,11 +92,11 @@ export class PageErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="h-8 w-8 text-yellow-600" />
               </div>
               
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
                 Page Not Available
               </h2>
               
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 {this.props.pageName 
                   ? `The ${this.props.pageName} page encountered an error.`
                   : 'This page encountered an error.'
@@ -105,11 +105,11 @@ export class PageErrorBoundary extends Component<Props, State> {
               </p>
 
               {import.meta.env.DEV && this.state.error && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-left">
-                  <p className="text-xs font-medium text-gray-700 mb-2">
+                <div className="bg-muted/50 border border-border rounded-lg p-4 mb-6 text-left">
+                  <p className="text-xs font-medium text-foreground mb-2">
                     Error Details (Development):
                   </p>
-                  <pre className="text-xs text-gray-600 overflow-auto max-h-32">
+                  <pre className="text-xs text-muted-foreground overflow-auto max-h-32">
                     {this.state.error.toString()}
                   </pre>
                 </div>
@@ -126,7 +126,7 @@ export class PageErrorBoundary extends Component<Props, State> {
                 
                 <button
                   onClick={this.handleReset}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted transition-colors"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Try Again

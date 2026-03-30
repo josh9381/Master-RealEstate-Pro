@@ -94,7 +94,7 @@ export function AICostWidget() {
       <CardContent className="space-y-4">
         {/* Big number */}
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold">${cost.toFixed(2)}</span>
+          <span className="text-2xl font-bold tracking-tight">${cost.toFixed(2)}</span>
           <span className="text-sm text-muted-foreground">estimated</span>
         </div>
 

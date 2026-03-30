@@ -98,7 +98,7 @@ export function NotificationsPage() {
       case 'update':
         return <TrendingUp className="h-5 w-5 text-purple-500" />
       case 'system':
-        return <Settings className="h-5 w-5 text-gray-500" />
+        return <Settings className="h-5 w-5 text-muted-foreground" />
       case 'email':
         return <Mail className="h-5 w-5 text-cyan-500" />
       case 'sms':
@@ -108,7 +108,7 @@ export function NotificationsPage() {
       case 'meeting':
         return <Calendar className="h-5 w-5 text-yellow-500" />
       default:
-        return <Bell className="h-5 w-5 text-gray-500" />
+        return <Bell className="h-5 w-5 text-muted-foreground" />
     }
   }
 
@@ -216,7 +216,7 @@ export function NotificationsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
           <p className="mt-2 text-muted-foreground">Stay updated with all your activities and updates</p>
         </div>
         <ErrorBanner
@@ -232,7 +232,7 @@ export function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
           <p className="mt-2 text-muted-foreground">
             Stay updated with all your activities and updates
           </p>

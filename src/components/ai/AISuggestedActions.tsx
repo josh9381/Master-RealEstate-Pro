@@ -195,7 +195,7 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
             <div
               key={suggestion.id}
               className={cn(
-                "group relative w-full rounded-lg border-l-4 bg-muted/30 p-3 transition-all hover:bg-muted/60 hover:shadow-md cursor-pointer",
+                "group relative w-full rounded-lg border-l-4 bg-muted/30 p-3 transition-all hover:bg-muted/60 hover:shadow-lg cursor-pointer",
                 getPriorityColor(suggestion.priority)
               )}
               onClick={suggestion.onClick}

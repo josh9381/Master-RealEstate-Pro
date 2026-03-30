@@ -200,7 +200,7 @@ const LeadHistory = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Lead Activity History</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Lead Activity History</h1>
           <p className="text-muted-foreground mt-2">
             Complete timeline of all lead interactions and changes
           </p>
@@ -347,7 +347,7 @@ const LeadHistory = () => {
                           ? 'bg-orange-500'
                           : event.color === 'teal'
                           ? 'bg-teal-500'
-                          : 'bg-gray-500'
+                          : 'bg-muted/500'
                       }`}
                     >
                       <IconComponent className="h-6 w-6 text-white" />

@@ -721,7 +721,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           </FieldGroup>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{msg.length}/160 characters</span>
-            <div className="w-24 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+            <div className="w-24 h-1.5 rounded-full bg-muted dark:bg-gray-700 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${charPercent > 90 ? 'bg-red-500' : charPercent > 75 ? 'bg-amber-500' : 'bg-green-500'}`}
                 style={{ width: `${Math.min(100, charPercent)}%` }}

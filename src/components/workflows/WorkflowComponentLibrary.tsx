@@ -287,7 +287,7 @@ const allComponentsList: WorkflowComponent[] = [
 ];
 
 const categoryFilters: { key: ComponentCategory; label: string; color: string; activeColor: string; count: number }[] = [
-  { key: 'all', label: 'All', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', activeColor: 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900', count: allComponentsList.length },
+  { key: 'all', label: 'All', color: 'bg-muted text-foreground dark:bg-gray-800 dark:text-muted-foreground', activeColor: 'bg-gray-900 text-white dark:bg-muted dark:text-foreground', count: allComponentsList.length },
   { key: 'triggers', label: 'Triggers', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300', activeColor: 'bg-blue-600 text-white', count: triggers.length },
   { key: 'conditions', label: 'Conditions', color: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300', activeColor: 'bg-yellow-500 text-white', count: conditions.length },
   { key: 'actions', label: 'Actions', color: 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300', activeColor: 'bg-green-600 text-white', count: actions.length },
@@ -403,7 +403,7 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
                 transition-all duration-150 border
                 ${isActive
                   ? `${f.activeColor} border-transparent shadow-sm`
-                  : `${f.color} border-transparent hover:border-gray-300 dark:hover:border-gray-600`
+                  : `${f.color} border-transparent hover:border-border dark:hover:border-gray-600`
                 }
               `}
             >
@@ -422,7 +422,7 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
           const Icon = component.icon;
           const isAdded = justAdded === component.id;
           const borderColor = categoryBorderColor[component.category] || 'border-l-gray-400';
-          const iconBg = categoryIconBg[component.category] || 'bg-gray-100 text-gray-600';
+          const iconBg = categoryIconBg[component.category] || 'bg-muted text-muted-foreground';
 
           return (
             <div
@@ -433,7 +433,7 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
                 ${borderColor}
                 ${isAdded
                   ? 'bg-green-50 dark:bg-green-950/30 border border-l-[3px] border-green-300 dark:border-green-700'
-                  : 'bg-background hover:bg-accent/50 border border-l-[3px] border-transparent hover:border-gray-200 dark:hover:border-gray-700'
+                  : 'bg-background hover:bg-accent/50 border border-l-[3px] border-transparent hover:border-border dark:hover:border-gray-700'
                 }
                 ${mode === 'drag' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
               `}

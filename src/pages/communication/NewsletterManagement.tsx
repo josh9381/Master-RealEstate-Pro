@@ -48,7 +48,7 @@ const NewsletterManagement = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Newsletter Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Newsletter Management</h1>
           <p className="text-muted-foreground mt-2">
             Create and manage your email newsletters
           </p>

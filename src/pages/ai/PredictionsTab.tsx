@@ -232,7 +232,7 @@ const PredictionsTab = () => {
                         ? 'bg-green-100 text-green-600'
                         : prediction.status === 'warning'
                         ? 'bg-yellow-100 text-yellow-600'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {prediction.status === 'positive' ? (
@@ -276,15 +276,15 @@ const PredictionsTab = () => {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
               <div className="text-center p-4 border rounded-lg">
-                <p className="text-3xl font-bold">{pipelineSummary.activeDeals}</p>
+                <p className="text-2xl font-bold tracking-tight">{pipelineSummary.activeDeals}</p>
                 <p className="text-sm text-muted-foreground">Active Deals</p>
               </div>
               <div className="text-center p-4 border rounded-lg">
-                <p className="text-3xl font-bold">{pipelineSummary.avgDaysInPipeline}d</p>
+                <p className="text-2xl font-bold tracking-tight">{pipelineSummary.avgDaysInPipeline}d</p>
                 <p className="text-sm text-muted-foreground">Avg Pipeline Duration</p>
               </div>
               <div className="text-center p-4 border rounded-lg">
-                <p className="text-3xl font-bold">{fmtMoney(pipelineSummary.totalPipelineValue)}</p>
+                <p className="text-2xl font-bold tracking-tight">{fmtMoney(pipelineSummary.totalPipelineValue)}</p>
                 <p className="text-sm text-muted-foreground">Pipeline Value</p>
               </div>
             </div>
@@ -311,7 +311,7 @@ const PredictionsTab = () => {
                         ? 'bg-green-100 text-green-600'
                         : prediction.status === 'warning'
                         ? 'bg-yellow-100 text-yellow-600'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {prediction.status === 'positive' ? (

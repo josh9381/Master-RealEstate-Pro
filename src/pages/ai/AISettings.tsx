@@ -252,7 +252,7 @@ const AISettings = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">AI Settings</h1>
+            <h1 className="text-2xl font-bold tracking-tight">AI Settings</h1>
             <p className="text-muted-foreground mt-1">
               Configure your AI profile, defaults, and feature preferences
             </p>
@@ -635,7 +635,7 @@ const AISettings = () => {
                       <label key={platform} className="flex items-center gap-2 text-sm">
                         <input
                           type="checkbox"
-                          className="rounded border-gray-300"
+                          className="rounded border-border"
                           checked={((form.profile.socialMediaPrefs as Record<string, unknown>)?.platforms as string[] || []).includes(platform)}
                           onChange={(e) => {
                             const prefs = (form.profile.socialMediaPrefs || { platforms: [], hashtagStyle: 'moderate', emojiUsage: 'moderate' }) as Record<string, unknown>

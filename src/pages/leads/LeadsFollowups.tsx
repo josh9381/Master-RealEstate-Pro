@@ -245,7 +245,7 @@ function LeadsFollowups() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Follow-ups</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Follow-ups</h1>
           <p className="mt-2 text-muted-foreground">
             Manage your scheduled follow-up tasks and never miss an opportunity
           </p>
@@ -347,7 +347,7 @@ function LeadsFollowups() {
           return (
             <Card 
               key={followup.id}
-              className={`transition-all hover:shadow-md ${
+              className={`transition-all hover:shadow-lg ${
                 followup.status === 'overdue' ? 'border-red-500/50' : ''
               } ${
                 followup.status === 'completed' ? 'opacity-60' : ''

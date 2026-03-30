@@ -241,7 +241,7 @@ export const ContactList = ({
                           type="checkbox"
                           checked={selectedContactIds.has(contact.id)}
                           onChange={() => onToggleContactSelect(contact.id)}
-                          className="w-4 h-4 rounded border-gray-300"
+                          className="w-4 h-4 rounded border-border"
                         />
                       </div>
                     )}

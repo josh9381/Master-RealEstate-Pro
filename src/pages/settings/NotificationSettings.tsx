@@ -240,7 +240,7 @@ const NotificationSettings = () => {
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Notification Settings</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Notification Settings</h1>
           <p className="text-muted-foreground mt-2">
             Manage how and when you receive notifications
           </p>

@@ -190,9 +190,9 @@ export default function SubscriptionPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Crown className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Admin Access Required</h2>
-          <p className="text-gray-600">Only administrators can manage subscriptions.</p>
+          <Crown className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">Admin Access Required</h2>
+          <p className="text-muted-foreground">Only administrators can manage subscriptions.</p>
         </div>
       </div>
     )
@@ -202,17 +202,17 @@ export default function SubscriptionPage() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-muted rounded w-1/2"></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white p-6 rounded-lg border border-gray-200 animate-pulse">
-              <div className="h-6 bg-gray-200 rounded mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+            <div key={i} className="bg-white p-6 rounded-lg border border-border animate-pulse">
+              <div className="h-6 bg-muted rounded mb-4"></div>
+              <div className="h-4 bg-muted rounded mb-2"></div>
               <div className="space-y-2 mt-6">
                 {[...Array(5)].map((_, j) => (
-                  <div key={j} className="h-4 bg-gray-200 rounded"></div>
+                  <div key={j} className="h-4 bg-muted rounded"></div>
                 ))}
               </div>
             </div>
@@ -234,8 +234,8 @@ export default function SubscriptionPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Subscription Plans</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-2xl font-bold tracking-tight">Subscription Plans</h1>
+        <p className="text-muted-foreground mt-2">
           Choose the plan that fits your organization's needs
         </p>
       </div>
@@ -305,8 +305,8 @@ export default function SubscriptionPage() {
               <div className="flex items-center gap-3">
                 <Crown className="w-6 h-6 text-amber-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Current Plan</p>
-                  <p className="text-xl font-bold text-gray-900">
+                  <p className="text-sm text-muted-foreground">Current Plan</p>
+                  <p className="text-xl font-bold text-foreground">
                     {user.organization.subscriptionTier}
                   </p>
                 </div>
@@ -362,10 +362,10 @@ export default function SubscriptionPage() {
                 
                 <div className="mt-4">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-gray-900">
+                    <span className="text-2xl font-bold tracking-tight">
                       ${plan.price}
                     </span>
-                    <span className="text-gray-600">/{plan.billingPeriod}</span>
+                    <span className="text-muted-foreground">/{plan.billingPeriod}</span>
                   </div>
                   
                   {/* Show savings for upgrades */}
@@ -382,7 +382,7 @@ export default function SubscriptionPage() {
                 {/* Limits */}
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-gray-500" />
+                    <Users className="w-4 h-4 text-muted-foreground" />
                     <span>
                       {plan.features.maxUsers === null 
                         ? 'Unlimited users' 
@@ -391,7 +391,7 @@ export default function SubscriptionPage() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-gray-500" />
+                    <Mail className="w-4 h-4 text-muted-foreground" />
                     <span>
                       {plan.features.maxLeads === null 
                         ? 'Unlimited leads' 
@@ -400,7 +400,7 @@ export default function SubscriptionPage() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-gray-500" />
+                    <Target className="w-4 h-4 text-muted-foreground" />
                     <span>
                       {plan.features.maxCampaigns === null 
                         ? 'Unlimited campaigns' 
@@ -409,7 +409,7 @@ export default function SubscriptionPage() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Workflow className="w-4 h-4 text-gray-500" />
+                    <Workflow className="w-4 h-4 text-muted-foreground" />
                     <span>
                       {plan.features.maxWorkflows === null 
                         ? 'Unlimited workflows' 
@@ -419,14 +419,14 @@ export default function SubscriptionPage() {
                   
                   {plan.features.emailsPerMonth && (
                     <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-gray-500" />
+                      <MessageSquare className="w-4 h-4 text-muted-foreground" />
                       <span>{plan.features.emailsPerMonth.toLocaleString()} emails/month</span>
                     </div>
                   )}
                   
                   {plan.features.smsPerMonth && (
                     <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-gray-500" />
+                      <Phone className="w-4 h-4 text-muted-foreground" />
                       <span>{plan.features.smsPerMonth.toLocaleString()} SMS/month</span>
                     </div>
                   )}
@@ -437,7 +437,7 @@ export default function SubscriptionPage() {
                   {(plan.features.features || []).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2 text-sm">
                       <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700">{feature}</span>
+                      <span className="text-foreground">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -485,23 +485,23 @@ export default function SubscriptionPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h4 className="font-semibold text-gray-900 mb-1">Can I change plans anytime?</h4>
-            <p className="text-sm text-gray-600">
+            <h4 className="font-semibold text-foreground mb-1">Can I change plans anytime?</h4>
+            <p className="text-sm text-muted-foreground">
               Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.
             </p>
           </div>
           
           <div>
-            <h4 className="font-semibold text-gray-900 mb-1">What happens when I hit a limit?</h4>
-            <p className="text-sm text-gray-600">
+            <h4 className="font-semibold text-foreground mb-1">What happens when I hit a limit?</h4>
+            <p className="text-sm text-muted-foreground">
               You'll receive warnings as you approach your limits. Once reached, you'll need to upgrade 
               to continue adding more resources.
             </p>
           </div>
           
           <div>
-            <h4 className="font-semibold text-gray-900 mb-1">Is there a free trial?</h4>
-            <p className="text-sm text-gray-600">
+            <h4 className="font-semibold text-foreground mb-1">Is there a free trial?</h4>
+            <p className="text-sm text-muted-foreground">
               New organizations get a 14-day trial of the PROFESSIONAL plan to test all features.
             </p>
           </div>
@@ -522,7 +522,7 @@ export default function SubscriptionPage() {
                     setShowConfirmModal(false)
                     setSelectedPlan(null)
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-muted-foreground"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -533,18 +533,18 @@ export default function SubscriptionPage() {
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-sm text-gray-600">Current Plan</p>
-                    <p className="text-lg font-semibold text-gray-900">{user?.organization?.subscriptionTier}</p>
+                    <p className="text-sm text-muted-foreground">Current Plan</p>
+                    <p className="text-lg font-semibold text-foreground">{user?.organization?.subscriptionTier}</p>
                   </div>
-                  <div className="text-2xl text-gray-400">→</div>
+                  <div className="text-2xl text-muted-foreground">→</div>
                   <div>
-                    <p className="text-sm text-gray-600">New Plan</p>
+                    <p className="text-sm text-muted-foreground">New Plan</p>
                     <p className="text-lg font-semibold text-blue-900">{selectedPlan.name}</p>
                   </div>
                 </div>
                 
                 <div className="pt-3 border-t border-blue-200">
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm text-foreground">
                     <strong>Price:</strong> ${selectedPlan.price}/{selectedPlan.billingPeriod}
                   </p>
                 </div>
@@ -569,7 +569,7 @@ export default function SubscriptionPage() {
               
               {/* Feature Comparison */}
               <div>
-                <h4 className="font-semibold text-gray-900 mb-3">What You Get:</h4>
+                <h4 className="font-semibold text-foreground mb-3">What You Get:</h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Check className="w-4 h-4 text-green-600" />

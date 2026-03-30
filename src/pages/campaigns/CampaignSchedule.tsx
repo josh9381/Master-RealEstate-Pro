@@ -245,7 +245,7 @@ const CampaignSchedule = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Campaign Schedule</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Campaign Schedule</h1>
           <p className="text-muted-foreground mt-2">
             Manage scheduled and recurring campaigns
           </p>
@@ -264,7 +264,7 @@ const CampaignSchedule = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Scheduled Campaigns</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -274,7 +274,7 @@ const CampaignSchedule = () => {
             <p className="text-xs text-muted-foreground">Ready to send</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -284,7 +284,7 @@ const CampaignSchedule = () => {
             <p className="text-xs text-muted-foreground">Across all scheduled</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recurring Campaigns</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -294,7 +294,7 @@ const CampaignSchedule = () => {
             <p className="text-xs text-muted-foreground">Active schedules</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Next Campaign</CardTitle>
             <Send className="h-4 w-4 text-muted-foreground" />
@@ -324,7 +324,7 @@ const CampaignSchedule = () => {
       )}
 
       {/* Scheduled Campaigns */}
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle>Upcoming Scheduled Campaigns</CardTitle>
           <CardDescription>Campaigns ready to send at scheduled times</CardDescription>
@@ -337,7 +337,7 @@ const CampaignSchedule = () => {
             {scheduledCampaigns.map((campaign) => (
               <div
                 key={campaign.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200"
+                className="flex items-center justify-between p-4 border rounded-lg hover:shadow-lg hover:border-primary/30 transition-all duration-200"
               >
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10">
@@ -396,7 +396,7 @@ const CampaignSchedule = () => {
       </Card>
 
       {/* Recurring Schedules */}
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle>Recurring Campaign Schedules</CardTitle>
           <CardDescription>Automatically scheduled campaigns</CardDescription>
@@ -409,7 +409,7 @@ const CampaignSchedule = () => {
               recurringCampaigns.map((schedule) => (
                 <div
                   key={schedule.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:shadow-lg hover:border-primary/30 transition-all duration-200"
                 >
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-green-100">
@@ -465,7 +465,7 @@ const CampaignSchedule = () => {
       </Card>
 
       {/* Recently Sent */}
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle>Recently Sent Campaigns</CardTitle>
           <CardDescription>Recently completed campaigns</CardDescription>
@@ -478,7 +478,7 @@ const CampaignSchedule = () => {
               sentCampaigns.map((campaign) => (
                 <div
                   key={campaign.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:shadow-lg hover:border-primary/30 transition-all duration-200"
                 >
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
@@ -525,7 +525,7 @@ const CampaignSchedule = () => {
       </Card>
 
       {/* Schedule New Campaign */}
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle>Schedule New Campaign</CardTitle>
           <CardDescription>Set up a new scheduled campaign</CardDescription>

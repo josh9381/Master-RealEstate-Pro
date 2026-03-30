@@ -341,7 +341,7 @@ const LeadScoring = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Lead Scoring & Models</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Lead Scoring & Models</h1>
             <p className="text-muted-foreground mt-1">
               AI-powered lead quality prediction, model config, and training
             </p>
@@ -663,7 +663,7 @@ const LeadScoring = () => {
                 <div className="flex items-center gap-4 pb-4 border-b">
                   <div>
                     <span className="text-sm text-muted-foreground">Final Score</span>
-                    <div className="text-3xl font-bold">{factorBreakdown.data.finalScore}</div>
+                    <div className="text-2xl font-bold tracking-tight">{factorBreakdown.data.finalScore}</div>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Raw Total</span>

@@ -267,7 +267,7 @@ const SMSTemplatesLibrary = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">SMS Templates</h1>
+          <h1 className="text-2xl font-bold tracking-tight">SMS Templates</h1>
           <p className="text-muted-foreground mt-2">Manage reusable SMS templates for outreach</p>
         </div>
         <Button onClick={openCreate}>
@@ -332,7 +332,7 @@ const SMSTemplatesLibrary = () => {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-between">
                 {/* Phone preview */}
-                <div className="bg-gray-100 rounded-xl p-3 mb-3 border-2 border-gray-200">
+                <div className="bg-muted rounded-xl p-3 mb-3 border-2 border-border">
                   <div className="bg-green-500 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm ml-auto max-w-[85%]">
                     {template.body.length > 200 ? template.body.substring(0, 200) + '...' : template.body}
                   </div>
@@ -580,7 +580,7 @@ const SMSTemplatesLibrary = () => {
                   {formBody && (
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Preview</label>
-                      <div className="bg-gray-100 rounded-xl p-4 border-2 border-gray-200 max-w-[300px] mx-auto">
+                      <div className="bg-muted rounded-xl p-4 border-2 border-border max-w-[300px] mx-auto">
                         <div className="text-center text-xs text-muted-foreground mb-2">SMS Preview</div>
                         <div className="bg-green-500 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm">
                           {formBody}

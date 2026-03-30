@@ -130,7 +130,7 @@ const ScheduledReportsSection = () => {
       </CardHeader>
       <CardContent>
         {showScheduleForm && (
-          <form onSubmit={handleCreateSchedule} className="mb-4 p-4 border rounded-lg space-y-3 bg-gray-50 dark:bg-gray-800/50">
+          <form onSubmit={handleCreateSchedule} className="mb-4 p-4 border rounded-lg space-y-3 bg-muted/50 dark:bg-gray-800/50">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Report Type</label>
@@ -215,7 +215,7 @@ const ScheduledReportsSection = () => {
 
         <div className="space-y-3">
           {schedules.length === 0 && !showScheduleForm && (
-            <p className="text-sm text-gray-500 text-center py-4">No scheduled reports yet. Click "New Schedule" to create one.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">No scheduled reports yet. Click "New Schedule" to create one.</p>
           )}
           {schedules.map((sched: any) => (
             <div key={sched.id} className={`flex items-center justify-between p-4 border rounded-lg ${!sched.isActive ? 'opacity-60' : ''}`}>
@@ -672,7 +672,7 @@ const CustomReports = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Custom Reports</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Custom Reports</h1>
           <p className="text-muted-foreground mt-2">
             Build, save, and manage custom reports with your data
           </p>

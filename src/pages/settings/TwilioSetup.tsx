@@ -304,7 +304,7 @@ const TwilioSetup = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Twilio Configuration</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Twilio Configuration</h1>
           <p className="text-muted-foreground mt-2">
             Configure Twilio for SMS and phone call functionality
           </p>
@@ -337,8 +337,8 @@ const TwilioSetup = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex items-center space-x-3">
-              <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-green-100' : hasCredentials ? 'bg-yellow-100' : 'bg-gray-100'}`}>
-                <Power className={`h-6 w-6 ${connected ? 'text-green-600' : hasCredentials ? 'text-yellow-600' : 'text-gray-400'}`} />
+              <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-green-100' : hasCredentials ? 'bg-yellow-100' : 'bg-muted'}`}>
+                <Power className={`h-6 w-6 ${connected ? 'text-green-600' : hasCredentials ? 'text-yellow-600' : 'text-muted-foreground'}`} />
               </div>
               <div>
                 <p className="font-medium">
@@ -364,8 +364,8 @@ const TwilioSetup = () => {
                   <MessageSquare className="h-6 w-6 text-green-600" />
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-gray-100">
-                  <MessageSquare className="h-6 w-6 text-gray-400" />
+                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-muted">
+                  <MessageSquare className="h-6 w-6 text-muted-foreground" />
                 </div>
               )}
               <div>
@@ -428,7 +428,7 @@ const TwilioSetup = () => {
                     setAccountSid('');
                     setShowAccountSid(false);
                   }}
-                  className="absolute right-10 top-1/2 -translate-y-1/2 px-2 py-1 hover:bg-gray-100 rounded text-xs text-blue-600 border"
+                  className="absolute right-10 top-1/2 -translate-y-1/2 px-2 py-1 hover:bg-muted rounded text-xs text-blue-600 border"
                   title="Clear to enter new Account SID"
                 >
                   Clear
@@ -437,13 +437,13 @@ const TwilioSetup = () => {
               <button
                 type="button"
                 onClick={() => setShowAccountSid(!showAccountSid)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
                 title={showAccountSid ? "Hide Account SID" : "Show Account SID"}
               >
                 {showAccountSid ? (
-                  <EyeOff className="h-4 w-4 text-gray-500" />
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <Eye className="h-4 w-4 text-gray-500" />
+                  <Eye className="h-4 w-4 text-muted-foreground" />
                 )}
               </button>
             </div>
@@ -472,13 +472,13 @@ const TwilioSetup = () => {
                 <button
                   type="button"
                   onClick={() => setShowAuthToken(!showAuthToken)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
                   title={showAuthToken ? "Hide Auth Token" : "Show Auth Token"}
                 >
                   {showAuthToken ? (
-                    <EyeOff className="h-4 w-4 text-gray-500" />
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-500" />
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                 </button>
               )}
@@ -591,7 +591,7 @@ const TwilioSetup = () => {
               </p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div>
                 <p className="text-sm font-medium">Status Callback URL (Optional)</p>
                 <p className="text-xs text-muted-foreground mt-1">For delivery status updates</p>
@@ -692,7 +692,7 @@ const TwilioSetup = () => {
                 type="text"
                 value={phoneNumber || 'Not configured'}
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+                className="w-full px-3 py-2 border rounded-lg bg-muted/50 text-foreground"
               />
               <p className="text-xs text-muted-foreground mt-1">Configure in API Credentials section above</p>
             </div>
@@ -789,7 +789,7 @@ const TwilioSetup = () => {
                 type="text"
                 value={phoneNumber || 'Not configured'}
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+                className="w-full px-3 py-2 border rounded-lg bg-muted/50 text-foreground"
               />
               <p className="text-xs text-muted-foreground mt-1">Configure in API Credentials section above</p>
             </div>
@@ -884,7 +884,7 @@ const TwilioSetup = () => {
           <div className="grid gap-6 md:grid-cols-3">
             <div className="p-4 border rounded-lg">
               <h4 className="font-semibold mb-3">SMS Messages</h4>
-              <p className="text-3xl font-bold">{usageStats.smsCount.toLocaleString()}</p>
+              <p className="text-2xl font-bold tracking-tight">{usageStats.smsCount.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mt-1">sent this month</p>
               <p className="text-sm font-medium text-green-600 mt-2">
                 ${(usageStats.smsCount * 0.01).toFixed(2)} cost
@@ -892,7 +892,7 @@ const TwilioSetup = () => {
             </div>
             <div className="p-4 border rounded-lg">
               <h4 className="font-semibold mb-3">Voice Minutes</h4>
-              <p className="text-3xl font-bold">{usageStats.callCount.toLocaleString()}</p>
+              <p className="text-2xl font-bold tracking-tight">{usageStats.callCount.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mt-1">minutes used</p>
               <p className="text-sm font-medium text-green-600 mt-2">
                 ${(usageStats.callCount * 0.10).toFixed(2)} cost
@@ -900,7 +900,7 @@ const TwilioSetup = () => {
             </div>
             <div className="p-4 border rounded-lg">
               <h4 className="font-semibold mb-3">Phone Numbers</h4>
-              <p className="text-3xl font-bold">{phoneNumbers.length}</p>
+              <p className="text-2xl font-bold tracking-tight">{phoneNumbers.length}</p>
               <p className="text-sm text-muted-foreground mt-1">active numbers</p>
               <p className="text-sm font-medium text-green-600 mt-2">
                 ${(phoneNumbers.length * 1.00).toFixed(2)} cost

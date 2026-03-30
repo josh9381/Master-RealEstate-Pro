@@ -85,7 +85,7 @@ function toHexColor(color?: string | null): string {
   const twMap: Record<string, string> = {
     'bg-red-500': '#EF4444', 'bg-orange-500': '#F97316', 'bg-yellow-500': '#EAB308',
     'bg-green-500': '#22C55E', 'bg-cyan-500': '#06B6D4', 'bg-blue-500': '#3B82F6',
-    'bg-purple-500': '#A855F7', 'bg-pink-500': '#EC4899', 'bg-gray-500': '#6B7280',
+    'bg-purple-500': '#A855F7', 'bg-pink-500': '#EC4899', 'bg-muted/500': '#6B7280',
   }
   if (twMap[color]) return twMap[color]
   // Map plain color names
@@ -218,7 +218,7 @@ export function TagsManager() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Tags & Segments</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Tags & Segments</h1>
           <p className="mt-2 text-muted-foreground">Organize and manage your lead tags and segment settings</p>
         </div>
         <ErrorBanner message={`Failed to load tags: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
@@ -239,7 +239,7 @@ export function TagsManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Tags & Segments</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Tags & Segments</h1>
           <p className="mt-2 text-muted-foreground">
             Organize and manage your lead tags and segment settings
           </p>

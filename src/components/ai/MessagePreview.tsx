@@ -49,34 +49,34 @@ export function MessagePreview({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 my-4">
+    <div className="bg-white dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg shadow-sm p-4 my-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="text-primary">{getIcon()}</div>
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">{getTitle()}</h3>
+          <h3 className="font-semibold text-foreground dark:text-gray-100">{getTitle()}</h3>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
             {content.tone}
           </span>
-          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+          <span className="px-2 py-1 bg-muted dark:bg-gray-700 text-foreground dark:text-muted-foreground rounded">
             {content.purpose}
           </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="bg-gray-50 dark:bg-gray-900/50 rounded p-3 mb-3">
+      <div className="bg-muted/50 dark:bg-gray-900/50 rounded p-3 mb-3">
         {type === 'email' && (
           <>
             <div className="mb-2">
-              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Subject:</span>
-              <p className="text-sm text-gray-900 dark:text-gray-100 mt-1">{content.subject}</p>
+              <span className="text-xs font-semibold text-muted-foreground dark:text-muted-foreground">Subject:</span>
+              <p className="text-sm text-foreground dark:text-gray-100 mt-1">{content.subject}</p>
             </div>
             <div>
-              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Body:</span>
-              <p className="text-sm text-gray-900 dark:text-gray-100 mt-1 whitespace-pre-wrap">
+              <span className="text-xs font-semibold text-muted-foreground dark:text-muted-foreground">Body:</span>
+              <p className="text-sm text-foreground dark:text-gray-100 mt-1 whitespace-pre-wrap">
                 {content.body}
               </p>
             </div>
@@ -84,17 +84,17 @@ export function MessagePreview({
         )}
         {type === 'sms' && (
           <div>
-            <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+            <p className="text-sm text-foreground dark:text-gray-100 whitespace-pre-wrap">
               {content.message}
             </p>
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-2 text-xs text-muted-foreground dark:text-muted-foreground">
               {content.length}/{content.maxLength} characters
             </div>
           </div>
         )}
         {type === 'script' && (
           <div>
-            <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+            <p className="text-sm text-foreground dark:text-gray-100 whitespace-pre-wrap">
               {content.content}
             </p>
           </div>

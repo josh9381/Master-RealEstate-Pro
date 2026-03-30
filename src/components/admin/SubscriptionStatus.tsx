@@ -51,11 +51,11 @@ export function SubscriptionStatus() {
   
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4" />
+      <div className="bg-white rounded-lg border border-border p-6 animate-pulse">
+        <div className="h-6 bg-muted rounded w-1/2 mb-4" />
         <div className="space-y-2">
-          <div className="h-4 bg-gray-200 rounded" />
-          <div className="h-4 bg-gray-200 rounded w-3/4" />
+          <div className="h-4 bg-muted rounded" />
+          <div className="h-4 bg-muted rounded w-3/4" />
         </div>
       </div>
     )
@@ -117,13 +117,13 @@ export function SubscriptionStatus() {
   }
   
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-border overflow-hidden">
       {/* Header */}
       <div className={`p-6 bg-${config.color}-50 border-b border-${config.color}-100`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {config.icon}
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-foreground">
               {tier || 'STARTER'} Plan
             </h3>
           </div>
@@ -136,7 +136,7 @@ export function SubscriptionStatus() {
         </div>
         
         {data.subscription?.price && data.subscription.price > 0 && (
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             ${data.subscription.price}/month
           </p>
         )}
@@ -145,7 +145,7 @@ export function SubscriptionStatus() {
       {/* Usage Meters */}
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-semibold text-gray-700">Resource Usage</h4>
+          <h4 className="text-sm font-semibold text-foreground">Resource Usage</h4>
           <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
             View Details
           </button>
@@ -159,11 +159,11 @@ export function SubscriptionStatus() {
           return (
             <div key={item.label}>
               <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 text-sm text-gray-700">
+                <div className="flex items-center gap-2 text-sm text-foreground">
                   <Icon className="w-4 h-4" />
                   <span>{item.label}</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-foreground">
                   {item.current.toLocaleString()}
                   {item.limit && ` / ${item.limit.toLocaleString()}`}
                   {!item.limit && ' / Unlimited'}
@@ -171,7 +171,7 @@ export function SubscriptionStatus() {
               </div>
               
               {item.limit && (
-                <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="relative h-2 bg-muted rounded-full overflow-hidden">
                   <div 
                     className={`absolute inset-y-0 left-0 rounded-full transition-all ${getUsageColor(percentage)}`}
                     style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -192,11 +192,11 @@ export function SubscriptionStatus() {
       
       {/* Upgrade CTA */}
       {tier !== 'ENTERPRISE' && (
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-t border-gray-200">
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-t border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
               <TrendingUp className="w-4 h-4 text-blue-600" />
-              <span className="text-gray-700">Need more resources?</span>
+              <span className="text-foreground">Need more resources?</span>
             </div>
             <a 
               href="/admin/subscription"

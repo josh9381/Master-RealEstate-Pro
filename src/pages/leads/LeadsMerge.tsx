@@ -187,7 +187,7 @@ const LeadsMerge = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Merge Duplicate Leads</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Merge Duplicate Leads</h1>
           <p className="text-muted-foreground mt-2">
             Find and merge duplicate lead records with field-level control
           </p>

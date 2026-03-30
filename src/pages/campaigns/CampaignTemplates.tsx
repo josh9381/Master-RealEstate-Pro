@@ -323,7 +323,7 @@ const CampaignTemplates = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Campaign Templates</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Campaign Templates</h1>
           <p className="text-muted-foreground mt-2">
             Pre-built real estate campaign templates to speed up your marketing
           </p>
@@ -342,7 +342,7 @@ const CampaignTemplates = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Templates</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -352,7 +352,7 @@ const CampaignTemplates = () => {
             <p className="text-xs text-muted-foreground">Ready to use</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Email</CardTitle>
             <Mail className="h-4 w-4 text-blue-500" />
@@ -363,7 +363,7 @@ const CampaignTemplates = () => {
           </CardContent>
         </Card>
         {stats.sms > 0 && (
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">SMS</CardTitle>
             <MessageSquare className="h-4 w-4 text-green-500" />
@@ -375,7 +375,7 @@ const CampaignTemplates = () => {
         </Card>
         )}
         {stats.phone > 0 && (
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Phone</CardTitle>
             <Phone className="h-4 w-4 text-orange-500" />
@@ -386,7 +386,7 @@ const CampaignTemplates = () => {
           </CardContent>
         </Card>
         )}
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recurring</CardTitle>
             <RefreshCw className="h-4 w-4 text-purple-500" />

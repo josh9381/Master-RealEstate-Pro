@@ -250,7 +250,7 @@ const LeadsExport = () => {
       <LeadsSubNav />
 
       <div>
-        <h1 className="text-3xl font-bold">Export Leads</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Export Leads</h1>
         <p className="text-muted-foreground mt-2">
           Download your lead data in various formats.{totalLeads > 0 && ` ${totalLeads} total leads available.`}
         </p>

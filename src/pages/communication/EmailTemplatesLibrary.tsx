@@ -365,7 +365,7 @@ const EmailTemplatesLibrary = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Email Templates Library</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Email Templates Library</h1>
           <p className="text-muted-foreground mt-2">
             Pre-designed templates for your email campaigns
           </p>
@@ -552,7 +552,7 @@ const EmailTemplatesLibrary = () => {
                 </div>
               </div>
               ) : (
-              <div key={template.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-4">
+              <div key={template.id} className="border rounded-lg p-4 hover:shadow-lg transition-shadow flex items-center gap-4">
                 <div className="flex items-center justify-center h-12 w-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg flex-shrink-0">
                   <span className="text-2xl">📧</span>
                 </div>

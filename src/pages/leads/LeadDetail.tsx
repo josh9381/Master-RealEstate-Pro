@@ -336,7 +336,7 @@ function LeadDetail() {
     if (score >= 80) return 'text-green-600'
     if (score >= 60) return 'text-yellow-600'
     if (score >= 40) return 'text-blue-600'
-    return 'text-gray-500'
+    return 'text-muted-foreground'
   }
 
   const lead = leadResponse as Lead | undefined
@@ -566,7 +566,7 @@ function LeadDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead'}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead'}</h1>
           {(lead?.position || lead?.company) && (
             <p className="mt-2 text-muted-foreground">
               {lead?.position && lead?.company

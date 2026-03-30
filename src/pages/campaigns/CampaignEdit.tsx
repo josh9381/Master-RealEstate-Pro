@@ -163,7 +163,7 @@ function CampaignEdit() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Edit Campaign</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Edit Campaign</h1>
             <p className="mt-1 text-muted-foreground">
               Modify your campaign settings and content
             </p>

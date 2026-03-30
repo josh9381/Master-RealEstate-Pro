@@ -121,7 +121,7 @@ const ConversionReports = () => {
   if (isError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Conversion Reports</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Conversion Reports</h1>
         <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load conversion data'} retry={() => refetch()} />
       </div>
     );
@@ -131,7 +131,7 @@ const ConversionReports = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Conversion Reports</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Conversion Reports</h1>
           <p className="text-muted-foreground mt-2">
             Track conversion rates and funnel performance
           </p>

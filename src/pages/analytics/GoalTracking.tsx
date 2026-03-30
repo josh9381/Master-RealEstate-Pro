@@ -135,9 +135,9 @@ const GoalTracking = () => {
     return (
       <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+          <div className="h-8 bg-muted dark:bg-gray-700 rounded w-1/3" />
           <div className="grid grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-40 bg-gray-200 dark:bg-gray-700 rounded" />)}
+            {[1, 2, 3, 4].map((i) => <div key={i} className="h-40 bg-muted dark:bg-gray-700 rounded" />)}
           </div>
         </div>
       </div>
@@ -157,11 +157,11 @@ const GoalTracking = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground dark:text-white flex items-center gap-2">
             <Target className="h-7 w-7 text-purple-600" />
             Goal Tracking
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground dark:text-muted-foreground mt-1">
             Set targets and track your progress
           </p>
         </div>
@@ -178,19 +178,19 @@ const GoalTracking = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Active Goals</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{activeGoals.length}</p>
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">Active Goals</p>
+            <p className="text-2xl font-bold text-foreground dark:text-white">{activeGoals.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">Completed</p>
             <p className="text-2xl font-bold text-green-600">{completedGoals.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Avg Progress</p>
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">Avg Progress</p>
             <p className="text-2xl font-bold text-blue-600">
               {activeGoals.length > 0
                 ? Math.round(activeGoals.reduce((s: number, g: any) => s + (g.progress || 0), 0) / activeGoals.length)
@@ -213,7 +213,7 @@ const GoalTracking = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal Name</label>
+                  <label className="block text-sm font-medium text-foreground dark:text-muted-foreground mb-1">Goal Name</label>
                   <input
                     type="text"
                     required
@@ -224,7 +224,7 @@ const GoalTracking = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Metric Type</label>
+                  <label className="block text-sm font-medium text-foreground dark:text-muted-foreground mb-1">Metric Type</label>
                   <select
                     value={form.metricType}
                     onChange={(e) => setForm({ ...form, metricType: e.target.value })}
@@ -238,7 +238,7 @@ const GoalTracking = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Value</label>
+                  <label className="block text-sm font-medium text-foreground dark:text-muted-foreground mb-1">Target Value</label>
                   <input
                     type="number"
                     required
@@ -250,7 +250,7 @@ const GoalTracking = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-foreground dark:text-muted-foreground mb-1">Start Date</label>
                   <input
                     type="date"
                     required
@@ -260,7 +260,7 @@ const GoalTracking = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-foreground dark:text-muted-foreground mb-1">End Date</label>
                   <input
                     type="date"
                     required
@@ -272,7 +272,7 @@ const GoalTracking = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period</label>
+                  <label className="block text-sm font-medium text-foreground dark:text-muted-foreground mb-1">Period</label>
                   <select
                     value={form.period}
                     onChange={(e) => setForm({ ...form, period: e.target.value })}
@@ -284,7 +284,7 @@ const GoalTracking = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (optional)</label>
+                  <label className="block text-sm font-medium text-foreground dark:text-muted-foreground mb-1">Notes (optional)</label>
                   <input
                     type="text"
                     value={form.notes}
@@ -310,7 +310,7 @@ const GoalTracking = () => {
       {/* Active Goals */}
       {activeGoals.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Active Goals</h2>
+          <h2 className="text-lg font-semibold text-foreground dark:text-white">Active Goals</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {activeGoals.map((goal: any) => {
               const metric = METRIC_TYPES.find((m) => m.value === goal.metricType) || METRIC_TYPES[METRIC_TYPES.length - 1];
@@ -331,17 +331,17 @@ const GoalTracking = () => {
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900 dark:text-white">{goal.name}</h3>
-                          <p className="text-xs text-gray-500">{metric.label} · {goal.period}</p>
+                          <h3 className="font-medium text-foreground dark:text-white">{goal.name}</h3>
+                          <p className="text-xs text-muted-foreground">{metric.label} · {goal.period}</p>
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => startEdit(goal)} className="p-1 text-gray-400 hover:text-blue-500">
+                        <button onClick={() => startEdit(goal)} className="p-1 text-muted-foreground hover:text-blue-500">
                           <Edit2 className="h-4 w-4" />
                         </button>
                         <button
                           onClick={async () => { if (await showConfirm({ title: 'Delete Goal', message: 'Delete this goal?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMutation.mutate(goal.id); }}
-                          className="p-1 text-gray-400 hover:text-red-500"
+                          className="p-1 text-muted-foreground hover:text-red-500"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -351,14 +351,14 @@ const GoalTracking = () => {
                     {/* Progress bar */}
                     <div className="mb-3">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-gray-400">
+                        <span className="text-muted-foreground dark:text-muted-foreground">
                           {formatValue(goal.currentValue, goal.metricType)} / {formatValue(goal.targetValue, goal.metricType)}
                         </span>
-                        <span className={`font-medium ${isCompleted ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
+                        <span className={`font-medium ${isCompleted ? 'text-green-600' : 'text-foreground dark:text-white'}`}>
                           {progress}%
                         </span>
                       </div>
-                      <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-3 bg-muted dark:bg-gray-700 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
@@ -369,7 +369,7 @@ const GoalTracking = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         {daysLeft} days left
@@ -391,7 +391,7 @@ const GoalTracking = () => {
       {/* Completed Goals */}
       {completedGoals.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Completed Goals</h2>
+          <h2 className="text-lg font-semibold text-foreground dark:text-white">Completed Goals</h2>
           <div className="space-y-2">
             {completedGoals.map((goal: any) => {
               const metric = METRIC_TYPES.find((m) => m.value === goal.metricType) || METRIC_TYPES[METRIC_TYPES.length - 1];
@@ -400,15 +400,15 @@ const GoalTracking = () => {
                   <div className="flex items-center gap-3">
                     <Trophy className="h-5 w-5 text-green-600" />
                     <div>
-                      <span className="font-medium text-gray-900 dark:text-white">{goal.name}</span>
-                      <span className="text-sm text-gray-500 ml-2">
+                      <span className="font-medium text-foreground dark:text-white">{goal.name}</span>
+                      <span className="text-sm text-muted-foreground ml-2">
                         {formatValue(goal.targetValue, goal.metricType)} {metric.label}
                       </span>
                     </div>
                   </div>
                   <button
                     onClick={async () => { if (await showConfirm({ title: 'Delete Goal', message: 'Delete this goal?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMutation.mutate(goal.id); }}
-                    className="p-1 text-gray-400 hover:text-red-500"
+                    className="p-1 text-muted-foreground hover:text-red-500"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -422,9 +422,9 @@ const GoalTracking = () => {
       {goals.length === 0 && !showForm && (
         <Card>
           <CardContent className="py-12 text-center">
-            <Target className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Goals Set</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
+            <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground dark:text-muted-foreground mb-2">No Goals Set</h3>
+            <p className="text-muted-foreground dark:text-muted-foreground mb-4">
               Create goals to track your real estate performance metrics
             </p>
             <Button onClick={() => setShowForm(true)} className="flex items-center gap-2 mx-auto">

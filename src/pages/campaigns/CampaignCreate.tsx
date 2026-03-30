@@ -567,7 +567,7 @@ function CampaignCreate() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Create New Campaign</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Create New Campaign</h1>
           <p className="mt-2 text-muted-foreground">
             {selectedType 
               ? `Creating ${campaignTypes.find(t => t.type === selectedType)?.title || 'campaign'}`
@@ -650,7 +650,7 @@ function CampaignCreate() {
           </div>
 
           {/* Quick-Start Templates */}
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="premium-card">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-primary" />
@@ -714,7 +714,7 @@ function CampaignCreate() {
 
       {/* Step 2: Basic Details */}
       {step === 2 && (
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle>Campaign Details</CardTitle>
             <CardDescription>
@@ -778,7 +778,7 @@ function CampaignCreate() {
       {/* Step 3: Campaign Content */}
       {step === 3 && (
         <div className="space-y-6">
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="premium-card">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-primary" />
@@ -807,7 +807,7 @@ function CampaignCreate() {
                           Personalize
                         </Button>
                         {showSubjectTokens && (
-                          <div className="absolute right-0 top-full mt-1 z-10 w-52 rounded-md border bg-popover p-1 shadow-md">
+                          <div className="absolute right-0 top-full mt-1 z-10 w-52 rounded-md border bg-popover p-1 shadow-lg">
                             {personalizationTokens.map((t) => (
                               <button
                                 key={t.token}
@@ -967,7 +967,7 @@ function CampaignCreate() {
                               Personalize
                             </Button>
                             {showSmsTokens && (
-                              <div className="absolute right-0 top-full mt-1 z-10 w-52 rounded-md border bg-popover p-1 shadow-md">
+                              <div className="absolute right-0 top-full mt-1 z-10 w-52 rounded-md border bg-popover p-1 shadow-lg">
                                 {personalizationTokens.map((t) => (
                                   <button
                                     key={t.token}
@@ -1068,15 +1068,15 @@ function CampaignCreate() {
                         </Button>
                       </div>
                       {showSmsPreview && (
-                        <div className="w-[280px] rounded-[2rem] border-4 border-gray-800 dark:border-gray-300 bg-gray-100 dark:bg-gray-900 p-1 shadow-lg">
+                        <div className="w-[280px] rounded-[2rem] border-4 border-gray-800 dark:border-border bg-muted dark:bg-gray-900 p-1 shadow-lg">
                           {/* Phone status bar */}
-                          <div className="flex items-center justify-between px-4 py-1 text-[10px] font-medium text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center justify-between px-4 py-1 text-[10px] font-medium text-muted-foreground dark:text-muted-foreground">
                             <span>9:41</span>
                             <div className="w-20 h-5 bg-gray-800 dark:bg-gray-300 rounded-full" />
                             <span>5G</span>
                           </div>
                           {/* Chat header */}
-                          <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 text-center">
+                          <div className="bg-muted dark:bg-gray-800 px-3 py-2 text-center">
                             <div className="text-xs font-semibold">Your Business</div>
                             <div className="text-[10px] text-muted-foreground">SMS</div>
                           </div>
@@ -1084,13 +1084,13 @@ function CampaignCreate() {
                           <div className="bg-white dark:bg-gray-950 min-h-[260px] p-3 space-y-2">
                             {formData.content ? (
                               <>
-                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-gray-200 dark:bg-gray-800 px-3 py-2 text-xs leading-relaxed">
+                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted dark:bg-gray-800 px-3 py-2 text-xs leading-relaxed">
                                   {formData.content.replace(/\{\{(\w+)\}\}/g, (_, key) => {
                                     const samples: Record<string, string> = { firstName: 'Sarah', lastName: 'Johnson', email: 'sarah@email.com', phone: '(555) 123-4567', propertyAddress: '123 Oak St', propertyType: 'Single Family', agentName: 'Mike', companyName: 'RE/MAX' }
                                     return samples[key] || `{{${key}}}`
                                   })}
                                 </div>
-                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-gray-200 dark:bg-gray-800 px-3 py-1.5 text-[10px] text-muted-foreground italic">
+                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted dark:bg-gray-800 px-3 py-1.5 text-[10px] text-muted-foreground italic">
                                   Reply STOP to opt out.
                                 </div>
                                 {formData.mediaUrl && /^https?:\/\/.+/.test(formData.mediaUrl) && (
@@ -1111,7 +1111,7 @@ function CampaignCreate() {
                             )}
                           </div>
                           {/* Input bar */}
-                          <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-b-[1.5rem]">
+                          <div className="bg-muted dark:bg-gray-800 px-3 py-2 rounded-b-[1.5rem]">
                             <div className="bg-white dark:bg-gray-700 rounded-full px-3 py-1.5 text-[10px] text-muted-foreground">
                               iMessage
                             </div>
@@ -1224,7 +1224,7 @@ function CampaignCreate() {
       {/* Step 4: Target Audience */}
       {step === 4 && (
         <div className="space-y-6">
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="premium-card">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Target className="h-5 w-5 text-primary" />
@@ -1366,7 +1366,7 @@ function CampaignCreate() {
       {/* Step 5: Schedule & Budget */}
       {step === 5 && (
         <div className="space-y-6">
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="premium-card">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
@@ -1664,7 +1664,7 @@ function CampaignCreate() {
       {step === 6 && (
         <div className="space-y-6">
           {/* Campaign Summary */}
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="premium-card">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Eye className="h-5 w-5 text-primary" />
@@ -1719,7 +1719,7 @@ function CampaignCreate() {
 
           {/* A/B Testing */}
           {selectedType === 'email' && (
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card className="premium-card">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />

@@ -120,7 +120,7 @@ interface MetricCardProps {
 
 function MetricCard({ title, icon: Icon, value, subtitle, valueClassName }: MetricCardProps) {
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="premium-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-1.5">
           {title}
@@ -286,7 +286,7 @@ function StatCell({ label, value, rate, rateColor, large = true, colSpan }: Stat
 
 function CampaignDetailCard({ campaign, onNavigate }: { campaign: EnrichedCampaign; onNavigate: (id: string) => void }) {
   return (
-    <div className="p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200">
+    <div className="p-4 border rounded-lg hover:shadow-lg hover:border-primary/30 transition-all duration-200">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10">
@@ -967,7 +967,7 @@ const CampaignReports = () => {
       <CampaignsSubNav />
 
       <div>
-        <h1 className="text-3xl font-bold">Campaign Reports & Analytics</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Campaign Reports & Analytics</h1>
         <p className="text-muted-foreground mt-2">
           Track performance, analyze trends, and explore detailed campaign metrics
         </p>

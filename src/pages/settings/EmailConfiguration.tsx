@@ -245,7 +245,7 @@ const EmailConfiguration = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Email Configuration</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Email Configuration</h1>
           <p className="text-muted-foreground mt-2">
             Configure SMTP settings and email delivery
           </p>
@@ -285,7 +285,7 @@ const EmailConfiguration = () => {
               {isConfigured ? (
                 <CheckCircle className="h-5 w-5 text-green-600" />
               ) : (
-                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+                <div className="h-5 w-5 rounded-full border-2 border-border" />
               )}
               <div>
                 <p className="font-medium">
@@ -300,7 +300,7 @@ const EmailConfiguration = () => {
               {lastTested ? (
                 <CheckCircle className="h-5 w-5 text-green-600" />
               ) : (
-                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+                <div className="h-5 w-5 rounded-full border-2 border-border" />
               )}
               <div>
                 <p className="font-medium">
@@ -398,13 +398,13 @@ const EmailConfiguration = () => {
                   <button
                     type="button"
                     onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
                     title={showApiKey ? "Hide API Key" : "Show API Key"}
                   >
                     {showApiKey ? (
-                      <EyeOff className="h-4 w-4 text-gray-500" />
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <Eye className="h-4 w-4 text-gray-500" />
+                      <Eye className="h-4 w-4 text-muted-foreground" />
                     )}
                   </button>
                 )}

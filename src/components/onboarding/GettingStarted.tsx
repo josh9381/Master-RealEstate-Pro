@@ -133,7 +133,7 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
               className={`relative p-4 rounded-xl border transition-all duration-200 ${
                 step.isComplete
                   ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800'
-                  : 'bg-card border-border hover:border-primary/40 hover:shadow-md'
+                  : 'bg-card border-border hover:border-primary/40 hover:shadow-lg'
               }`}
             >
               {/* Step number badge */}

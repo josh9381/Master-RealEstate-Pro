@@ -80,7 +80,7 @@ export default function APIIntegrationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">API Integrations</h1>
+          <h1 className="text-2xl font-bold tracking-tight">API Integrations</h1>
           <p className="text-muted-foreground">Manage your API keys and integrations</p>
         </div>
         <Button onClick={() => setShowCreateForm(true)} disabled={showCreateForm}>

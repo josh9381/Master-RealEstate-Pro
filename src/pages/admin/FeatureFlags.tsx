@@ -158,7 +158,7 @@ const FeatureFlags = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Feature Flags</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Feature Flags</h1>
           <p className="text-muted-foreground mt-2">
             Control feature rollouts and experiments
           </p>
@@ -235,12 +235,12 @@ const FeatureFlags = () => {
                 <div className="flex items-start space-x-4 flex-1">
                   <div
                     className={`p-2 rounded-lg ${
-                      feature.enabled ? 'bg-green-100' : 'bg-gray-100'
+                      feature.enabled ? 'bg-green-100' : 'bg-muted'
                     }`}
                   >
                     <Flag
                       className={`h-5 w-5 ${
-                        feature.enabled ? 'text-green-600' : 'text-gray-400'
+                        feature.enabled ? 'text-green-600' : 'text-muted-foreground'
                       }`}
                     />
                   </div>
@@ -291,7 +291,7 @@ const FeatureFlags = () => {
                       onChange={() => handleToggle(feature.id)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(feature.id)}>
                     <Edit className="h-4 w-4" />

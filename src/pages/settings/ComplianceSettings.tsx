@@ -127,7 +127,7 @@ const ComplianceSettings = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Compliance Settings</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Compliance Settings</h1>
           <p className="text-muted-foreground mt-2">
             Configure TCPA, DNC, GDPR, and other compliance requirements
           </p>
@@ -478,7 +478,7 @@ const ComplianceSettings = () => {
                   <span className="text-sm">{consent.type}</span>
                   <label className="relative inline-block w-12 h-6">
                     <input type="checkbox" defaultChecked={consent.enabled} className="sr-only peer" />
-                    <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-12 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
               ))}
@@ -502,7 +502,7 @@ const ComplianceSettings = () => {
                 onChange={(e) => setAuditEnabled(e.target.checked)}
                 className="sr-only peer" 
               />
-              <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-12 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </CardHeader>

@@ -113,7 +113,7 @@ const AnalyticsDashboard = () => {
   if (analyticsError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Analytics Dashboard</h1>
         <ErrorBanner
           message={analyticsErrorObj instanceof Error ? analyticsErrorObj.message : 'Failed to load analytics data'}
           retry={() => refetch()}
@@ -126,7 +126,7 @@ const AnalyticsDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Analytics Dashboard</h1>
           <p className="text-muted-foreground mt-2">
             Comprehensive view of your business performance
           </p>
@@ -139,7 +139,7 @@ const AnalyticsDashboard = () => {
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/campaigns')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/campaigns')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-1.5">
               Total Revenue
@@ -154,7 +154,7 @@ const AnalyticsDashboard = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/leads')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/leads')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-1.5">
               Total Leads
@@ -169,7 +169,7 @@ const AnalyticsDashboard = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/leads')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/analytics/leads')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-1.5">
               Conversion Rate
@@ -184,7 +184,7 @@ const AnalyticsDashboard = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/leads')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/analytics/leads')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-1.5">
               Avg Deal Size
@@ -335,7 +335,7 @@ const AnalyticsDashboard = () => {
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/analytics/conversions')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/analytics/conversions')}>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Mail className="h-4 w-4 mr-2" />
@@ -385,7 +385,7 @@ const AnalyticsDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/leads/pipeline')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/leads/pipeline')}>
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChart3 className="h-4 w-4 mr-2" />

@@ -762,7 +762,7 @@ function LeadsList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Leads</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Leads</h1>
           <p className="mt-2 text-muted-foreground">Manage and track all your leads in one place</p>
         </div>
       </div>
@@ -788,7 +788,7 @@ function LeadsList() {
             <select
               value={scoreFilter}
               onChange={(e) => setScoreFilter(e.target.value as ScoreFilterValue)}
-              className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-muted/50 transition-colors"
             >
               <option value="ALL">All Scores</option>
               <option value="HOT">🔥 Hot (80-100)</option>
@@ -806,7 +806,7 @@ function LeadsList() {
                   setFilters(prev => ({ ...prev, tags: [] }))
                 }
               }}
-              className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-muted/50 transition-colors"
             >
               <option value="">All Tags</option>
               {allTags.map(tag => (

@@ -303,7 +303,7 @@ function LeadsImport() {
       <LeadsSubNav />
 
       <div>
-        <h1 className="text-3xl font-bold">Import Leads</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Import Leads</h1>
         <p className="mt-2 text-muted-foreground">
           Upload CSV, Excel, or vCard files to import leads with column mapping and duplicate detection
         </p>

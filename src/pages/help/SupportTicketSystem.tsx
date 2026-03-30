@@ -35,7 +35,7 @@ const STATUS_COLORS: Record<string, string> = {
   OPEN: 'bg-blue-100 text-blue-800',
   IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
   RESOLVED: 'bg-green-100 text-green-800',
-  CLOSED: 'bg-gray-100 text-gray-800',
+  CLOSED: 'bg-muted text-gray-800',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -327,7 +327,7 @@ const SupportTicketSystem = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Support Tickets</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Support Tickets</h1>
           <p className="text-muted-foreground mt-2">
             View and manage your support requests
           </p>
@@ -410,7 +410,7 @@ const SupportTicketSystem = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Closed</CardTitle>
-            <AlertCircle className="h-4 w-4 text-gray-500" />
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.closed ?? '\u2014'}</div>

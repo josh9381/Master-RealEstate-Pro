@@ -53,7 +53,7 @@ export function DevErrorPanel() {
             <div className="flex items-center gap-2">
               <span className="text-red-400 text-sm">⚠</span>
               <span className="font-semibold text-sm">Dev Errors ({errorCount})</span>
-              <span className="text-gray-500">({totalOccurrences} total)</span>
+              <span className="text-muted-foreground">({totalOccurrences} total)</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -80,7 +80,7 @@ export function DevErrorPanel() {
           {/* Error List */}
           <div className="overflow-y-auto flex-1 divide-y divide-gray-800">
             {errors.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">No errors captured</div>
+              <div className="p-4 text-center text-muted-foreground">No errors captured</div>
             ) : (
               errors.map((err) => (
                 <ErrorItem key={err.id} error={err} />
@@ -104,7 +104,7 @@ function ErrorItem({ error }: { error: ReturnType<typeof getDevErrors>[0] }) {
     network: 'text-blue-400 bg-blue-900/30',
   }
 
-  const colorClass = typeColors[error.type] || 'text-gray-400 bg-gray-800'
+  const colorClass = typeColors[error.type] || 'text-muted-foreground bg-gray-800'
 
   return (
     <div className="px-3 py-2 hover:bg-gray-800/50 cursor-pointer" onClick={() => setExpanded(!expanded)}>
@@ -114,7 +114,7 @@ function ErrorItem({ error }: { error: ReturnType<typeof getDevErrors>[0] }) {
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-gray-200 break-words leading-tight">{error.message}</p>
-          <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500">
+          <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
             <span>{new Date(error.timestamp).toLocaleTimeString()}</span>
             {error.count > 1 && <span className="text-orange-400">×{error.count}</span>}
             {error.status && <span>HTTP {error.status}</span>}
@@ -123,7 +123,7 @@ function ErrorItem({ error }: { error: ReturnType<typeof getDevErrors>[0] }) {
       </div>
 
       {expanded && error.stack && (
-        <pre className="mt-2 p-2 bg-gray-950 rounded text-[10px] text-gray-400 overflow-x-auto max-h-32 whitespace-pre-wrap">
+        <pre className="mt-2 p-2 bg-gray-950 rounded text-[10px] text-muted-foreground overflow-x-auto max-h-32 whitespace-pre-wrap">
           {error.stack}
         </pre>
       )}

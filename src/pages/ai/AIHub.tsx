@@ -194,7 +194,7 @@ const AIHub = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">AI Hub</h1>
+        <h1 className="text-2xl font-bold tracking-tight">AI Hub</h1>
         <p className="text-muted-foreground mt-2">
           Your AI control center — monitor, configure, and understand your AI across the platform
         </p>

@@ -255,8 +255,8 @@ const BillingPage = () => {
             <CardContent className="pt-6">
               {isLoading ? (
                 <div className="animate-pulse space-y-4">
-                  <div className="h-10 bg-gray-200 rounded w-1/3" />
-                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+                  <div className="h-10 bg-muted rounded w-1/3" />
+                  <div className="h-4 bg-muted rounded w-1/2" />
                 </div>
               ) : subscriptionData ? (
                 <div className="space-y-6">
@@ -345,7 +345,7 @@ const BillingPage = () => {
                       <span className="text-2xl font-bold">Contact Us</span>
                     ) : (
                       <>
-                        <span className="text-3xl font-bold">${plan.price}</span>
+                        <span className="text-2xl font-bold tracking-tight">${plan.price}</span>
                         <span className="text-muted-foreground text-sm">/mo</span>
                       </>
                     )}

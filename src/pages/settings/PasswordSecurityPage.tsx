@@ -101,7 +101,7 @@ export default function PasswordSecurityPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Password & Security</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Password & Security</h1>
         <p className="text-muted-foreground">Manage your password and security settings</p>
       </div>
 

@@ -378,7 +378,7 @@ function CampaignDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{campaign.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{campaign.name}</h1>
           <div className="mt-2 flex items-center space-x-2">
             <Badge variant={
               (campaign.status || '').toUpperCase() === 'ACTIVE' ? 'success'
@@ -418,7 +418,7 @@ function CampaignDetail() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Sent
@@ -429,7 +429,7 @@ function CampaignDetail() {
             <p className="text-xs text-muted-foreground">Total messages</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Opened
@@ -440,7 +440,7 @@ function CampaignDetail() {
             <p className="text-xs text-muted-foreground">{openRate}% open rate</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Clicked
@@ -451,7 +451,7 @@ function CampaignDetail() {
             <p className="text-xs text-muted-foreground">{clickRate}% click rate</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Converted
@@ -462,7 +462,7 @@ function CampaignDetail() {
             <p className="text-xs text-muted-foreground">{conversionRate}% conversion</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Unsubscribed
@@ -480,7 +480,7 @@ function CampaignDetail() {
       {/* Deliverability Stats */}
       {deliverabilityData && (
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="premium-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -492,7 +492,7 @@ function CampaignDetail() {
               <p className="text-xs text-muted-foreground">{(deliverabilityData.delivered ?? 0).toLocaleString()} of {(deliverabilityData.sent ?? 0).toLocaleString()} delivered</p>
             </CardContent>
           </Card>
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="premium-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5" />
@@ -509,7 +509,7 @@ function CampaignDetail() {
               </p>
             </CardContent>
           </Card>
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="premium-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 <ShieldAlert className="h-3.5 w-3.5" />
@@ -535,7 +535,7 @@ function CampaignDetail() {
       )}
 
       {/* Performance Chart */}
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle className="text-lg">Performance Over Time</CardTitle>
         </CardHeader>
@@ -563,7 +563,7 @@ function CampaignDetail() {
       {/* Enhanced Performance Dashboard */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Conversion Funnel */}
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle className="text-lg">Conversion Funnel</CardTitle>
           </CardHeader>
@@ -599,7 +599,7 @@ function CampaignDetail() {
         </Card>
 
         {/* Device Breakdown */}
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle className="text-lg">Device Breakdown</CardTitle>
           </CardHeader>
@@ -649,7 +649,7 @@ function CampaignDetail() {
         </Card>
 
         {/* Engagement by Time of Day */}
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle className="text-lg">Engagement by Time of Day</CardTitle>
           </CardHeader>
@@ -675,7 +675,7 @@ function CampaignDetail() {
         </Card>
 
         {/* Geographic Distribution */}
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle className="text-lg">Top Performing Locations</CardTitle>
           </CardHeader>
@@ -737,7 +737,7 @@ function CampaignDetail() {
       {campaignData?.isABTest && <ABTestResultsSection campaignId={id!} />}
 
       {/* Additional Performance Metrics */}
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle className="text-lg">Key Performance Indicators</CardTitle>
         </CardHeader>
@@ -771,7 +771,7 @@ function CampaignDetail() {
       </Card>
 
       {/* Campaign Content Preview */}
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle className="text-lg">Campaign Content</CardTitle>
         </CardHeader>
@@ -1013,7 +1013,7 @@ export default CampaignDetail
 // ─── Per-Recipient Activity Section ─────────────────────────────
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
-  PENDING: { label: 'Pending', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+  PENDING: { label: 'Pending', className: 'bg-muted text-foreground dark:bg-gray-800 dark:text-muted-foreground' },
   SENT: { label: 'Sent', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
   DELIVERED: { label: 'Delivered', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
   OPENED: { label: 'Opened', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },
@@ -1174,7 +1174,7 @@ function RecipientActivitySection({ campaignId }: { campaignId: string }) {
   const formatDate = (d: string | null) => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="premium-card">
       <CardHeader
         className="cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}

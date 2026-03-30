@@ -249,7 +249,7 @@ const CallCenter = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Cold Call Hub</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Cold Call Hub</h1>
           <p className="text-muted-foreground mt-1">Smart queue + lead context + quick disposition</p>
         </div>
         <div className="flex gap-2">
@@ -509,17 +509,17 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-gray-200 text-gray-400 cursor-not-allowed opacity-60"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-border text-muted-foreground cursor-not-allowed opacity-60"
                       disabled={true}
                       title="Coming Soon — Voicemail requires Twilio Voice integration"
                     >
                       <PhoneMissed className="h-5 w-5" />
                       <span className="text-xs font-medium">Voicemail</span>
-                      <span className="text-[9px] text-gray-400">Coming Soon</span>
+                      <span className="text-[9px] text-muted-foreground">Coming Soon</span>
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-gray-200 hover:bg-gray-50 hover:border-gray-400 text-gray-600"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-border hover:bg-muted/50 hover:border-gray-400 text-muted-foreground"
                       onClick={() => handleDisposition('NO_ANSWER')}
                       disabled={logCallMutation.isPending}
                     >
@@ -555,7 +555,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-gray-200 hover:bg-gray-50 hover:border-gray-400 text-gray-500"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-border hover:bg-muted/50 hover:border-gray-400 text-muted-foreground"
                       onClick={() => handleDisposition('BUSY')}
                       disabled={logCallMutation.isPending}
                     >
