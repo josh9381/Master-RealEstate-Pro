@@ -3,10 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useAuthStore } from '@/store/authStore';
+import { useToast } from '@/hooks/useToast';
 import { APP_NAME } from '@/lib/appConfig';
 
 const InvoiceDetail = () => {
   const { user } = useAuthStore();
+  const { toast } = useToast();
   const organizationName = user?.organization?.name || APP_NAME;
   const invoice = {
     id: 'INV-2024-001',
@@ -306,7 +308,7 @@ const InvoiceDetail = () => {
                   <Badge variant="secondary" className="bg-green-100 text-green-800">
                     {inv.status}
                   </Badge>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => toast.info(`Invoice ${inv.number} details would open here`)}>
                     View
                   </Button>
                 </div>

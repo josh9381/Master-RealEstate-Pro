@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, isTokenDenied } from '../utils/jwt';
+import { logger } from '../lib/logger';
 
 // Extend Express Request type to include user with organizationId
 declare global {
@@ -57,8 +58,14 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         });
         return;
       }
-    } catch {
-      // Fail-open: if denylist check fails, allow the request through
+    } catch (error) {
+      // Fail-closed: if denylist check fails, reject the request for safety
+      logger.error({ error }, 'Token denylist check failed — rejecting request');
+      res.status(503).json({
+        success: false,
+        error: 'Authentication service temporarily unavailable'
+      });
+      return;
     }
 
     // Attach user info to request object (including organizationId for multi-tenancy)

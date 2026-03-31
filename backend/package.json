@@ -17,9 +17,6 @@
     "script:check-schema": "tsx scripts/check-schema.ts",
     "script:create-notifications": "tsx scripts/create-notifications.ts"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",

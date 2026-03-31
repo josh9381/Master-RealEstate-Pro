@@ -6,7 +6,7 @@ describe('auth.validator', () => {
       firstName: 'John',
       lastName: 'Doe',
       email: 'john@example.com',
-      password: 'Password1',
+      password: 'Password1!',
       tosAccepted: true,
     }
 

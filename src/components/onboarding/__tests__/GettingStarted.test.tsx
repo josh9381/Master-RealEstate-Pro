@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 import { GettingStarted } from '../GettingStarted'
@@ -36,7 +36,7 @@ describe('GettingStarted', () => {
   })
 
   it('does not render when all steps are complete', () => {
-    const { container } = renderComponent({
+    renderComponent({
       totalLeads: 5,
       totalCampaigns: 3,
       hasCampaignResults: true,

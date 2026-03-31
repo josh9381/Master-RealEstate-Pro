@@ -122,7 +122,10 @@ export function errorHandler(
     if (prismaError.code === 'P2002') {
       statusCode = 409;
       message = 'A record with this value already exists';
-      details = { field: prismaError.meta?.target };
+      // Only expose field names in development to prevent schema enumeration
+      if (process.env.NODE_ENV === 'development') {
+        details = { field: prismaError.meta?.target };
+      }
     } else if (prismaError.code === 'P2025') {
       statusCode = 404;
       message = 'Record not found';

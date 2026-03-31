@@ -358,6 +358,8 @@ model Lead {
   @@index([organizationId, email])
   @@index([organizationId])
   @@index([organizationId, status])
+  @@index([organizationId, score])
+  @@index([organizationId, createdAt])
   @@index([pipelineId])
   @@index([pipelineStageId])
 }
@@ -455,6 +457,8 @@ model Message {
   @@index([spamComplaintAt])
   @@index([organizationId])
   @@index([organizationId, type])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, bouncedAt])
 }
 
 model Note {
@@ -591,6 +595,8 @@ model Task {
   @@index([dueDate])
   @@index([priority])
   @@index([status])
+  @@index([organizationId, dueDate])
+  @@index([organizationId, status])
 }
 
 model Team {
@@ -705,7 +711,7 @@ model Workflow {
   isActive           Boolean             @default(false)
   triggerType        WorkflowTrigger
   triggerData        Json?
-  webhookKey          String?   @unique  // Unique key for webhook triggers
+  webhookKey          String?             // Unique key for webhook triggers (per org)
   actions            Json
   maxRetries         Int                 @default(3) // 1-3, user-configurable
   notifyOnFailure    Boolean             @default(true) // Notify user when action fails
@@ -722,6 +728,7 @@ model Workflow {
   @@index([triggerType])
   @@index([organizationId])
   @@index([organizationId, isActive])
+  @@unique([organizationId, webhookKey])
 }
 
 model Segment {

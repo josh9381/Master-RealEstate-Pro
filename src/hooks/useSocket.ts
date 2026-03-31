@@ -35,7 +35,7 @@ function getSocket(): Socket {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
-      reconnectionAttempts: Infinity,
+      reconnectionAttempts: 20,
     })
 
     socket.on('connect', () => {

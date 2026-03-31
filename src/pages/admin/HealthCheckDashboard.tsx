@@ -302,7 +302,7 @@ const HealthCheckDashboard = () => {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => toast.info(`Incident: ${incident.title}\n${incident.description}\nStatus: ${incident.status}`)}>
                   View
                 </Button>
               </div>

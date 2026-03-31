@@ -192,7 +192,7 @@ const NewsletterManagement = () => {
                     ) : (
                       <>
                         <Button variant="outline" size="sm" onClick={() => {
-                          navigate(`/communication/campaigns?edit=${newsletter.id}`);
+                          navigate(`/campaigns/${newsletter.id}/edit`);
                         }}>
                           Edit
                         </Button>

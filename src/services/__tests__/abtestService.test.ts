@@ -80,13 +80,13 @@ describe('abtestService', () => {
 
   it('pauseABTest posts to pause endpoint', async () => {
     mockPost.mockResolvedValue({ data: { data: { id: 'test1', status: 'PAUSED' } } })
-    const result = await pauseABTest('test1')
+    await pauseABTest('test1')
     expect(mockPost).toHaveBeenCalledWith('/ab-tests/test1/pause')
   })
 
   it('stopABTest posts to stop endpoint', async () => {
     mockPost.mockResolvedValue({ data: { data: { id: 'test1', status: 'COMPLETED' } } })
-    const result = await stopABTest('test1')
+    await stopABTest('test1')
     expect(mockPost).toHaveBeenCalledWith('/ab-tests/test1/stop')
   })
 

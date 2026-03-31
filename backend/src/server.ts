@@ -107,13 +107,13 @@ app.use(cors(corsOptions));
 // Security headers - Development-friendly configuration
 const isDevelopment = process.env.NODE_ENV !== 'production'
 app.use(helmet({
-  contentSecurityPolicy: isDevelopment ? false : {
+  contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
-      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: isDevelopment ? ["'self'", "'unsafe-inline'", "'unsafe-eval'"] : ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
+      connectSrc: isDevelopment ? ["'self'", "ws:", "wss:"] : ["'self'"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -129,6 +129,13 @@ app.use(helmet({
 }))
 
 // Middleware
+// Request timeout — prevents connections from being held indefinitely (DoS protection)
+app.use((req, res, next) => {
+  req.setTimeout(30000); // 30 seconds
+  res.setTimeout(30000);
+  next();
+});
+
 // Stripe webhooks need raw body for signature verification — mount BEFORE express.json()
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }))
 

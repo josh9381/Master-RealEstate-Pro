@@ -242,12 +242,13 @@ const HelpCenter = () => {
               <li
                 key={article}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                onClick={() => navigate(`/help/docs?search=${encodeURIComponent(article)}`)}
               >
                 <div className="flex items-center space-x-3">
                   <Book className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{article}</span>
                 </div>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/help/docs?search=${encodeURIComponent(article)}`); }}>
                   Read
                 </Button>
               </li>
@@ -268,6 +269,7 @@ const HelpCenter = () => {
               <div
                 key={video.title}
                 className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/help/videos')}
               >
                 <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                   <Video className="h-12 w-12 text-primary" />

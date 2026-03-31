@@ -182,14 +182,14 @@ const PaymentMethods = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       {!method.isDefault && (
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => toast.info('Payment method management is handled by your payment provider')}>
                           Set as Default
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => toast.info('Payment method management is handled by your payment provider')}>
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => toast.info('Payment method management is handled by your payment provider')}>
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     </div>

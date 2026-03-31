@@ -24,7 +24,7 @@ import {
   getSourceROI,
   getFollowUpAnalytics,
   getLeadSources,
-} from '../controllers/analytics.controller'
+} from '../controllers/analytics'
 
 const router = Router()
 

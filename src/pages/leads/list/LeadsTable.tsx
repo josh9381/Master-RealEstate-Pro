@@ -86,7 +86,7 @@ export function LeadsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-12">
+            <TableHead className="w-10">
               <input
                 type="checkbox"
                 checked={selectedLeads.length === leads.length && leads.length > 0}
@@ -96,9 +96,9 @@ export function LeadsTable({
                 aria-label={`Select all ${leads.length} leads on this page`}
               />
             </TableHead>
-            <TableHead className="w-12"></TableHead>
+            <TableHead className="w-10"></TableHead>
             <TableHead className="cursor-pointer" onClick={() => onSort('name')}>
-              <div className="flex items-center">
+              <div className="flex items-center whitespace-nowrap">
                 Name
                 {getSortIcon('name')}
               </div>
@@ -110,7 +110,7 @@ export function LeadsTable({
               </div>
             </TableHead>
             <TableHead>Email</TableHead>
-            <TableHead className="hidden lg:table-cell">Phone</TableHead>
+            <TableHead className="hidden lg:table-cell whitespace-nowrap">Phone</TableHead>
             <TableHead className="cursor-pointer" onClick={() => onSort('score')}>
               <div className="flex items-center">
                 Score
@@ -130,8 +130,8 @@ export function LeadsTable({
               </div>
             </TableHead>
             <TableHead className="hidden lg:table-cell">Tags</TableHead>
-            <TableHead className="hidden xl:table-cell">Assigned To</TableHead>
-            <TableHead className="w-12"></TableHead>
+            <TableHead className="hidden xl:table-cell whitespace-nowrap">Assigned To</TableHead>
+            <TableHead className="w-10"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -161,7 +161,7 @@ export function LeadsTable({
                     )}
                   </Button>
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Link
                     to={`/leads/${lead.id}`}
                     className="font-medium hover:text-primary"
@@ -170,8 +170,8 @@ export function LeadsTable({
                   </Link>
                 </TableCell>
                 <TableCell>{lead.company}</TableCell>
-                <TableCell className="text-muted-foreground">{lead.email}</TableCell>
-                <TableCell className="hidden lg:table-cell text-muted-foreground">{lead.phone}</TableCell>
+                <TableCell className="text-muted-foreground max-w-[200px] truncate">{lead.email}</TableCell>
+                <TableCell className="hidden lg:table-cell text-muted-foreground whitespace-nowrap">{lead.phone}</TableCell>
                 <TableCell>
                   <ScoreBadge score={lead.score || 0} size="sm" />
                 </TableCell>
@@ -203,7 +203,7 @@ export function LeadsTable({
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="hidden xl:table-cell">
+                <TableCell className="hidden xl:table-cell whitespace-nowrap">
                   {(() => {
                     if (typeof lead.assignedTo === 'string') {
                       return lead.assignedTo
@@ -340,7 +340,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
     return (
       <div
         ref={ref}
-        className="w-48 bg-white rounded-md shadow-lg border"
+        className="w-48 bg-popover text-popover-foreground rounded-md shadow-lg border"
         style={style || { position: 'absolute', right: 0, marginTop: 4, zIndex: 50 }}
         role="menu"
         aria-label="Lead actions"
@@ -362,7 +362,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
         <div className="py-1">
           <button
             role="menuitem"
-            className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
+            className="w-full px-4 py-2 text-sm text-left hover:bg-accent flex items-center gap-2"
             onClick={onEdit}
           >
             <FileText className="h-4 w-4" />
@@ -370,7 +370,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
           </button>
           <button
             role="menuitem"
-            className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
+            className="w-full px-4 py-2 text-sm text-left hover:bg-accent flex items-center gap-2"
             onClick={onDuplicate}
           >
             <FileText className="h-4 w-4" />
@@ -378,7 +378,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
           </button>
           <button
             role="menuitem"
-            className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
+            className="w-full px-4 py-2 text-sm text-left hover:bg-accent flex items-center gap-2"
             onClick={onEmail}
           >
             <Mail className="h-4 w-4" />
@@ -388,7 +388,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
             <a
               role="menuitem"
               href={`tel:${lead.phone}`}
-              className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
+              className="w-full px-4 py-2 text-sm text-left hover:bg-accent flex items-center gap-2"
               onClick={onClose}
             >
               <Phone className="h-4 w-4" />
@@ -397,7 +397,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
           ) : (
             <button
               role="menuitem"
-              className="w-full px-4 py-2 text-sm text-left text-muted-foreground cursor-not-allowed flex items-center gap-2"
+              className="w-full px-4 py-2 text-sm text-left text-muted-foreground cursor-not-allowed flex items-center gap-2 hover:bg-accent"
               disabled
               aria-disabled="true"
             >
@@ -408,7 +408,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
           <div className="border-t my-1"></div>
           <button
             role="menuitem"
-            className="w-full px-4 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
+            className="w-full px-4 py-2 text-sm text-left hover:bg-destructive/10 text-destructive flex items-center gap-2"
             onClick={onDelete}
           >
             <X className="h-4 w-4" />

@@ -85,7 +85,16 @@ export function getUploadUrl(relativePath: string): string {
 export function deleteUploadFile(urlPath: string): void {
   if (!urlPath || !urlPath.startsWith('/uploads/')) return;
   const relativePath = urlPath.replace('/uploads/', '');
-  const fullPath = path.join(UPLOAD_DIR, relativePath);
+
+  // Prevent directory traversal attacks
+  if (relativePath.includes('..') || relativePath.startsWith('/')) return;
+
+  const fullPath = path.resolve(UPLOAD_DIR, relativePath);
+  const realUploadDir = path.resolve(UPLOAD_DIR);
+
+  // Ensure resolved path is within the uploads directory
+  if (!fullPath.startsWith(realUploadDir + path.sep) && fullPath !== realUploadDir) return;
+
   if (fs.existsSync(fullPath)) {
     fs.unlinkSync(fullPath);
   }
@@ -143,7 +152,15 @@ export const attachmentUpload = multer({
  */
 export function readAttachmentAsBase64(filePath: string): { content: string; filename: string; type: string } | null {
   try {
-    const fullPath = filePath.startsWith('/') ? filePath : path.join(UPLOAD_DIR, filePath);
+    // Prevent directory traversal attacks
+    if (filePath.includes('..')) return null;
+
+    const fullPath = filePath.startsWith('/') ? filePath : path.resolve(UPLOAD_DIR, filePath);
+    const realUploadDir = path.resolve(UPLOAD_DIR);
+
+    // Ensure resolved path is within the uploads directory
+    if (!fullPath.startsWith(realUploadDir + path.sep) && fullPath !== realUploadDir) return null;
+
     if (!fs.existsSync(fullPath)) return null;
     const content = fs.readFileSync(fullPath).toString('base64');
     const ext = path.extname(fullPath).toLowerCase();

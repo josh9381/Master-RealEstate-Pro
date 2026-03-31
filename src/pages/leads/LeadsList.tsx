@@ -49,7 +49,7 @@ function LeadsList() {
       tags: sp.get('tags')?.split(',').filter(Boolean) || [],
       assignedTo: sp.get('assignedTo')?.split(',').filter(Boolean) || [],
       page: Math.max(1, parseInt(sp.get('page') || '1') || 1),
-      pageSize: Math.min(200, Math.max(1, parseInt(sp.get('pageSize') || '25') || 25)),
+      pageSize: Math.min(200, Math.max(1, parseInt(sp.get('pageSize') || '10') || 10)),
       sortBy: (VALID_SORT_FIELDS.has(sp.get('sortBy') || '') ? sp.get('sortBy') : 'createdAt') as SortField,
       sortDir: (VALID_SORT_DIRS.has(sp.get('sortDir') || '') ? sp.get('sortDir') : 'desc') as SortDirection,
       scoreFilter: (VALID_SCORE_FILTERS.has(sp.get('scoreFilter') || '') ? sp.get('scoreFilter') : 'ALL') as ScoreFilterValue,
@@ -130,7 +130,7 @@ function LeadsList() {
     if (filters.tags.length > 0) params.set('tags', filters.tags.join(','))
     if (filters.assignedTo.length > 0) params.set('assignedTo', filters.assignedTo.join(','))
     if (currentPage > 1) params.set('page', String(currentPage))
-    if (pageSize !== 25) params.set('pageSize', String(pageSize))
+    if (pageSize !== 10) params.set('pageSize', String(pageSize))
     if (sortField !== 'createdAt') params.set('sortBy', sortField)
     if (sortDirection !== 'desc') params.set('sortDir', sortDirection || '')
     if (scoreFilter !== 'ALL') params.set('scoreFilter', scoreFilter)
@@ -731,7 +731,7 @@ function LeadsList() {
             <select
               value={scoreFilter}
               onChange={(e) => setScoreFilter(e.target.value as ScoreFilterValue)}
-              className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 border rounded-md text-sm bg-background hover:bg-accent transition-colors"
             >
               <option value="ALL">All Scores</option>
               <option value="HOT">🔥 Hot (80-100)</option>
@@ -749,7 +749,7 @@ function LeadsList() {
                   setFilters(prev => ({ ...prev, tags: [] }))
                 }
               }}
-              className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 border rounded-md text-sm bg-background hover:bg-accent transition-colors"
             >
               <option value="">All Tags</option>
               {allTags.map(tag => (

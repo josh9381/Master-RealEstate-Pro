@@ -8,7 +8,7 @@ jest.mock('../../src/config/database', () => ({
   prisma: mockPrisma,
 }))
 
-import { getDashboardStats, getLeadAnalytics } from '../../src/controllers/analytics.controller'
+import { getDashboardStats, getLeadAnalytics } from '../../src/controllers/analytics'
 
 function mockReqRes(query = {}, body = {}, params = {}) {
   return {
