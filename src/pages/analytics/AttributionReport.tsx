@@ -14,6 +14,7 @@ import { analyticsApi } from '@/lib/api';
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { CHART_COLORS as COLORS } from '@/lib/chartColors';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 
 type AttributionModel = 'first-touch' | 'last-touch' | 'linear' | 'time-decay' | 'u-shaped';
 
@@ -128,6 +129,14 @@ const AttributionReport = () => {
         </Card>
       ) : (
         <>
+          {/* Truncation notice */}
+          {data.capped && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200">
+              <Info className="h-4 w-4 flex-shrink-0" />
+              <span>Showing attribution for the most recent 500 conversions. Narrow your date range for complete results.</span>
+            </div>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
@@ -178,17 +187,19 @@ const AttributionReport = () => {
               </CardHeader>
               <CardContent>
                 {data.byChannel && data.byChannel.length > 0 ? (
-                  <div aria-label="Revenue by channel bar chart">
+                  <ChartErrorBoundary chartName="Revenue by Channel">
+                  <div role="img" aria-label="Revenue by channel bar chart">
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={data.byChannel}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                       <YAxis tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
                       <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                      <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="revenue" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                   </div>
+                  </ChartErrorBoundary>
                 ) : (
                   <p className="text-gray-500 text-center py-8">No channel data available</p>
                 )}
@@ -206,7 +217,8 @@ const AttributionReport = () => {
               </CardHeader>
               <CardContent>
                 {data.bySource && data.bySource.length > 0 ? (
-                  <div aria-label="Revenue by source pie chart">
+                  <ChartErrorBoundary chartName="Revenue by Source">
+                  <div role="img" aria-label="Revenue by source pie chart">
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -226,6 +238,7 @@ const AttributionReport = () => {
                     </PieChart>
                   </ResponsiveContainer>
                   </div>
+                  </ChartErrorBoundary>
                 ) : (
                   <p className="text-gray-500 text-center py-8">No source data available</p>
                 )}

@@ -1,4 +1,4 @@
-import { CHART_COLORS, LEAD_SOURCE_COLORS, PIPELINE_STAGE_COLORS, getChartColor } from '../chartColors'
+import { CHART_COLORS, LEAD_SOURCE_COLORS, PIPELINE_STAGE_COLORS, LINE_CHART_COLORS, TAG_PICKER_COLORS, getChartColor } from '../chartColors'
 
 describe('getChartColor', () => {
   it('returns the first color for index 0', () => {
@@ -41,5 +41,22 @@ describe('color palettes', () => {
   it('all CHART_COLORS are unique', () => {
     const unique = new Set(CHART_COLORS)
     expect(unique.size).toBe(CHART_COLORS.length)
+  })
+
+  it('LINE_CHART_COLORS has 4 colors', () => {
+    expect(LINE_CHART_COLORS).toHaveLength(4)
+  })
+
+  it('TAG_PICKER_COLORS has 8 colors', () => {
+    expect(TAG_PICKER_COLORS).toHaveLength(8)
+  })
+
+  it('all palettes contain valid hex colors', () => {
+    const allPalettes = [CHART_COLORS, LEAD_SOURCE_COLORS, PIPELINE_STAGE_COLORS, LINE_CHART_COLORS, TAG_PICKER_COLORS]
+    for (const palette of allPalettes) {
+      for (const color of palette) {
+        expect(color).toMatch(/^#[0-9a-fA-F]{6}$/)
+      }
+    }
   })
 })

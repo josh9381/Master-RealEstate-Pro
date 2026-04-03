@@ -11,6 +11,7 @@ import { analyticsApi } from '@/lib/api';
 import { formatRate, calcRate } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import {
   BarChart,
@@ -86,7 +87,7 @@ const ConversionReports = () => {
   // Build source conversion from lead source data using real per-source won counts
   const totalConversions = leadData?.byStatus?.won || leadData?.byStatus?.WON || 0;
   const overallConversionRate = leadData?.conversionRate || 0;
-  const wonBySource: Record<string, number> = leadData?.wonBySource || {};
+  const wonBySource: Record<string, number> = useMemo(() => leadData?.wonBySource || {}, [leadData?.wonBySource]);
   const sourceConversion = useMemo(() => leadData?.bySource
     ? (Object.entries(leadData.bySource) as [string, number][]).map(([source, count]) => {
         const converted = wonBySource[source] || 0;
@@ -272,17 +273,19 @@ const ConversionReports = () => {
           <CardContent>
             {sourceConversion.length > 0 ? (
             <>
-            <div aria-label="Conversion by source bar chart">
+            <ChartErrorBoundary chartName="Conversion by Source">
+            <div role="img" aria-label="Conversion by source bar chart">
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={sourceConversion}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="source" angle={-45} textAnchor="end" height={100} />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="rate" fill="#3b82f6" />
+                <Bar dataKey="rate" fill={CHART_COLORS[0]} />
               </BarChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
             <div className="mt-4 space-y-2">
               {sourceConversion.map((source) => (
                 <div key={source.source} className="flex items-center justify-between text-sm">
@@ -311,7 +314,8 @@ const ConversionReports = () => {
           <CardContent>
             {timeToConvert.length > 0 ? (
             <>
-            <div aria-label="Time to convert pie chart">
+            <ChartErrorBoundary chartName="Time to Convert">
+            <div role="img" aria-label="Time to convert pie chart">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -332,6 +336,7 @@ const ConversionReports = () => {
               </PieChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
             <div className="mt-4 space-y-2">
               {timeToConvert.map((item) => (
                 <div key={item.days} className="flex items-center justify-between text-sm">

@@ -1,62 +1,66 @@
 /**
  * Centralized chart color palette for all analytics and data visualization.
  * Use these constants instead of hardcoding hex colors in individual components.
+ *
+ * Palettes are designed to be colorblind-safe (distinguishable under
+ * protanopia, deuteranopia, and tritanopia) using principles from the
+ * Wong (2011) and Tol palettes adapted for web.
  */
 
-/** Primary 8-color palette for charts, graphs, pie/donut charts */
+/** Primary 8-color palette for charts, graphs, pie/donut charts (colorblind-safe) */
 export const CHART_COLORS = [
-  '#3b82f6', // blue-500
-  '#10b981', // emerald-500
-  '#8b5cf6', // violet-500
-  '#f59e0b', // amber-500
-  '#ec4899', // pink-500
-  '#06b6d4', // cyan-500
-  '#f97316', // orange-500
-  '#84cc16', // lime-500
+  '#0077BB', // strong blue
+  '#EE7733', // orange
+  '#009988', // teal
+  '#CC3311', // vermillion
+  '#33BBEE', // cyan
+  '#EE3377', // magenta
+  '#BBBBBB', // gray
+  '#AA3377', // purple
 ] as const
 
-/** 6-color palette for lead source distribution */
+/** 6-color palette for lead source distribution (colorblind-safe) */
 export const LEAD_SOURCE_COLORS = [
-  '#3b82f6', // blue-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#8b5cf6', // violet-500
-  '#ef4444', // red-500
-  '#6b7280', // gray-500
+  '#0077BB', // strong blue
+  '#EE7733', // orange
+  '#009988', // teal
+  '#CC3311', // vermillion
+  '#33BBEE', // cyan
+  '#BBBBBB', // gray
 ] as const
 
-/** 10-color palette for pipeline stages */
+/** 10-color palette for pipeline stages (colorblind-safe) */
 export const PIPELINE_STAGE_COLORS = [
-  '#6B7280', // gray
-  '#3B82F6', // blue
-  '#06B6D4', // cyan
-  '#8B5CF6', // violet
-  '#EC4899', // pink
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#F97316', // orange
-  '#10B981', // emerald
-  '#14B8A6', // teal
+  '#BBBBBB', // gray
+  '#0077BB', // strong blue
+  '#33BBEE', // cyan
+  '#AA3377', // purple
+  '#EE3377', // magenta
+  '#EE7733', // orange
+  '#CC3311', // vermillion
+  '#DDAA33', // gold
+  '#009988', // teal
+  '#44BB99', // mint
 ] as const
 
-/** Line chart stroke colors (4-color for multi-series) */
+/** Line chart stroke colors (4-color for multi-series, colorblind-safe) */
 export const LINE_CHART_COLORS = [
-  '#3b82f6', // blue-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#8b5cf6', // violet-500
+  '#0077BB', // strong blue
+  '#EE7733', // orange
+  '#009988', // teal
+  '#CC3311', // vermillion
 ] as const
 
 /** Tag editor color picker palette */
 export const TAG_PICKER_COLORS = [
-  '#3B82F6', // blue
-  '#10B981', // emerald
-  '#8B5CF6', // violet
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#EC4899', // pink
-  '#14B8A6', // teal
-  '#6366F1', // indigo
+  '#0077BB', // strong blue
+  '#009988', // teal
+  '#AA3377', // purple
+  '#EE7733', // orange
+  '#CC3311', // vermillion
+  '#EE3377', // magenta
+  '#44BB99', // mint
+  '#33BBEE', // cyan
 ] as const
 
 /** Helper: get a chart color by index, cycling if needed */

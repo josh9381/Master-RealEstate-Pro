@@ -27,6 +27,7 @@ import {
 import { analyticsApi } from '@/lib/api';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const AnalyticsDashboard = () => {
@@ -57,7 +58,7 @@ const AnalyticsDashboard = () => {
   const leadAnalytics = analyticsResult?.leadAnalytics ?? null;
   const campaignAnalytics = analyticsResult?.campaignAnalytics ?? null;
   const teamPerformanceData = analyticsResult?.teamPerformanceData ?? [];
-  const revenueTimeline = analyticsResult?.revenueTimeline ?? [];
+  const revenueTimeline = useMemo(() => analyticsResult?.revenueTimeline ?? [], [analyticsResult?.revenueTimeline]);
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
@@ -69,7 +70,11 @@ const AnalyticsDashboard = () => {
     month: m.month,
     revenue: m.totalRevenue || 0,
   })), [revenueTimeline]);
-  const totalRevenue = campaignAnalytics?.performance?.totalRevenue || (revenueTimeline.length > 0 ? revenueTimeline.reduce((sum: number, m: { totalRevenue?: number }) => sum + (m.totalRevenue || 0), 0) : 0);
+  // Single source of truth: revenue timeline aggregation. Campaign performance total is only
+  // used when no timeline data is available (e.g. brand-new org with no monthly history).
+  const totalRevenue = revenueTimeline.length > 0
+    ? revenueTimeline.reduce((sum: number, m: { totalRevenue?: number }) => sum + (m.totalRevenue || 0), 0)
+    : (campaignAnalytics?.performance?.totalRevenue || 0);
   const totalLeads = dashboardData?.leads?.total || leadAnalytics?.total || 0;
   const conversionRate = leadAnalytics?.conversionRate || dashboardData?.leads?.conversionRate || 0;
   const wonLeads = leadAnalytics?.byStatus?.WON || 0;
@@ -219,7 +224,8 @@ const AnalyticsDashboard = () => {
           </CardHeader>
           <CardContent>
             {revenueData.length > 0 ? (
-            <div aria-label="Revenue trend chart">
+            <ChartErrorBoundary chartName="Revenue Trend">
+            <div role="img" aria-label="Revenue trend chart">
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -238,6 +244,7 @@ const AnalyticsDashboard = () => {
               </AreaChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                 No revenue data yet
@@ -253,7 +260,8 @@ const AnalyticsDashboard = () => {
           </CardHeader>
           <CardContent>
             {channelData.length > 0 ? (
-            <div aria-label="Lead sources distribution pie chart">
+            <ChartErrorBoundary chartName="Lead Sources">
+            <div role="img" aria-label="Lead sources distribution pie chart">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -263,7 +271,7 @@ const AnalyticsDashboard = () => {
                   labelLine={false}
                   label={({ name, value }) => `${name}: ${value}%`}
                   outerRadius={100}
-                  fill="#8884d8"
+                  fill={CHART_COLORS[0]}
                   dataKey="value"
                 >
                   {channelData.map((entry, i) => (
@@ -274,6 +282,7 @@ const AnalyticsDashboard = () => {
               </PieChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                 No lead source data yet
@@ -291,7 +300,8 @@ const AnalyticsDashboard = () => {
         </CardHeader>
         <CardContent>
           {conversionFunnel.length > 0 ? (
-          <div aria-label="Conversion funnel chart">
+          <ChartErrorBoundary chartName="Conversion Funnel">
+          <div role="img" aria-label="Conversion funnel chart">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={conversionFunnel} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
@@ -302,6 +312,7 @@ const AnalyticsDashboard = () => {
             </BarChart>
           </ResponsiveContainer>
           </div>
+          </ChartErrorBoundary>
           ) : (
             <div className="flex items-center justify-center h-[300px] text-muted-foreground">
               No conversion data yet

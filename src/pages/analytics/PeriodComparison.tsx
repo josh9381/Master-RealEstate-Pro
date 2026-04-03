@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { analyticsApi } from '@/lib/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
+import { CHART_COLORS } from '@/lib/chartColors';
 
 const PERIOD_PRESETS = [
   { value: 'last7', label: 'Last 7 Days' },
@@ -194,7 +196,8 @@ const PeriodComparison = () => {
             <CardDescription>Current vs previous period metrics</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px]" aria-label="Period comparison bar chart">
+            <ChartErrorBoundary chartName="Period Comparison">
+            <div className="h-[400px]" role="img" aria-label="Period comparison bar chart">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -202,11 +205,12 @@ const PeriodComparison = () => {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="Current Period" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Previous Period" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Current Period" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Previous Period" fill={CHART_COLORS[6]} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
           </CardContent>
         </Card>
       )}

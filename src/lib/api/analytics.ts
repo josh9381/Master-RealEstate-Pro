@@ -111,4 +111,9 @@ export const analyticsApi = {
     const response = await api.get('/analytics/lead-sources')
     return response.data
   },
+
+  getUsageStats: async (params?: AnalyticsQuery) => {
+    const response = await api.get('/analytics/usage-stats', { params })
+    return response.data
+  },
 }

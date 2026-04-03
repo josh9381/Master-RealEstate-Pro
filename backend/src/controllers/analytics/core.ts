@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getErrorMessage } from '../../utils/errors'
 import { logger } from '../../lib/logger'
 import { Request, Response } from 'express'
@@ -9,7 +10,6 @@ import {
 
 // Get overall dashboard statistics
 export const getDashboardStats = async (req: Request, res: Response) => {
-  const userId = req.user!.userId
   const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
   const { startDate, endDate, source, status, priority } = req.query
 
@@ -178,7 +178,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 // Get lead analytics
 export const getLeadAnalytics = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId  // CRITICAL: Get organization ID
-  const { startDate, endDate, _groupBy = 'status', source, status, _priority } = req.query
+  const { startDate, endDate, source, status } = req.query
 
   const dateFilter: Record<string, unknown> = {}
   if (startDate) dateFilter.gte = new Date(startDate as string)
@@ -374,7 +374,6 @@ export const getCampaignAnalytics = async (req: Request, res: Response) => {
 
 // Get task analytics
 export const getTaskAnalytics = async (req: Request, res: Response) => {
-  const userId = req.user!.userId
   const organizationId = req.user!.organizationId
   const { startDate, endDate } = req.query
 
@@ -718,6 +717,122 @@ export const getConversionFunnel = async (req: Request, res: Response) => {
       success: false,
       message: 'Failed to fetch conversion funnel analytics',
       error: getErrorMessage(error)
+    })
+  }
+}
+
+// ============================================================================
+// Usage Analytics — server-side aggregation
+// ============================================================================
+
+/**
+ * GET /api/analytics/usage-stats
+ * Aggregates activity data server-side so the frontend doesn't need to fetch
+ * the full activity feed and compute metrics client-side.
+ */
+export const getUsageStats = async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId
+    const { startDate, endDate } = req.query
+
+    const dateFilter: Record<string, any> = {}
+    if (startDate) dateFilter.gte = new Date(startDate as string)
+    if (endDate) dateFilter.lte = new Date(endDate as string)
+    const dateWhere = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
+
+    // Aggregation: count activities grouped by date and type
+    const activities = await prisma.activity.findMany({
+      where: { organizationId, ...dateWhere },
+      select: {
+        type: true,
+        createdAt: true,
+        userId: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    })
+
+    // Daily buckets
+    const dailyMap: Record<string, { date: string; users: Set<string>; activities: number }> = {}
+    const typeCounts: Record<string, number> = {}
+    const uniqueUsers = new Set<string>()
+
+    for (const a of activities) {
+      const date = a.createdAt.toISOString().split('T')[0]
+      if (!dailyMap[date]) {
+        dailyMap[date] = { date, users: new Set(), activities: 0 }
+      }
+      dailyMap[date].activities++
+      if (a.userId) {
+        dailyMap[date].users.add(a.userId)
+        uniqueUsers.add(a.userId)
+      }
+
+      const type = a.type || 'OTHER'
+      typeCounts[type] = (typeCounts[type] || 0) + 1
+    }
+
+    const totalActivities = activities.length
+
+    const daily = Object.values(dailyMap)
+      .map(({ date, users, activities: count }) => ({
+        date,
+        users: users.size,
+        activities: count,
+      }))
+      .slice(-30) // last 30 days at most
+
+    const featureUsage = Object.entries(typeCounts)
+      .map(([type, count]) => ({
+        feature: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' '),
+        usage: count,
+        percentage: totalActivities > 0 ? Math.round((count / totalActivities) * 100) : 0,
+      }))
+      .sort((a, b) => b.usage - a.usage)
+      .slice(0, 10)
+
+    // Top users by activity count
+    const userCounts: Record<string, number> = {}
+    for (const a of activities) {
+      if (a.userId) {
+        userCounts[a.userId] = (userCounts[a.userId] || 0) + 1
+      }
+    }
+
+    const topUserIds = Object.entries(userCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([id]) => id)
+
+    const topUserRecords = topUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: topUserIds }, organizationId },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : []
+
+    const userNameMap = new Map(topUserRecords.map((u) => [u.id, `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown']))
+
+    const topUsers = topUserIds.map((id) => ({
+      name: userNameMap.get(id) || 'Unknown',
+      actions: userCounts[id],
+    }))
+
+    res.json({
+      success: true,
+      data: {
+        totalActivities,
+        uniqueUsers: uniqueUsers.size,
+        daily,
+        featureUsage,
+        topUsers,
+      },
+    })
+  } catch (error: unknown) {
+    logger.error('Error fetching usage stats:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch usage statistics',
+      error: getErrorMessage(error),
     })
   }
 }

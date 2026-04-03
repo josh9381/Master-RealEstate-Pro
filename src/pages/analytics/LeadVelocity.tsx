@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
+import { CHART_COLORS } from '@/lib/chartColors';
 
 const STAGE_ORDER = ['NEW', 'CONTACTED', 'NURTURING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION'];
 const AVG_DAYS_PER_MONTH = 30.44;
@@ -135,17 +137,19 @@ const LeadVelocity = () => {
         </CardHeader>
         <CardContent>
           {sortedStages.length > 0 ? (
-            <div aria-label="Average days per pipeline stage bar chart">
+            <ChartErrorBoundary chartName="Stage Duration">
+            <div role="img" aria-label="Average days per pipeline stage bar chart">
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={sortedStages}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="stage" tick={{ fontSize: 11 }} />
                 <YAxis label={{ value: 'Days', angle: -90, position: 'insideLeft' }} />
                 <Tooltip formatter={(value: number) => [`${value} days`, 'Avg Duration']} />
-                <Bar dataKey="avgDays" fill="#f97316" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="avgDays" fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
           ) : (
             <p className="text-gray-500 text-center py-8">No stage transition data available yet</p>
           )}
@@ -163,7 +167,8 @@ const LeadVelocity = () => {
             <CardDescription>Leads entering and exiting the pipeline each month</CardDescription>
           </CardHeader>
           <CardContent>
-            <div aria-label="Monthly pipeline velocity line chart">
+            <ChartErrorBoundary chartName="Pipeline Velocity">
+            <div role="img" aria-label="Monthly pipeline velocity line chart">
             <ResponsiveContainer width="100%" height={350}>
               <LineChart data={data.monthlyVelocity}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -171,12 +176,13 @@ const LeadVelocity = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="entered" stroke="#3b82f6" strokeWidth={2} name="Entered Pipeline" />
-                <Line type="monotone" dataKey="won" stroke="#10b981" strokeWidth={2} name="Won" />
-                <Line type="monotone" dataKey="lost" stroke="#ef4444" strokeWidth={2} name="Lost" />
+                <Line type="monotone" dataKey="entered" stroke={CHART_COLORS[0]} strokeWidth={2} name="Entered Pipeline" />
+                <Line type="monotone" dataKey="won" stroke={CHART_COLORS[2]} strokeWidth={2} name="Won" />
+                <Line type="monotone" dataKey="lost" stroke={CHART_COLORS[3]} strokeWidth={2} name="Lost" />
               </LineChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
           </CardContent>
         </Card>
       )}

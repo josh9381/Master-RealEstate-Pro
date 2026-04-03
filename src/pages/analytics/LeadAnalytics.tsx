@@ -19,6 +19,8 @@ import {
 import { analyticsApi } from '@/lib/api';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
+import { CHART_COLORS } from '@/lib/chartColors';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const LeadAnalytics = () => {
@@ -38,27 +40,11 @@ const LeadAnalytics = () => {
     refetch();
   };
 
-  if (loading) {
-    return <LoadingSkeleton rows={4} showChart={true} />;
-  }
-
-  if (leadError) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Lead Analytics</h1>
-        <ErrorBanner
-          message={leadErrorObj instanceof Error ? leadErrorObj.message : 'Failed to load lead analytics'}
-          retry={() => refetch()}
-        />
-      </div>
-    );
-  }
-
   // Use API data with fallbacks
   const totalLeads = leadData?.total || 0;
   const conversionRate = leadData?.conversionRate || 0;
   const averageScore = leadData?.averageScore || 0;
-  const topLeads = leadData?.topLeads || [];
+  const topLeads = useMemo(() => leadData?.topLeads || [], [leadData?.topLeads]);
 
   // Lead trends from API data — use byStatus trends if available, otherwise show empty
   const leadTrends = leadData?.trends || [];
@@ -83,6 +69,22 @@ const LeadAnalytics = () => {
         score: lead.score
       }))
     : [], [topLeads]);
+
+  if (loading) {
+    return <LoadingSkeleton rows={4} showChart={true} />;
+  }
+
+  if (leadError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Lead Analytics</h1>
+        <ErrorBanner
+          message={leadErrorObj instanceof Error ? leadErrorObj.message : 'Failed to load lead analytics'}
+          retry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -208,25 +210,27 @@ const LeadAnalytics = () => {
         </CardHeader>
         <CardContent>
           {leadTrends.length > 0 ? (
-          <div aria-label="Lead trends chart">
+          <ChartErrorBoundary chartName="Lead Trends">
+          <div role="img" aria-label="Lead trends chart">
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={leadTrends}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip />
-              <Area type="monotone" dataKey="newLeads" stackId="1" stroke="#3b82f6" fill="#3b82f6" />
+              <Area type="monotone" dataKey="newLeads" stackId="1" stroke={CHART_COLORS[0]} fill={CHART_COLORS[0]} />
               <Area
                 type="monotone"
                 dataKey="qualified"
                 stackId="2"
-                stroke="#10b981"
-                fill="#10b981"
+                stroke={CHART_COLORS[2]}
+                fill={CHART_COLORS[2]}
               />
-              <Area type="monotone" dataKey="converted" stackId="3" stroke="#8b5cf6" fill="#8b5cf6" />
+              <Area type="monotone" dataKey="converted" stackId="3" stroke={CHART_COLORS[1]} fill={CHART_COLORS[1]} />
             </AreaChart>
           </ResponsiveContainer>
           </div>
+          </ChartErrorBoundary>
           ) : (
             <div className="flex items-center justify-center h-[300px] text-muted-foreground">
               No lead trend data yet

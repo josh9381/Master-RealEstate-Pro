@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Clock, Users, Zap, RefreshCw } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { analyticsApi } from '@/lib/api';
-import { calcRate } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
+import { CHART_COLORS } from '@/lib/chartColors';
 import {
   AreaChart,
   Area,
@@ -28,83 +29,31 @@ const UsageAnalytics = () => {
     queryKey: ['usage-analytics'],
     queryFn: async () => {
       const dateParams = dateRangeRef.current;
-      const [dashboard, activity] = await Promise.all([
+      const [dashboard, usageStats, recentActivity] = await Promise.all([
         analyticsApi.getDashboardStats(dateParams),
-        analyticsApi.getActivityFeed({ startDate: dateParams.startDate, endDate: dateParams.endDate, limit: 200 }),
+        analyticsApi.getUsageStats(dateParams),
+        analyticsApi.getActivityFeed({ startDate: dateParams.startDate, endDate: dateParams.endDate, limit: 5 }),
       ]);
       return {
         dashboardData: dashboard?.data || dashboard,
-        activityData: activity?.data?.activities || activity?.activities || [],
+        usageStats: usageStats?.data || {},
+        recentActivities: recentActivity?.data?.activities || recentActivity?.activities || [],
       };
     },
   });
 
   const dashboardData = usageResult?.dashboardData ?? null;
-  const activityData = usageResult?.activityData ?? [];
+  const usageStats = usageResult?.usageStats ?? {};
+  const usageData = usageStats.daily ?? [];
+  const topUsers = usageStats.topUsers ?? [];
+  const featureUsage = usageStats.featureUsage ?? [];
+  const totalActivities = usageStats.totalActivities ?? 0;
+  const activityData = usageResult?.recentActivities ?? [];
 
   const handleDateChange = (range: DateRange) => {
     dateRangeRef.current = range;
     refetch();
   };
-
-  // Usage data derived from activity feed
-  const usageData = useMemo(() => {
-    if (activityData.length === 0) return [];
-    interface DayBucket { date: string; users: number; activities: number; storage: number; _userSet: Set<string> }
-    const buckets = activityData.reduce((acc: Record<string, DayBucket>, activity: Record<string, unknown>) => {
-      const date = ((activity.createdAt as string) || (activity.time as string) || '').split('T')[0];
-      if (!date) return acc;
-      if (!acc[date]) {
-        acc[date] = { date, users: 0, activities: 0, storage: 0, _userSet: new Set() };
-      }
-      acc[date].activities++;
-      const userId = (activity.userId as string) || ((activity.user as Record<string, string>)?.id) || (activity.userName as string) || 'unknown';
-      acc[date]._userSet.add(userId);
-      acc[date].users = acc[date]._userSet.size;
-      return acc;
-    }, {});
-    return (Object.values(buckets) as DayBucket[])
-      .map(({ date, users, activities, storage }) => ({ date, users, activities, storage }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(-14);
-  }, [activityData]);
-
-  // Active users derived from activity data
-  const topUsers = useMemo(() => {
-    if (activityData.length === 0) return [];
-    return Object.values(
-      activityData.reduce((acc: Record<string, { name: string; logins: number; actions: number; lastActive: string }>, activity: Record<string, unknown>) => {
-        const user = activity.user;
-        const name = (activity.userName as string)
-          || (typeof user === 'object' && user !== null
-              ? `${(user as Record<string, string>).firstName || ''} ${(user as Record<string, string>).lastName || ''}`.trim() || (user as Record<string, string>).name
-              : user as string)
-          || 'Unknown';
-        if (!acc[name]) {
-          acc[name] = { name, logins: 0, actions: 0, lastActive: '' };
-        }
-        acc[name].actions++;
-        acc[name].lastActive = (activity.createdAt as string) || (activity.time as string) || '';
-        return acc;
-      }, {})
-    ).slice(0, 4) as { name: string; logins: number; actions: number; lastActive: string }[];
-  }, [activityData]);
-
-  // Feature usage — derived from activity types
-  const featureUsage = useMemo(() => {
-    if (activityData.length === 0) return [] as { feature: string; usage: number; percentage: number }[];
-    const typeCounts: Record<string, number> = {};
-    activityData.forEach((a: Record<string, unknown>) => {
-      const type = (a.type as string) || (a.activityType as string) || 'other';
-      typeCounts[type] = (typeCounts[type] || 0) + 1;
-    });
-    const total = activityData.length;
-    return Object.entries(typeCounts).map(([feature, usage]) => ({
-      feature: feature.charAt(0).toUpperCase() + feature.slice(1).replace(/_/g, ' '),
-      usage,
-      percentage: calcRate(usage, total, 0)
-    })).sort((a, b) => b.usage - a.usage).slice(0, 8);
-  }, [activityData]);
 
   if (loading) {
     return <LoadingSkeleton rows={4} showChart={true} />;
@@ -139,7 +88,7 @@ const UsageAnalytics = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activityData.length}</div>
+            <div className="text-2xl font-bold">{totalActivities}</div>
             <p className="text-xs text-muted-foreground">Recent activities</p>
           </CardContent>
         </Card>
@@ -176,7 +125,7 @@ const UsageAnalytics = () => {
       </div>
 
       {/* Page-level empty state when no activity data exists */}
-      {activityData.length === 0 && (
+      {totalActivities === 0 && (
         <AnalyticsEmptyState variant="usage" />
       )}
 
@@ -188,7 +137,8 @@ const UsageAnalytics = () => {
         </CardHeader>
         <CardContent>
           {usageData.length > 0 ? (
-          <div aria-label="Usage trends chart">
+          <ChartErrorBoundary chartName="Usage Trends">
+          <div role="img" aria-label="Usage trends chart showing daily active users and activity count">
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={usageData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -202,8 +152,8 @@ const UsageAnalytics = () => {
                 type="monotone"
                 dataKey="users"
                 stackId="1"
-                stroke="#3b82f6"
-                fill="#3b82f6"
+                stroke={CHART_COLORS[0]}
+                fill={CHART_COLORS[0]}
                 name="Active Users"
               />
               <Area
@@ -211,14 +161,15 @@ const UsageAnalytics = () => {
                 type="monotone"
                 dataKey="activities"
                 stackId="2"
-                stroke="#10b981"
-                fill="#10b981"
+                stroke={CHART_COLORS[2]}
+                fill={CHART_COLORS[2]}
                 name="Activities"
                 fillOpacity={0.6}
               />
             </AreaChart>
           </ResponsiveContainer>
           </div>
+          </ChartErrorBoundary>
           ) : (
             <div className="flex items-center justify-center h-[300px] text-muted-foreground">
               No usage trend data yet
@@ -236,7 +187,7 @@ const UsageAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topUsers.length > 0 ? topUsers.map((user) => (
+              {topUsers.length > 0 ? topUsers.map((user: { name: string; actions: number }) => (
                 <div key={`user-${user.name}`} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 font-bold text-primary">
@@ -245,11 +196,11 @@ const UsageAnalytics = () => {
                     <div>
                       <p className="font-medium">{user.name || 'Unknown'}</p>
                       <p className="text-xs text-muted-foreground">
-                        {user.logins} logins • {user.actions} actions
+                        {user.actions} actions
                       </p>
                     </div>
                   </div>
-                  <Badge variant="secondary">{user.lastActive ? new Date(user.lastActive).toLocaleDateString() : 'N/A'}</Badge>
+                  <Badge variant="secondary">{user.actions.toLocaleString()}</Badge>
                 </div>
               )) : (
                 <div className="flex items-center justify-center h-24 text-muted-foreground">
@@ -268,7 +219,7 @@ const UsageAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {featureUsage.length > 0 ? featureUsage.map((item) => (
+              {featureUsage.length > 0 ? featureUsage.map((item: { feature: string; usage: number; percentage: number }) => (
                 <div key={item.feature}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">{item.feature}</span>

@@ -6,6 +6,7 @@ export {
   getTaskAnalytics,
   getActivityFeed,
   getConversionFunnel,
+  getUsageStats,
 } from './core'
 
 export {

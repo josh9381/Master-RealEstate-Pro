@@ -12,6 +12,8 @@ import {
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
 import { formatRate } from '@/lib/metricsCalculator';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
+import { CHART_COLORS } from '@/lib/chartColors';
 
 const MONTH_OPTIONS = [
   { value: 1, label: 'Last Month' },
@@ -164,7 +166,8 @@ const FollowUpAnalytics = () => {
           </CardHeader>
           <CardContent>
             {statusData.length > 0 ? (
-              <div aria-label="Follow-up status distribution pie chart">
+              <ChartErrorBoundary chartName="Status Distribution">
+              <div role="img" aria-label="Follow-up status distribution pie chart">
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
@@ -184,9 +187,11 @@ const FollowUpAnalytics = () => {
                 </PieChart>
               </ResponsiveContainer>
               </div>
+              </ChartErrorBoundary>
             ) : (
               <p className="text-gray-500 text-center py-8">No data</p>
-            )}
+            )
+          }
           </CardContent>
         </Card>
 
@@ -200,17 +205,19 @@ const FollowUpAnalytics = () => {
             <CardDescription>How follow-ups are delivered</CardDescription>
           </CardHeader>
           <CardContent>
-            <div aria-label="Follow-up channel usage bar chart">
+            <ChartErrorBoundary chartName="Channel Usage">
+            <div role="img" aria-label="Follow-up channel usage bar chart">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={channelData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
           </CardContent>
         </Card>
       </div>
@@ -226,7 +233,8 @@ const FollowUpAnalytics = () => {
             <CardDescription>Follow-up creation vs completion over time</CardDescription>
           </CardHeader>
           <CardContent>
-            <div aria-label="Monthly follow-up trend line chart">
+            <ChartErrorBoundary chartName="Monthly Trend">
+            <div role="img" aria-label="Monthly follow-up trend line chart">
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={monthlyTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -234,12 +242,13 @@ const FollowUpAnalytics = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="created" stroke="#6366f1" strokeWidth={2} name="Created" />
-                <Line type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={2} name="Completed" />
-                <Line type="monotone" dataKey="fired" stroke="#f59e0b" strokeWidth={2} name="Fired" />
+                <Line type="monotone" dataKey="created" stroke={CHART_COLORS[0]} strokeWidth={2} name="Created" />
+                <Line type="monotone" dataKey="completed" stroke={CHART_COLORS[2]} strokeWidth={2} name="Completed" />
+                <Line type="monotone" dataKey="fired" stroke={CHART_COLORS[1]} strokeWidth={2} name="Fired" />
               </LineChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
           </CardContent>
         </Card>
       )}

@@ -71,18 +71,22 @@ export function Sidebar() {
   
   const tier = getSubscriptionTier()
 
-  if (!sidebarOpen) return null
-
   return (
     <>
       {/* Mobile overlay */}
-      <div
-        className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-        onClick={() => setSidebarOpen(false)}
-      />
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r bg-card shadow-lg transition-transform duration-300 lg:translate-x-0">
+      <aside className={cn(
+        'flex h-full shrink-0 flex-col border-r bg-card shadow-lg transition-all duration-300 overflow-hidden',
+        'fixed left-0 top-0 z-50 lg:relative lg:z-auto',
+        sidebarOpen ? 'w-64' : 'w-0 border-r-0'
+      )}>
         {/* Logo & Close */}
         <div className="flex h-16 items-center justify-between border-b px-6">
           <Link to="/" className="flex items-center space-x-2">
@@ -248,3 +252,4 @@ export function Sidebar() {
     </>
   )
 }
+

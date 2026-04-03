@@ -7,14 +7,11 @@ import { ToastContainer } from '@/components/ui/ToastContainer'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FloatingAIButton } from '@/components/ai/FloatingAIButton'
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
-import { useUIStore } from '@/store/uiStore'
 import { useToast } from '@/hooks/useToast'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { cn } from '@/lib/utils'
 
 export function MainLayout() {
-  const { sidebarOpen } = useUIStore()
   const { toast } = useToast()
 
   // Subscribe to real-time WebSocket events (lead/campaign/workflow updates)
@@ -45,10 +42,7 @@ export function MainLayout() {
       <Sidebar />
 
       <div
-        className={cn(
-          'flex flex-1 flex-col overflow-hidden transition-all duration-300',
-          sidebarOpen ? 'ml-64' : 'ml-0'
-        )}
+        className="flex flex-1 flex-col overflow-hidden transition-all duration-300 min-w-0"
       >
         <Header />
 

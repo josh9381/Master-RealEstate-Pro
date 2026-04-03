@@ -13,6 +13,7 @@ import { analyticsApi } from '@/lib/api';
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
 import { CHART_COLORS as COLORS } from '@/lib/chartColors';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 
 const formatCurrency = fmtMoney;
 
@@ -113,7 +114,8 @@ const SourceROI = () => {
             <CardDescription>Total revenue generated from leads by their original source</CardDescription>
           </CardHeader>
           <CardContent>
-            <div aria-label="Revenue by source bar chart">
+            <ChartErrorBoundary chartName="Revenue by Source">
+            <div role="img" aria-label="Revenue by source bar chart">
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={sources} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
@@ -128,6 +130,7 @@ const SourceROI = () => {
               </BarChart>
             </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
           </CardContent>
         </Card>
       )}

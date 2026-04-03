@@ -15,6 +15,7 @@ import { exportToCSV, exportToJSON, exportAnalyticsAsPDF, ExportColumn } from '@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import type { ReportConfig } from '@/types';
 import { formatRate } from '@/lib/metricsCalculator';
+import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 
 // ——— Report Builder types ———
 type WidgetType = 'table' | 'bar-chart' | 'line-chart' | 'pie-chart' | 'number-card' | 'gauge' | 'funnel' | 'area-chart';
@@ -516,32 +517,42 @@ const CustomReports = () => {
         );
       case 'bar-chart':
         return (
+          <ChartErrorBoundary chartName={widget.label}>
+          <div role="img" aria-label={`${widget.label} bar chart`}>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" fontSize={11} />
               <YAxis fontSize={11} />
               <Tooltip />
-              <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              {chartData[0]?.sent !== undefined && <Bar dataKey="sent" fill="#3B82F6" />}
-              {chartData[0]?.opened !== undefined && <Bar dataKey="opened" fill="#10B981" />}
+              <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+              {chartData[0]?.sent !== undefined && <Bar dataKey="sent" fill={CHART_COLORS[0]} />}
+              {chartData[0]?.opened !== undefined && <Bar dataKey="opened" fill={CHART_COLORS[2]} />}
             </BarChart>
           </ResponsiveContainer>
+          </div>
+          </ChartErrorBoundary>
         );
       case 'line-chart':
         return (
+          <ChartErrorBoundary chartName={widget.label}>
+          <div role="img" aria-label={`${widget.label} line chart`}>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" fontSize={11} />
               <YAxis fontSize={11} />
               <Tooltip />
-              <Line type="monotone" dataKey={chartData[0]?.leads !== undefined ? 'leads' : 'value'} stroke="#3B82F6" strokeWidth={2} />
+              <Line type="monotone" dataKey={chartData[0]?.leads !== undefined ? 'leads' : 'value'} stroke={CHART_COLORS[0]} strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
+          </div>
+          </ChartErrorBoundary>
         );
       case 'pie-chart':
         return (
+          <ChartErrorBoundary chartName={widget.label}>
+          <div role="img" aria-label={`${widget.label} pie chart`}>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={chartData} cx="50%" cy="50%" outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
@@ -552,33 +563,41 @@ const CustomReports = () => {
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
+          </div>
+          </ChartErrorBoundary>
         );
       case 'area-chart':
         return (
+          <ChartErrorBoundary chartName={widget.label}>
+          <div role="img" aria-label={`${widget.label} area chart`}>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" fontSize={11} />
               <YAxis fontSize={11} />
               <Tooltip />
-              <Area type="monotone" dataKey={chartData[0]?.leads !== undefined ? 'leads' : 'value'} fill="#3B82F6" fillOpacity={0.2} stroke="#3B82F6" />
+              <Area type="monotone" dataKey={chartData[0]?.leads !== undefined ? 'leads' : 'value'} fill={CHART_COLORS[0]} fillOpacity={0.2} stroke={CHART_COLORS[0]} />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
+          </ChartErrorBoundary>
         );
       case 'gauge': {
         const gaugeValue = Math.min(100, Math.max(0, widget.value || (chartData[0]?.value ?? 0)));
         return (
-          <div className="h-32 flex flex-col items-center justify-center">
+          <ChartErrorBoundary chartName={widget.label}>
+          <div role="img" aria-label={`${widget.label} gauge at ${gaugeValue}%`} className="h-32 flex flex-col items-center justify-center">
             <div className="relative w-24 h-24">
               <svg viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#3B82F6" strokeWidth="8"
+                <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke={CHART_COLORS[0]} strokeWidth="8"
                   strokeDasharray={`${(gaugeValue / 100) * 251} 251`}
                   strokeLinecap="round" transform="rotate(-90 50 50)" />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center text-lg font-bold">{gaugeValue}%</div>
             </div>
           </div>
+          </ChartErrorBoundary>
         );
       }
       case 'table':

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getErrorMessage } from '../../utils/errors'
 import { logger } from '../../lib/logger'
 import { Request, Response } from 'express'
@@ -86,7 +87,7 @@ function applyAttributionModel(touchpoints: Touchpoint[], model: AttributionMode
         return [{ touchpointId: touchpoints[0].id, type: touchpoints[0].type, campaignId: touchpoints[0].campaignId, credit: 1 }]
       }
       if (touchpoints.length === 2) {
-        return touchpoints.map((tp, i) => ({
+        return touchpoints.map((tp) => ({
           touchpointId: tp.id,
           type: tp.type,
           campaignId: tp.campaignId,
@@ -143,7 +144,8 @@ export async function getAttributionReport(req: Request, res: Response) {
     if (endDate) dateFilter.lte = new Date(endDate as string)
     const dateWhere = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
 
-    // Step 1: Get all WON leads in date range (these are our "conversions")
+    // Step 1: Get WON leads in date range (capped to prevent unbounded queries)
+    const MAX_ATTRIBUTION_LEADS = 500
     const wonLeads = await prisma.lead.findMany({
       where: {
         organizationId,
@@ -158,6 +160,8 @@ export async function getAttributionReport(req: Request, res: Response) {
         value: true,
         createdAt: true,
       },
+      orderBy: { createdAt: 'desc' },
+      take: MAX_ATTRIBUTION_LEADS,
     })
 
     if (wonLeads.length === 0) {
@@ -297,6 +301,7 @@ export async function getAttributionReport(req: Request, res: Response) {
         model,
         conversions: wonLeads.length,
         totalRevenue: totalAttributedRevenue,
+        capped: wonLeads.length >= MAX_ATTRIBUTION_LEADS,
         bySource: Object.entries(sourceCredits)
           .sort(([, a], [, b]) => b.revenue - a.revenue)
           .map(([name, data]) => ({ name, ...data, credit: roundTo2(data.credit) })),

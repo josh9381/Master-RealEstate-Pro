@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { authenticate } from '../middleware/auth'
 import { asyncHandler } from '../utils/asyncHandler'
 import { cacheResponse } from '../middleware/cache'
+import { CACHE_TTL } from '../config/cache'
 import {
   getDashboardStats,
   getLeadAnalytics,
@@ -24,6 +25,7 @@ import {
   getSourceROI,
   getFollowUpAnalytics,
   getLeadSources,
+  getUsageStats,
 } from '../controllers/analytics'
 
 const router = Router()
@@ -31,35 +33,38 @@ const router = Router()
 // All routes require authentication
 router.use(authenticate)
 
-// Dashboard & overview (cache 2 min)
-router.get('/dashboard', cacheResponse(120), asyncHandler(getDashboardStats))
-router.get('/dashboard-alerts', cacheResponse(120), asyncHandler(getDashboardAlerts))
+// Dashboard & overview
+router.get('/dashboard', cacheResponse(CACHE_TTL.DASHBOARD), asyncHandler(getDashboardStats))
+router.get('/dashboard-alerts', cacheResponse(CACHE_TTL.DASHBOARD), asyncHandler(getDashboardAlerts))
 
-// Lead & campaign analytics (cache 3 min)
-router.get('/leads', cacheResponse(180), asyncHandler(getLeadAnalytics))
-router.get('/campaigns', cacheResponse(180), asyncHandler(getCampaignAnalytics))
-router.get('/tasks', cacheResponse(180), asyncHandler(getTaskAnalytics))
+// Lead & campaign analytics
+router.get('/leads', cacheResponse(CACHE_TTL.STANDARD), asyncHandler(getLeadAnalytics))
+router.get('/campaigns', cacheResponse(CACHE_TTL.STANDARD), asyncHandler(getCampaignAnalytics))
+router.get('/tasks', cacheResponse(CACHE_TTL.STANDARD), asyncHandler(getTaskAnalytics))
 router.get('/activity-feed', asyncHandler(getActivityFeed))
-router.get('/conversion-funnel', cacheResponse(180), asyncHandler(getConversionFunnel))
+router.get('/conversion-funnel', cacheResponse(CACHE_TTL.STANDARD), asyncHandler(getConversionFunnel))
 
-// Performance analytics (cache 5 min — heavy queries, infrequently changing)
-router.get('/monthly-performance', cacheResponse(300), asyncHandler(getMonthlyPerformance))
-router.get('/hourly-engagement', cacheResponse(300), asyncHandler(getHourlyEngagement))
-router.get('/team-performance', cacheResponse(300), asyncHandler(getTeamPerformance))
-router.get('/revenue-timeline', cacheResponse(300), asyncHandler(getRevenueTimeline))
-router.get('/pipeline-metrics', cacheResponse(300), asyncHandler(getPipelineMetrics))
-router.get('/device-breakdown', cacheResponse(300), asyncHandler(getDeviceBreakdown))
-router.get('/geographic', cacheResponse(300), asyncHandler(getGeographicBreakdown))
+// Performance analytics — heavy queries, infrequently changing
+router.get('/monthly-performance', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getMonthlyPerformance))
+router.get('/hourly-engagement', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getHourlyEngagement))
+router.get('/team-performance', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getTeamPerformance))
+router.get('/revenue-timeline', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getRevenueTimeline))
+router.get('/pipeline-metrics', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getPipelineMetrics))
+router.get('/device-breakdown', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getDeviceBreakdown))
+router.get('/geographic', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getGeographicBreakdown))
 
 // Phase 5: Attribution, comparison, velocity, ROI, follow-up analytics
-router.get('/attribution', cacheResponse(300), asyncHandler(getAttributionReport))
-router.get('/attribution/touchpoints/:leadId', cacheResponse(120), asyncHandler(getLeadTouchpoints))
-router.get('/comparison', cacheResponse(300), asyncHandler(getPeriodComparison))
-router.get('/lead-velocity', cacheResponse(300), asyncHandler(getLeadVelocity))
-router.get('/source-roi', cacheResponse(300), asyncHandler(getSourceROI))
-router.get('/follow-up-analytics', cacheResponse(300), asyncHandler(getFollowUpAnalytics))
+router.get('/attribution', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getAttributionReport))
+router.get('/attribution/touchpoints/:leadId', cacheResponse(CACHE_TTL.DASHBOARD), asyncHandler(getLeadTouchpoints))
+router.get('/comparison', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getPeriodComparison))
+router.get('/lead-velocity', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getLeadVelocity))
+router.get('/source-roi', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getSourceROI))
+router.get('/follow-up-analytics', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getFollowUpAnalytics))
+
+// Usage analytics — server-side aggregation
+router.get('/usage-stats', cacheResponse(CACHE_TTL.STANDARD), asyncHandler(getUsageStats))
 
 // Filter options — distinct values from the database
-router.get('/lead-sources', cacheResponse(300), asyncHandler(getLeadSources))
+router.get('/lead-sources', cacheResponse(CACHE_TTL.HEAVY), asyncHandler(getLeadSources))
 
 export default router
