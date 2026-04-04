@@ -41,7 +41,7 @@ const DocumentationPages = () => {
   const [page, setPage] = useState(1);
 
   // Fetch categories
-  const { data: catData } = useQuery({
+  const { data: catData, isLoading: catLoading } = useQuery({
     queryKey: ['doc-categories'],
     queryFn: () => docsApi.getCategories(),
   });
@@ -59,7 +59,7 @@ const DocumentationPages = () => {
   });
 
   // Fetch single article
-  const { data: articleData } = useQuery({
+  const { data: articleData, isLoading: articleLoading } = useQuery({
     queryKey: ['doc-article', selectedSlug],
     queryFn: () => docsApi.getBySlug(selectedSlug),
     enabled: view === 'article' && !!selectedSlug,
@@ -92,6 +92,26 @@ const DocumentationPages = () => {
   };
 
   // ── Article view ─────────────────────────────────────────────────────────
+  if (view === 'article' && articleLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-10 w-32 bg-muted animate-pulse rounded" />
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div className="h-8 bg-muted animate-pulse rounded w-3/4" />
+              <div className="h-4 bg-muted animate-pulse rounded w-full" />
+              <div className="h-4 bg-muted animate-pulse rounded w-full" />
+              <div className="h-4 bg-muted animate-pulse rounded w-2/3" />
+              <div className="h-4 bg-muted animate-pulse rounded w-full" />
+              <div className="h-4 bg-muted animate-pulse rounded w-5/6" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (view === 'article' && article) {
     return (
       <div className="space-y-6">
@@ -266,7 +286,13 @@ const DocumentationPages = () => {
       {/* Categories */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Browse by Category</h2>
-        {categories.length === 0 ? (
+        {catLoading ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i}><CardContent className="pt-6"><div className="flex items-start space-x-3"><div className="h-8 w-8 bg-muted animate-pulse rounded" /><div className="space-y-2 flex-1"><div className="h-4 bg-muted animate-pulse rounded w-28" /><div className="h-3 bg-muted animate-pulse rounded w-16" /></div></div></CardContent></Card>
+            ))}
+          </div>
+        ) : categories.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center text-muted-foreground">
               <Book className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />

@@ -118,7 +118,7 @@ export function DialogContent({ children, className = '' }: DialogContentProps) 
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelId}
-        className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6 ${className}`}
+        className={`relative bg-card text-card-foreground rounded-lg shadow-xl max-w-lg w-full p-6 ${className}`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
@@ -134,11 +134,11 @@ export function DialogHeader({ children }: DialogHeaderProps) {
 
 export function DialogTitle({ children }: DialogTitleProps) {
   const labelId = React.useContext(DialogLabelContext);
-  return <h2 id={labelId} className="text-xl font-semibold text-gray-900 dark:text-white">{children}</h2>
+  return <h2 id={labelId} className="text-xl font-semibold text-foreground">{children}</h2>
 }
 
 export function DialogDescription({ children }: DialogDescriptionProps) {
-  return <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{children}</p>
+  return <p className="mt-2 text-sm text-muted-foreground">{children}</p>
 }
 
 export function DialogFooter({ children }: DialogFooterProps) {

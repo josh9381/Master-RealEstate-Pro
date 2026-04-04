@@ -7,6 +7,7 @@ import { getOpenAIService, ASSISTANT_TONES, AssistantTone } from '../services/op
 import { getAIFunctionsService, AI_FUNCTIONS, DESTRUCTIVE_FUNCTIONS, ADMIN_ONLY_FUNCTIONS } from '../services/ai-functions.service'
 import { incrementAIUsage } from '../services/usage-tracking.service'
 import prisma from '../config/database'
+import { getRedisClient } from '../config/redis'
 
 /**
  * Enhance a message using AI — uses real intelligence service
@@ -73,6 +74,7 @@ export const suggestActions = async (req: Request, res: Response) => {
  * Time-bound confirmation tokens for destructive AI actions.
  * Maps token → { userId, functionName, args, expiresAt }
  * Tokens expire after 2 minutes and are single-use.
+ * Uses Redis when available for multi-instance support, falls back to in-memory.
  */
 const confirmationTokens = new Map<string, {
   userId: string
@@ -82,15 +84,45 @@ const confirmationTokens = new Map<string, {
   expiresAt: number
 }>()
 
+const CONFIRMATION_TOKEN_PREFIX = 'ai_confirm:'
+const CONFIRMATION_TTL_SEC = 120
+
+async function storeConfirmationToken(token: string, data: { userId: string; organizationId: string; functionName: string; args: Record<string, unknown>; expiresAt: number }): Promise<void> {
+  const redis = getRedisClient()
+  if (redis) {
+    await redis.set(`${CONFIRMATION_TOKEN_PREFIX}${token}`, JSON.stringify(data), 'EX', CONFIRMATION_TTL_SEC)
+  }
+  // Always store in-memory as fallback
+  confirmationTokens.set(token, data)
+}
+
+async function retrieveConfirmationToken(token: string): Promise<{ userId: string; organizationId: string; functionName: string; args: Record<string, unknown>; expiresAt: number } | null> {
+  const redis = getRedisClient()
+  if (redis) {
+    const raw = await redis.get(`${CONFIRMATION_TOKEN_PREFIX}${token}`)
+    if (raw) return JSON.parse(raw)
+  }
+  return confirmationTokens.get(token) || null
+}
+
+async function deleteConfirmationToken(token: string): Promise<void> {
+  const redis = getRedisClient()
+  if (redis) {
+    await redis.del(`${CONFIRMATION_TOKEN_PREFIX}${token}`)
+  }
+  confirmationTokens.delete(token)
+}
+
 function generateConfirmationToken(userId: string, organizationId: string, functionName: string, args: Record<string, unknown>): string {
   const token = crypto.randomBytes(32).toString('hex')
-  confirmationTokens.set(token, {
+  const data = {
     userId,
     organizationId,
     functionName,
     args,
     expiresAt: Date.now() + 2 * 60 * 1000, // 2 minutes
-  })
+  }
+  storeConfirmationToken(token, data)
   // Prune expired tokens periodically (max 200 entries as safety valve)
   if (confirmationTokens.size > 200) {
     const now = Date.now()
@@ -101,18 +133,18 @@ function generateConfirmationToken(userId: string, organizationId: string, funct
   return token
 }
 
-function validateConfirmationToken(token: string, userId: string): { valid: boolean; data?: typeof confirmationTokens extends Map<string, infer V> ? V : never; error?: string } {
-  const entry = confirmationTokens.get(token)
+async function validateConfirmationToken(token: string, userId: string): Promise<{ valid: boolean; data?: { userId: string; organizationId: string; functionName: string; args: Record<string, unknown>; expiresAt: number }; error?: string }> {
+  const entry = await retrieveConfirmationToken(token)
   if (!entry) return { valid: false, error: 'Invalid or expired confirmation token' }
   if (entry.expiresAt < Date.now()) {
-    confirmationTokens.delete(token)
+    await deleteConfirmationToken(token)
     return { valid: false, error: 'Confirmation token has expired. Please try again.' }
   }
   if (entry.userId !== userId) {
     return { valid: false, error: 'Confirmation token does not belong to this user' }
   }
   // Single-use: delete after validation
-  confirmationTokens.delete(token)
+  await deleteConfirmationToken(token)
   return { valid: true, data: entry }
 }
 
@@ -248,7 +280,7 @@ TONE SETTINGS: ${toneConfig.systemAddition}`,
         const confirmationToken = req.body.confirmationToken
         if (confirmationToken) {
           // Validate the time-bound token
-          const validation = validateConfirmationToken(confirmationToken, userId)
+          const validation = await validateConfirmationToken(confirmationToken, userId)
           if (!validation.valid) {
             return res.status(400).json({
               success: false,

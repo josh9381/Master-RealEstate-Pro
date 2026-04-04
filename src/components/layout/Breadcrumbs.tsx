@@ -1,5 +1,6 @@
+import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Home, ChevronRight } from 'lucide-react'
+import { Home, ChevronRight, MoreHorizontal } from 'lucide-react'
 
 const LABEL_MAP: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -110,15 +111,27 @@ export function Breadcrumbs() {
   }
 
   // Collapse middle segments at 4+ depth
-  let displayItems = items
-  if (items.length >= 4) {
-    displayItems = [
-      items[0],
-      { label: '…', path: '' },
-      items[items.length - 2],
-      items[items.length - 1],
-    ]
-  }
+  const collapsed = items.length >= 4 ? items.slice(1, items.length - 2) : []
+  const displayItems = items.length >= 4
+    ? [items[0], { label: '…', path: '' }, items[items.length - 2], items[items.length - 1]]
+    : items
+
+  const [ellipsisOpen, setEllipsisOpen] = useState(false)
+  const ellipsisRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!ellipsisOpen) return
+    function handleClick(e: MouseEvent) {
+      if (ellipsisRef.current && !ellipsisRef.current.contains(e.target as Node)) {
+        setEllipsisOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [ellipsisOpen])
+
+  // Close on route change
+  useEffect(() => { setEllipsisOpen(false) }, [pathname])
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
@@ -132,7 +145,33 @@ export function Breadcrumbs() {
       {displayItems.map((item, i) => (
         <span key={`${item.path}-${item.label}`} className="flex items-center gap-1.5">
           <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
-          {item.path && i < displayItems.length - 1 ? (
+          {item.label === '…' && collapsed.length > 0 ? (
+            <div ref={ellipsisRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setEllipsisOpen((v) => !v)}
+                className="flex items-center hover:text-foreground transition-colors rounded px-1 hover:bg-muted"
+                aria-label={`Show ${collapsed.length} hidden breadcrumb${collapsed.length > 1 ? 's' : ''}`}
+                aria-expanded={ellipsisOpen}
+                aria-haspopup="true"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+              {ellipsisOpen && (
+                <div className="absolute left-0 top-full mt-1 py-1 bg-popover border border-border rounded-md shadow-md z-50 min-w-[140px]">
+                  {collapsed.map((c) => (
+                    <Link
+                      key={c.path}
+                      to={c.path}
+                      className="block px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+                    >
+                      {c.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : item.path && i < displayItems.length - 1 ? (
             <Link to={item.path} className="hover:text-foreground transition-colors">
               {item.label}
             </Link>

@@ -75,6 +75,11 @@ export const billingApi = {
     return response.data
   },
 
+  getInvoiceById: async (id: string) => {
+    const response = await api.get(`/billing/invoices/${encodeURIComponent(id)}`)
+    return response.data
+  },
+
   getPaymentMethods: async () => {
     const response = await api.get('/billing/payment-methods')
     return response.data

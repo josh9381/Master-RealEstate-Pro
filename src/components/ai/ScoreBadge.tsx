@@ -45,8 +45,8 @@ export function ScoreBadge({
       return {
         label: 'Cold',
         icon: CircleDot,
-        className: 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200',
-        iconColor: 'text-gray-500'
+        className: 'bg-muted text-muted-foreground border-border hover:bg-accent',
+        iconColor: 'text-muted-foreground'
       };
     }
   };

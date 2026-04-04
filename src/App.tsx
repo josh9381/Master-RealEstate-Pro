@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense } from 'react'
+import { useAuthStore } from './store/authStore'
 import { MainLayout } from './components/layout/MainLayout'
 import { AuthLayout } from './components/layout/AuthLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
@@ -31,6 +32,18 @@ import VerifyEmail from './pages/auth/VerifyEmail'
 
 // Public pages
 import { UnsubscribePage } from './pages/unsubscribe/UnsubscribePage'
+
+// Landing page (lazy loaded)
+const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'))
+
+// Smart landing: show landing page if not authenticated, redirect to dashboard if logged in
+function LandingRedirect() {
+  const { isAuthenticated } = useAuthStore()
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+  return <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
+}
 
 // Leads (lazy loaded)
 const LeadsOverview = lazyWithRetry(() => import('./pages/leads/LeadsOverview'))
@@ -145,6 +158,8 @@ function App() {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={<LandingRedirect />} />
+      <Route path="/landing" element={<Suspense fallback={<PageLoader />}><LandingPage /></Suspense>} />
       <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
       <Route path="/terms-of-service" element={<TermsOfService />} />
 
@@ -159,7 +174,6 @@ function App() {
 
       {/* Main app routes */}
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Dashboard"><Dashboard /></PageErrorBoundary></Suspense>} />
         <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Dashboard"><Dashboard /></PageErrorBoundary></Suspense>} />
         
         {/* Leads */}

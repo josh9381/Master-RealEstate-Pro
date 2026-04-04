@@ -121,26 +121,27 @@ export class ABTestService {
     organizationId: string;
     metadata?: Prisma.InputJsonValue;
   }) {
-    const result = await prisma.aBTestResult.create({
-      data: {
-        testId: data.testId,
-        variant: data.variant,
-        leadId: data.leadId,
-        campaignId: data.campaignId,
-        organizationId: data.organizationId,
-        metadata: data.metadata || {},
-      },
-    });
-
-    // Increment participant count
-    await prisma.aBTest.update({
-      where: { id: data.testId },
-      data: {
-        participantCount: {
-          increment: 1,
+    // Use transaction to ensure result creation and count increment are atomic
+    const [result] = await prisma.$transaction([
+      prisma.aBTestResult.create({
+        data: {
+          testId: data.testId,
+          variant: data.variant,
+          leadId: data.leadId,
+          campaignId: data.campaignId,
+          organizationId: data.organizationId,
+          metadata: data.metadata || {},
         },
-      },
-    });
+      }),
+      prisma.aBTest.update({
+        where: { id: data.testId },
+        data: {
+          participantCount: {
+            increment: 1,
+          },
+        },
+      }),
+    ]);
 
     return result;
   }
@@ -218,7 +219,7 @@ export class ABTestService {
     const total = results.length;
     if (total === 0) {
       return {
-        variant: results[0]?.variant || 'A',
+        variant: 'unknown',
         participantCount: 0,
         openRate: 0,
         clickRate: 0,

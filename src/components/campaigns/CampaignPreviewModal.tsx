@@ -106,7 +106,7 @@ export function CampaignPreviewModal({
           {/* Status Breakdown */}
           {Object.keys(preview.statusBreakdown || {}).length > 0 && (
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+              <h4 className="font-semibold text-foreground mb-3">
                 Recipients by Status
               </h4>
               <div className="flex flex-wrap gap-2">
@@ -121,27 +121,27 @@ export function CampaignPreviewModal({
 
           {/* Message Preview */}
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+            <h4 className="font-semibold text-foreground mb-3">
               Message Preview
             </h4>
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+            <div className="border border-border rounded-lg p-4 bg-muted">
               {preview.messagePreview?.subject && (
-                <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Subject:</p>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                <div className="mb-3 pb-3 border-b border-border">
+                  <p className="text-xs text-muted-foreground mb-1">Subject:</p>
+                  <p className="font-medium text-foreground">
                     {preview.messagePreview?.subject}
                   </p>
                 </div>
               )}
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Message:</p>
+                <p className="text-xs text-muted-foreground mb-2">Message:</p>
                 <div 
-                  className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap"
+                  className="text-sm text-foreground whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview.messagePreview?.body || '') }}
                 />
               </div>
-              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-xs text-muted-foreground italic">
                   Preview shown with first recipient's data
                 </p>
               </div>
@@ -151,32 +151,32 @@ export function CampaignPreviewModal({
           {/* Sample Recipients */}
           {(preview.sampleRecipients || []).length > 0 && (
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+              <h4 className="font-semibold text-foreground mb-3">
                 Sample Recipients (showing first {(preview.sampleRecipients || []).length})
               </h4>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div className="border border-border rounded-lg overflow-hidden">
                 <div className="max-h-60 overflow-y-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                    <thead className="bg-muted sticky top-0">
                       <tr>
-                        <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">
+                        <th className="px-4 py-2 text-left font-medium text-muted-foreground">
                           Name
                         </th>
-                        <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">
+                        <th className="px-4 py-2 text-left font-medium text-muted-foreground">
                           Contact
                         </th>
-                        <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">
+                        <th className="px-4 py-2 text-left font-medium text-muted-foreground">
                           Status
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="divide-y divide-border">
                       {(preview.sampleRecipients || []).map((recipient, idx) => (
-                        <tr key={recipient.id || recipient.email || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                          <td className="px-4 py-2 text-gray-900 dark:text-white">
+                        <tr key={recipient.id || recipient.email || idx} className="hover:bg-muted/50">
+                          <td className="px-4 py-2 text-foreground">
                             {recipient.name}
                           </td>
-                          <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
+                          <td className="px-4 py-2 text-muted-foreground">
                             {preview.campaignType === 'EMAIL' && recipient.email}
                             {preview.campaignType === 'SMS' && recipient.phone}
                             {preview.campaignType === 'PHONE' && recipient.phone}
@@ -197,11 +197,11 @@ export function CampaignPreviewModal({
 
           {/* Cost Breakdown Detail */}
           {(preview.recipientCount || 0) > 0 && (
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 text-sm">
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+            <div className="bg-muted rounded-lg p-4 text-sm">
+              <h4 className="font-semibold text-foreground mb-2">
                 Cost Breakdown
               </h4>
-              <div className="space-y-1 text-gray-600 dark:text-gray-400">
+              <div className="space-y-1 text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Unit cost ({preview.campaignType}):</span>
                   <span className="font-mono">${formatCurrency(preview.cost?.perRecipient || 0)}</span>
@@ -210,7 +210,7 @@ export function CampaignPreviewModal({
                   <span>Recipients:</span>
                   <span className="font-mono">× {(preview.recipientCount || 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700 font-semibold text-gray-900 dark:text-white">
+                <div className="flex justify-between pt-2 border-t border-border font-semibold text-foreground">
                   <span>Total Cost:</span>
                   <span className="font-mono">${(preview.cost?.total || 0).toFixed(2)} {preview.cost?.currency}</span>
                 </div>

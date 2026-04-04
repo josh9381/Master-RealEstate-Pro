@@ -15,6 +15,7 @@ export const USER_SCOPED_KEYS = [
   'onboarding_wizard_dismissed',
   'onboarding_tour_completed',
   'onboarding_tour_step',
+  'setup_wizard_completed',
   'notification_sound_settings',
   'recent_searches',
 ] as const;

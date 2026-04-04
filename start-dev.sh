@@ -78,7 +78,7 @@ echo ""
 echo -e "${GREEN}🎉 All services started successfully!${NC}"
 echo ""
 echo -e "${BLUE}📊 Service URLs:${NC}"
-if [ -n "$CODESPACE_NAME" ]; then
+if [ -n "$CODESPACE_NAME" ]; then 
   DOMAIN="${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:-app.github.dev}"
   echo "   Frontend:      https://${CODESPACE_NAME}-3000.${DOMAIN}"
   echo "   Backend API:   https://${CODESPACE_NAME}-8000.${DOMAIN}"

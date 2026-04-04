@@ -276,8 +276,8 @@ export function EmailBlockEditor({
         {compiledHtml ? (
           <EmailPreviewFrame html={compiledHtml} />
         ) : (
-          <div className="p-6 bg-gray-100 dark:bg-gray-900 min-h-[300px]">
-            <div className="max-w-[600px] mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden p-4">
+          <div className="p-6 bg-muted min-h-[300px]">
+            <div className="max-w-[600px] mx-auto bg-card rounded-lg shadow-sm overflow-hidden p-4">
               {blocks.map(block => (
                 <BlockPreview key={block.id} block={block} />
               ))}
@@ -347,7 +347,7 @@ export function EmailBlockEditor({
       </div>
 
       {/* Canvas */}
-      <div className="p-4 space-y-1 bg-gray-50/50 dark:bg-gray-900/50">
+      <div className="p-4 space-y-1 bg-muted/50">
         {blocks.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Plus className="h-8 w-8 mb-2 opacity-50" />
@@ -371,8 +371,8 @@ export function EmailBlockEditor({
             onClick={() => setSelectedBlockId(block.id)}
             className={`group relative rounded-md border transition-all ${
               selectedBlockId === block.id
-                ? 'border-primary ring-1 ring-primary/30 bg-white dark:bg-gray-800'
-                : 'border-transparent hover:border-border bg-white dark:bg-gray-800'
+                ? 'border-primary ring-1 ring-primary/30 bg-card'
+                : 'border-transparent hover:border-border bg-card'
             } ${dragOverIndex === idx ? 'border-dashed border-primary/50 bg-primary/5' : ''}`}
           >
             {/* Block header bar */}

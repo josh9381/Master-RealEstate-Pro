@@ -59,7 +59,7 @@ function Register() {
         tosAccepted: true,
       })
       toast.success('Account created!', 'Please check your email to verify your account.')
-      navTimerRef.current = setTimeout(() => navigate('/'), 500)
+      navTimerRef.current = setTimeout(() => navigate('/dashboard'), 500)
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string; errors?: unknown } } }
       const errorMessage = err.response?.data?.message || 'Could not create account'

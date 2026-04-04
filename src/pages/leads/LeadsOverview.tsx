@@ -11,16 +11,13 @@ import {
   Merge,
   Filter,
   ArrowRight,
-  Plus,
   Target,
   TrendingUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { leadsApi } from '@/lib/api';
 import { calcRate } from '@/lib/metricsCalculator';
-import { FeatureGate } from '@/components/subscription/FeatureGate';
 
 const SOCIAL_MEDIA_SOURCES = ['linkedin', 'instagram', 'facebook ads', 'google ads', 'youtube', 'social media', 'social'];
 
@@ -98,14 +95,6 @@ export default function LeadsOverview() {
           <h1 className="text-3xl font-bold">Leads</h1>
           <p className="mt-1 text-muted-foreground">Overview of your lead pipeline and performance</p>
         </div>
-        <FeatureGate resource="leads">
-          <Link to="/leads/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Lead
-            </Button>
-          </Link>
-        </FeatureGate>
       </div>
 
       {/* Stats Cards */}

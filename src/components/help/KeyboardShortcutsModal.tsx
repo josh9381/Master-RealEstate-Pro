@@ -9,8 +9,6 @@ import {
   Navigation,
   Zap,
   MessageSquare,
-  Users,
-  Settings as SettingsIcon,
   Keyboard
 } from 'lucide-react'
 
@@ -22,59 +20,38 @@ interface Shortcut {
 
 const shortcuts: Shortcut[] = [
   // Navigation
-  { keys: ['G', 'D'], description: 'Go to Dashboard', category: 'Navigation' },
-  { keys: ['G', 'L'], description: 'Go to Leads', category: 'Navigation' },
-  { keys: ['G', 'P'], description: 'Go to Pipeline', category: 'Navigation' },
-  { keys: ['G', 'C'], description: 'Go to Communication', category: 'Navigation' },
-  { keys: ['G', 'A'], description: 'Go to Analytics', category: 'Navigation' },
-  { keys: ['G', 'S'], description: 'Go to Settings', category: 'Navigation' },
-  { keys: ['G', 'F'], description: 'Go to Follow-ups', category: 'Navigation' },
+  { keys: ['Alt', 'D'], description: 'Go to Dashboard', category: 'Navigation' },
+  { keys: ['Alt', 'L'], description: 'Go to Leads', category: 'Navigation' },
+  { keys: ['Alt', 'C'], description: 'Go to Communication', category: 'Navigation' },
+  { keys: ['Alt', 'S'], description: 'Go to Settings', category: 'Navigation' },
   
   // Actions
-  { keys: ['N'], description: 'Create new lead', category: 'Actions' },
-  { keys: ['E'], description: 'Edit current lead', category: 'Actions' },
-  { keys: ['Ctrl', 'S'], description: 'Save changes', category: 'Actions' },
-  { keys: ['Ctrl', 'K'], description: 'Open command palette', category: 'Actions' },
+  { keys: ['Alt', 'N'], description: 'Create new lead', category: 'Actions' },
+  { keys: ['Alt', 'R'], description: 'Refresh dashboard', category: 'Actions' },
+  { keys: ['Alt', 'K'], description: 'Open global search', category: 'Actions' },
   { keys: ['Esc'], description: 'Close modal/panel', category: 'Actions' },
   { keys: ['?'], description: 'Show keyboard shortcuts', category: 'Actions' },
   
-  // Search
-  { keys: ['/'], description: 'Focus search bar', category: 'Search' },
-  { keys: ['Ctrl', 'F'], description: 'Find in page', category: 'Search' },
-  { keys: ['F'], description: 'Open advanced filters', category: 'Search' },
-  
-  // Lead Management
-  { keys: ['L', 'N'], description: 'Add note to lead', category: 'Lead Management' },
-  { keys: ['L', 'T'], description: 'Add tag to lead', category: 'Lead Management' },
-  { keys: ['L', 'A'], description: 'Assign lead', category: 'Lead Management' },
-  { keys: ['L', 'S'], description: 'Change lead status', category: 'Lead Management' },
-  { keys: ['L', 'D'], description: 'Delete lead', category: 'Lead Management' },
-  
-  // Communication
-  { keys: ['C', 'E'], description: 'Compose email', category: 'Communication' },
-  { keys: ['C', 'S'], description: 'Send SMS', category: 'Communication' },
-  { keys: ['C', 'C'], description: 'Log call', category: 'Communication' },
-  { keys: ['C', 'M'], description: 'Schedule meeting', category: 'Communication' },
-  
-  // Bulk Actions
-  { keys: ['Ctrl', 'A'], description: 'Select all leads', category: 'Bulk Actions' },
-  { keys: ['Shift', 'Click'], description: 'Select range', category: 'Bulk Actions' },
-  { keys: ['Ctrl', 'Click'], description: 'Select multiple', category: 'Bulk Actions' },
+  // Dashboard
+  { keys: ['Alt', '1'], description: 'Overview tab', category: 'Dashboard' },
+  { keys: ['Alt', '2'], description: 'Activity tab', category: 'Dashboard' },
+  { keys: ['Alt', '3'], description: 'Campaigns tab', category: 'Dashboard' },
+  { keys: ['Alt', '4'], description: 'Alerts tab', category: 'Dashboard' },
   
   // AI Features
-  { keys: ['A', 'I'], description: 'Open AI Assistant', category: 'AI Features' },
-  { keys: ['A', 'E'], description: 'AI Email Composer', category: 'AI Features' },
-  { keys: ['A', 'S'], description: 'AI Suggested Actions', category: 'AI Features' }
+  { keys: ['Alt', 'A'], description: 'Toggle AI Assistant', category: 'AI Features' },
+  
+  // Communication
+  { keys: ['Enter'], description: 'Send reply', category: 'Communication' },
+  { keys: ['Shift', 'Enter'], description: 'New line in reply', category: 'Communication' },
 ]
 
 const categories = [
   { name: 'Navigation', icon: Navigation, color: 'text-blue-500' },
   { name: 'Actions', icon: Zap, color: 'text-purple-500' },
-  { name: 'Search', icon: Search, color: 'text-green-500' },
-  { name: 'Lead Management', icon: Users, color: 'text-orange-500' },
+  { name: 'Dashboard', icon: Search, color: 'text-green-500' },
+  { name: 'AI Features', icon: Keyboard, color: 'text-yellow-500' },
   { name: 'Communication', icon: MessageSquare, color: 'text-cyan-500' },
-  { name: 'Bulk Actions', icon: SettingsIcon, color: 'text-pink-500' },
-  { name: 'AI Features', icon: Keyboard, color: 'text-yellow-500' }
 ]
 
 interface KeyboardShortcutsModalProps {

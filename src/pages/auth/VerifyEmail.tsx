@@ -48,10 +48,10 @@ const VerifyEmail = () => {
 
         {status === 'success' && (
           <div className="flex flex-col items-center space-y-3">
-            <div className="p-3 bg-green-100 rounded-full">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+              <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-green-600 font-medium">{message}</p>
+            <p className="text-green-600 dark:text-green-400 font-medium">{message}</p>
             <Button asChild>
               <Link to="/auth/login">Continue to Login</Link>
             </Button>
@@ -60,10 +60,10 @@ const VerifyEmail = () => {
 
         {status === 'error' && (
           <div className="flex flex-col items-center space-y-3">
-            <div className="p-3 bg-red-100 rounded-full">
-              <XCircle className="h-12 w-12 text-red-600" />
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+              <XCircle className="h-12 w-12 text-red-600 dark:text-red-400" />
             </div>
-            <p className="text-red-600 font-medium">{message}</p>
+            <p className="text-red-600 dark:text-red-400 font-medium">{message}</p>
             <div className="flex gap-2">
               <Button variant="outline" asChild>
                 <Link to="/auth/login">Back to Login</Link>

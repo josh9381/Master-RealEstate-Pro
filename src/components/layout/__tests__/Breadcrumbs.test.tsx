@@ -51,7 +51,7 @@ describe('Breadcrumbs', () => {
 
   it('collapses middle items at 4+ depth with ellipsis', () => {
     renderWithPath('/a/b/c/d')
-    expect(screen.getByText('…')).toBeInTheDocument()
+    expect(screen.getByLabelText(/show.*hidden breadcrumb/i)).toBeInTheDocument()
   })
 
   it('last breadcrumb item is not a link (current page)', () => {

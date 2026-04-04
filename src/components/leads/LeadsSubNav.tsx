@@ -7,11 +7,9 @@ import {
   Download, 
   History, 
   Merge,
-  Plus,
   Filter
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
 
 const navItems = [
   { name: 'All Leads', href: '/leads', icon: Users, exact: true },
@@ -24,12 +22,7 @@ const navItems = [
   { name: 'Merge', href: '/leads/merge', icon: Merge },
 ]
 
-interface LeadsSubNavProps {
-  /** Hide the "Add Lead" button (e.g. on the Create page itself) */
-  hideAddButton?: boolean
-}
-
-export function LeadsSubNav({ hideAddButton }: LeadsSubNavProps) {
+export function LeadsSubNav() {
   const location = useLocation()
 
   const isActive = (href: string, exact?: boolean) => {
@@ -61,19 +54,6 @@ export function LeadsSubNav({ hideAddButton }: LeadsSubNavProps) {
           )
         })}
       </nav>
-      {!hideAddButton && (
-        <div className="flex items-center gap-2 ml-4 shrink-0">
-          <UsageBadge resource="leads" />
-          <FeatureGate resource="leads">
-            <Link to="/leads/create">
-              <Button size="sm">
-                <Plus className="mr-1 h-4 w-4" />
-                Add Lead
-              </Button>
-            </Link>
-          </FeatureGate>
-        </div>
-      )}
     </div>
   )
 }

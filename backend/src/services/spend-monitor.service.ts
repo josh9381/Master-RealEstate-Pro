@@ -15,6 +15,7 @@ import { aiLogger } from '../utils/ai-logger'
 import { calculateCost, MODEL_TIERS } from './ai-config.service'
 import { calcRate } from '../utils/metricsCalculator'
 import { calcProgress } from '../utils/metricsCalculator'
+import { getRedisClient } from '../config/redis'
 
 // Alert thresholds
 const PLATFORM_MONTHLY_THRESHOLD = parseFloat(process.env.AI_SPEND_ALERT_THRESHOLD || '500')
@@ -22,7 +23,10 @@ const ALERT_WARNING_PERCENT = 0.8  // Alert at 80% of budget
 const ALERT_CRITICAL_PERCENT = 1.0 // Alert at 100% of budget
 
 // Track which alerts have already been sent this month (avoid spam)
+// Uses Redis when available for persistence across restarts, with in-memory fallback
 const alertsSent = new Map<string, Set<string>>()
+const ALERT_REDIS_PREFIX = 'spend_alert:'
+const ALERT_REDIS_TTL = 35 * 24 * 60 * 60 // 35 days (covers a full month + buffer)
 
 /**
  * Check and alert on platform-wide AI spend
@@ -43,25 +47,25 @@ export async function checkPlatformSpend(): Promise<void> {
   const alertKey = `platform:${currentMonth}`
 
   if (totalSpend >= PLATFORM_MONTHLY_THRESHOLD * ALERT_CRITICAL_PERCENT) {
-    if (!hasAlerted(alertKey, 'critical')) {
+    if (!await hasAlerted(alertKey, 'critical')) {
       aiLogger.spendAlert({
         organizationId: 'PLATFORM',
         currentSpend: totalSpend,
         threshold: PLATFORM_MONTHLY_THRESHOLD,
         period: currentMonth,
       })
-      markAlerted(alertKey, 'critical')
+      await markAlerted(alertKey, 'critical')
       logger.error(`🚨 [SPEND ALERT] Platform AI spend $${totalSpend.toFixed(2)} has exceeded threshold $${PLATFORM_MONTHLY_THRESHOLD}`)
     }
   } else if (totalSpend >= PLATFORM_MONTHLY_THRESHOLD * ALERT_WARNING_PERCENT) {
-    if (!hasAlerted(alertKey, 'warning')) {
+    if (!await hasAlerted(alertKey, 'warning')) {
       aiLogger.spendAlert({
         organizationId: 'PLATFORM',
         currentSpend: totalSpend,
         threshold: PLATFORM_MONTHLY_THRESHOLD,
         period: currentMonth,
       })
-      markAlerted(alertKey, 'warning')
+      await markAlerted(alertKey, 'warning')
       logger.warn(`⚠️ [SPEND WARNING] Platform AI spend $${totalSpend.toFixed(2)} is at ${calcProgress(totalSpend, PLATFORM_MONTHLY_THRESHOLD)}% of threshold $${PLATFORM_MONTHLY_THRESHOLD}`)
     }
   }
@@ -108,24 +112,24 @@ export async function checkOrgSpend(organizationId: string): Promise<{
   const alertKey = `org:${organizationId}:${currentMonth}`
 
   if (overBudget) {
-    if (!hasAlerted(alertKey, 'critical')) {
+    if (!await hasAlerted(alertKey, 'critical')) {
       aiLogger.spendAlert({
         organizationId,
         currentSpend: spend,
         threshold: dollarBudget,
         period: currentMonth,
       })
-      markAlerted(alertKey, 'critical')
+      await markAlerted(alertKey, 'critical')
     }
   } else if (percentUsed >= 80) {
-    if (!hasAlerted(alertKey, 'warning')) {
+    if (!await hasAlerted(alertKey, 'warning')) {
       aiLogger.spendAlert({
         organizationId,
         currentSpend: spend,
         threshold: dollarBudget,
         period: currentMonth,
       })
-      markAlerted(alertKey, 'warning')
+      await markAlerted(alertKey, 'warning')
     }
   }
 
@@ -170,11 +174,24 @@ export async function getSpendSummary(): Promise<{
 
 // -- Internal alert tracking --
 
-function hasAlerted(key: string, level: string): boolean {
+async function hasAlerted(key: string, level: string): Promise<boolean> {
+  // Check Redis first
+  const redis = getRedisClient()
+  if (redis) {
+    const exists = await redis.sismember(`${ALERT_REDIS_PREFIX}${key}`, level)
+    return exists === 1
+  }
   return alertsSent.get(key)?.has(level) || false
 }
 
-function markAlerted(key: string, level: string): void {
+async function markAlerted(key: string, level: string): Promise<void> {
+  // Store in Redis
+  const redis = getRedisClient()
+  if (redis) {
+    await redis.sadd(`${ALERT_REDIS_PREFIX}${key}`, level)
+    await redis.expire(`${ALERT_REDIS_PREFIX}${key}`, ALERT_REDIS_TTL)
+  }
+  // Also store in-memory as fallback
   if (!alertsSent.has(key)) {
     alertsSent.set(key, new Set())
   }

@@ -78,23 +78,23 @@ export function MessageEnhancerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="message-enhancer-title" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" tabIndex={-1}>
+      <div className="bg-card text-card-foreground rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" tabIndex={-1}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50">
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 id="message-enhancer-title" className="text-xl font-bold text-gray-900">AI Message Enhancer</h2>
-              <p className="text-sm text-gray-600">Transform your message with AI-powered rewriting</p>
+              <h2 id="message-enhancer-title" className="text-xl font-bold text-foreground">AI Message Enhancer</h2>
+              <p className="text-sm text-muted-foreground">Transform your message with AI-powered rewriting</p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="hover:bg-white/50"
+            className="hover:bg-background/50"
             aria-label="Close enhancer"
           >
             <X className="h-5 w-5" />
@@ -105,7 +105,7 @@ export function MessageEnhancerModal({
         <div className="flex-1 overflow-y-auto p-6">
           {/* Tone Selector */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-sm font-medium text-foreground mb-3">
               Select Tone
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -115,12 +115,12 @@ export function MessageEnhancerModal({
                   onClick={() => setSelectedTone(tone.value)}
                   className={`p-3 rounded-lg border-2 text-left transition-all ${
                     selectedTone === tone.value
-                      ? 'border-purple-500 bg-purple-50 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/30 shadow-sm'
+                      : 'border-border hover:border-muted-foreground/30 hover:bg-muted'
                   }`}
                 >
                   <div className="font-medium text-sm">{tone.label}</div>
-                  <div className="text-xs text-gray-600 mt-1">{tone.description}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{tone.description}</div>
                 </button>
               ))}
             </div>
@@ -130,30 +130,30 @@ export function MessageEnhancerModal({
           <div className="grid md:grid-cols-2 gap-4">
             {/* Original Text */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Original Message
               </label>
-              <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 min-h-[200px] max-h-[300px] overflow-y-auto">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{originalText}</p>
+              <div className="border border-border rounded-lg p-4 bg-muted min-h-[200px] max-h-[300px] overflow-y-auto">
+                <p className="text-sm text-foreground whitespace-pre-wrap">{originalText}</p>
               </div>
             </div>
 
             {/* Enhanced Text */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Enhanced Message
               </label>
-              <div className="border-2 border-purple-300 rounded-lg p-4 bg-purple-50 min-h-[200px] max-h-[300px] overflow-y-auto">
+              <div className="border-2 border-purple-300 dark:border-purple-700 rounded-lg p-4 bg-purple-50 dark:bg-purple-950/20 min-h-[200px] max-h-[300px] overflow-y-auto">
                 {isEnhancing ? (
                   <div className="flex flex-col items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-purple-600 animate-spin mb-3" />
-                    <p className="text-sm text-gray-600">Enhancing your message...</p>
+                    <p className="text-sm text-muted-foreground">Enhancing your message...</p>
                   </div>
                 ) : enhancedText ? (
-                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{enhancedText}</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{enhancedText}</p>
                 ) : enhanceFailed ? (
                   <div className="flex flex-col items-center justify-center h-full gap-3">
-                    <p className="text-sm text-red-600 text-center">Enhancement failed. Please try again.</p>
+                    <p className="text-sm text-destructive text-center">Enhancement failed. Please try again.</p>
                     <Button
                       onClick={handleEnhance}
                       variant="outline"
@@ -166,7 +166,7 @@ export function MessageEnhancerModal({
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-sm text-gray-500 text-center">
+                    <p className="text-sm text-muted-foreground text-center">
                       Click &quot;Enhance&quot; to see the AI-improved version
                     </p>
                   </div>
@@ -177,7 +177,7 @@ export function MessageEnhancerModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t bg-gray-50">
+        <div className="flex items-center justify-between p-6 border-t bg-muted/50">
           <div className="flex gap-2">
             {enhancedText && !isEnhancing && (
               <Button

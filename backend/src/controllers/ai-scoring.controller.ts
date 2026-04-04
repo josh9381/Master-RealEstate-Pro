@@ -711,9 +711,10 @@ export const getFeatureImportance = async (req: Request, res: Response) => {
 }
 
 /**
- * Time-bound confirmation tokens for destructive AI actions.
- * Maps token → { userId, functionName, args, expiresAt }
- * Tokens expire after 2 minutes and are single-use.
+ * Recalibration job tracking.
+ * In-memory for active/running jobs (they're background async operations).
+ * Completed results are persisted to ModelPerformanceHistory in DB,
+ * so status checks fall back to DB when no in-memory job is found.
  */
 // In-memory recalibration job tracking
 interface RecalibrationJob {
@@ -833,6 +834,27 @@ export const getRecalibrationStatus = async (req: Request, res: Response) => {
     const job = recalibrationJobs.get(userId)
 
     if (!job) {
+      // Fall back to DB — check ModelPerformanceHistory for recent completions
+      const recent = await prisma.modelPerformanceHistory.findFirst({
+        where: { userId, modelType: 'lead_scoring' },
+        orderBy: { createdAt: 'desc' },
+      })
+      if (recent) {
+        return res.json({
+          success: true,
+          data: {
+            jobId: `recal_${userId}_history`,
+            status: 'completed',
+            startedAt: recent.createdAt,
+            completedAt: recent.createdAt,
+            result: {
+              accuracy: recent.accuracyAfter,
+              sampleSize: recent.sampleSize,
+              improvements: recent.improvements,
+            },
+          },
+        })
+      }
       return res.json({
         success: true,
         data: { status: 'none', message: 'No recalibration job found' },

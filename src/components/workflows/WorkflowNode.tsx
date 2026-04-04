@@ -93,7 +93,7 @@ const getTypeBadgeColor = (type: NodeType) => {
     case 'delay':
       return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
     default:
-      return 'bg-gray-100 text-gray-700';
+      return 'bg-muted text-muted-foreground';
   }
 };
 
@@ -156,7 +156,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
           )}
 
           {/* Icon */}
-          <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
+          <div className="p-2 rounded-lg bg-card shadow-sm">
             <Icon className="h-5 w-5" />
           </div>
 
@@ -271,9 +271,9 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
 
         {/* Connection points */}
         {(node.type !== 'trigger') && (
-          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 z-10" />
+          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rounded-full bg-card border-2 border-border z-10" />
         )}
-        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 z-10" />
+        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rounded-full bg-card border-2 border-border z-10" />
       </CardContent>
     </Card>
   );

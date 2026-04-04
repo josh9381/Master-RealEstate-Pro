@@ -284,9 +284,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       const pendingToken = crypto.randomBytes(32).toString('hex');
       const hashedPending = crypto.createHash('sha256').update(pendingToken).digest('hex');
 
-      // Store in a simple in-memory map with 5-min expiry (or use DB)
-      // Using the user's emailVerificationToken field temporarily is bad practice,
-      // so we'll store it in a dedicated way
+      // Store a short-lived 2FA pending token in the DB (via refreshToken table)
       await prisma.refreshToken.create({
         data: {
           token: `2fa_pending:${hashedPending}`,

@@ -38,7 +38,7 @@ function Login() {
         if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded
       } catch { /* ignore */ }
     }
-    return '/'
+    return '/dashboard'
   }
 
   // 2FA challenge state

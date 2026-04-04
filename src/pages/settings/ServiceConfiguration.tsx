@@ -72,10 +72,6 @@ const ServiceConfiguration = () => {
     }
   };
 
-  const handleFeatureComingSoon = (feature: string) => {
-    toast.info(`${feature}`, 'Feature coming soon');
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -265,10 +261,7 @@ const ServiceConfiguration = () => {
               className="w-full px-3 py-2 border rounded-lg bg-muted"
             />
           </div>
-          <div className="flex items-center space-x-4">
-            <Button disabled onClick={() => handleFeatureComingSoon('Save Cache Settings')}>Save Cache Settings</Button>
-            <Button variant="outline" disabled onClick={() => handleFeatureComingSoon('Flush Cache')}>Flush Cache</Button>
-          </div>
+          <p className="text-xs text-muted-foreground italic">Cache configuration will be available in a future update.</p>
         </CardContent>
       </Card>
 
@@ -325,7 +318,7 @@ const ServiceConfiguration = () => {
               />
             </div>
           </div>
-          <Button disabled onClick={() => handleFeatureComingSoon('Save Queue Settings')}>Save Queue Settings</Button>
+          <p className="text-xs text-muted-foreground italic">Queue configuration will be available in a future update.</p>
         </CardContent>
       </Card>
 
@@ -388,10 +381,7 @@ const ServiceConfiguration = () => {
               className="w-full px-3 py-2 border rounded-lg bg-muted"
             />
           </div>
-          <div className="flex items-center space-x-4">
-            <Button disabled onClick={() => handleFeatureComingSoon('Save Search Settings')}>Save Search Settings</Button>
-            <Button variant="outline" disabled onClick={() => handleFeatureComingSoon('Reindex All Data')}>Reindex All Data</Button>
-          </div>
+          <p className="text-xs text-muted-foreground italic">Search configuration will be available in a future update.</p>
         </CardContent>
       </Card>
 
@@ -449,7 +439,7 @@ const ServiceConfiguration = () => {
               <span className="text-sm text-muted-foreground">Anonymize IP addresses</span>
             </label>
           </div>
-          <Button disabled onClick={() => handleFeatureComingSoon('Save Analytics Settings')}>Save Analytics Settings</Button>
+          <p className="text-xs text-muted-foreground italic">Analytics configuration will be available in a future update.</p>
         </CardContent>
       </Card>
 
@@ -500,7 +490,7 @@ const ServiceConfiguration = () => {
               className="w-full px-3 py-2 border rounded-lg bg-muted"
             />
           </div>
-          <Button disabled onClick={() => handleFeatureComingSoon('Save Monitoring Settings')}>Save Monitoring Settings</Button>
+          <p className="text-xs text-muted-foreground italic">Monitoring configuration will be available in a future update.</p>
         </CardContent>
       </Card>
 

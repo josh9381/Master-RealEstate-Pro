@@ -10,17 +10,17 @@ const icons = {
 }
 
 const colors = {
-  success: 'bg-green-50 border-green-200 text-green-900',
-  error: 'bg-red-50 border-red-200 text-red-900',
-  warning: 'bg-yellow-50 border-yellow-200 text-yellow-900',
-  info: 'bg-blue-50 border-blue-200 text-blue-900',
+  success: 'bg-green-50 border-green-200 text-green-900 dark:bg-green-950/40 dark:border-green-800 dark:text-green-300',
+  error: 'bg-red-50 border-red-200 text-red-900 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300',
+  warning: 'bg-yellow-50 border-yellow-200 text-yellow-900 dark:bg-yellow-950/40 dark:border-yellow-800 dark:text-yellow-300',
+  info: 'bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300',
 }
 
 const iconColors = {
-  success: 'text-green-600',
-  error: 'text-red-600',
-  warning: 'text-yellow-600',
-  info: 'text-blue-600',
+  success: 'text-green-600 dark:text-green-400',
+  error: 'text-red-600 dark:text-red-400',
+  warning: 'text-yellow-600 dark:text-yellow-400',
+  info: 'text-blue-600 dark:text-blue-400',
 }
 
 export function ToastContainer() {
@@ -29,7 +29,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div role="status" aria-live="polite" aria-atomic="false" className="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 max-w-md">
+    <div role="status" aria-live="polite" aria-atomic="false" className="fixed bottom-24 right-4 z-[60] flex flex-col gap-2 max-w-md">
       {toasts.map((toast) => {
         const Icon = icons[toast.type]
         

@@ -41,6 +41,10 @@ export interface ExecutionResult {
 
 // ===================================
 // In-Memory Execution Queue
+// NOTE: This is intentionally in-memory as it serves as a processing buffer
+// for workflows that already have persistent DB records (WorkflowExecution).
+// On restart, pending workflows can be recovered from DB by querying
+// WorkflowExecution records with status='pending' or 'running'.
 // ===================================
 
 const executionQueue: ExecutionQueueItem[] = [];
@@ -252,6 +256,7 @@ async function createExecutionLog(data: {
         leadId: data.leadId,
         status: data.status,
         error: data.error,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         metadata: data.metadata as any,
         startedAt: new Date(),
         completedAt: data.status !== ExecutionStatus.RUNNING ? new Date() : undefined,

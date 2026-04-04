@@ -1,8 +1,7 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
 import {
   LayoutDashboard,
   Users,
@@ -16,12 +15,11 @@ import {
   CreditCard,
   HelpCircle,
   X,
-  User,
-  LogOut,
   ChevronUp,
   Crown,
   UserCog,
 } from 'lucide-react'
+import { ProfileDropdown } from '@/components/shared/ProfileDropdown'
 
 import type { LucideIcon } from 'lucide-react'
 
@@ -47,20 +45,8 @@ const adminNavigation = [
 
 export function Sidebar() {
   const location = useLocation()
-  const navigate = useNavigate()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
-  const { user, logout, getSubscriptionTier } = useAuthStore()
-  const [showProfileMenu, setShowProfileMenu] = useState(false)
-
-  const handleLogout = async () => {
-    setShowProfileMenu(false)
-    await logout()
-    navigate('/auth/login')
-  }
-
-  const displayName = user ? `${user.firstName} ${user.lastName}` : 'User'
-  const displayEmail = user?.email || ''
-  const userInitials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : 'U'
+  const { user, getSubscriptionTier } = useAuthStore()
   
   // Filter admin navigation based on user role
   const userRole = user?.role?.toUpperCase() as 'ADMIN' | 'MANAGER' | 'USER' | undefined
@@ -82,18 +68,21 @@ export function Sidebar() {
       )}
 
       {/* Sidebar */}
-      <aside className={cn(
-        'flex h-full shrink-0 flex-col border-r bg-card shadow-lg transition-all duration-300 overflow-hidden',
-        'fixed left-0 top-0 z-50 lg:relative lg:z-auto',
-        sidebarOpen ? 'w-64' : 'w-0 border-r-0'
-      )}>
+      <aside
+        className={cn(
+          'flex h-full shrink-0 flex-col border-r bg-card shadow-lg transition-all duration-300 overflow-hidden',
+          'fixed left-0 top-0 z-50 lg:relative lg:z-auto',
+          sidebarOpen ? 'w-64' : 'w-0 border-r-0'
+        )}
+        aria-hidden={!sidebarOpen}
+      >
         {/* Logo & Close */}
         <div className="flex h-16 items-center justify-between border-b px-6">
           <Link to="/" className="flex items-center space-x-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <LayoutDashboard className="h-5 w-5" />
             </div>
-            <span className="text-lg font-bold">CRM Platform</span>
+            <span className="text-lg font-bold">RealEstate<span className="text-primary">Pro</span></span>
           </Link>
           
           <button
@@ -160,11 +149,11 @@ export function Sidebar() {
                         {item.name === 'Subscription' && tier && (
                           <span className={cn(
                             "ml-auto text-xs px-1.5 py-0.5 rounded font-medium",
-                            tier === 'STARTER' && "bg-blue-100 text-blue-700",
-                            tier === 'PROFESSIONAL' && "bg-purple-100 text-purple-700",
-                            tier === 'ELITE' && "bg-indigo-100 text-indigo-700",
-                            tier === 'TEAM' && "bg-emerald-100 text-emerald-700",
-                            tier === 'ENTERPRISE' && "bg-amber-100 text-amber-700",
+                            tier === 'STARTER' && "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+                            tier === 'PROFESSIONAL' && "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+                            tier === 'ELITE' && "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+                            tier === 'TEAM' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+                            tier === 'ENTERPRISE' && "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
                           )}>
                             {tier}
                           </span>
@@ -180,73 +169,37 @@ export function Sidebar() {
 
         {/* User section */}
         <div className="border-t p-4">
-          <div className="relative">
-            <button
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center space-x-3 w-full rounded-lg p-2 hover:bg-accent transition-colors"
-              aria-expanded={showProfileMenu}
-              aria-haspopup="true"
-              aria-label="User menu"
-            >
-              {user?.avatar ? (
-                <img 
-                  src={user.avatar} 
-                  alt={displayName}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                  {userInitials}
+          <ProfileDropdown position="above" closeSidebarOnNav>
+            {({ toggle, isOpen, displayName, displayEmail, userInitials, avatarUrl }) => (
+              <button
+                onClick={toggle}
+                className="flex items-center space-x-3 w-full rounded-lg p-2 hover:bg-accent transition-colors"
+                aria-expanded={isOpen}
+                aria-haspopup="true"
+                aria-label="User menu"
+              >
+                {avatarUrl ? (
+                  <img 
+                    src={avatarUrl} 
+                    alt={displayName}
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                    {userInitials}
+                  </div>
+                )}
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-xs text-muted-foreground">{displayEmail}</p>
                 </div>
-              )}
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium">{displayName}</p>
-                <p className="text-xs text-muted-foreground">{displayEmail}</p>
-              </div>
-              <ChevronUp className={cn(
-                "h-4 w-4 transition-transform",
-                showProfileMenu && "rotate-180"
-              )} />
-            </button>
-
-            {/* Profile Menu */}
-            {showProfileMenu && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border rounded-lg shadow-lg">
-                <div className="p-2">
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false)
-                      navigate('/settings/profile')
-                      setSidebarOpen(false)
-                    }}
-                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent"
-                  >
-                    <User className="h-4 w-4" />
-                    <span>Profile Settings</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false)
-                      navigate('/settings')
-                      setSidebarOpen(false)
-                    }}
-                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent"
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </button>
-                  <div className="border-t my-2" />
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent text-red-600"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Log Out</span>
-                  </button>
-                </div>
-              </div>
+                <ChevronUp className={cn(
+                  "h-4 w-4 transition-transform",
+                  isOpen && "rotate-180"
+                )} />
+              </button>
             )}
-          </div>
+          </ProfileDropdown>
         </div>
       </aside>
     </>

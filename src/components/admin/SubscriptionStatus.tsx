@@ -51,11 +51,11 @@ export function SubscriptionStatus() {
   
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4" />
+      <div className="bg-card rounded-lg border border-border p-6 animate-pulse">
+        <div className="h-6 bg-muted rounded w-1/2 mb-4" />
         <div className="space-y-2">
-          <div className="h-4 bg-gray-200 rounded" />
-          <div className="h-4 bg-gray-200 rounded w-3/4" />
+          <div className="h-4 bg-muted rounded" />
+          <div className="h-4 bg-muted rounded w-3/4" />
         </div>
       </div>
     )
@@ -63,12 +63,12 @@ export function SubscriptionStatus() {
   
   if (!data?.usage) return null
   
-  const tierConfig: Record<string, { color: string; icon: React.ReactNode | null }> = {
-    STARTER: { color: 'blue', icon: null },
-    PROFESSIONAL: { color: 'purple', icon: <Crown className="w-4 h-4" /> },
-    ELITE: { color: 'indigo', icon: <Crown className="w-4 h-4" /> },
-    TEAM: { color: 'emerald', icon: <Crown className="w-4 h-4" /> },
-    ENTERPRISE: { color: 'amber', icon: <Crown className="w-4 h-4" /> },
+  const tierConfig: Record<string, { headerBg: string; headerBorder: string; icon: React.ReactNode | null }> = {
+    STARTER: { headerBg: 'bg-blue-50 dark:bg-blue-950/30', headerBorder: 'border-blue-100 dark:border-blue-900', icon: null },
+    PROFESSIONAL: { headerBg: 'bg-purple-50 dark:bg-purple-950/30', headerBorder: 'border-purple-100 dark:border-purple-900', icon: <Crown className="w-4 h-4" /> },
+    ELITE: { headerBg: 'bg-indigo-50 dark:bg-indigo-950/30', headerBorder: 'border-indigo-100 dark:border-indigo-900', icon: <Crown className="w-4 h-4" /> },
+    TEAM: { headerBg: 'bg-emerald-50 dark:bg-emerald-950/30', headerBorder: 'border-emerald-100 dark:border-emerald-900', icon: <Crown className="w-4 h-4" /> },
+    ENTERPRISE: { headerBg: 'bg-amber-50 dark:bg-amber-950/30', headerBorder: 'border-amber-100 dark:border-amber-900', icon: <Crown className="w-4 h-4" /> },
   }
   
   const config = tierConfig[tier || 'STARTER'] || tierConfig.STARTER
@@ -117,26 +117,26 @@ export function SubscriptionStatus() {
   }
   
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-card rounded-lg border border-border overflow-hidden">
       {/* Header */}
-      <div className={`p-6 bg-${config.color}-50 border-b border-${config.color}-100`}>
+      <div className={`p-6 ${config.headerBg} border-b ${config.headerBorder}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {config.icon}
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-foreground">
               {tier || 'STARTER'} Plan
             </h3>
           </div>
           
           {isTrial && (
-            <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-md">
+            <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs font-medium rounded-md">
               Trial Active
             </span>
           )}
         </div>
         
         {data.subscription?.price && data.subscription.price > 0 && (
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             ${data.subscription.price}/month
           </p>
         )}
@@ -145,8 +145,8 @@ export function SubscriptionStatus() {
       {/* Usage Meters */}
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-semibold text-gray-700">Resource Usage</h4>
-          <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+          <h4 className="text-sm font-semibold text-foreground">Resource Usage</h4>
+          <button className="text-xs text-primary hover:text-primary/80 font-medium">
             View Details
           </button>
         </div>
@@ -159,11 +159,11 @@ export function SubscriptionStatus() {
           return (
             <div key={item.label}>
               <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 text-sm text-gray-700">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Icon className="w-4 h-4" />
                   <span>{item.label}</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-foreground">
                   {item.current.toLocaleString()}
                   {item.limit && ` / ${item.limit.toLocaleString()}`}
                   {!item.limit && ' / Unlimited'}
@@ -171,7 +171,7 @@ export function SubscriptionStatus() {
               </div>
               
               {item.limit && (
-                <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="relative h-2 bg-muted rounded-full overflow-hidden">
                   <div 
                     className={`absolute inset-y-0 left-0 rounded-full transition-all ${getUsageColor(percentage)}`}
                     style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -192,15 +192,15 @@ export function SubscriptionStatus() {
       
       {/* Upgrade CTA */}
       {tier !== 'ENTERPRISE' && (
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-t border-gray-200">
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 border-t border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
-              <TrendingUp className="w-4 h-4 text-blue-600" />
-              <span className="text-gray-700">Need more resources?</span>
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <span className="text-muted-foreground">Need more resources?</span>
             </div>
             <a 
               href="/admin/subscription"
-              className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+              className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium"
             >
               Upgrade Plan
             </a>

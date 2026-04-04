@@ -38,9 +38,9 @@ export function AdminStats() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white p-6 rounded-lg border border-gray-200 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+          <div key={i} className="bg-card p-6 rounded-lg border border-border animate-pulse">
+            <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
+            <div className="h-8 bg-muted rounded w-3/4"></div>
           </div>
         ))}
       </div>
@@ -49,15 +49,15 @@ export function AdminStats() {
   
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+      <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
+        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-red-900 font-medium">Failed to load statistics</p>
-          <p className="text-red-700 text-sm">Please try again</p>
+          <p className="text-red-900 dark:text-red-300 font-medium">Failed to load statistics</p>
+          <p className="text-red-700 dark:text-red-400 text-sm">Please try again</p>
         </div>
         <button 
           onClick={() => refetch()}
-          className="px-3 py-1.5 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm font-medium"
+          className="px-3 py-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-900/60 text-sm font-medium"
         >
           Retry
         </button>
@@ -102,23 +102,23 @@ export function AdminStats() {
   
   const colorClasses = {
     blue: {
-      bg: 'bg-blue-100',
-      text: 'text-blue-600',
+      bg: 'bg-blue-100 dark:bg-blue-900/30',
+      text: 'text-blue-600 dark:text-blue-400',
       ring: 'ring-blue-600',
     },
     green: {
-      bg: 'bg-green-100',
-      text: 'text-green-600',
+      bg: 'bg-green-100 dark:bg-green-900/30',
+      text: 'text-green-600 dark:text-green-400',
       ring: 'ring-green-600',
     },
     purple: {
-      bg: 'bg-purple-100',
-      text: 'text-purple-600',
+      bg: 'bg-purple-100 dark:bg-purple-900/30',
+      text: 'text-purple-600 dark:text-purple-400',
       ring: 'ring-purple-600',
     },
     orange: {
-      bg: 'bg-orange-100',
-      text: 'text-orange-600',
+      bg: 'bg-orange-100 dark:bg-orange-900/30',
+      text: 'text-orange-600 dark:text-orange-400',
       ring: 'ring-orange-600',
     },
   }
@@ -134,20 +134,20 @@ export function AdminStats() {
           return (
             <div 
               key={stat.label}
-              className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+              className="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow"
             >
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
                 <div className={`p-2 rounded-lg ${colors.bg}`}>
                   <Icon className={`w-5 h-5 ${colors.text}`} />
                 </div>
               </div>
               
               <div>
-                <p className="text-3xl font-bold text-gray-900 mb-1">
+                <p className="text-3xl font-bold text-foreground mb-1">
                   {stat.value.toLocaleString()}
                 </p>
-                <p className="text-sm text-gray-500">{stat.subValue}</p>
+                <p className="text-sm text-muted-foreground">{stat.subValue}</p>
               </div>
             </div>
           )

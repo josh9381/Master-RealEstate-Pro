@@ -155,7 +155,7 @@ export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: Ad
                     type="checkbox"
                     checked={filters.status.includes(status)}
                     onChange={() => toggleArrayFilter('status', status)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                   />
                   <span className="text-sm group-hover:text-primary transition-colors">
                     {status}
@@ -181,7 +181,7 @@ export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: Ad
                     type="checkbox"
                     checked={filters.source.includes(source)}
                     onChange={() => toggleArrayFilter('source', source)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                   />
                   <span className="text-sm group-hover:text-primary transition-colors">
                     {source}
@@ -292,7 +292,7 @@ export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: Ad
                     type="checkbox"
                     checked={filters.tags.includes(tag)}
                     onChange={() => toggleArrayFilter('tags', tag)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                   />
                   <span className="text-sm group-hover:text-primary transition-colors">
                     {tag}
@@ -318,7 +318,7 @@ export function AdvancedFilters({ isOpen, onClose, onApply, currentFilters }: Ad
                     type="checkbox"
                     checked={filters.assignedTo.includes(person)}
                     onChange={() => toggleArrayFilter('assignedTo', person)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                   />
                   <span className="text-sm group-hover:text-primary transition-colors">
                     {person}

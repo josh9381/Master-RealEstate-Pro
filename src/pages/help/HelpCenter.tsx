@@ -15,7 +15,7 @@ const HelpCenter = () => {
   const [searchQuery, setSearchQuery] = useState('')
 
   // Fetch real category data from docs API
-  const { data: catData } = useQuery({
+  const { data: catData, isLoading: catLoading } = useQuery({
     queryKey: ['help-center-doc-categories'],
     queryFn: () => docsApi.getCategories(),
   })
@@ -203,6 +203,22 @@ const HelpCenter = () => {
           <CardDescription>Find articles organized by topic</CardDescription>
         </CardHeader>
         <CardContent>
+          {catLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-4 border rounded-lg animate-pulse">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="p-2 bg-muted rounded-lg h-9 w-9" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 bg-muted rounded w-24" />
+                      <div className="h-3 bg-muted rounded w-16" />
+                    </div>
+                  </div>
+                  <div className="h-3 bg-muted rounded w-full mt-2" />
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {categories.map((category) => {
               const Icon = category.icon;
@@ -227,6 +243,7 @@ const HelpCenter = () => {
               );
             })}
           </div>
+          )}
         </CardContent>
       </Card>
 

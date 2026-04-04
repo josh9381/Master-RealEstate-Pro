@@ -298,14 +298,19 @@ export async function recordInteraction(req: Request, res: Response) {
       return res.status(400).json({ success: false, message: 'Missing resultId or type' });
     }
 
-    // Verify the result belongs to the user's organization
+    // Verify the result belongs to the user's organization AND the correct test
+    const { id: testId } = req.params;
     const testResult = await prisma.aBTestResult.findUnique({
       where: { id: resultId },
-      select: { organizationId: true },
+      select: { organizationId: true, testId: true },
     });
 
     if (!testResult || testResult.organizationId !== organizationId) {
       return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    if (testResult.testId !== testId) {
+      return res.status(400).json({ success: false, message: 'Result does not belong to this test' });
     }
 
     let result;

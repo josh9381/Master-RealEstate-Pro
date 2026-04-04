@@ -28,7 +28,10 @@ import {
   ArrowUpRight,
   ArrowRight,
   Filter,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  Keyboard,
+  Settings
 } from 'lucide-react'
 import {
   AreaChart,
@@ -43,12 +46,19 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
+  Legend,
+  LineChart,
+  Line
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import { analyticsApi, campaignsApi, tasksApi, appointmentsApi } from '@/lib/api'
 import { GettingStarted } from '@/components/onboarding/GettingStarted'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
+import { Tabs } from '@/components/ui/Tabs'
+import { MiniCalendar } from '@/components/dashboard/MiniCalendar'
+import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer'
+import { useDashboardPreferences } from '@/hooks/useDashboardPreferences'
+import { cn } from '@/lib/utils'
 import type { Campaign, ConversionStage, RevenueMonth, ActivityRecord, DashboardActivity, DashboardTask, DashboardCampaign, DashboardAlert } from '@/types'
 
 // Types
@@ -61,17 +71,23 @@ interface StatCard {
   target: string
   progress: number
   helpText?: string
+  link?: string
+  sparkline?: { v: number }[]
 }
 
 function Dashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { prefs, toggle: togglePref, reset: resetPrefs } = useDashboardPreferences()
   const [dateRange, setDateRange] = useState('30d')
   const [refreshing, setRefreshing] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [filterSource, setFilterSource] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterPriority, setFilterPriority] = useState('all')
+  const [activeTab, setActiveTab] = useState('activity')
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null)
+  const [showShortcuts, setShowShortcuts] = useState(false)
 
   // Convert dateRange string to startDate/endDate params
   const dateParams = useMemo(() => {
@@ -314,6 +330,7 @@ function Dashboard() {
       target: DEFAULT_LEADS_TARGET.toLocaleString(),
       progress: calcProgress(dashboardData.overview?.totalLeads, DEFAULT_LEADS_TARGET) || 0,
       helpText: 'Total number of leads in your CRM. Includes all statuses (new, contacted, qualified, won, lost).',
+      link: '/leads',
     },
     {
       name: 'Active Campaigns',
@@ -324,6 +341,7 @@ function Dashboard() {
       target: DEFAULT_CAMPAIGNS_TARGET.toString(),
       progress: calcProgress(dashboardData.overview?.activeCampaigns, DEFAULT_CAMPAIGNS_TARGET) || 0,
       helpText: 'Campaigns currently running or scheduled to send. Completed and draft campaigns are not counted.',
+      link: '/campaigns',
     },
     {
       name: 'Conversion Rate',
@@ -338,6 +356,7 @@ function Dashboard() {
       target: `${DEFAULT_CONVERSION_RATE_TARGET}%`,
       progress: calcProgress(dashboardData.leads?.conversionRate, DEFAULT_CONVERSION_RATE_TARGET) || 0,
       helpText: 'Percentage of decided leads that were won. Calculated as (Won leads ÷ (Won + Lost)) × 100. Higher is better — aim for 15-25% in real estate.',
+      link: '/analytics',
     },
     {
       name: 'Tasks Completed',
@@ -348,6 +367,7 @@ function Dashboard() {
       target: `${DEFAULT_TASK_COMPLETION_TARGET}%`,
       progress: dashboardData.tasks?.completionRate ?? 0,
       helpText: 'Tasks marked as completed out of all assigned tasks. The percentage shows your completion rate for the selected time period.',
+      link: '/tasks',
     },
   ] as StatCard[] : [
     {
@@ -357,7 +377,8 @@ function Dashboard() {
       trend: 'up' as const,
       icon: Users,
       target: DEFAULT_LEADS_TARGET.toLocaleString(),
-      progress: 0
+      progress: 0,
+      link: '/leads',
     },
     {
       name: 'Active Campaigns',
@@ -366,7 +387,8 @@ function Dashboard() {
       trend: 'up' as const,
       icon: Megaphone,
       target: DEFAULT_CAMPAIGNS_TARGET.toString(),
-      progress: 0
+      progress: 0,
+      link: '/campaigns',
     },
     {
       name: 'Conversion Rate',
@@ -375,7 +397,8 @@ function Dashboard() {
       trend: 'up' as const,
       icon: Target,
       target: `${DEFAULT_CONVERSION_RATE_TARGET}%`,
-      progress: 0
+      progress: 0,
+      link: '/analytics',
     },
     {
       name: 'Tasks Completed',
@@ -384,9 +407,65 @@ function Dashboard() {
       trend: 'up' as const,
       icon: CheckCircle2,
       target: `${DEFAULT_TASK_COMPLETION_TARGET}%`,
-      progress: 0
+      progress: 0,
+      link: '/tasks',
     },
   ] as StatCard[]
+
+  // Generate sparkline data from revenue timeline (last 7 data points)
+  const sparklineData = useMemo(() => {
+    if (!revenueTimelineData?.monthly) return null
+    const months = revenueTimelineData.monthly.slice(-7)
+    return {
+      revenue: months.map((m: RevenueMonth) => ({ v: m.totalRevenue || 0 })),
+      deals: months.map((m: RevenueMonth) => ({ v: m.deals || 0 })),
+    }
+  }, [revenueTimelineData])
+
+  // Assign sparklines to stats cards
+  if (sparklineData && stats.length >= 4) {
+    stats[0].sparkline = sparklineData.deals // Total Leads — use deals as proxy
+    stats[1].sparkline = sparklineData.deals
+    stats[2].sparkline = sparklineData.revenue
+    stats[3].sparkline = sparklineData.deals
+  }
+
+  // Today's Focus — natural language summary of urgent items
+  const todaysFocus = useMemo(() => {
+    const parts: string[] = []
+    const overdueTasks = dashboardData?.tasks?.overdue || 0
+    const dueToday = dashboardData?.tasks?.dueToday || 0
+    const todayAppts = (appointmentsData?.appointments || appointmentsData || []).filter((a: { startTime?: string; scheduledAt?: string }) => {
+      const t = a.startTime || a.scheduledAt
+      if (!t) return false
+      const d = new Date(t)
+      const now = new Date()
+      return d.toDateString() === now.toDateString()
+    }).length
+
+    if (overdueTasks > 0) parts.push(`**${overdueTasks} overdue task${overdueTasks > 1 ? 's' : ''}**`)
+    if (dueToday > 0) parts.push(`**${dueToday} task${dueToday > 1 ? 's' : ''} due today**`)
+    if (todayAppts > 0) parts.push(`**${todayAppts} appointment${todayAppts > 1 ? 's' : ''} today**`)
+    if (parts.length === 0) return null
+    return `You have ${parts.join(' and ')}.`
+  }, [dashboardData, appointmentsData])
+
+  // Pipeline value from revenue data
+  const pipelineValue = useMemo(() => {
+    if (!revenueTimelineData?.monthly) return null
+    const latest = revenueTimelineData.monthly.slice(-1)[0] as RevenueMonth | undefined
+    if (!latest) return null
+    const totalRevenue = revenueTimelineData.monthly.reduce((sum: number, m: RevenueMonth) => sum + (m.totalRevenue || 0), 0)
+    const totalDeals = revenueTimelineData.monthly.reduce((sum: number, m: RevenueMonth) => sum + (m.deals || 0), 0)
+    return { value: totalRevenue, deals: totalDeals }
+  }, [revenueTimelineData])
+
+  // Sort alerts by urgency
+  const sortedAlerts = useMemo(() => {
+    if (!alertsData?.alerts) return []
+    const order: Record<string, number> = { urgent: 0, warning: 1, info: 2, success: 3 }
+    return [...alertsData.alerts].sort((a: DashboardAlert, b: DashboardAlert) => (order[a.type] ?? 4) - (order[b.type] ?? 4))
+  }, [alertsData])
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -442,6 +521,54 @@ function Dashboard() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showExportMenu])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Don't fire when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+
+      // Alt+key shortcuts
+      if (e.altKey) {
+        switch (e.key.toLowerCase()) {
+          case 'r':
+            e.preventDefault()
+            handleRefresh()
+            break
+          case '1':
+            e.preventDefault()
+            setActiveTab('overview')
+            break
+          case '2':
+            e.preventDefault()
+            setActiveTab('activity')
+            break
+          case '3':
+            e.preventDefault()
+            setActiveTab('campaigns')
+            break
+          case '4':
+            e.preventDefault()
+            setActiveTab('alerts')
+            break
+          case 'n':
+            e.preventDefault()
+            navigate('/leads/create')
+            break
+        }
+        return
+      }
+
+      // Bare key shortcuts (non-input)
+      if (e.key === '?') {
+        e.preventDefault()
+        setShowShortcuts((s) => !s)
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [handleRefresh, navigate])
 
   const buildExportData = useCallback(() => {
     const rows: Record<string, string | number>[] = []
@@ -664,18 +791,53 @@ function Dashboard() {
     }
   }, [stats, conversionData, topCampaigns, revenueData, upcomingTasks, recentActivities, dateRange, toast])
 
+  // Derive appointment dates for mini calendar dot indicators
+  const appointmentDates = useMemo(() => {
+    const list = appointmentsData?.appointments || appointmentsData || []
+    return (list as { startTime?: string; scheduledAt?: string }[])
+      .map((a) => a.startTime || a.scheduledAt)
+      .filter(Boolean) as string[]
+  }, [appointmentsData])
+
+  // Filter appointments by selected calendar date
+  const filteredAppointments = useMemo(() => {
+    const list = (appointmentsData?.appointments || appointmentsData || []) as { id: string; title: string; startTime?: string; scheduledAt?: string; type?: string; lead?: { name?: string; firstName?: string; lastName?: string }; leadName?: string; status?: string }[]
+    if (!selectedCalendarDate) return list.slice(0, 5)
+    const selKey = `${selectedCalendarDate.getFullYear()}-${String(selectedCalendarDate.getMonth() + 1).padStart(2, '0')}-${String(selectedCalendarDate.getDate()).padStart(2, '0')}`
+    const filtered = list.filter((a) => {
+      const t = a.startTime || a.scheduledAt
+      if (!t) return false
+      const d = new Date(t)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === selKey
+    })
+    return filtered.slice(0, 5)
+  }, [appointmentsData, selectedCalendarDate])
+
+  const alertCount = alertsData?.alerts?.length || 0
+
+  const dashboardTabs = useMemo(() => [
+    { value: 'activity', label: 'Activity & Schedule' },
+    { value: 'overview', label: 'Analytics' },
+    { value: 'campaigns', label: 'Campaigns' },
+    { value: 'alerts', label: 'Alerts', count: alertCount || undefined },
+  ], [alertCount])
+
   // Show loading state while fetching data
   if (isLoading) {
     return <LoadingSkeleton rows={5} showChart />
   }
 
+  // Determine context-aware quick actions
+  const hasLeads = (dashboardData?.overview?.totalLeads || 0) > 0
+  const overdueTasks = dashboardData?.tasks?.overdue || 0
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Page Header with Actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
             Welcome back! Here's what's happening with your business.
           </p>
         </div>
@@ -714,6 +876,33 @@ function Dashboard() {
                   <FileText className="h-4 w-4" />
                   Export PDF
                 </button>
+              </div>
+            )}
+          </div>
+          <DashboardCustomizer prefs={prefs} onToggle={togglePref} onReset={resetPrefs} />
+          <div className="relative">
+            <Button variant="outline" size="sm" onClick={() => setShowShortcuts(!showShortcuts)} aria-label="Keyboard shortcuts">
+              <Keyboard className="h-4 w-4" />
+            </Button>
+            {showShortcuts && (
+              <div className="absolute right-0 mt-1 w-52 bg-card border rounded-lg shadow-lg z-20 p-3">
+                <p className="text-xs font-semibold mb-2">Keyboard Shortcuts</p>
+                <div className="space-y-1 text-xs">
+                  {[
+                    ['R', 'Refresh'],
+                    ['1', 'Overview tab'],
+                    ['2', 'Activity tab'],
+                    ['3', 'Campaigns tab'],
+                    ['4', 'Alerts tab'],
+                    ['N', 'New Lead'],
+                    ['?', 'Toggle shortcuts'],
+                  ].map(([key, desc]) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">{key}</kbd>
+                      <span className="text-muted-foreground">{desc}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -796,34 +985,41 @@ function Dashboard() {
         </Card>
       )}
 
-      {/* Getting Started Wizard — shows when user has no data */}
-      <GettingStarted
-        totalLeads={dashboardData?.overview?.totalLeads || 0}
-        totalCampaigns={dashboardData?.overview?.totalCampaigns || dashboardData?.campaigns?.total || 0}
-        hasCampaignResults={!!(dashboardData?.campaigns?.performance?.totalSent > 0)}
-      />
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Button onClick={() => navigate('/leads/create')} className="h-auto py-4 flex-col gap-2">
-          <Plus className="h-5 w-5" />
-          <span>New Lead</span>
+      {/* Quick Actions — context-aware compact bar */}
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={() => navigate('/leads/create')} size="sm" className={cn('gap-1.5', !hasLeads && 'ring-2 ring-primary ring-offset-1')}>
+          <Plus className="h-3.5 w-3.5" />
+          New Lead
         </Button>
-        <Button onClick={() => navigate('/campaigns/create')} variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Megaphone className="h-5 w-5" />
-          <span>New Campaign</span>
+        <Button onClick={() => navigate('/campaigns/create')} variant="outline" size="sm" className="gap-1.5">
+          <Megaphone className="h-3.5 w-3.5" />
+          New Campaign
         </Button>
-        <Button onClick={() => navigate('/communication')} variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Mail className="h-5 w-5" />
-          <span>Send Email</span>
+        <Button onClick={() => navigate('/communication')} variant="outline" size="sm" className="gap-1.5">
+          <Mail className="h-3.5 w-3.5" />
+          Send Email
         </Button>
-        <Button onClick={() => navigate('/calendar')} variant="outline" className="h-auto py-4 flex-col gap-2">
-          <Calendar className="h-5 w-5" />
-          <span>Schedule Meeting</span>
+        <Button onClick={() => navigate('/calendar')} variant="outline" size="sm" className="gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          Schedule Meeting
         </Button>
+        {overdueTasks > 0 && (
+          <Button onClick={() => navigate('/tasks')} variant="outline" size="sm" className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            {overdueTasks} Overdue Task{overdueTasks > 1 ? 's' : ''}
+          </Button>
+        )}
       </div>
 
-      {/* Main Stats Cards with Progress */}
+      {/* Today's Focus — natural language summary */}
+      {todaysFocus && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+          <span dangerouslySetInnerHTML={{ __html: todaysFocus.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+        </div>
+      )}
+
+      {/* Main Stats Cards with Progress + Sparklines */}
       {statsError ? (
         <Card>
           <CardContent className="py-8 text-center">
@@ -832,24 +1028,40 @@ function Dashboard() {
           </CardContent>
         </Card>
       ) : (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.name} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card
+            key={stat.name}
+            className={cn('hover:shadow-lg transition-shadow', stat.link && 'cursor-pointer')}
+            onClick={() => stat.link && navigate(stat.link)}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 {stat.name}
                 {stat.helpText && <HelpTooltip text={stat.helpText} />}
               </CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center justify-between mt-2">
+            <CardContent className="pb-3 px-4">
+              <div className="flex items-end justify-between">
+                <div className="text-xl font-bold">{stat.value}</div>
+                {/* Sparkline */}
+                {stat.sparkline && stat.sparkline.length > 1 && (
+                  <div className="w-16 h-5">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={stat.sparkline}>
+                        <Line type="monotone" dataKey="v" stroke={stat.trend === 'up' ? '#22c55e' : '#ef4444'} strokeWidth={1.5} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-between mt-1">
                 <p className="flex items-center text-xs text-muted-foreground">
                   {stat.trend === 'up' ? (
-                    <TrendingUp className="mr-1 h-4 w-4 text-green-500" />
+                    <TrendingUp className="mr-1 h-3.5 w-3.5 text-green-500" />
                   ) : (
-                    <TrendingDown className="mr-1 h-4 w-4 text-red-500" />
+                    <TrendingDown className="mr-1 h-3.5 w-3.5 text-red-500" />
                   )}
                   <span className={stat.trend === 'up' ? 'text-green-500' : 'text-red-500'}>
                     {stat.change}
@@ -857,8 +1069,7 @@ function Dashboard() {
                 </p>
                 <span className="text-xs text-muted-foreground">Goal: {stat.target}</span>
               </div>
-              {/* Progress Bar */}
-              <div className="mt-3 h-2 w-full bg-secondary rounded-full overflow-hidden">
+              <div className="mt-2 h-1.5 w-full bg-secondary rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary transition-all duration-500"
                   style={{ width: `${stat.progress}%` }}
@@ -870,484 +1081,628 @@ function Dashboard() {
       </div>
       )}
 
-      {/* Secondary Quick Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        {quickStats.map((item) => (
-          <Card key={item.label}>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{item.value}</div>
-              <div className="flex items-center justify-between mt-1">
-                <p className="text-sm text-muted-foreground">{item.label}</p>
-{item.change && <Badge variant="secondary" className="text-xs">{item.change}</Badge>}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Pipeline Value — compact strip */}
+      {pipelineValue && pipelineValue.value > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 text-sm">
+          <Target className="h-4 w-4 text-primary shrink-0" />
+          <span>Pipeline: <strong>{fmtMoney(pipelineValue.value)}</strong> across <strong>{pipelineValue.deals}</strong> deal{pipelineValue.deals !== 1 ? 's' : ''}</span>
+        </div>
+      )}
 
-      {/* Charts Row 1 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Revenue & Performance Chart */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Revenue & Deals Trend</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">6-month overview</p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/analytics')} aria-label="View full analytics">
-              <ArrowUpRight className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {revenueLoading ? (
-              <div className="h-[300px] bg-muted rounded animate-pulse" />
-            ) : revenueError ? (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                <p>Failed to load chart data. <Button variant="link" size="sm" onClick={() => refetchRevenue()}>Retry</Button></p>
-              </div>
-            ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={revenueData} aria-label="Revenue and deals trend chart">
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `$${(v / 1_000).toFixed(0)}K` : `$${v}`} />
-                <Tooltip formatter={(value: number, name: string) => [name === 'revenue' ? fmtMoney(value) : value, name === 'revenue' ? 'Revenue' : 'Deals']} />
-                <Legend />
-                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRevenue)" />
-                <Area type="monotone" dataKey="deals" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" />
-              </AreaChart>
-            </ResponsiveContainer>
+      {/* Getting Started Wizard — shows when user has no data */}
+      <GettingStarted
+        totalLeads={dashboardData?.overview?.totalLeads || 0}
+        totalCampaigns={dashboardData?.overview?.totalCampaigns || dashboardData?.campaigns?.total || 0}
+        hasCampaignResults={!!(dashboardData?.campaigns?.performance?.totalSent > 0)}
+      />
+
+      {/* Tab Bar */}
+      <Tabs tabs={dashboardTabs} value={activeTab} onChange={setActiveTab} />
+
+      {/* ===== TAB: Overview ===== */}
+      {activeTab === 'overview' && (
+        <div className="space-y-4">
+          {/* Charts Row 1 — Revenue & Conversion Funnel */}
+          {(prefs.revenueChart || prefs.conversionFunnel) && (
+          <div className={cn('grid gap-4', prefs.revenueChart && prefs.conversionFunnel ? 'md:grid-cols-2' : 'md:grid-cols-1')}>
+            {prefs.revenueChart && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div>
+                  <CardTitle className="text-base">Revenue & Deals Trend</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">6-month overview</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/analytics')} aria-label="View full analytics">
+                  <ArrowUpRight className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="pb-3">
+                {revenueLoading ? (
+                  <div className="h-[220px] bg-muted rounded animate-pulse" />
+                ) : revenueError ? (
+                  <div className="h-[220px] flex flex-col items-center justify-center text-muted-foreground">
+                    <AlertCircle className="h-6 w-6 mb-2" />
+                    <p className="text-sm">No revenue data yet.</p>
+                    <Button variant="link" size="sm" onClick={() => navigate('/leads/create')} className="mt-1">Close your first deal →</Button>
+                  </div>
+                ) : revenueData.length === 0 ? (
+                  <div className="h-[220px] flex flex-col items-center justify-center text-muted-foreground">
+                    <AlertCircle className="h-6 w-6 mb-2 opacity-50" />
+                    <p className="text-sm">No revenue data yet.</p>
+                    <Button variant="link" size="sm" onClick={() => navigate('/leads/create')} className="mt-1">Close your first deal →</Button>
+                  </div>
+                ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={revenueData} aria-label="Revenue and deals trend chart">
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis tickFormatter={(v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `$${(v / 1_000).toFixed(0)}K` : `$${v}`} tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(value: number, name: string) => [name === 'revenue' ? fmtMoney(value) : value, name === 'revenue' ? 'Revenue' : 'Deals']} />
+                    <Legend />
+                    <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRevenue)" />
+                    <Area type="monotone" dataKey="deals" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Conversion Funnel */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-1.5">
-                Conversion Funnel
-                <HelpTooltip text="Shows how leads progress through your sales stages: New → Contacted → Qualified → Proposal → Won. Each bar represents the number of leads at that stage. Percentages are stage-to-stage conversion rates (not cumulative). The overall rate shows what percentage of all leads eventually convert to 'Won'." />
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Lead progression (stage-to-stage rates)</p>
-            </div>
-            <Badge>{conversionFunnelData?.overallConversionRate ? `${formatRate(conversionFunnelData.overallConversionRate)}%` : '—'} Overall</Badge>
-          </CardHeader>
-          <CardContent>
-            {funnelLoading ? (
-              <div className="h-[300px] bg-muted rounded animate-pulse" />
-            ) : funnelError ? (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                <p>Failed to load funnel data. <Button variant="link" size="sm" onClick={() => refetchFunnel()}>Retry</Button></p>
-              </div>
-            ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={conversionData} layout="vertical" aria-label="Conversion funnel chart">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="stage" width={100} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
+            {prefs.conversionFunnel && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-1.5">
+                    Conversion Funnel
+                    <HelpTooltip text="Shows how leads progress through your sales stages: New → Contacted → Qualified → Proposal → Won. Each bar represents the number of leads at that stage. Percentages are stage-to-stage conversion rates (not cumulative). The overall rate shows what percentage of all leads eventually convert to 'Won'." />
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">Lead progression (stage-to-stage rates)</p>
+                </div>
+                <Badge>{conversionFunnelData?.overallConversionRate ? `${formatRate(conversionFunnelData.overallConversionRate)}%` : '—'} Overall</Badge>
+              </CardHeader>
+              <CardContent className="pb-3">
+                {funnelLoading ? (
+                  <div className="h-[220px] bg-muted rounded animate-pulse" />
+                ) : funnelError ? (
+                  <div className="h-[220px] flex flex-col items-center justify-center text-muted-foreground">
+                    <AlertCircle className="h-6 w-6 mb-2" />
+                    <p className="text-sm">No funnel data yet.</p>
+                    <Button variant="link" size="sm" onClick={() => navigate('/leads/create')} className="mt-1">Add leads to see your funnel →</Button>
+                  </div>
+                ) : conversionData.length === 0 ? (
+                  <div className="h-[220px] flex flex-col items-center justify-center text-muted-foreground">
+                    <AlertCircle className="h-6 w-6 mb-2 opacity-50" />
+                    <p className="text-sm">No funnel data yet.</p>
+                    <Button variant="link" size="sm" onClick={() => navigate('/leads/create')} className="mt-1">Add leads to see your funnel →</Button>
+                  </div>
+                ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={conversionData} layout="vertical" aria-label="Conversion funnel chart">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="stage" width={90} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          )}
 
-      {/* Charts Row 2 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Lead Sources */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Lead Sources</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Distribution by channel</p>
-          </CardHeader>
-          <CardContent>
-            {leadsLoading ? (
-              <div className="space-y-4">
-                <div className="h-[250px] bg-muted animate-pulse rounded" />
-              </div>
-            ) : leadsError ? (
-              <div className="flex flex-col items-center justify-center h-[250px] text-muted-foreground">
-                <AlertCircle className="h-8 w-8 mb-2" />
-                <p>Failed to load lead sources</p>
-                <Button variant="outline" size="sm" className="mt-2" onClick={() => refetchLeads()}>Retry</Button>
-              </div>
-            ) : (
-            <div className="flex items-center gap-6">
-              <ResponsiveContainer width="50%" height={250}>
-                <PieChart aria-label="Lead sources distribution chart">
-                  <Pie
-                    data={leadSourceData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {leadSourceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+          {/* Charts Row 2 — Lead Sources & Campaign Performance */}
+          {(prefs.leadSources || prefs.campaignPerformance) && (
+          <div className={cn('grid gap-4', prefs.leadSources && prefs.campaignPerformance ? 'md:grid-cols-2' : 'md:grid-cols-1')}>
+            {prefs.leadSources && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Lead Sources</CardTitle>
+                <p className="text-xs text-muted-foreground">Distribution by channel</p>
+              </CardHeader>
+              <CardContent className="pb-3">
+                {leadsLoading ? (
+                  <div className="h-[180px] bg-muted animate-pulse rounded" />
+                ) : leadsError ? (
+                  <div className="flex flex-col items-center justify-center h-[180px] text-muted-foreground">
+                    <AlertCircle className="h-6 w-6 mb-2" />
+                    <p className="text-sm">Failed to load lead sources</p>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={() => refetchLeads()}>Retry</Button>
+                  </div>
+                ) : leadSourceData.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[180px] text-muted-foreground">
+                    <Users className="h-6 w-6 mb-2 opacity-50" />
+                    <p className="text-sm">No lead sources yet.</p>
+                    <Button variant="link" size="sm" onClick={() => navigate('/leads/create')} className="mt-1">Import leads to see distribution →</Button>
+                  </div>
+                ) : (
+                <div className="flex items-center gap-4">
+                  <ResponsiveContainer width="50%" height={180}>
+                    <PieChart aria-label="Lead sources distribution chart">
+                      <Pie
+                        data={leadSourceData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={70}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {leadSourceData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex-1 space-y-1.5">
+                    {leadSourceData.map((source) => (
+                      <div key={source.name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: source.color }} />
+                          <span className="text-xs">{source.name}</span>
+                        </div>
+                        <span className="text-xs font-medium">{source.value}</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex-1 space-y-2">
-                {leadSourceData.map((source) => (
-                  <div key={source.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.color }} />
-                      <span className="text-sm">{source.name}</span>
-                    </div>
-                    <span className="text-sm font-medium">{source.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Campaign Performance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Campaign Performance</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">By channel</p>
-          </CardHeader>
-          <CardContent>
-            {campaignAnalyticsLoading ? (
-              <div className="h-[250px] bg-muted animate-pulse rounded" />
-            ) : campaignAnalyticsError ? (
-              <div className="flex flex-col items-center justify-center h-[250px] text-muted-foreground">
-                <AlertCircle className="h-8 w-8 mb-2" />
-                <p>Failed to load campaign data</p>
-                <Button variant="outline" size="sm" className="mt-2" onClick={() => refetchCampaigns()}>Retry</Button>
-              </div>
-            ) : (
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={campaignPerformance} aria-label="Campaign performance by channel chart">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="conversions" fill="#f59e0b" />
-              </BarChart>
-            </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Activity, Tasks & Calendar Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Recent Activity Feed */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Activity</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/activity')}>
-              View All
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {activityLoading ? (
-              <div className="space-y-4">
-                {[1,2,3].map(i => (
-                  <div key={i} className="flex items-start gap-3 animate-pulse">
-                    <div className="h-10 w-10 bg-muted rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-muted rounded w-3/4" />
-                      <div className="h-3 bg-muted rounded w-1/2" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : activityError ? (
-              <div className="flex items-center justify-center py-6 text-muted-foreground">
-                <p>Failed to load activities. <Button variant="link" size="sm" onClick={() => refetchActivity()}>Retry</Button></p>
-              </div>
-            ) : (
-            <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <button type="button" key={activity.id} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-accent/50 rounded-md -mx-1 px-1 w-full text-left" onClick={() => activity.leadId ? navigate(`/leads/${activity.leadId}`) : undefined}>
-                  <div className="mt-1 p-2 rounded-full bg-primary/10">
-                    <activity.icon className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">{activity.lead}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
-                </button>
-              ))}
-            </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Tasks */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Upcoming Tasks</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')}>
-              View All
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {tasksLoading ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg border animate-pulse">
-                    <div className="h-4 w-4 bg-muted rounded mt-1" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-muted rounded w-3/4" />
-                      <div className="h-3 bg-muted rounded w-1/2" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : tasksError ? (
-              <div className="flex items-center justify-center py-6 text-muted-foreground">
-                <p>Failed to load tasks. <Button variant="link" size="sm" onClick={() => refetchTasks()}>Retry</Button></p>
-              </div>
-            ) : (
-            <div className="space-y-3">
-              {upcomingTasks.map((task) => (
-                <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
-                  <input
-                    type="checkbox"
-                    className="mt-1 cursor-pointer"
-                    checked={task.status === 'completed'}
-                    onChange={() => handleTaskComplete(task.id, task.status)}
-                    aria-label={`Mark task "${task.title}" as ${task.status === 'completed' ? 'incomplete' : 'complete'}`}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{task.title}</p>
-                      <Badge variant={
-                        task.priority === 'high' ? 'destructive' :
-                        task.priority === 'medium' ? 'warning' : 'secondary'
-                      } className="text-xs">
-                        {task.priority}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{task.due}</span>
-                      <Badge variant="outline" className="text-xs ml-2">{task.status}</Badge>
-                    </div>
                   </div>
                 </div>
-              ))}
+                )}
+              </CardContent>
+            </Card>
+            )}
+
+            {prefs.campaignPerformance && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Campaign Performance</CardTitle>
+                <p className="text-xs text-muted-foreground">By channel</p>
+              </CardHeader>
+              <CardContent className="pb-3">
+                {campaignAnalyticsLoading ? (
+                  <div className="h-[180px] bg-muted animate-pulse rounded" />
+                ) : campaignAnalyticsError ? (
+                  <div className="flex flex-col items-center justify-center h-[180px] text-muted-foreground">
+                    <AlertCircle className="h-6 w-6 mb-2" />
+                    <p className="text-sm">Failed to load campaign data</p>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={() => refetchCampaigns()}>Retry</Button>
+                  </div>
+                ) : campaignPerformance.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[180px] text-muted-foreground">
+                    <Megaphone className="h-6 w-6 mb-2 opacity-50" />
+                    <p className="text-sm">No campaign data yet.</p>
+                    <Button variant="link" size="sm" onClick={() => navigate('/campaigns/create')} className="mt-1">Create your first campaign →</Button>
+                  </div>
+                ) : (
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={campaignPerformance} aria-label="Campaign performance by channel chart">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="conversions" fill="#f59e0b" />
+                  </BarChart>
+                </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+            )}
+          </div>
+          )}
+
+          {/* Empty state if all overview widgets hidden */}
+          {!prefs.revenueChart && !prefs.conversionFunnel && !prefs.leadSources && !prefs.campaignPerformance && (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <p className="text-sm">No widgets visible. Click <Settings className="inline h-4 w-4 mx-0.5" /> to customize.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== TAB: Activity & Schedule ===== */}
+      {activeTab === 'activity' && (
+        <div className="space-y-4">
+          {/* Quick stats strip */}
+          {prefs.quickStats && (
+          <div className="flex flex-wrap gap-4 text-sm">
+            {quickStats.map((item) => (
+              <div key={item.label} className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
+                <span className="font-semibold">{item.value}</span>
+                <span className="text-muted-foreground">{item.label}</span>
+                {item.change && <Badge variant="secondary" className="text-xs">{item.change}</Badge>}
+              </div>
+            ))}
+          </div>
+          )}
+
+          {/* Calendar + Appointments row */}
+          {(prefs.calendar || prefs.appointments) && (
+          <div className={cn('grid gap-4', prefs.calendar && prefs.appointments ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-1')}>
+            {prefs.calendar && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Calendar</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-3">
+                <MiniCalendar
+                  eventDates={appointmentDates}
+                  selectedDate={selectedCalendarDate}
+                  onDateSelect={(date) => {
+                    if (selectedCalendarDate && date.getTime() === selectedCalendarDate.getTime()) {
+                      setSelectedCalendarDate(null)
+                    } else {
+                      setSelectedCalendarDate(date)
+                    }
+                  }}
+                />
+                {selectedCalendarDate && (
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      Showing: {selectedCalendarDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                    <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => setSelectedCalendarDate(null)}>
+                      Show all
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            )}
+
+            {prefs.appointments && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">Upcoming Appointments</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="pb-3">
+                {appointmentsLoading ? (
+                  <div className="space-y-3">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg border animate-pulse">
+                        <div className="h-8 w-8 bg-muted rounded" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-muted rounded w-3/4" />
+                          <div className="h-3 bg-muted rounded w-1/2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : appointmentsError ? (
+                  <div className="flex items-center justify-center py-6 text-muted-foreground">
+                    <p>Failed to load appointments. <Button variant="link" size="sm" onClick={() => refetchAppointments()}>Retry</Button></p>
+                  </div>
+                ) : filteredAppointments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <Calendar className="h-8 w-8 mb-2 opacity-50" />
+                    <p className="text-sm">{selectedCalendarDate ? 'No appointments on this day' : 'No upcoming appointments'}</p>
+                    <Button variant="link" size="sm" onClick={() => navigate('/calendar')} className="mt-1">
+                      Schedule one
+                    </Button>
+                  </div>
+                ) : (
+                <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                  {filteredAppointments.map((apt) => {
+                    const aptTime = apt.startTime || apt.scheduledAt
+                    const leadName = apt.lead?.name || [apt.lead?.firstName, apt.lead?.lastName].filter(Boolean).join(' ') || apt.leadName
+                    const isToday = aptTime ? new Date(aptTime).toDateString() === new Date().toDateString() : false
+                    return (
+                    <button type="button" key={apt.id} className={cn(
+                      'flex items-start gap-3 p-2.5 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer w-full text-left',
+                      isToday && 'border-l-2 border-l-primary bg-primary/5'
+                    )} onClick={() => navigate('/calendar')}>
+                      <div className="mt-0.5 p-1.5 rounded-lg bg-primary/10">
+                        <Calendar className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{apt.title}</p>
+                          {isToday && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Today</Badge>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {aptTime ? new Date(aptTime).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD'}
+                          </span>
+                        </div>
+                        {leadName && (
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{leadName}</p>
+                        )}
+                      </div>
+                      {apt.type && (
+                        <Badge variant="outline" className="text-xs shrink-0">{apt.type}</Badge>
+                      )}
+                    </button>
+                    )
+                  })}
+                </div>
+                )}
+              </CardContent>
+            </Card>
+            )}
+          </div>
+          )}
+
+          {/* Activity Feed + Tasks row */}
+          {(prefs.activityFeed || prefs.tasks) && (
+          <div className={cn('grid gap-4', prefs.activityFeed && prefs.tasks ? 'md:grid-cols-2' : 'md:grid-cols-1')}>
+            {prefs.activityFeed && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">Recent Activity</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/activity')}>
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="pb-3">
+                {activityLoading ? (
+                  <div className="space-y-3">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="flex items-start gap-3 animate-pulse">
+                        <div className="h-8 w-8 bg-muted rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-muted rounded w-3/4" />
+                          <div className="h-3 bg-muted rounded w-1/2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : activityError ? (
+                  <div className="flex items-center justify-center py-6 text-muted-foreground">
+                    <p>Failed to load activities. <Button variant="link" size="sm" onClick={() => refetchActivity()}>Retry</Button></p>
+                  </div>
+                ) : (
+                <div className="space-y-1 max-h-[280px] overflow-y-auto">
+                  {recentActivities.map((activity) => (
+                    <button type="button" key={activity.id} className="flex items-start gap-3 py-2.5 px-1 border-b last:border-0 cursor-pointer hover:bg-accent/50 rounded-md w-full text-left" onClick={() => activity.leadId ? navigate(`/leads/${activity.leadId}`) : undefined}>
+                      <div className="mt-0.5 p-1.5 rounded-full bg-primary/10">
+                        <activity.icon className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{activity.action}</p>
+                        <p className="text-xs text-muted-foreground truncate">{activity.lead}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
+                    </button>
+                  ))}
+                </div>
+                )}
+              </CardContent>
+            </Card>
+            )}
+
+            {prefs.tasks && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">Upcoming Tasks</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')}>
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="pb-3">
+                {tasksLoading ? (
+                  <div className="space-y-3">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg border animate-pulse">
+                        <div className="h-4 w-4 bg-muted rounded mt-1" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-muted rounded w-3/4" />
+                          <div className="h-3 bg-muted rounded w-1/2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : tasksError ? (
+                  <div className="flex items-center justify-center py-6 text-muted-foreground">
+                    <p>Failed to load tasks. <Button variant="link" size="sm" onClick={() => refetchTasks()}>Retry</Button></p>
+                  </div>
+                ) : (
+                <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                  {upcomingTasks.map((task) => (
+                    <div key={task.id} className="flex items-start gap-3 p-2.5 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
+                      <input
+                        type="checkbox"
+                        className="mt-1 cursor-pointer"
+                        checked={task.status === 'completed'}
+                        onChange={() => handleTaskComplete(task.id, task.status)}
+                        aria-label={`Mark task "${task.title}" as ${task.status === 'completed' ? 'incomplete' : 'complete'}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{task.title}</p>
+                          <Badge variant={
+                            task.priority === 'high' ? 'destructive' :
+                            task.priority === 'medium' ? 'warning' : 'secondary'
+                          } className="text-xs shrink-0">
+                            {task.priority}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">{task.due}</span>
+                          <Badge variant="outline" className="text-xs ml-1">{task.status}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                )}
+              </CardContent>
+            </Card>
+            )}
+          </div>
+          )}
+
+          {/* Empty state if all activity widgets hidden */}
+          {!prefs.quickStats && !prefs.calendar && !prefs.appointments && !prefs.activityFeed && !prefs.tasks && (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <p className="text-sm">No widgets visible. Click <Settings className="inline h-4 w-4 mx-0.5" /> to customize.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== TAB: Campaigns ===== */}
+      {activeTab === 'campaigns' && (
+        prefs.topCampaigns ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-base">Top Performing Campaigns</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Based on ROI and conversions</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => navigate('/campaigns')}>
+              View All Campaigns
+            </Button>
+          </CardHeader>
+          <CardContent className="pb-3">
+            {topCampaignsLoading ? (
+              <div className="space-y-3 animate-pulse">
+                {[1,2,3].map(i => (
+                  <div key={i} className="h-10 bg-muted rounded" />
+                ))}
+              </div>
+            ) : topCampaignsError ? (
+              <div className="flex items-center justify-center py-6 text-muted-foreground">
+                <p>Failed to load campaigns. <Button variant="link" size="sm" onClick={() => refetchTopCampaigns()}>Retry</Button></p>
+              </div>
+            ) : topCampaigns.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <Megaphone className="h-6 w-6 mb-2 opacity-50" />
+                <p className="text-sm">No campaigns yet.</p>
+                <Button variant="link" size="sm" onClick={() => navigate('/campaigns/create')} className="mt-1">Create your first campaign →</Button>
+              </div>
+            ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="pb-2.5 text-left text-sm font-medium">Campaign</th>
+                    <th className="pb-2.5 text-left text-sm font-medium">Type</th>
+                    <th className="pb-2.5 text-right text-sm font-medium">Opens</th>
+                    <th className="pb-2.5 text-right text-sm font-medium">Clicks</th>
+                    <th className="pb-2.5 text-right text-sm font-medium">Conversions</th>
+                    <th className="pb-2.5 text-right text-sm font-medium">ROI</th>
+                    <th className="pb-2.5 text-right text-sm font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topCampaigns.map((campaign) => (
+                    <tr key={campaign.id} className="border-b last:border-0 hover:bg-accent/50">
+                      <td className="py-2.5 text-sm font-medium">{campaign.name}</td>
+                      <td className="py-2.5">
+                        <Badge variant="secondary">{campaign.type}</Badge>
+                      </td>
+                      <td className="py-2.5 text-sm text-right">{campaign.opens.toLocaleString()}</td>
+                      <td className="py-2.5 text-sm text-right">{campaign.clicks.toLocaleString()}</td>
+                      <td className="py-2.5 text-sm text-right font-medium">{campaign.conversions}</td>
+                      <td className="py-2.5 text-sm text-right">
+                        <Badge variant="success">{campaign.roi}</Badge>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
+                          View
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             )}
           </CardContent>
         </Card>
+        ) : (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            <p className="text-sm">No widgets visible. Click <Settings className="inline h-4 w-4 mx-0.5" /> to customize.</p>
+          </div>
+        )
+      )}
 
-        {/* Upcoming Appointments / Calendar Widget */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Upcoming Appointments</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
-              View All
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+      {/* ===== TAB: Alerts ===== */}
+      {activeTab === 'alerts' && (
+        prefs.alerts ? (
+        <Card className="border-l-4 border-l-yellow-500" role="region" aria-label="Alerts and notifications">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-yellow-600" />
+              <CardTitle className="text-base">Alerts & Notifications</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            {appointmentsLoading ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg border animate-pulse">
-                    <div className="h-8 w-8 bg-muted rounded" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-muted rounded w-3/4" />
-                      <div className="h-3 bg-muted rounded w-1/2" />
+          <CardContent className="pb-3">
+            {sortedAlerts.length > 0 ? (
+              <div className="space-y-2">
+                {sortedAlerts.map((alert: DashboardAlert, index: number) => (
+                  <div
+                    key={alert.message || `alert-${index}`}
+                    className={`flex items-start gap-3 rounded-lg border p-3 ${
+                      alert.type === 'urgent'
+                        ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'
+                        : alert.type === 'warning'
+                        ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950'
+                        : alert.type === 'success'
+                        ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+                        : 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{alert.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{alert.description}</p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : appointmentsError ? (
-              <div className="flex items-center justify-center py-6 text-muted-foreground">
-                <p>Failed to load appointments. <Button variant="link" size="sm" onClick={() => refetchAppointments()}>Retry</Button></p>
-              </div>
-            ) : (appointmentsData?.appointments || appointmentsData || []).length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <Calendar className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">No upcoming appointments</p>
-                <Button variant="link" size="sm" onClick={() => navigate('/calendar')} className="mt-1">
-                  Schedule one
-                </Button>
-              </div>
-            ) : (
-            <div className="space-y-3">
-              {(appointmentsData?.appointments || appointmentsData || []).slice(0, 5).map((apt: { id: string; title: string; startTime?: string; scheduledAt?: string; type?: string; lead?: { name?: string; firstName?: string; lastName?: string }; leadName?: string; status?: string }) => {
-                const aptTime = apt.startTime || apt.scheduledAt
-                const leadName = apt.lead?.name || [apt.lead?.firstName, apt.lead?.lastName].filter(Boolean).join(' ') || apt.leadName
-                return (
-                <button type="button" key={apt.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer w-full text-left" onClick={() => navigate('/calendar')}>
-                  <div className="mt-0.5 p-2 rounded-lg bg-primary/10">
-                    <Calendar className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{apt.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {aptTime ? new Date(aptTime).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD'}
-                      </span>
-                    </div>
-                    {leadName && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{leadName}</p>
+                    {alert.category === 'leads' && (
+                      <Button variant="ghost" size="sm" onClick={() => navigate('/leads')}>
+                        View <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    )}
+                    {alert.category === 'tasks' && (
+                      <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')}>
+                        View <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    )}
+                    {alert.category === 'campaigns' && (
+                      <Button variant="ghost" size="sm" onClick={() => navigate('/campaigns')}>
+                        View <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    )}
+                    {alert.category === 'messages' && (
+                      <Button variant="ghost" size="sm" onClick={() => navigate('/communication')}>
+                        View <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
                     )}
                   </div>
-                  {apt.type && (
-                    <Badge variant="outline" className="text-xs shrink-0">{apt.type}</Badge>
-                  )}
-                </button>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-6 text-muted-foreground">
+                <p className="text-sm">No alerts yet. Alerts will appear here as your data grows.</p>
+              </div>
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Top Campaigns */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Top Performing Campaigns</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Based on ROI and conversions</p>
+        ) : (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            <p className="text-sm">No widgets visible. Click <Settings className="inline h-4 w-4 mx-0.5" /> to customize.</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate('/campaigns')}>
-            View All Campaigns
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {topCampaignsLoading ? (
-            <div className="space-y-4 animate-pulse">
-              {[1,2,3].map(i => (
-                <div key={i} className="h-12 bg-muted rounded" />
-              ))}
-            </div>
-          ) : topCampaignsError ? (
-            <div className="flex items-center justify-center py-6 text-muted-foreground">
-              <p>Failed to load campaigns. <Button variant="link" size="sm" onClick={() => refetchTopCampaigns()}>Retry</Button></p>
-            </div>
-          ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="pb-3 text-left text-sm font-medium">Campaign</th>
-                  <th className="pb-3 text-left text-sm font-medium">Type</th>
-                  <th className="pb-3 text-right text-sm font-medium">Opens</th>
-                  <th className="pb-3 text-right text-sm font-medium">Clicks</th>
-                  <th className="pb-3 text-right text-sm font-medium">Conversions</th>
-                  <th className="pb-3 text-right text-sm font-medium">ROI</th>
-                  <th className="pb-3 text-right text-sm font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topCampaigns.map((campaign) => (
-                  <tr key={campaign.id} className="border-b last:border-0 hover:bg-accent/50">
-                    <td className="py-4 text-sm font-medium">{campaign.name}</td>
-                    <td className="py-4">
-                      <Badge variant="secondary">{campaign.type}</Badge>
-                    </td>
-                    <td className="py-4 text-sm text-right">{campaign.opens.toLocaleString()}</td>
-                    <td className="py-4 text-sm text-right">{campaign.clicks.toLocaleString()}</td>
-                    <td className="py-4 text-sm text-right font-medium">{campaign.conversions}</td>
-                    <td className="py-4 text-sm text-right">
-                      <Badge variant="success">{campaign.roi}</Badge>
-                    </td>
-                    <td className="py-4 text-right">
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
-                        View
-                        <ArrowRight className="ml-1 h-3 w-3" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Alerts & Notifications */}
-      <Card className="border-l-4 border-l-yellow-500" role="region" aria-label="Alerts and notifications">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-yellow-600" />
-            <CardTitle>Alerts & Notifications</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {alertsData?.alerts && alertsData.alerts.length > 0 ? (
-            <div className="space-y-3">
-              {alertsData.alerts.map((alert: DashboardAlert, index: number) => (
-                <div
-                  key={alert.message || `alert-${index}`}
-                  className={`flex items-start gap-3 rounded-lg border p-3 ${
-                    alert.type === 'urgent'
-                      ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'
-                      : alert.type === 'warning'
-                      ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950'
-                      : alert.type === 'success'
-                      ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
-                      : 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
-                  }`}
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{alert.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{alert.description}</p>
-                  </div>
-                  {alert.category === 'leads' && (
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/leads')}>
-                      View <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  )}
-                  {alert.category === 'tasks' && (
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')}>
-                      View <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  )}
-                  {alert.category === 'campaigns' && (
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/campaigns')}>
-                      View <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  )}
-                  {alert.category === 'messages' && (
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/communication')}>
-                      View <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-6 text-muted-foreground">
-              <p className="text-sm">No alerts yet. Alerts will appear here as your data grows.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        )
+      )}
     </div>
   )
 }

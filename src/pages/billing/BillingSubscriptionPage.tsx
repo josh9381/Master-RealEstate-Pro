@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { billingApi } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
+import { PLANS } from '@/lib/planConfig'
 
 interface SubscriptionResponse {
   success: boolean
@@ -88,50 +89,7 @@ export default function BillingSubscriptionPage() {
     portalMutation.mutate()
   }
 
-  const plans = [
-    {
-      id: 'STARTER',
-      name: 'Starter',
-      price: 49,
-      interval: 'month',
-      description: 'Perfect for individuals',
-      features: [
-        'Up to 3 users',
-        '2,500 leads',
-        '5 campaigns',
-        'Basic AI (50 msgs/mo)',
-        'Email support',
-      ],
-    },
-    {
-      id: 'PROFESSIONAL',
-      name: 'Professional',
-      price: 119,
-      interval: 'month',
-      description: 'Best for small teams',
-      features: [
-        'Up to 15 users',
-        '25,000 leads',
-        '25 campaigns',
-        'Full AI (500 msgs/mo)',
-        'Priority support',
-      ],
-    },
-    {
-      id: 'ENTERPRISE',
-      name: 'Enterprise',
-      price: 299,
-      interval: 'month',
-      description: 'For large teams',
-      features: [
-        'Everything in Professional',
-        'Custom integrations',
-        'Dedicated support',
-        'Unlimited storage',
-        'SLA guarantee',
-      ],
-    },
-  ]
+  const plans = PLANS
 
   const currentPlanData = plans.find(p => p.id === currentPlanId) || {
     name: currentPlanId,

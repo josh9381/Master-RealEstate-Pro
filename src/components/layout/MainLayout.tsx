@@ -7,6 +7,7 @@ import { ToastContainer } from '@/components/ui/ToastContainer'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FloatingAIButton } from '@/components/ai/FloatingAIButton'
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
+import { SetupWizard } from '@/components/onboarding/SetupWizard'
 import { useToast } from '@/hooks/useToast'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -57,6 +58,7 @@ export function MainLayout() {
       <ToastContainer />
       <ConfirmDialog />
       <FloatingAIButton />
+      <SetupWizard />
       <OnboardingTour />
     </div>
   )

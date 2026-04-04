@@ -404,8 +404,9 @@ const ComplianceSettings = () => {
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button onClick={() => toast.info('DNC registry update will be available when connected to a DNC provider')}>Update DNC Registry</Button>
-            <Button variant="outline" onClick={() => toast.info('Internal DNC list upload coming soon')}>Upload Internal List</Button>
+            <Button disabled>Update DNC Registry</Button>
+            <Button variant="outline" disabled>Upload Internal List</Button>
+            <p className="text-xs text-muted-foreground mt-2">DNC registry integration will be available when connected to a DNC provider.</p>
           </div>
         </CardContent>
       </Card>
@@ -607,7 +608,7 @@ const ComplianceSettings = () => {
             )}
           </div>
           <div className="mt-4">
-            <Button variant="outline" className="w-full" onClick={() => toast.info('Full audit log viewer coming soon')}>
+            <Button variant="outline" className="w-full" onClick={() => window.location.href = '/admin/audit'}>
               View All Audit Logs
             </Button>
           </div>

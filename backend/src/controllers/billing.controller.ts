@@ -217,6 +217,54 @@ export const getInvoices = async (req: Request, res: Response) => {
   }
 }
 
+export const getInvoiceById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const orgId = req.user!.organizationId
+
+    const sub = await prisma.subscription.findUnique({
+      where: { organizationId: orgId },
+      select: {
+        stripeCustomerId: true,
+        tier: true,
+        Invoice: {
+          where: { id },
+          take: 1,
+        },
+      },
+    })
+
+    // Try Stripe first if configured
+    if (process.env.STRIPE_SECRET_KEY && sub?.stripeCustomerId) {
+      try {
+        const stripe = getStripeService()
+        const stripeInvoices = await stripe.listInvoices(sub.stripeCustomerId, 50)
+        const stripeInvoice = stripeInvoices.find((inv: Record<string, unknown>) =>
+          inv.id === id || inv.stripeInvoiceId === id
+        )
+        if (stripeInvoice) {
+          res.json({ success: true, data: stripeInvoice })
+          return
+        }
+      } catch (error) {
+        logger.error('[BILLING] Failed to fetch Stripe invoice:', error)
+      }
+    }
+
+    // Fall back to DB
+    const dbInvoice = sub?.Invoice?.[0]
+    if (dbInvoice) {
+      res.json({ success: true, data: dbInvoice })
+      return
+    }
+
+    res.status(404).json({ success: false, message: 'Invoice not found' })
+  } catch (error) {
+    logger.error('Get invoice by ID error:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch invoice' })
+  }
+}
+
 export const getPaymentMethods = async (req: Request, res: Response) => {
   if (!process.env.STRIPE_SECRET_KEY) {
     res.json({ success: true, data: [] })

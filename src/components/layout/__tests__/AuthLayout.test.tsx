@@ -9,7 +9,7 @@ describe('AuthLayout', () => {
         <AuthLayout />
       </MemoryRouter>
     )
-    expect(screen.getByText('CRM Platform')).toBeInTheDocument()
+    expect(screen.getByText('Pro')).toBeInTheDocument()
   })
 
   it('renders tagline', () => {
@@ -18,7 +18,7 @@ describe('AuthLayout', () => {
         <AuthLayout />
       </MemoryRouter>
     )
-    expect(screen.getByText('Marketing Automation & Intelligence')).toBeInTheDocument()
+    expect(screen.getByText('CRM & Marketing Automation for Real Estate')).toBeInTheDocument()
   })
 
   it('renders full-screen container with center alignment', () => {

@@ -729,6 +729,8 @@ function CampaignCreate() {
                 placeholder="e.g., Summer Product Launch"
                 value={formData.name}
                 onChange={(e) => updateFormData({ name: e.target.value })}
+                required
+                aria-required="true"
               />
             </div>
 
@@ -824,6 +826,8 @@ function CampaignCreate() {
                       placeholder="e.g., Exclusive Summer Offer - 50% Off!"
                       value={formData.subject}
                       onChange={(e) => { updateFormData({ subject: e.target.value }); if (campaignErrors.subject) setCampaignErrors(prev => { const next = {...prev}; delete next.subject; return next }) }}
+                      required
+                      aria-required="true"
                     />
                     <div className="flex items-center justify-between">
                       {campaignErrors.subject && <p className="text-sm text-red-500" role="alert">⚠ {campaignErrors.subject}</p>}

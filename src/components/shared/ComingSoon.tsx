@@ -50,11 +50,11 @@ export function ComingSoon({
         <div className="text-center">
           {/* Decorative illustration */}
           <div className="relative inline-flex items-center justify-center mb-6">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl scale-150" />
-            <div className="relative p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-3xl border border-primary/10">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent dark:from-primary/30 dark:via-primary/10 blur-2xl scale-150" />
+            <div className="relative p-6 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-3xl border border-primary/10 dark:border-primary/30">
               <Icon className="h-16 w-16 text-primary" />
             </div>
-            <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-primary/60 animate-pulse" />
+            <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-primary/70 dark:text-primary/80 animate-pulse" />
           </div>
 
           <Badge variant="warning" className="mb-4 text-sm px-3 py-1">

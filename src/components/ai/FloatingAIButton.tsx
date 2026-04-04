@@ -15,7 +15,6 @@ export function FloatingAIButton() {
     }
   })
   const [showPulse, setShowPulse] = useState(true)
-  const keysPressed = useRef(new Set<string>())
   const shortcutCooldown = useRef(false)
 
   // Stop the pulse animation after 10 seconds
@@ -36,35 +35,26 @@ export function FloatingAIButton() {
     localStorage.setItem(BADGE_SEEN_KEY, Date.now().toString())
   }, [])
 
-  // Wire A+I keyboard shortcut
+  // Wire Alt+A keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey || e.key.toLowerCase() !== 'a') return
+
       // Don't trigger when typing in inputs/textareas
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
-      keysPressed.current.add(e.key.toLowerCase())
-
-      if (keysPressed.current.has('a') && keysPressed.current.has('i')) {
-        e.preventDefault()
-        if (!shortcutCooldown.current) {
-          shortcutCooldown.current = true
-          toggleOpen(!isOpen)
-          setTimeout(() => { shortcutCooldown.current = false }, 300)
-        }
-        keysPressed.current.clear()
+      e.preventDefault()
+      if (!shortcutCooldown.current) {
+        shortcutCooldown.current = true
+        toggleOpen(!isOpen)
+        setTimeout(() => { shortcutCooldown.current = false }, 300)
       }
     }
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      keysPressed.current.delete(e.key.toLowerCase())
-    }
-
     window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
     }
   }, [isOpen, toggleOpen])
 
@@ -77,7 +67,7 @@ export function FloatingAIButton() {
           "fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl",
           isOpen && "scale-0 opacity-0"
         )}
-        aria-label="Open AI Assistant (A+I)"
+        aria-label="Open AI Assistant (Alt+A)"
       >
         <Sparkles className="h-6 w-6" />
         

@@ -75,25 +75,25 @@ export function ActivityLog() {
   }
   
   const getActivityColor = (type: string) => {
-    if (type.includes('CREATED')) return 'text-green-600 bg-green-100'
-    if (type.includes('UPDATED')) return 'text-blue-600 bg-blue-100'
-    if (type.includes('DELETED')) return 'text-red-600 bg-red-100'
-    return 'text-gray-600 bg-gray-100'
+    if (type.includes('CREATED')) return 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30'
+    if (type.includes('UPDATED')) return 'text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
+    if (type.includes('DELETED')) return 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30'
+    return 'text-muted-foreground bg-muted'
   }
   
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+          <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
         </div>
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="animate-pulse flex gap-3">
-              <div className="w-8 h-8 bg-gray-200 rounded-full" />
+              <div className="w-8 h-8 bg-muted rounded-full" />
               <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                <div className="h-3 bg-gray-200 rounded w-1/2" />
+                <div className="h-4 bg-muted rounded w-3/4 mb-2" />
+                <div className="h-3 bg-muted rounded w-1/2" />
               </div>
             </div>
           ))}
@@ -104,8 +104,8 @@ export function ActivityLog() {
   
   if (error) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center gap-3 text-red-600">
+      <div className="bg-card rounded-lg border border-border p-6">
+        <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
           <AlertCircle className="w-5 h-5" />
           <div className="flex-1">
             <p className="font-medium">Failed to load activity log</p>
@@ -124,17 +124,17 @@ export function ActivityLog() {
   const activities = data?.activities || []
   
   return (
-    <div className="bg-white rounded-lg border border-gray-200">
+    <div className="bg-card rounded-lg border border-border">
       {/* Header */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-gray-700" />
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+            <Clock className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
           </div>
           
           {!isAdmin() && isManager() && (
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
               Your activities only
             </span>
           )}
@@ -142,10 +142,10 @@ export function ActivityLog() {
       </div>
       
       {/* Activity List */}
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-border">
         {activities.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+          <div className="p-8 text-center text-muted-foreground">
+            <Clock className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
             <p>No recent activity</p>
           </div>
         ) : (
@@ -153,7 +153,7 @@ export function ActivityLog() {
             const isCurrentUser = activity.userId === user?.id
             
             return (
-              <div key={activity.id} className="p-4 hover:bg-gray-50 transition-colors">
+              <div key={activity.id} className="p-4 hover:bg-muted/50 transition-colors">
                 <div className="flex gap-3">
                   {/* Icon */}
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${getActivityColor(activity.type)}`}>
@@ -162,11 +162,11 @@ export function ActivityLog() {
                   
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">
+                    <p className="text-sm text-foreground">
                       {activity.description}
                     </p>
                     
-                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                       {activity.user.firstName && activity.user.lastName ? (
                         <span className="font-medium">
                           {activity.user.firstName} {activity.user.lastName}
@@ -195,8 +195,8 @@ export function ActivityLog() {
       
       {/* Footer */}
       {activities.length > 0 && (
-        <div className="p-4 border-t border-gray-200 text-center">
-          <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+        <div className="p-4 border-t border-border text-center">
+          <button className="text-sm text-primary hover:text-primary/80 font-medium">
             View all activity
           </button>
         </div>

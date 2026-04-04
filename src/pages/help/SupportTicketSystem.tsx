@@ -32,17 +32,17 @@ interface SupportTicket {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  OPEN: 'bg-blue-100 text-blue-800',
-  IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
-  RESOLVED: 'bg-green-100 text-green-800',
-  CLOSED: 'bg-gray-100 text-gray-800',
+  OPEN: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  IN_PROGRESS: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+  RESOLVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  CLOSED: 'bg-muted text-muted-foreground',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  LOW: 'bg-green-100 text-green-800',
-  MEDIUM: 'bg-orange-100 text-orange-800',
-  HIGH: 'bg-red-100 text-red-800',
-  URGENT: 'bg-red-200 text-red-900',
+  LOW: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  MEDIUM: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+  HIGH: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  URGENT: 'bg-red-200 text-red-900 dark:bg-red-900/40 dark:text-red-200',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -97,7 +97,7 @@ const SupportTicketSystem = () => {
     queryFn: () => supportApi.getStats(),
   });
 
-  const { data: ticketDetail } = useQuery({
+  const { data: ticketDetail, isLoading: detailLoading } = useQuery({
     queryKey: ['support-ticket', selectedTicketId],
     queryFn: () => supportApi.get(selectedTicketId!),
     enabled: !!selectedTicketId && view === 'detail',
@@ -148,6 +148,24 @@ const SupportTicketSystem = () => {
   };
 
   // ── Detail view ──────────────────────────────────────────────────────────
+  if (view === 'detail' && detailLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-32 bg-muted animate-pulse rounded" />
+          <div className="flex-1 space-y-2">
+            <div className="h-7 bg-muted animate-pulse rounded w-64" />
+            <div className="flex gap-2">
+              <div className="h-5 w-20 bg-muted animate-pulse rounded-full" />
+              <div className="h-5 w-16 bg-muted animate-pulse rounded-full" />
+            </div>
+          </div>
+        </div>
+        <Card><CardContent className="pt-6"><div className="space-y-3"><div className="h-4 bg-muted animate-pulse rounded w-full" /><div className="h-4 bg-muted animate-pulse rounded w-3/4" /><div className="h-4 bg-muted animate-pulse rounded w-1/2" /></div></CardContent></Card>
+      </div>
+    );
+  }
+
   if (view === 'detail' && detail) {
     return (
       <div className="space-y-6">
@@ -184,7 +202,7 @@ const SupportTicketSystem = () => {
         {/* Messages thread */}
         <div className="space-y-3">
           {(detail.messages || []).map((msg) => (
-            <Card key={msg.id} className={msg.isStaffReply ? 'border-blue-200 bg-blue-50/50' : ''}>
+            <Card key={msg.id} className={msg.isStaffReply ? 'border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20' : ''}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">

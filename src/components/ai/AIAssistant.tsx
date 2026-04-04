@@ -525,7 +525,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 z-[45] bg-black/20 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
       )}
@@ -533,7 +533,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
       {/* Panel */}
       <div
         className={cn(
-          "fixed right-0 top-0 z-50 flex h-full w-full flex-col bg-background shadow-2xl transition-all duration-300 sm:w-[400px]",
+          "fixed right-0 top-0 z-[55] flex h-full w-full flex-col bg-background shadow-2xl transition-all duration-300 sm:w-[400px]",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
       >

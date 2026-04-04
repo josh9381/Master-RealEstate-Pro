@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/hooks/useToast';
-import { teamsApi } from '@/lib/api';
+import { teamsApi, activitiesApi } from '@/lib/api';
 
 const TeamManagement = () => {
   const { toast } = useToast();
@@ -56,7 +56,19 @@ const TeamManagement = () => {
     refetch();
   };
 
-  const activityLogs: Array<{ user: string; action: string; time: string }> = [];
+  const { data: activityData } = useQuery({
+    queryKey: ['team', 'activity-logs'],
+    queryFn: async () => {
+      const response = await activitiesApi.getActivities({ limit: 20 });
+      return (response.data || []).map((a: { user?: { name?: string }; type?: string; createdAt?: string }) => ({
+        user: a.user?.name || 'Unknown',
+        action: a.type || 'Activity',
+        time: a.createdAt ? new Date(a.createdAt).toLocaleString() : '',
+      }));
+    },
+    enabled: showActivityLogs,
+  });
+  const activityLogs: Array<{ user: string; action: string; time: string }> = activityData || [];
 
   const leaderboardData: Array<{ name: string; leads: number; deals: number; revenue: string; avatar: string }> = [];
 
@@ -655,7 +667,8 @@ const TeamManagement = () => {
               )) : (
                 <div className="text-center py-6 text-muted-foreground">
                   <Award className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No performance data available yet</p>
+                  <p className="text-sm">Team performance leaderboard coming soon</p>
+                  <p className="text-xs mt-1">Requires analytics integration to aggregate lead and deal data per team member.</p>
                 </div>
               )}
             </div>

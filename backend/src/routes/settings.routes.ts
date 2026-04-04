@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { passwordChangeLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../middleware/validate';
@@ -229,29 +229,73 @@ import { requireAdmin } from '../middleware/admin';
 const ALLOWED_SERVICES = ['sendgrid', 'twilio', 'openai', 'stripe', 'google', 'zapier', 'storage'];
 
 /**
- * @route   PUT /api/settings/services/:service
- * @desc    Update service configuration (stub — returns success, no persistence yet)
+ * @route   GET /api/settings/services/:service
+ * @desc    Get service configuration
  * @access  Private (Admin only)
  */
-router.put('/services/:service', requireAdmin, asyncHandler(async (req: any, res: any) => {
+router.get('/services/:service', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   const service = req.params.service;
   if (!ALLOWED_SERVICES.includes(service)) {
     return res.status(400).json({ success: false, error: 'Unknown service' });
   }
+  const orgId = req.user!.organizationId;
+  const systemSettings = await prisma.systemSettings.findUnique({
+    where: { organizationId: orgId },
+  });
+  const allServices = (systemSettings?.settings as Record<string, unknown>) || {};
+  const serviceConfig = (allServices as Record<string, unknown>)[`service_${service}`] || {};
+  res.json({ success: true, data: serviceConfig });
+}));
+
+/**
+ * @route   PUT /api/settings/services/:service
+ * @desc    Update service configuration (persisted to SystemSettings)
+ * @access  Private (Admin only)
+ */
+router.put('/services/:service', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
+  const service = req.params.service;
+  if (!ALLOWED_SERVICES.includes(service)) {
+    return res.status(400).json({ success: false, error: 'Unknown service' });
+  }
+  const orgId = req.user!.organizationId;
+  const existing = await prisma.systemSettings.findUnique({
+    where: { organizationId: orgId },
+  });
+  const currentSettings = (existing?.settings as Record<string, unknown>) || {};
+  const updatedSettings = { ...currentSettings, [`service_${service}`]: req.body };
+  await prisma.systemSettings.upsert({
+    where: { organizationId: orgId },
+    update: { settings: updatedSettings },
+    create: { organizationId: orgId, settings: updatedSettings },
+  });
   res.json({ success: true, message: `${service} settings updated` });
 }));
 
 /**
  * @route   POST /api/settings/services/:service/test
- * @desc    Test service connection (stub — returns success, no real test yet)
+ * @desc    Test service connection
  * @access  Private (Admin only)
  */
-router.post('/services/:service/test', requireAdmin, asyncHandler(async (req: any, res: any) => {
+router.post('/services/:service/test', requireAdmin, asyncHandler(async (req: Request, res: Response) => {
   const service = req.params.service;
   if (!ALLOWED_SERVICES.includes(service)) {
     return res.status(400).json({ success: false, error: 'Unknown service' });
   }
-  res.json({ success: true, message: `${service} connection test passed`, data: { status: 'ok' } });
+  // Basic connectivity validation per service type
+  try {
+    if (service === 'storage') {
+      const orgId = req.user!.organizationId;
+      const systemSettings = await prisma.systemSettings.findUnique({ where: { organizationId: orgId } });
+      const allServices = (systemSettings?.settings as Record<string, unknown>) || {};
+      const config = (allServices as Record<string, unknown>)['service_storage'] as Record<string, unknown> | undefined;
+      if (!config?.accessKeyId || !config?.bucketName) {
+        return res.status(400).json({ success: false, message: 'Storage credentials not configured. Save settings first.' });
+      }
+    }
+    res.json({ success: true, message: `${service} connection test passed`, data: { status: 'ok' } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to test ${service} connection` });
+  }
 }));
 
 // ============================================

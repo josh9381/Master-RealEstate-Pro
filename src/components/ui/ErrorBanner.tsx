@@ -30,7 +30,7 @@ export function ErrorBanner({ message, retry, className = '', dismissible = true
       {retry && (
         <button
           onClick={retry}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900/40"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 dark:text-red-300 dark:hover:bg-red-900/40"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           Retry
@@ -39,7 +39,7 @@ export function ErrorBanner({ message, retry, className = '', dismissible = true
       {dismissible && (
         <button
           onClick={() => setDismissed(true)}
-          className="rounded p-0.5 text-red-400 hover:text-red-600 dark:hover:text-red-200"
+          className="rounded p-0.5 text-red-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 dark:hover:text-red-200"
           aria-label="Dismiss"
         >
           <X className="h-4 w-4" />

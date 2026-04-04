@@ -10,6 +10,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '@/lib/api';
 import { billingApi } from '@/lib/api';
 import { calcRate } from '@/lib/metricsCalculator';
+import { PLANS } from '@/lib/planConfig';
 
 // ---------- Types ----------
 interface UsageEntry {
@@ -59,14 +60,8 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
-// ---------- Plans data ----------
-const plans = [
-  { id: 'STARTER', name: 'Starter', price: 49, features: ['Up to 3 users', '2,500 leads', '5 campaigns', 'Basic AI (50 msgs/mo)', 'Email support'] },
-  { id: 'PROFESSIONAL', name: 'Professional', price: 119, features: ['Up to 15 users', '25,000 leads', '25 campaigns', 'Full AI (500 msgs/mo)', 'Priority support'] },
-  { id: 'ELITE', name: 'Elite', price: 179, features: ['Up to 50 users', '100,000 leads', 'Unlimited campaigns', 'Premium AI (2,000 msgs/mo)', 'Phone support'] },
-  { id: 'TEAM', name: 'Team', price: 799, features: ['Unlimited users', 'Unlimited leads', 'Unlimited campaigns', 'Unlimited AI', 'Dedicated manager'] },
-  { id: 'ENTERPRISE', name: 'Enterprise', price: 0, features: ['Custom everything', 'SLA guarantee', 'Custom integrations', 'Dedicated infrastructure', 'Enterprise support'] },
-];
+// ---------- Plans data (from shared config) ----------
+const plans = PLANS;
 
 const BillingPage = () => {
   const { toast } = useToast();
