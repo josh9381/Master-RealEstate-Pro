@@ -5,8 +5,10 @@ import { FeaturesGrid } from '../components/landing/FeaturesGrid'
 import { ProductShowcase } from '../components/landing/ProductShowcase'
 import { HowItWorks } from '../components/landing/HowItWorks'
 import { StatsSection } from '../components/landing/StatsSection'
+import { IntegrationsSection } from '../components/landing/IntegrationsSection'
 import { Testimonials } from '../components/landing/Testimonials'
 import { PricingSection } from '../components/landing/PricingSection'
+import { FAQSection } from '../components/landing/FAQSection'
 import { CTASection } from '../components/landing/CTASection'
 import { Footer } from '../components/landing/Footer'
 
@@ -20,8 +22,10 @@ export default function LandingPage() {
       <ProductShowcase />
       <HowItWorks />
       <StatsSection />
+      <IntegrationsSection />
       <Testimonials />
       <PricingSection />
+      <FAQSection />
       <CTASection />
       <Footer />
     </div>

@@ -7,6 +7,7 @@ const navLinks = [
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'Testimonials', href: '#testimonials' },
+  { label: 'FAQ', href: '#faq' },
 ]
 
 export function Navbar() {
@@ -19,10 +20,34 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Close mobile menu on resize to desktop
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth >= 1024) setMobileOpen(false) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith('#')) {
+      e.preventDefault()
+      const el = document.querySelector(href)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' })
+        setMobileOpen(false)
+      }
+    }
+  }
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
+        scrolled || mobileOpen
           ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100'
           : 'bg-transparent'
       }`}
@@ -31,10 +56,10 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className={`p-2 rounded-xl transition-colors ${scrolled ? 'bg-blue-600' : 'bg-white/20 backdrop-blur-sm'}`}>
-              <Building2 className={`h-6 w-6 ${scrolled ? 'text-white' : 'text-white'}`} />
+            <div className={`p-2 rounded-xl transition-colors ${scrolled || mobileOpen ? 'bg-blue-600' : 'bg-white/20 backdrop-blur-sm'}`}>
+              <Building2 className="h-6 w-6 text-white" />
             </div>
-            <span className={`text-xl font-bold tracking-tight transition-colors ${scrolled ? 'text-gray-900' : 'text-white'}`}>
+            <span className={`text-xl font-bold tracking-tight transition-colors ${scrolled || mobileOpen ? 'text-gray-900' : 'text-white'}`}>
               RealEstate<span className="text-blue-400">Pro</span>
             </span>
           </Link>
@@ -45,7 +70,8 @@ export function Navbar() {
               <a
                 key={link.label}
                 href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-blue-400 ${
+                onClick={(e) => handleNavClick(e, link.href)}
+                className={`text-sm font-medium transition-colors hover:text-blue-500 ${
                   scrolled ? 'text-gray-600' : 'text-white/80'
                 }`}
               >
@@ -77,7 +103,7 @@ export function Navbar() {
           {/* Mobile Toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className={`lg:hidden p-2 rounded-lg ${scrolled ? 'text-gray-700' : 'text-white'}`}
+            className={`lg:hidden p-2 rounded-lg transition-colors ${scrolled || mobileOpen ? 'text-gray-700' : 'text-white'}`}
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -85,33 +111,40 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {mobileOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-100 shadow-xl">
-          <div className="px-4 py-4 space-y-1">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="block px-4 py-3 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
-              >
-                {link.label}
-              </a>
-            ))}
-            <hr className="my-3" />
-            <Link to="/auth/login" className="block px-4 py-3 text-gray-700 font-medium rounded-lg hover:bg-gray-50">
-              Log In
-            </Link>
-            <Link
-              to="/auth/register"
-              className="block px-4 py-3 text-center text-white font-semibold bg-blue-600 rounded-lg hover:bg-blue-700"
+      {/* Mobile Menu with smooth transition */}
+      <div
+        className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+          mobileOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="bg-white border-t border-gray-100 shadow-xl px-4 py-4 space-y-1">
+          {navLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              onClick={(e) => handleNavClick(e, link.href)}
+              className="block px-4 py-3 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Get Started Free
-            </Link>
-          </div>
+              {link.label}
+            </a>
+          ))}
+          <hr className="my-3" />
+          <Link
+            to="/auth/login"
+            onClick={() => setMobileOpen(false)}
+            className="block px-4 py-3 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Log In
+          </Link>
+          <Link
+            to="/auth/register"
+            onClick={() => setMobileOpen(false)}
+            className="block px-4 py-3 text-center text-white font-semibold bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Get Started Free
+          </Link>
         </div>
-      )}
+      </div>
     </nav>
   )
 }

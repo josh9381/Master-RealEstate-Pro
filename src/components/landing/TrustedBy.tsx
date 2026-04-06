@@ -1,26 +1,43 @@
-export function TrustedBy() {
-  const companies = [
-    'Keller Williams',
-    'RE/MAX',
-    'Coldwell Banker',
-    'Century 21',
-    'Compass',
-    'eXp Realty',
-  ]
+const companies = [
+  { name: 'Keller Williams', abbr: 'KW' },
+  { name: 'RE/MAX', abbr: 'RM' },
+  { name: 'Coldwell Banker', abbr: 'CB' },
+  { name: 'Century 21', abbr: 'C21' },
+  { name: 'Compass', abbr: 'CO' },
+  { name: 'eXp Realty', abbr: 'eXp' },
+  { name: 'Sotheby\'s', abbr: 'SI' },
+  { name: 'Berkshire Hathaway', abbr: 'BH' },
+]
 
+export function TrustedBy() {
   return (
-    <section className="py-12 bg-gray-50 border-y border-gray-100">
+    <section className="py-14 bg-gray-50 border-y border-gray-100 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <p className="text-center text-sm font-medium text-gray-400 uppercase tracking-wider mb-8">
-          Trusted by agents at top brokerages
+        <p className="text-center text-sm font-medium text-gray-400 uppercase tracking-wider mb-10">
+          Trusted by 2,000+ agents at top brokerages
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
-          {companies.map((name) => (
+      </div>
+
+      {/* Infinite marquee */}
+      <div className="relative">
+        {/* Fade edges */}
+        <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-40 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-40 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none" />
+
+        <div className="flex animate-marquee">
+          {[...companies, ...companies].map((c, i) => (
             <div
-              key={name}
-              className="text-xl font-bold text-gray-300 hover:text-gray-400 transition-colors cursor-default select-none"
+              key={`${c.name}-${i}`}
+              className="flex-shrink-0 mx-8 sm:mx-12 flex items-center gap-3 group"
             >
-              {name}
+              <div className="w-11 h-11 rounded-xl bg-gray-200/80 group-hover:bg-blue-100 flex items-center justify-center transition-colors duration-300">
+                <span className="text-xs font-extrabold text-gray-400 group-hover:text-blue-600 transition-colors duration-300">
+                  {c.abbr}
+                </span>
+              </div>
+              <span className="text-lg font-bold text-gray-300 group-hover:text-gray-500 transition-colors duration-300 whitespace-nowrap select-none">
+                {c.name}
+              </span>
             </div>
           ))}
         </div>

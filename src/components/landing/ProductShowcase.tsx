@@ -1,4 +1,5 @@
-import { Play, CheckCircle2 } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 
 const bulletPoints = [
   'Visual pipeline with drag-and-drop deal management',
@@ -7,54 +8,117 @@ const bulletPoints = [
   'Real-time analytics and conversion tracking',
 ]
 
-export function ProductShowcase() {
+function DashboardMockup() {
   return (
-    <section className="py-24 bg-gray-50">
+    <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-gray-300/50 border border-gray-200 bg-white">
+      <div className="aspect-[16/10] flex flex-col">
+        {/* Browser chrome */}
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-400" />
+            <div className="w-3 h-3 rounded-full bg-yellow-400" />
+            <div className="w-3 h-3 rounded-full bg-green-400" />
+          </div>
+          <div className="flex-1 h-6 bg-white rounded-md border border-gray-200 ml-3 flex items-center px-3">
+            <span className="text-[10px] text-gray-400">app.realestatepro.com/dashboard</span>
+          </div>
+        </div>
+
+        {/* Dashboard content */}
+        <div className="flex-1 flex">
+          {/* Sidebar */}
+          <div className="w-[18%] bg-gray-900 p-3 space-y-2 hidden sm:block">
+            <div className="h-6 bg-blue-600 rounded-md mb-4" />
+            {['bg-gray-700', 'bg-blue-500/40 ring-1 ring-blue-500/50', 'bg-gray-700', 'bg-gray-700', 'bg-gray-700', 'bg-gray-800'].map((c, i) => (
+              <div key={i} className={`h-4 rounded-md ${c}`} />
+            ))}
+          </div>
+
+          {/* Main area */}
+          <div className="flex-1 p-3 sm:p-4 space-y-3 bg-gray-50/50">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: 'Active Leads', value: '2,847', color: 'border-l-blue-500 bg-white', change: '+12%' },
+                { label: 'Deals Won', value: '$1.2M', color: 'border-l-emerald-500 bg-white', change: '+24%' },
+                { label: 'Response Rate', value: '94%', color: 'border-l-purple-500 bg-white', change: '+8%' },
+                { label: 'Campaigns', value: '18', color: 'border-l-orange-500 bg-white', change: '+3' },
+              ].map((card, i) => (
+                <div key={i} className={`rounded-lg p-2 border-l-[3px] ${card.color} shadow-sm`}>
+                  <p className="text-[7px] sm:text-[9px] text-gray-400 truncate">{card.label}</p>
+                  <p className="text-[11px] sm:text-sm font-bold text-gray-800">{card.value}</p>
+                  <span className="text-[7px] sm:text-[8px] text-emerald-500 font-semibold">{card.change}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Chart area */}
+            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[9px] sm:text-[10px] font-semibold text-gray-700">Pipeline Overview</span>
+                <div className="flex gap-2">
+                  {['1W', '1M', '3M'].map(p => (
+                    <span key={p} className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 rounded ${p === '1M' ? 'bg-blue-100 text-blue-700' : 'text-gray-400'}`}>{p}</span>
+                  ))}
+                </div>
+              </div>
+              {/* Fake chart bars */}
+              <div className="flex items-end gap-[3px] sm:gap-1 h-16 sm:h-20">
+                {[40, 55, 45, 70, 60, 80, 65, 90, 75, 85, 70, 95].map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-t-sm bg-gradient-to-t from-blue-500 to-blue-400 opacity-80"
+                    style={{ height: `${h}%` }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom row */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-100">
+                <span className="text-[8px] sm:text-[9px] font-semibold text-gray-700">Recent Leads</span>
+                <div className="space-y-1.5 mt-2">
+                  {['John P.', 'Sarah M.', 'Alex K.'].map((name, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
+                        <span className="text-[6px] text-white font-bold">{name[0]}</span>
+                      </div>
+                      <span className="text-[7px] sm:text-[8px] text-gray-600">{name}</span>
+                      <span className="ml-auto text-[6px] sm:text-[7px] text-emerald-500 font-medium">Hot</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-100">
+                <span className="text-[8px] sm:text-[9px] font-semibold text-gray-700">AI Insights</span>
+                <div className="space-y-1.5 mt-2">
+                  {['3 leads ready to convert', 'Campaign A/B winner found', 'Follow up Sarah today'].map((text, i) => (
+                    <div key={i} className="flex items-start gap-1">
+                      <div className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${i === 0 ? 'bg-emerald-400' : i === 1 ? 'bg-blue-400' : 'bg-amber-400'}`} />
+                      <span className="text-[7px] sm:text-[8px] text-gray-600 leading-tight">{text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function ProductShowcase() {
+  const { ref, isVisible } = useScrollAnimation()
+
+  return (
+    <section className="py-24 bg-gray-50" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left: Product Image */}
-          <div className="relative">
-            {/* IMAGE 2 PLACEHOLDER: Replace with Nano Banana Pro product showcase image */}
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-gray-300/50 border border-gray-200">
-              <div className="aspect-[16/10] bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-100 flex items-center justify-center">
-                {/* Fake dashboard skeleton */}
-                <div className="w-[90%] h-[85%] bg-white rounded-xl shadow-inner p-4 flex flex-col gap-3">
-                  {/* Top bar */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-red-300" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-300" />
-                    <div className="w-3 h-3 rounded-full bg-green-300" />
-                    <div className="flex-1 h-5 bg-gray-100 rounded ml-4" />
-                  </div>
-                  {/* Content */}
-                  <div className="flex-1 grid grid-cols-4 gap-2">
-                    {/* Sidebar */}
-                    <div className="col-span-1 bg-gray-50 rounded-lg p-2 space-y-2">
-                      {[...Array(6)].map((_, i) => (
-                        <div key={i} className={`h-4 rounded ${i === 1 ? 'bg-blue-200' : 'bg-gray-200'}`} />
-                      ))}
-                    </div>
-                    {/* Main area */}
-                    <div className="col-span-3 space-y-2">
-                      <div className="grid grid-cols-4 gap-2">
-                        {['blue', 'emerald', 'purple', 'orange'].map((c) => (
-                          <div key={c} className={`h-16 rounded-lg bg-${c === 'blue' ? 'blue' : c === 'emerald' ? 'emerald' : c === 'purple' ? 'purple' : 'orange'}-100`} />
-                        ))}
-                      </div>
-                      <div className="h-32 bg-gradient-to-r from-blue-100 to-cyan-50 rounded-lg" />
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="h-20 bg-gray-100 rounded-lg" />
-                        <div className="h-20 bg-gray-100 rounded-lg" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Nano Banana replacement comment */}
-              {/* Replace the above skeleton with:
-                  <img src="/landing/product-showcase.png" alt="RealEstate Pro Dashboard" className="w-full h-full object-cover" />
-              */}
-            </div>
+          <div className={`relative transition-all duration-700 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'}`}>
+            <DashboardMockup />
 
             {/* Floating accent */}
             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-600/10 rounded-full blur-2xl" />
@@ -62,7 +126,7 @@ export function ProductShowcase() {
           </div>
 
           {/* Right: Copy */}
-          <div>
+          <div className={`transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'}`}>
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
               See It In Action
             </p>
@@ -85,14 +149,6 @@ export function ProductShowcase() {
                 </li>
               ))}
             </ul>
-
-            {/* VOICEOVER 2 PLACEHOLDER: Wire up audio player */}
-            <button className="group inline-flex items-center gap-3 px-6 py-3 text-blue-600 font-semibold bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 group-hover:bg-blue-700 transition-colors">
-                <Play className="h-4 w-4 text-white ml-0.5" />
-              </div>
-              Hear about our features
-            </button>
           </div>
         </div>
       </div>

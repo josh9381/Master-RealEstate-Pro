@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 
 const plans = [
   {
@@ -55,11 +56,13 @@ const plans = [
 ]
 
 export function PricingSection() {
+  const { ref, isVisible } = useScrollAnimation()
+
   return (
-    <section id="pricing" className="py-24 bg-gray-50">
+    <section id="pricing" className="py-24 bg-gray-50" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
             Pricing
           </p>
@@ -75,7 +78,7 @@ export function PricingSection() {
         </div>
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+        <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 items-start transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           {plans.map((plan) => (
             <div
               key={plan.name}
