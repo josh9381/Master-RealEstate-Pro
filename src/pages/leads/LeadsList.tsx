@@ -603,7 +603,7 @@ function LeadsList() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 10rem)' }}>
 
       {/* Bulk Actions Bar */}
       {selectedLeads.length > 0 && (
@@ -701,6 +701,9 @@ function LeadsList() {
           onLeadChange={setEditingLead} onSave={handleSaveEdit}
         />
       )}
+
+      {/* Fixed Top Section */}
+      <div className="flex-shrink-0 space-y-4">
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -818,6 +821,10 @@ function LeadsList() {
           onLoadView={handleLoadSavedView} hasActiveFilters={hasActiveFilters}
         />
       </div>
+      </div>{/* End fixed top section */}
+
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 mt-4">
 
       {/* Leads Content */}
       {filteredAndSortedLeads.length === 0 ? (
@@ -883,49 +890,53 @@ function LeadsList() {
               onSendEmail={(leadId) => { setSelectedLeads([leadId]); setShowMassEmail(true) }}
             />
           )}
-
-          {/* Pagination */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Show</span>
-                <select className="border rounded-md p-1 text-sm" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-muted-foreground">
-                  per page • Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalLeads)} of {totalLeads} results
-                </span>
-              </div>
-
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}>
-                  Previous
-                </Button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = currentPage <= 3 ? i + 1 : currentPage + i - 2
-                  if (pageNum > totalPages) return null
-                  return (
-                    <Button key={pageNum} variant={currentPage === pageNum ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(pageNum)}>
-                      {pageNum}
-                    </Button>
-                  )
-                })}
-                {totalPages > 5 && currentPage < totalPages - 2 && (
-                  <>
-                    <Button variant="ghost" size="sm" disabled>...</Button>
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)}>{totalPages}</Button>
-                  </>
-                )}
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>
-                  Next
-                </Button>
-              </div>
-            </div>
-          </Card>
         </>
+      )}
+
+      </div>{/* End scrollable content area */}
+
+      {/* Fixed Bottom: Pagination */}
+      {filteredAndSortedLeads.length > 0 && (
+        <div className="flex-shrink-0 pt-4 border-t">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Show</span>
+              <select className="border rounded-md p-1 text-sm" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-muted-foreground">
+                per page • Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalLeads)} of {totalLeads} results
+              </span>
+            </div>
+
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}>
+                Previous
+              </Button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = currentPage <= 3 ? i + 1 : currentPage + i - 2
+                if (pageNum > totalPages) return null
+                return (
+                  <Button key={pageNum} variant={currentPage === pageNum ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(pageNum)}>
+                    {pageNum}
+                  </Button>
+                )
+              })}
+              {totalPages > 5 && currentPage < totalPages - 2 && (
+                <>
+                  <Button variant="ghost" size="sm" disabled>...</Button>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)}>{totalPages}</Button>
+                </>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirmation Dialog */}

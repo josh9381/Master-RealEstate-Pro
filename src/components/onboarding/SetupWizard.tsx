@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { getUserItem, setUserItem } from '@/lib/userStorage'
 import { useToast } from '@/hooks/useToast'
@@ -18,6 +18,8 @@ import {
   AlertTriangle,
   SkipForward,
   Sparkles,
+  Send,
+  Clock,
 } from 'lucide-react'
 
 const SETUP_WIZARD_KEY = 'setup_wizard_completed'
@@ -132,6 +134,23 @@ function ProfileStep() {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   })
   const [saving, setSaving] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    settingsApi.getProfile().then((res) => {
+      const data = res?.data?.user || res?.user
+      if (data) {
+        setForm((prev) => ({
+          ...prev,
+          firstName: data.firstName || prev.firstName,
+          lastName: data.lastName || prev.lastName,
+          phone: data.phone || '',
+          jobTitle: data.jobTitle || '',
+          timezone: data.timezone || prev.timezone,
+        }))
+      }
+    }).catch(() => {}).finally(() => setLoaded(true))
+  }, [])
 
   const handleSave = async () => {
     if (!form.firstName.trim() || !form.lastName.trim()) {
@@ -148,6 +167,14 @@ function ProfileStep() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      </div>
+    )
   }
 
   return (
@@ -225,14 +252,15 @@ function BusinessStep() {
     industry: 'Real Estate',
     companySize: '1-10 employees',
     website: '',
-    email: '',
+    billingEmail: '',
     phone: '',
   })
   const [saving, setSaving] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     settingsApi.getBusinessSettings().then((res) => {
-      const data = res?.data || res
+      const data = res?.data?.settings || res?.settings
       if (data) {
         setForm((prev) => ({
           ...prev,
@@ -240,11 +268,11 @@ function BusinessStep() {
           industry: data.industry || 'Real Estate',
           companySize: data.companySize || '1-10 employees',
           website: data.website || '',
-          email: data.email || '',
+          billingEmail: data.billingEmail || '',
           phone: data.phone || '',
         }))
       }
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setLoaded(true))
   }, [])
 
   const handleSave = async () => {
@@ -262,6 +290,14 @@ function BusinessStep() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      </div>
+    )
   }
 
   return (
@@ -317,8 +353,8 @@ function BusinessStep() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Business Email</label>
           <input
             type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            value={form.billingEmail}
+            onChange={(e) => setForm({ ...form, billingEmail: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             placeholder="info@company.com"
           />
@@ -358,12 +394,16 @@ function EmailStep() {
   })
   const [saving, setSaving] = useState(false)
   const [hasExisting, setHasExisting] = useState(false)
+  const [testingEmail, setTestingEmail] = useState(false)
+  const [configSaved, setConfigSaved] = useState(false)
 
   useEffect(() => {
     settingsApi.getEmailConfig().then((res) => {
       const config = res?.data?.config || res?.config
       if (config) {
-        setHasExisting(!!config.hasApiKey)
+        const exists = !!config.hasApiKey
+        setHasExisting(exists)
+        setConfigSaved(exists)
         setForm((prev) => ({
           ...prev,
           smtpHost: config.smtpHost || 'smtp.sendgrid.net',
@@ -405,6 +445,7 @@ function EmailStep() {
       queryClient.invalidateQueries({ queryKey: ['settings', 'emailConfig'] })
       toast.success('Email configuration saved')
       setHasExisting(true)
+      setConfigSaved(true)
     } catch {
       toast.error('Failed to save email configuration')
     } finally {
@@ -481,13 +522,39 @@ function EmailStep() {
           </div>
         </div>
       </details>
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-      >
-        {saving ? 'Saving...' : 'Save Email Config'}
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex-1 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          {saving ? 'Saving...' : 'Save Email Config'}
+        </button>
+        {configSaved && (
+          <button
+            onClick={async () => {
+              if (!form.fromEmail.trim()) {
+                toast.error('Save your email configuration first')
+                return
+              }
+              setTestingEmail(true)
+              try {
+                await settingsApi.testEmail({ to: form.fromEmail })
+                toast.success(`Test email sent to ${form.fromEmail} — check your inbox!`)
+              } catch {
+                toast.error('Test email failed. Check your API key and from email settings.')
+              } finally {
+                setTestingEmail(false)
+              }
+            }}
+            disabled={testingEmail}
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          >
+            <Send className="h-4 w-4" />
+            {testingEmail ? 'Sending...' : 'Test'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -502,12 +569,17 @@ function SMSStep() {
   })
   const [saving, setSaving] = useState(false)
   const [hasExisting, setHasExisting] = useState(false)
+  const [testingBusy, setTestingBusy] = useState(false)
+  const [configSaved, setConfigSaved] = useState(false)
+  const [testPhone, setTestPhone] = useState('')
 
   useEffect(() => {
     settingsApi.getSMSConfig().then((res) => {
       const config = res?.data?.config || res?.config
       if (config) {
-        setHasExisting(!!config.hasCredentials)
+        const exists = !!config.hasCredentials
+        setHasExisting(exists)
+        setConfigSaved(exists)
         setForm((prev) => ({
           ...prev,
           accountSid: config.accountSid || '',
@@ -549,10 +621,11 @@ function SMSStep() {
       if (form.authToken) payload.authToken = form.authToken
       await settingsApi.updateSMSConfig(payload)
       queryClient.invalidateQueries({ queryKey: ['settings', 'smsConfig'] })
-      toast.success('Twilio credentials saved')
+      toast.success('Twilio credentials verified and saved')
       setHasExisting(true)
+      setConfigSaved(true)
     } catch {
-      toast.error('Failed to save Twilio configuration')
+      toast.error('Failed to save Twilio configuration — check your credentials')
     } finally {
       setSaving(false)
     }
@@ -602,64 +675,65 @@ function SMSStep() {
         disabled={saving}
         className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
       >
-        {saving ? 'Saving...' : 'Save Twilio Config'}
+        {saving ? 'Verifying & Saving...' : 'Save Twilio Config'}
       </button>
+      {configSaved && (
+        <div className="pt-2 border-t border-gray-100 space-y-3">
+          <p className="text-sm font-medium text-gray-700">Send a test SMS to verify everything works:</p>
+          <div className="flex gap-3">
+            <input
+              type="tel"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              placeholder="+1 your phone number"
+            />
+            <button
+              onClick={async () => {
+                if (!testPhone.trim()) {
+                  toast.error('Enter a phone number to send a test SMS')
+                  return
+                }
+                setTestingBusy(true)
+                try {
+                  await settingsApi.testSMS({ to: testPhone })
+                  toast.success(`Test SMS sent to ${testPhone}`)
+                } catch {
+                  toast.error('Test SMS failed. Verify your Twilio credentials and phone number.')
+                } finally {
+                  setTestingBusy(false)
+                }
+              }}
+              disabled={testingBusy}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors text-sm"
+            >
+              <Send className="h-4 w-4" />
+              {testingBusy ? 'Sending...' : 'Test SMS'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 function GoogleStep() {
-  const { toast } = useToast()
-  const [connected, setConnected] = useState(false)
-  const [connecting, setConnecting] = useState(false)
-
-  useEffect(() => {
-    settingsApi.getIntegrationStatus('google').then((res) => {
-      if (res?.connected) setConnected(true)
-    }).catch(() => {})
-  }, [])
-
-  const handleConnect = async () => {
-    setConnecting(true)
-    try {
-      await settingsApi.connectIntegration('google', {})
-      setConnected(true)
-      toast.success('Google account connected')
-    } catch {
-      toast.error('Failed to connect Google account')
-    } finally {
-      setConnecting(false)
-    }
-  }
-
   return (
     <div className="space-y-6 max-w-lg mx-auto">
-      {connected ? (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
-          <Check className="h-4 w-4" />
-          Google account is connected!
+      <div className="text-center py-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 mb-4">
+          <Clock className="h-8 w-8 text-blue-500" />
         </div>
-      ) : (
-        <div className="text-center py-4">
-          <p className="text-gray-500 mb-6">
-            Connect your Google account to sync Gmail, Calendar, and Contacts.
-            You can fine-tune sync settings later in Settings.
-          </p>
-          <button
-            onClick={handleConnect}
-            disabled={connecting}
-            className="inline-flex items-center gap-3 px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all font-medium text-gray-700"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-            </svg>
-            {connecting ? 'Connecting...' : 'Connect Google Account'}
-          </button>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">Google Integration</h3>
+        <p className="text-gray-500 max-w-sm mx-auto mb-4">
+          Google OAuth integration requires setup in your organization's Google Cloud Console.
+          You can configure this in <strong>Settings → Integrations</strong> once you have your OAuth credentials ready.
+        </p>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
+          <Clock className="h-4 w-4" />
+          Configure in Settings after setup
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-3 gap-4">
         {[
@@ -667,11 +741,21 @@ function GoogleStep() {
           { name: 'Calendar', desc: 'Sync appointments' },
           { name: 'Contacts', desc: 'Import & sync contacts' },
         ].map((service) => (
-          <div key={service.name} className={`p-4 rounded-xl border text-center ${connected ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200 bg-gray-50'}`}>
+          <div key={service.name} className="p-4 rounded-xl border border-gray-200 bg-gray-50 text-center">
             <p className="font-medium text-gray-900 text-sm">{service.name}</p>
             <p className="text-xs text-gray-400 mt-1">{service.desc}</p>
           </div>
         ))}
+      </div>
+
+      <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-600">
+        <p className="font-medium text-gray-700 mb-2">To set up Google integration:</p>
+        <ol className="list-decimal list-inside space-y-1 text-gray-500">
+          <li>Create a project in Google Cloud Console</li>
+          <li>Enable Gmail, Calendar, and People APIs</li>
+          <li>Create OAuth 2.0 credentials</li>
+          <li>Add credentials in Settings → Integrations</li>
+        </ol>
       </div>
     </div>
   )
@@ -680,12 +764,14 @@ function GoogleStep() {
 function SecurityStep() {
   const { toast } = useToast()
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [emailVerified, setEmailVerified] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     settingsApi.getSecuritySettings().then((res) => {
       const data = res?.data || res
       if (data?.twoFactorEnabled) setTwoFactorEnabled(true)
+      if (data?.emailVerified) setEmailVerified(true)
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
@@ -734,15 +820,17 @@ function SecurityStep() {
         <h4 className="text-sm font-semibold text-gray-700 mb-3">Security Checklist</h4>
         <ul className="space-y-2">
           {[
-            { label: 'Strong password set', done: true },
             { label: 'Two-factor authentication', done: twoFactorEnabled },
-            { label: 'Email verified', done: true },
+            { label: 'Email verified', done: emailVerified },
           ].map((item) => (
             <li key={item.label} className="flex items-center gap-2 text-sm">
               <div className={`w-5 h-5 rounded-full flex items-center justify-center ${item.done ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-400'}`}>
                 <Check className="h-3 w-3" />
               </div>
               <span className={item.done ? 'text-gray-700' : 'text-gray-400'}>{item.label}</span>
+              {!item.done && (
+                <span className="ml-auto text-xs text-amber-600 font-medium">Recommended</span>
+              )}
             </li>
           ))}
         </ul>
@@ -795,17 +883,46 @@ export function SetupWizard() {
   const { user } = useAuthStore()
   const [currentStep, setCurrentStep] = useState(0)
   const [show, setShow] = useState(false)
+  const [checking, setChecking] = useState(true)
   const [skippedSteps, setSkippedSteps] = useState<Set<string>>(new Set())
 
-  useEffect(() => {
-    if (!user?.id) return
-    const completed = getUserItem(user.id, SETUP_WIZARD_KEY)
-    if (!completed) {
-      setShow(true)
+  const checkShouldShow = useCallback(async () => {
+    if (!user?.id) {
+      setChecking(false)
+      return
     }
+
+    // Check localStorage first (fast path, avoids flicker)
+    const localCompleted = getUserItem(user.id, SETUP_WIZARD_KEY)
+    if (localCompleted) {
+      setChecking(false)
+      return
+    }
+
+    // Check server-side status
+    try {
+      const res = await settingsApi.getSetupStatus()
+      const data = res?.data
+      if (data?.setupCompletedAt) {
+        // Server says completed — sync to localStorage
+        setUserItem(user.id, SETUP_WIZARD_KEY, 'completed')
+        setChecking(false)
+        return
+      }
+    } catch {
+      // If API fails, fall back to showing wizard for new users
+    }
+
+    // Not completed — show wizard
+    setShow(true)
+    setChecking(false)
   }, [user?.id])
 
-  if (!show) return null
+  useEffect(() => {
+    checkShouldShow()
+  }, [checkShouldShow])
+
+  if (checking || !show) return null
 
   const step = WIZARD_STEPS[currentStep]
   const isFirst = currentStep === 0
@@ -833,6 +950,8 @@ export function SetupWizard() {
   const handleSkipAll = () => {
     if (user?.id) {
       setUserItem(user.id, SETUP_WIZARD_KEY, 'skipped')
+      // Also persist on server so it syncs across devices
+      settingsApi.completeSetup().catch(() => {})
     }
     setShow(false)
   }
@@ -840,6 +959,8 @@ export function SetupWizard() {
   const handleFinish = () => {
     if (user?.id) {
       setUserItem(user.id, SETUP_WIZARD_KEY, 'completed')
+      // Persist on server
+      settingsApi.completeSetup().catch(() => {})
     }
     setShow(false)
   }

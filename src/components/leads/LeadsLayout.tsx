@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Users,
-  SquareKanban,
   Clock,
   Upload,
   Download,
@@ -46,14 +45,6 @@ const leadsNav: NavGroup[] = [
         icon: LayoutList,
         description: 'View & manage all leads',
         keywords: ['all', 'list', 'table', 'grid', 'leads'],
-      },
-      {
-        id: 'pipeline',
-        label: 'Pipeline',
-        path: '/leads/pipeline',
-        icon: SquareKanban,
-        description: 'Kanban board view',
-        keywords: ['pipeline', 'kanban', 'board', 'stages', 'drag'],
       },
       {
         id: 'followups',
@@ -140,7 +131,7 @@ export const LeadsLayout = ({ children }: LeadsLayoutProps) => {
   }, [search]);
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] -mx-6 -mt-2 -mb-6">
+    <div className="flex min-h-[calc(100vh-8rem)] -mx-6 -mb-6">
       {/* Sidebar */}
       <aside className="w-72 border-r bg-muted/30 flex-shrink-0 overflow-y-auto">
         <div className="p-4 space-y-4">

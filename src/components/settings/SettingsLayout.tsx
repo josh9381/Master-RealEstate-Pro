@@ -185,7 +185,7 @@ export const SettingsLayout = ({ children }: SettingsLayoutProps) => {
   }, [search]);
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] -mx-6 -mt-2 -mb-6">
+    <div className="flex min-h-[calc(100vh-8rem)] -mx-6 -mb-6">
       {/* Sidebar */}
       <aside className="w-72 border-r bg-muted/30 flex-shrink-0 overflow-y-auto">
         <div className="p-4 space-y-4">

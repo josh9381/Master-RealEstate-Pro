@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger'
-import { Sparkles, Mail, Phone, Calendar, TrendingUp, X } from 'lucide-react'
+import { Sparkles, Mail, Phone, Calendar, TrendingUp, Target, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { aiApi } from '@/lib/api'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { formatRate } from '@/lib/metricsCalculator'
+import { PredictionBadge } from '@/components/ai/PredictionBadge'
+import type { LeadPrediction, EngagementAnalysis } from '@/services/intelligenceService'
 
 interface Suggestion {
   id: string
@@ -25,6 +27,9 @@ interface AISuggestedActionsProps {
   onComposeEmail?: () => void
   onScheduleCall?: () => void
   onBookDemo?: () => void
+  prediction?: LeadPrediction | null
+  engagement?: EngagementAnalysis | null
+  insightsLoading?: boolean
 }
 
 const iconMap: Record<string, typeof Mail> = {
@@ -64,7 +69,7 @@ function resolvePriority(confidence: number): 'high' | 'medium' | 'low' {
   return 'low'
 }
 
-export function AISuggestedActions({ className, leadId, onComposeEmail, onScheduleCall, onBookDemo }: AISuggestedActionsProps) {
+export function AISuggestedActions({ className, leadId, onComposeEmail, onScheduleCall, onBookDemo, prediction, engagement, insightsLoading }: AISuggestedActionsProps) {
   const [dismissedActions, setDismissedActions] = useState<string[]>([])
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -268,6 +273,61 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
           >
             Show dismissed ({dismissedActions.length})
           </Button>
+        )}
+
+        {/* AI Insights — Conversion Prediction & Engagement */}
+        {insightsLoading && (
+          <div className="mt-3 pt-3 border-t text-center py-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
+            <p className="text-xs text-muted-foreground mt-1">Analyzing lead...</p>
+          </div>
+        )}
+
+        {!insightsLoading && prediction && (prediction.conversionProbability > 0 || prediction.estimatedValue > 0) && (
+          <div className="mt-3 pt-3 border-t space-y-2">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Conversion Prediction
+            </p>
+            {prediction.conversionProbability > 0 && (
+              <PredictionBadge type="probability" value={prediction.conversionProbability} size="md" />
+            )}
+            {prediction.estimatedValue > 0 && (
+              <PredictionBadge type="value" value={prediction.estimatedValue} size="md" />
+            )}
+            {prediction.confidenceScore > 0 && (
+              <p className="text-xs text-muted-foreground">Confidence: {prediction.confidenceScore}%</p>
+            )}
+            {prediction.predictedCloseDateDays > 0 && (
+              <p className="text-xs text-muted-foreground">Estimated close: {prediction.predictedCloseDateDays} days</p>
+            )}
+          </div>
+        )}
+
+        {!insightsLoading && engagement && engagement.engagementScore > 0 && (
+          <div className="mt-3 pt-3 border-t space-y-2">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Engagement
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="text-2xl font-bold">{engagement.engagementScore}%</div>
+              {engagement.trend && (
+                <Badge variant={
+                  engagement.trend === 'increasing' ? 'success' :
+                  engagement.trend === 'declining' ? 'destructive' : 'secondary'
+                }>
+                  {engagement.trend}
+                </Badge>
+              )}
+            </div>
+            {engagement.churnRisk && (
+              <PredictionBadge type="risk" value={engagement.churnRisk} size="sm" />
+            )}
+            {engagement.lastActivityDays > 0 && (
+              <p className="text-xs text-muted-foreground">Last activity: {engagement.lastActivityDays} days ago</p>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

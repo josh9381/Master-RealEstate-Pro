@@ -47,9 +47,11 @@ export function MainLayout() {
       >
         <Header />
 
-        <main id="main-content" className="flex-1 overflow-y-auto bg-muted/10 p-6">
-          <div className="mx-auto max-w-screen-2xl">
+        <main id="main-content" className="flex-1 flex flex-col overflow-hidden bg-muted/10">
+          <div className="mx-auto max-w-screen-2xl w-full flex-shrink-0 px-6 pt-6">
             <Breadcrumbs />
+          </div>
+          <div className="mx-auto max-w-screen-2xl w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 pb-6 flex flex-col">
             <Outlet />
           </div>
         </main>

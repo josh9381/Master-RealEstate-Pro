@@ -82,11 +82,12 @@ export function LeadsTable({
   }
 
   return (
-    <Card>
-      <Table>
+    <Card className="overflow-hidden">
+      <div className="overflow-hidden">
+      <Table className="[&_th]:px-2 [&_th]:py-2 [&_td]:px-2 [&_td]:py-2.5 text-sm">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10">
+            <TableHead className="w-8 pr-0">
               <input
                 type="checkbox"
                 checked={selectedLeads.length === leads.length && leads.length > 0}
@@ -96,7 +97,7 @@ export function LeadsTable({
                 aria-label={`Select all ${leads.length} leads on this page`}
               />
             </TableHead>
-            <TableHead className="w-10"></TableHead>
+            <TableHead className="w-8 px-0"></TableHead>
             <TableHead className="cursor-pointer" onClick={() => onSort('name')}>
               <div className="flex items-center whitespace-nowrap">
                 Name
@@ -104,41 +105,41 @@ export function LeadsTable({
               </div>
             </TableHead>
             <TableHead className="cursor-pointer" onClick={() => onSort('company')}>
-              <div className="flex items-center">
+              <div className="flex items-center whitespace-nowrap">
                 Company
                 {getSortIcon('company')}
               </div>
             </TableHead>
             <TableHead>Email</TableHead>
-            <TableHead className="hidden lg:table-cell whitespace-nowrap">Phone</TableHead>
+            <TableHead className="hidden xl:table-cell whitespace-nowrap">Phone</TableHead>
             <TableHead className="cursor-pointer" onClick={() => onSort('score')}>
-              <div className="flex items-center">
+              <div className="flex items-center whitespace-nowrap">
                 Score
                 {getSortIcon('score')}
               </div>
             </TableHead>
             <TableHead className="cursor-pointer" onClick={() => onSort('status')}>
-              <div className="flex items-center">
+              <div className="flex items-center whitespace-nowrap">
                 Status
                 {getSortIcon('status')}
               </div>
             </TableHead>
-            <TableHead className="hidden md:table-cell cursor-pointer" onClick={() => onSort('source')}>
-              <div className="flex items-center">
+            <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => onSort('source')}>
+              <div className="flex items-center whitespace-nowrap">
                 Source
                 {getSortIcon('source')}
               </div>
             </TableHead>
-            <TableHead className="hidden lg:table-cell">Tags</TableHead>
-            <TableHead className="hidden xl:table-cell whitespace-nowrap">Assigned To</TableHead>
-            <TableHead className="w-10"></TableHead>
+            <TableHead className="hidden 2xl:table-cell">Tags</TableHead>
+            <TableHead className="hidden xl:table-cell whitespace-nowrap">Assigned</TableHead>
+            <TableHead className="w-8"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {leads.map((lead: Lead) => (
             <React.Fragment key={lead.id}>
               <TableRow>
-                <TableCell>
+                <TableCell className="pr-0">
                   <input
                     type="checkbox"
                     checked={selectedLeads.includes(lead.id)}
@@ -146,7 +147,7 @@ export function LeadsTable({
                     className="rounded"
                   />
                 </TableCell>
-                <TableCell>
+                <TableCell className="px-0">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -161,7 +162,7 @@ export function LeadsTable({
                     )}
                   </Button>
                 </TableCell>
-                <TableCell className="whitespace-nowrap">
+                <TableCell className="truncate max-w-[120px]">
                   <Link
                     to={`/leads/${lead.id}`}
                     className="font-medium hover:text-primary"
@@ -169,9 +170,9 @@ export function LeadsTable({
                     {`${lead.firstName} ${lead.lastName}`}
                   </Link>
                 </TableCell>
-                <TableCell>{lead.company}</TableCell>
-                <TableCell className="text-muted-foreground max-w-[200px] truncate">{lead.email}</TableCell>
-                <TableCell className="hidden lg:table-cell text-muted-foreground whitespace-nowrap">{lead.phone}</TableCell>
+                <TableCell className="truncate max-w-[100px]">{lead.company}</TableCell>
+                <TableCell className="text-muted-foreground truncate max-w-[160px]">{lead.email}</TableCell>
+                <TableCell className="hidden xl:table-cell text-muted-foreground whitespace-nowrap">{lead.phone}</TableCell>
                 <TableCell>
                   <ScoreBadge score={lead.score || 0} size="sm" />
                 </TableCell>
@@ -180,8 +181,8 @@ export function LeadsTable({
                     {lead.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="hidden md:table-cell capitalize">{lead.source}</TableCell>
-                <TableCell className="hidden lg:table-cell">
+                <TableCell className="hidden lg:table-cell capitalize truncate max-w-[80px]">{lead.source}</TableCell>
+                <TableCell className="hidden 2xl:table-cell">
                   <div className="flex flex-wrap gap-1">
                     {(lead.tags || []).slice(0, 2).map((tag: string | TagObject, idx: number) => {
                       const tagName = typeof tag === 'string' ? tag : tag?.name || 'Unknown'
@@ -203,7 +204,7 @@ export function LeadsTable({
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="hidden xl:table-cell whitespace-nowrap">
+                <TableCell className="hidden xl:table-cell truncate max-w-[110px]">
                   {(() => {
                     if (typeof lead.assignedTo === 'string') {
                       return lead.assignedTo
@@ -319,6 +320,7 @@ export function LeadsTable({
           ))}
         </TableBody>
       </Table>
+      </div>
     </Card>
   )
 }

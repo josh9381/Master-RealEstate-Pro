@@ -5,8 +5,10 @@ import {
   Mail,
   MessageSquare,
   Phone,
+  Share2,
   FileText,
   Calendar,
+  PieChart,
   BarChart3,
   FlaskConical,
   Search,
@@ -41,9 +43,17 @@ const campaignsNav: NavGroup[] = [
     label: 'Channels',
     items: [
       {
+        id: 'all',
+        label: 'All Campaigns',
+        path: '/campaigns/all',
+        icon: Megaphone,
+        description: 'View all campaigns',
+        keywords: ['all', 'campaigns', 'list', 'view'],
+      },
+      {
         id: 'email',
         label: 'Email Campaigns',
-        path: '/campaigns?type=email',
+        path: '/campaigns/all?type=email',
         icon: Mail,
         description: 'Email marketing campaigns',
         keywords: ['email', 'sendgrid', 'newsletter', 'drip'],
@@ -51,7 +61,7 @@ const campaignsNav: NavGroup[] = [
       {
         id: 'sms',
         label: 'SMS Campaigns',
-        path: '/campaigns?type=sms',
+        path: '/campaigns/all?type=sms',
         icon: MessageSquare,
         description: 'Text message campaigns',
         keywords: ['sms', 'text', 'message', 'twilio'],
@@ -59,10 +69,19 @@ const campaignsNav: NavGroup[] = [
       {
         id: 'phone',
         label: 'Phone Campaigns',
-        path: '/campaigns?type=phone',
+        path: '/campaigns/all?type=phone',
         icon: Phone,
         description: 'Voice call campaigns',
         keywords: ['phone', 'call', 'voice', 'telephony'],
+        badge: 'Coming Soon',
+      },
+      {
+        id: 'social',
+        label: 'Social Media',
+        path: '/campaigns/all?type=social',
+        icon: Share2,
+        description: 'Social media campaigns',
+        keywords: ['social', 'facebook', 'instagram', 'linkedin', 'twitter', 'x'],
         badge: 'Coming Soon',
       },
     ],
@@ -88,12 +107,20 @@ const campaignsNav: NavGroup[] = [
         keywords: ['schedule', 'calendar', 'plan', 'queue', 'timing'],
       },
       {
+        id: 'analytics',
+        label: 'Analytics',
+        path: '/campaigns/analytics',
+        icon: PieChart,
+        description: 'Campaign performance analytics',
+        keywords: ['analytics', 'stats', 'performance', 'metrics', 'dashboard'],
+      },
+      {
         id: 'reports',
         label: 'Reports',
         path: '/campaigns/reports',
         icon: BarChart3,
-        description: 'Campaign analytics & reports',
-        keywords: ['report', 'analytics', 'stats', 'performance', 'metrics'],
+        description: 'Campaign reports & exports',
+        keywords: ['report', 'export', 'summary', 'data'],
       },
       {
         id: 'ab-testing',
@@ -152,7 +179,7 @@ export const CampaignsLayout = ({ children }: CampaignsLayoutProps) => {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] -mx-6 -mt-2 -mb-6">
+    <div className="flex min-h-[calc(100vh-8rem)] -mx-6 -mb-6">
       {/* Sidebar */}
       <aside className="w-72 border-r bg-muted/30 flex-shrink-0 overflow-y-auto">
         <div className="p-4 space-y-4">
@@ -202,7 +229,7 @@ export const CampaignsLayout = ({ children }: CampaignsLayoutProps) => {
                 )}
               >
                 <Megaphone className="h-4 w-4" />
-                All Campaigns
+                Overview
               </Link>
             </div>
 

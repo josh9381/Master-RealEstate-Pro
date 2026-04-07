@@ -58,6 +58,7 @@ const LeadsMerge = lazyWithRetry(() => import('./pages/leads/LeadsMerge'))
 const LeadCreate = lazyWithRetry(() => import('./pages/leads/LeadCreate'))
 
 // Campaigns (lazy loaded)
+const CampaignsOverview = lazyWithRetry(() => import('./pages/campaigns/CampaignsOverview'))
 const CampaignsList = lazyWithRetry(() => import('./pages/campaigns/CampaignsList'))
 const CampaignCreate = lazyWithRetry(() => import('./pages/campaigns/CampaignCreate'))
 const CampaignDetail = lazyWithRetry(() => import('./pages/campaigns/CampaignDetail'))
@@ -67,6 +68,7 @@ const CampaignSchedule = lazyWithRetry(() => import('./pages/campaigns/CampaignS
 const CampaignReports = lazyWithRetry(() => import('./pages/campaigns/CampaignReports'))
 // EmailCampaigns, SMSCampaigns, PhoneCampaigns merged into CampaignsList (filter tabs) — old URLs redirect
 const ABTesting = lazyWithRetry(() => import('./pages/campaigns/ABTesting'))
+const CampaignAnalytics = lazyWithRetry(() => import('./pages/campaigns/CampaignAnalytics'))
 
 // AI Hub (lazy loaded)
 const AIHub = lazyWithRetry(() => import('./pages/ai/AIHub'))
@@ -195,16 +197,19 @@ function App() {
         <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Tasks"><TasksPage /></PageErrorBoundary></Suspense>} />
         
         {/* Campaigns */}
-        <Route path="/campaigns" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaigns"><CampaignsList /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaigns Overview"><CampaignsOverview /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns/all" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="All Campaigns"><CampaignsList /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         <Route path="/campaigns/create" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Create Campaign"><CampaignCreate /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         <Route path="/campaigns/:id" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Detail"><CampaignDetail /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         <Route path="/campaigns/:id/edit" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Edit Campaign"><CampaignEdit /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         <Route path="/campaigns/templates" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Templates"><CampaignTemplates /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         <Route path="/campaigns/schedule" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Schedule"><CampaignSchedule /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         <Route path="/campaigns/reports" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Reports"><CampaignReports /></PageErrorBoundary></Suspense></CampaignsLayout>} />
-        <Route path="/campaigns/email" element={<Navigate to="/campaigns?type=email" replace />} />
-        <Route path="/campaigns/sms" element={<Navigate to="/campaigns?type=sms" replace />} />
-        <Route path="/campaigns/phone" element={<Navigate to="/campaigns?type=phone" replace />} />
+        <Route path="/campaigns/analytics" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Campaign Analytics"><CampaignAnalytics /></PageErrorBoundary></Suspense></CampaignsLayout>} />
+        <Route path="/campaigns/email" element={<Navigate to="/campaigns/all?type=email" replace />} />
+        <Route path="/campaigns/sms" element={<Navigate to="/campaigns/all?type=sms" replace />} />
+        <Route path="/campaigns/phone" element={<Navigate to="/campaigns/all?type=phone" replace />} />
+        <Route path="/campaigns/social" element={<Navigate to="/campaigns/all?type=social" replace />} />
         <Route path="/campaigns/ab-testing" element={<CampaignsLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="A/B Testing"><ABTesting /></PageErrorBoundary></Suspense></CampaignsLayout>} />
         
         {/* AI Hub */}

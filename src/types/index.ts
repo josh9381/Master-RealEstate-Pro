@@ -32,6 +32,7 @@ export interface User {
   avatar?: string
   role: 'admin' | 'user' | 'manager' | 'USER' | 'ADMIN' | 'MANAGER'
   organizationId: string
+  setupCompletedAt?: string | null
   createdAt: string
   permissions?: UserPermissions
   organization?: OrganizationInfo

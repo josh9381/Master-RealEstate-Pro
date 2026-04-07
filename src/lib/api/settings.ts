@@ -155,6 +155,17 @@ export const settingsApi = {
     const response = await api.post(`/integrations/${provider}/sync`)
     return response.data
   },
+
+  // Setup Wizard
+  getSetupStatus: async () => {
+    const response = await api.get('/settings/setup-status')
+    return response.data
+  },
+
+  completeSetup: async () => {
+    const response = await api.post('/settings/setup-complete')
+    return response.data
+  },
 }
 
 export const teamsApi = {

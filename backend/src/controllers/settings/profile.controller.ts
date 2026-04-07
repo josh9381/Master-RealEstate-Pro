@@ -28,7 +28,9 @@ export async function getProfile(req: Request, res: Response): Promise<void> {
       role: true,
       timezone: true,
       language: true,
+      emailVerified: true,
       subscriptionTier: true,
+      setupCompletedAt: true,
       createdAt: true,
       lastLoginAt: true
     }

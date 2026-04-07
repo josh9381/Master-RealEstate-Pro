@@ -17,7 +17,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/Dialog'
-import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, Brain, TrendingUp, Target, Clock, AlertTriangle, ArrowLeft, Save, Plus, LayoutDashboard, History, CheckSquare, Wand2, Paperclip, Upload, Download, File } from 'lucide-react'
+import { Mail, Phone, Building, Calendar, Edit, Trash2, MessageSquare, FileText, X, AlertTriangle, ArrowLeft, Save, Plus, LayoutDashboard, History, CheckSquare, Wand2, Paperclip, Upload, Download, File, ChevronDown } from 'lucide-react'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { useConfirm } from '@/hooks/useConfirm'
 import { AIEmailComposer } from '@/components/ai/AIEmailComposer'
@@ -28,8 +28,7 @@ import { CommunicationHistory } from '@/components/leads/CommunicationHistory'
 import { LeadTasks } from '@/components/leads/LeadTasks'
 import { FollowUpReminders } from '@/components/leads/FollowUpReminders'
 import { LogCallDialog } from '@/components/leads/LogCallDialog'
-import { PredictionBadge } from '@/components/ai/PredictionBadge'
-import intelligenceService, { type LeadPrediction, type EngagementAnalysis, type NextActionSuggestion } from '@/services/intelligenceService'
+import intelligenceService, { type LeadPrediction, type EngagementAnalysis } from '@/services/intelligenceService'
 import { aiApi } from '@/lib/api'
 import { Lead } from '@/types'
 import type { AssignedUser, TeamMember, LeadNote } from '@/types'
@@ -195,6 +194,7 @@ function LeadDetail() {
   const [showSMSComposer, setShowSMSComposer] = useState(false)
   const [showLogCall, setShowLogCall] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [editSections, setEditSections] = useState<Record<string, boolean>>({ company: false, address: false, realEstate: false, notes: false })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [showAddNote, setShowAddNote] = useState(false)
@@ -206,7 +206,6 @@ function LeadDetail() {
   // AI Intelligence state
   const [aiPrediction, setAiPrediction] = useState<LeadPrediction | null>(null)
   const [aiEngagement, setAiEngagement] = useState<EngagementAnalysis | null>(null)
-  const [aiNextAction, setAiNextAction] = useState<NextActionSuggestion | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
 
   // Fetch notes from API
@@ -352,13 +351,11 @@ function LeadDetail() {
         const results = await Promise.allSettled([
           intelligenceService.getLeadPrediction(id),
           intelligenceService.getEngagementAnalysis(id),
-          intelligenceService.getNextAction(id),
         ])
         
         if (cancelled) return
         if (results[0].status === 'fulfilled') setAiPrediction(results[0].value)
         if (results[1].status === 'fulfilled') setAiEngagement(results[1].value)
-        if (results[2].status === 'fulfilled') setAiNextAction(results[2].value)
         
         const failures = results.filter(r => r.status === 'rejected')
         if (failures.length === results.length) {
@@ -547,25 +544,26 @@ function LeadDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-2 max-h-[calc(100vh-12rem)] overflow-hidden">
 
       {/* Back button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate('/leads')}
-        className="mb-2"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Leads
-      </Button>
+      <div className="flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/leads')}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Leads
+        </Button>
+      </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex-shrink-0 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead'}</h1>
+          <h1 className="text-2xl font-bold">{lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead'}</h1>
           {(lead?.position || lead?.company) && (
-            <p className="mt-2 text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {lead?.position && lead?.company
                 ? `${lead.position} at ${lead.company}`
                 : lead?.position || lead?.company}
@@ -575,6 +573,7 @@ function LeadDetail() {
         <div className="flex gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={async () => {
               try {
                 const res = await aiApi.enrichLead(id!)
@@ -597,11 +596,11 @@ function LeadDetail() {
             <Wand2 className="mr-2 h-4 w-4" />
             AI Enrich
           </Button>
-          <Button variant="outline" onClick={handleEditLead}>
+          <Button variant="outline" size="sm" onClick={handleEditLead}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="outline" onClick={handleDeleteLead}>
+          <Button variant="outline" size="sm" onClick={handleDeleteLead}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
@@ -609,20 +608,21 @@ function LeadDetail() {
       </div>
 
       {/* Quick Actions with AI */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Button onClick={() => setShowEmailComposer(true)} className="h-auto flex-col py-4">
-          <Mail className="mb-2 h-6 w-6" />
-          <span className="font-medium">Email</span>
+      <div className="flex-shrink-0 grid gap-2 md:grid-cols-4">
+        <Button onClick={() => setShowEmailComposer(true)} size="sm" className="h-auto flex-row gap-2 py-1.5 px-3 justify-center">
+          <Mail className="h-4 w-4" />
+          <span className="font-medium text-sm">Email</span>
           <span className="text-xs opacity-75">✨ AI-powered</span>
         </Button>
-        <Button onClick={() => setShowSMSComposer(true)} variant="outline" className="h-auto flex-col py-4">
-          <MessageSquare className="mb-2 h-6 w-6" />
-          <span className="font-medium">SMS</span>
+        <Button onClick={() => setShowSMSComposer(true)} variant="outline" size="sm" className="h-auto flex-row gap-2 py-1.5 px-3 justify-center">
+          <MessageSquare className="h-4 w-4" />
+          <span className="font-medium text-sm">SMS</span>
           <span className="text-xs opacity-75">✨ AI-powered</span>
         </Button>
         <Button
           variant="outline"
-          className="h-auto flex-col py-4"
+          size="sm"
+          className="h-auto flex-row gap-2 py-1.5 px-3 justify-center"
           onClick={() => {
             if (lead?.phone) {
               window.open(`tel:${lead.phone}`, '_self')
@@ -631,26 +631,27 @@ function LeadDetail() {
             }
           }}
         >
-          <Phone className="mb-2 h-6 w-6" />
-          <span className="font-medium">Call</span>
+          <Phone className="h-4 w-4" />
+          <span className="font-medium text-sm">Call</span>
           <span className="text-xs opacity-75">{lead?.phone ? 'Quick dial' : 'No phone'}</span>
         </Button>
         <Button
           variant="outline"
-          className="h-auto flex-col py-4"
+          size="sm"
+          className="h-auto flex-row gap-2 py-1.5 px-3 justify-center"
           onClick={() => setShowLogCall(true)}
         >
-          <Phone className="mb-2 h-6 w-6" />
-          <span className="font-medium">Log Call</span>
+          <Phone className="h-4 w-4" />
+          <span className="font-medium text-sm">Log Call</span>
           <span className="text-xs opacity-75">Record outcome</span>
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="flex-1 min-h-0 grid gap-4 md:grid-cols-[1fr_320px] md:grid-rows-[1fr] overflow-hidden">
         {/* Main Info - Tabbed */}
-        <div className="md:col-span-2 space-y-4">
+        <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
           {/* Tab Navigation */}
-          <div className="flex gap-1 rounded-lg border bg-muted/30 p-1">
+          <div className="flex-shrink-0 flex gap-1 rounded-lg border bg-muted/30 p-1">
             <Button
               size="sm"
               variant={activeTab === 'overview' ? 'default' : 'ghost'}
@@ -703,45 +704,47 @@ function LeadDetail() {
 
           {/* Tab Content */}
           {activeTab === 'overview' && (
-            <div className="space-y-6">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
           {/* Contact Info Card */}
           <Card>
             <CardHeader>
               <CardTitle>Contact Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">{lead?.email || 'No email provided'}</p>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Email</p>
+                    <p className="text-sm text-muted-foreground truncate">{lead?.email || 'No email provided'}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Phone</p>
-                  <p className="text-sm text-muted-foreground">{lead?.phone || 'No phone provided'}</p>
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Phone</p>
+                    <p className="text-sm text-muted-foreground truncate">{lead?.phone || 'No phone provided'}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Building className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Company</p>
-                  <p className="text-sm text-muted-foreground">{lead?.company || 'No company provided'}</p>
+                <div className="flex items-center space-x-3">
+                  <Building className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Company</p>
+                    <p className="text-sm text-muted-foreground truncate">{lead?.company || 'No company provided'}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Created</p>
-                  <p className="text-sm text-muted-foreground">
-                    {lead?.createdAt ? new Date(lead.createdAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    }) : 'Unknown'}
-                  </p>
+                <div className="flex items-center space-x-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Created</p>
+                    <p className="text-sm text-muted-foreground">
+                      {lead?.createdAt ? new Date(lead.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      }) : 'Unknown'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -822,6 +825,7 @@ function LeadDetail() {
 
           {/* Communications Tab */}
           {activeTab === 'communications' && (
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -840,10 +844,12 @@ function LeadDetail() {
                 />
               </CardContent>
             </Card>
+            </div>
           )}
 
           {/* Notes Tab */}
           {activeTab === 'notes' && (
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -974,10 +980,12 @@ function LeadDetail() {
               </div>
             </CardContent>
           </Card>
+          </div>
           )}
 
           {/* Tasks Tab */}
           {activeTab === 'tasks' && (
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -992,16 +1000,19 @@ function LeadDetail() {
                 />
               </CardContent>
             </Card>
+            </div>
           )}
 
           {/* Documents Tab */}
           {activeTab === 'documents' && (
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
             <LeadDocumentsTab leadId={id!} />
+            </div>
           )}
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="min-h-0 overflow-y-auto space-y-3 pr-1">
           {/* AI Suggested Actions */}
           <AISuggestedActions 
             leadId={id}
@@ -1016,6 +1027,9 @@ function LeadDetail() {
             onBookDemo={() => {
               toast.info('Demo scheduling — navigate to calendar to book a meeting')
             }}
+            prediction={aiPrediction}
+            engagement={aiEngagement}
+            insightsLoading={loadingAI}
           />
 
           {/* Follow-Up Reminders */}
@@ -1050,130 +1064,6 @@ function LeadDetail() {
                 </div>
                 <p className={`mt-2 text-sm font-medium ${getScoreColor(lead.score)}`}>{getScoreLabel(lead.score)}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* AI Insights Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-primary" />
-                AI Insights
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {loadingAI ? (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-                  <p className="text-sm text-muted-foreground mt-2">Analyzing lead...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Conversion Probability */}
-                  {aiPrediction && (aiPrediction.conversionProbability > 0 || aiPrediction.estimatedValue > 0) && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        Conversion Prediction
-                      </p>
-                      {aiPrediction.conversionProbability > 0 && (
-                        <PredictionBadge 
-                          type="probability" 
-                          value={aiPrediction.conversionProbability} 
-                          size="md"
-                        />
-                      )}
-                      {aiPrediction.estimatedValue > 0 && (
-                        <PredictionBadge 
-                          type="value" 
-                          value={aiPrediction.estimatedValue} 
-                          size="md"
-                        />
-                      )}
-                      {aiPrediction.confidenceScore > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Confidence: {aiPrediction.confidenceScore}%
-                        </p>
-                      )}
-                      {aiPrediction.predictedCloseDateDays > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Estimated close: {aiPrediction.predictedCloseDateDays} days
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Engagement Analysis */}
-                  {aiEngagement && aiEngagement.engagementScore > 0 && (
-                    <div className="space-y-2 pt-3 border-t">
-                      <p className="text-sm font-medium flex items-center gap-2">
-                        <Target className="h-4 w-4" />
-                        Engagement
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <div className="text-2xl font-bold">{aiEngagement.engagementScore}%</div>
-                        {aiEngagement.trend && (
-                          <Badge variant={
-                            aiEngagement.trend === 'increasing' ? 'success' :
-                            aiEngagement.trend === 'declining' ? 'destructive' : 'secondary'
-                          }>
-                            {aiEngagement.trend}
-                          </Badge>
-                        )}
-                      </div>
-                      {aiEngagement.churnRisk && (
-                        <PredictionBadge 
-                          type="risk" 
-                          value={aiEngagement.churnRisk} 
-                          size="sm"
-                        />
-                      )}
-                      {aiEngagement.lastActivityDays > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Last activity: {aiEngagement.lastActivityDays} days ago
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Next Best Action */}
-                  {aiNextAction && aiNextAction.suggestedAction && (
-                    <div className="space-y-2 pt-3 border-t">
-                      <p className="text-sm font-medium flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Recommended Action
-                      </p>
-                      {aiNextAction.priority && (
-                        <Badge variant={
-                          aiNextAction.priority === 'critical' ? 'destructive' :
-                          aiNextAction.priority === 'high' ? 'warning' : 'secondary'
-                        }>
-                          {aiNextAction.priority} priority
-                        </Badge>
-                      )}
-                      <p className="text-sm font-medium">{aiNextAction.suggestedAction}</p>
-                      {aiNextAction.reasoning && (
-                        <p className="text-xs text-muted-foreground">{aiNextAction.reasoning}</p>
-                      )}
-                      {aiNextAction.timing && (
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-medium">Best time:</span> {aiNextAction.timing}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Show message when no meaningful AI data */}
-                  {(!aiPrediction || (aiPrediction.conversionProbability === 0 && aiPrediction.estimatedValue === 0)) &&
-                   (!aiEngagement || aiEngagement.engagementScore === 0) &&
-                   (!aiNextAction || !aiNextAction.suggestedAction) && (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      Not enough data for AI insights yet
-                    </div>
-                  )}
-                </>
-              )}
             </CardContent>
           </Card>
 
@@ -1285,7 +1175,7 @@ function LeadDetail() {
               </Button>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Basic Information */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
@@ -1348,9 +1238,16 @@ function LeadDetail() {
               </div>
 
               {/* Company Information */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Company Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="border rounded-lg">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between p-3 text-left hover:bg-muted/50 rounded-lg transition-colors"
+                  onClick={() => setEditSections(s => ({ ...s, company: !s.company }))}
+                >
+                  <h3 className="text-lg font-semibold">Company Information</h3>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${editSections.company ? 'rotate-180' : ''}`} />
+                </button>
+                {editSections.company && <div className="grid grid-cols-2 gap-4 px-3 pb-3">
                   <div>
                     <label className="text-sm font-medium">Company Name</label>
                     <Input
@@ -1397,13 +1294,20 @@ function LeadDetail() {
                       placeholder="https://example.com"
                     />
                   </div>
-                </div>
+                </div>}
               </div>
 
               {/* Address Information */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Address</h3>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="border rounded-lg">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between p-3 text-left hover:bg-muted/50 rounded-lg transition-colors"
+                  onClick={() => setEditSections(s => ({ ...s, address: !s.address }))}
+                >
+                  <h3 className="text-lg font-semibold">Address</h3>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${editSections.address ? 'rotate-180' : ''}`} />
+                </button>
+                {editSections.address && <div className="grid grid-cols-2 gap-4 px-3 pb-3">
                   <div className="col-span-2">
                     <label className="text-sm font-medium">Street Address</label>
                     <Input
@@ -1479,7 +1383,7 @@ function LeadDetail() {
                       placeholder="United States"
                     />
                   </div>
-                </div>
+                </div>}
               </div>
 
               {/* Lead Details */}
@@ -1576,9 +1480,16 @@ function LeadDetail() {
               </div>
 
               {/* Real Estate Information */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Real Estate Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="border rounded-lg">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between p-3 text-left hover:bg-muted/50 rounded-lg transition-colors"
+                  onClick={() => setEditSections(s => ({ ...s, realEstate: !s.realEstate }))}
+                >
+                  <h3 className="text-lg font-semibold">Real Estate Information</h3>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${editSections.realEstate ? 'rotate-180' : ''}`} />
+                </button>
+                {editSections.realEstate && <div className="grid grid-cols-2 gap-4 px-3 pb-3">
                   <div>
                     <label className="text-sm font-medium">Property Type</label>
                     <select
@@ -1691,18 +1602,26 @@ function LeadDetail() {
                       placeholder="2"
                     />
                   </div>
-                </div>
+                </div>}
               </div>
 
               {/* Notes */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Notes</h3>
-                <textarea
-                  className="w-full mt-1 p-2 border rounded-md min-h-[100px]"
+              <div className="border rounded-lg">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between p-3 text-left hover:bg-muted/50 rounded-lg transition-colors"
+                  onClick={() => setEditSections(s => ({ ...s, notes: !s.notes }))}
+                >
+                  <h3 className="text-lg font-semibold">Notes</h3>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${editSections.notes ? 'rotate-180' : ''}`} />
+                </button>
+                {editSections.notes && <div className="px-3 pb-3"><textarea
+                  className="w-full p-2 border rounded-md min-h-[100px]"
                   value={typeof editingLead.notes === 'string' ? editingLead.notes : ''}
                   onChange={(e) => setEditingLead({...editingLead, notes: e.target.value})}
                   placeholder="Add any additional notes about this lead..."
                 />
+                </div>}
               </div>
 
               {/* Action Buttons */}

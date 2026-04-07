@@ -126,6 +126,8 @@ model BusinessSettings {
   userId         String       @unique
   organizationId String
   companyName    String?
+  industry       String?
+  companySize    String?
   address        String?
   phone          String?
   website        String?
@@ -654,6 +656,7 @@ model User {
   failedLoginAttempts  Int                   @default(0)
   lockedUntil          DateTime?
   tosAcceptedAt        DateTime?
+  setupCompletedAt     DateTime?
   emailVerificationToken String?
   emailVerificationExpiry DateTime?
   // Cached from Subscription.tier — kept in sync by subscription update logic

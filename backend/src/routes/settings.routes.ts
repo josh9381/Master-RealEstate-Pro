@@ -302,6 +302,58 @@ router.post('/services/:service/test', requireAdmin, asyncHandler(async (req: Re
 // AI SETTINGS (Phase 3C)
 // ============================================
 
+// ============================================
+// SETUP WIZARD COMPLETION
+// ============================================
+
+/**
+ * @route   GET /api/settings/setup-status
+ * @desc    Get setup wizard completion status
+ * @access  Private
+ */
+router.get('/setup-status', asyncHandler(async (req: Request, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.userId },
+    select: {
+      setupCompletedAt: true,
+      emailVerified: true,
+      twoFactorEnabled: true,
+      phone: true,
+      jobTitle: true,
+      firstName: true,
+      lastName: true,
+    }
+  });
+  const hasEmailConfig = await prisma.emailConfig.count({ where: { userId: req.user!.userId } }) > 0;
+  const hasSmsConfig = await prisma.sMSConfig.count({ where: { userId: req.user!.userId } }) > 0;
+  const hasBusiness = await prisma.businessSettings.count({ where: { userId: req.user!.userId } }) > 0;
+  res.json({
+    success: true,
+    data: {
+      setupCompletedAt: user?.setupCompletedAt,
+      emailVerified: user?.emailVerified ?? false,
+      twoFactorEnabled: user?.twoFactorEnabled ?? false,
+      hasProfile: !!(user?.firstName && user?.lastName),
+      hasEmailConfig,
+      hasSmsConfig,
+      hasBusiness,
+    }
+  });
+}));
+
+/**
+ * @route   POST /api/settings/setup-complete
+ * @desc    Mark setup wizard as completed
+ * @access  Private
+ */
+router.post('/setup-complete', asyncHandler(async (req: Request, res: Response) => {
+  await prisma.user.update({
+    where: { id: req.user!.userId },
+    data: { setupCompletedAt: new Date() }
+  });
+  res.json({ success: true, message: 'Setup wizard marked as complete' });
+}));
+
 /**
  * @route   GET /api/settings/ai
  * @desc    Get organization AI settings

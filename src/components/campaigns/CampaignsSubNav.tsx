@@ -4,7 +4,9 @@ import {
   Mail,
   MessageSquare,
   Phone,
+  Share2,
   Calendar,
+  PieChart,
   BarChart3,
   FileText,
   FlaskConical,
@@ -16,6 +18,7 @@ import { Campaign } from '@/types'
 const pageNavItems = [
   { name: 'Templates', href: '/campaigns/templates', icon: FileText },
   { name: 'Schedule', href: '/campaigns/schedule', icon: Calendar },
+  { name: 'Analytics', href: '/campaigns/analytics', icon: PieChart },
   { name: 'Reports', href: '/campaigns/reports', icon: BarChart3 },
   { name: 'A/B Testing', href: '/campaigns/ab-testing', icon: FlaskConical },
 ]
@@ -25,9 +28,10 @@ const typeFilters = [
   { key: 'EMAIL' as const, label: 'Email', icon: Mail },
   { key: 'SMS' as const, label: 'SMS', icon: MessageSquare },
   { key: 'PHONE' as const, label: 'Phone', icon: Phone, comingSoon: true },
+  { key: 'SOCIAL' as const, label: 'Social Media', icon: Share2, comingSoon: true },
 ]
 
-type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE'
+type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL'
 
 interface CampaignsSubNavProps {
   /** Campaign data for showing counts in type filter buttons */

@@ -966,9 +966,9 @@ const CampaignReports = () => {
     <div className="space-y-6">
 
       <div>
-        <h1 className="text-3xl font-bold">Campaign Reports & Analytics</h1>
+        <h1 className="text-3xl font-bold">Campaign Reports</h1>
         <p className="text-muted-foreground mt-2">
-          Track performance, analyze trends, and explore detailed campaign metrics
+          Detailed campaign metrics, trend analysis, and exportable reports
         </p>
       </div>
 

@@ -43,6 +43,8 @@ export async function updateBusinessSettings(req: Request, res: Response): Promi
 
   const {
     companyName,
+    industry,
+    companySize,
     address,
     phone,
     website,
@@ -55,6 +57,8 @@ export async function updateBusinessSettings(req: Request, res: Response): Promi
     where: { userId: req.user.userId },
     update: {
       ...(companyName !== undefined && { companyName }),
+      ...(industry !== undefined && { industry }),
+      ...(companySize !== undefined && { companySize }),
       ...(address !== undefined && { address }),
       ...(phone !== undefined && { phone }),
       ...(website !== undefined && { website }),
@@ -66,6 +70,8 @@ export async function updateBusinessSettings(req: Request, res: Response): Promi
       userId: req.user.userId,
       organizationId: req.user.organizationId,
       companyName,
+      industry,
+      companySize,
       address,
       phone,
       website,

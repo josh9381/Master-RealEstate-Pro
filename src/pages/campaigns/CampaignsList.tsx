@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog'
-import { LINE_CHART_COLORS } from '@/lib/chartColors'
 import {
   Plus, Mail, MessageSquare, Phone, MoreHorizontal, Search,
   TrendingUp, DollarSign, Users, Target, Calendar as CalendarIcon,
@@ -19,14 +18,13 @@ import { CampaignRowMenu } from '@/components/campaigns/CampaignRowMenu'
 import type { CampaignRowMenuActions } from '@/components/campaigns/CampaignRowMenu'
 import { getStatusVariant } from '@/lib/campaignUtils'
 import { Campaign } from '@/types'
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useToast } from '@/hooks/useToast'
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar'
 import { campaignsApi, CampaignsQuery } from '@/lib/api'
 import { exportToCSV, campaignExportColumns } from '@/lib/exportService'
 import { FeatureGate, UsageBadge } from '@/components/subscription/FeatureGate'
-import { calcROI, calcOpenRate, calcClickRate, formatRate, calcRate, calcProgress, fmtMoney } from '@/lib/metricsCalculator'
-type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE'
+import { calcROI, calcOpenRate, calcClickRate, formatRate, calcProgress, fmtMoney } from '@/lib/metricsCalculator'
+type CampaignType = 'all' | 'EMAIL' | 'SMS' | 'PHONE' | 'SOCIAL'
 
 function CampaignsList() {
   const { toast } = useToast()
@@ -57,7 +55,7 @@ function CampaignsList() {
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([])
   const [showComparison, setShowComparison] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 12
+  const [pageSize, setPageSize] = useState(10)
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -87,7 +85,7 @@ function CampaignsList() {
 
   // Fetch campaigns from API with server-side pagination
   const { data: campaignsResponse, isLoading, isError } = useQuery({
-    queryKey: ['campaigns', debouncedSearch, activeTab, typeFilter, currentPage],
+    queryKey: ['campaigns', debouncedSearch, activeTab, typeFilter, currentPage, pageSize],
     queryFn: async () => {
       try {
         const params: CampaignsQuery = {
@@ -232,23 +230,6 @@ function CampaignsList() {
     }
   }, [allCampaignsForStats, typeFilter])
 
-  // Performance by type — use full dataset
-  const performanceByType = useMemo(() => {
-    const types = typeFilter === 'all' ? ['EMAIL', 'SMS', 'PHONE', 'SOCIAL'] : [typeFilter]
-    return types.map(type => {
-      const typeCampaigns = allCampaignsForStats.filter(c => (c.type || '').toUpperCase() === type)
-      const revenue = typeCampaigns.reduce((sum, c) => sum + (c.revenue ?? 0), 0)
-      const spent = typeCampaigns.reduce((sum, c) => sum + (c.spent ?? 0), 0)
-      return {
-        type: type.charAt(0) + type.slice(1).toLowerCase(),
-        campaigns: typeCampaigns.length,
-        revenue,
-        spent,
-        roi: calcROI(revenue, spent)
-      }
-    })
-  }, [allCampaignsForStats, typeFilter])
-
   // Calendar data
   // getStatusVariant imported from @/lib/campaignUtils
 
@@ -390,8 +371,6 @@ function CampaignsList() {
     toast.success(`Exported ${selectedCampaignsData.length} campaign(s)`)
   }
 
-  const COLORS = LINE_CHART_COLORS
-
   // Shared row menu actions for CampaignRowMenu component
   const rowMenuActions: CampaignRowMenuActions = {
     onDuplicate: (id) => {
@@ -452,7 +431,7 @@ function CampaignsList() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 10rem)' }}>
 
 
 
@@ -469,6 +448,8 @@ function CampaignsList() {
       )}
 
       {typeFilter !== 'PHONE' && (<>
+      {/* Fixed Top Section */}
+      <div className="flex-shrink-0 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -504,7 +485,7 @@ function CampaignsList() {
       />
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
@@ -556,95 +537,30 @@ function CampaignsList() {
             <p className="mt-1 text-xs text-muted-foreground">Return on investment</p>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Budget vs Spent Tracker */}
-      <Card className="hover:shadow-lg transition-shadow">
-        <CardHeader>
-          <CardTitle className="text-lg">Budget Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Total Budget</p>
-                <p className="text-2xl font-bold">{fmtMoney(stats.totalBudget)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Spent</p>
-                <p className="text-2xl font-bold">{fmtMoney(stats.totalSpent)}</p>
-              </div>
-              <div className="space-y-1 text-right">
-                <p className="text-sm font-medium text-muted-foreground">Remaining</p>
-                <p className="text-2xl font-bold text-green-600">{fmtMoney(stats.totalBudget - stats.totalSpent)}</p>
-              </div>
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Budget</CardTitle>
+            <div className="rounded-full bg-indigo-100 p-2.5">
+              <DollarSign className="h-4 w-4 text-indigo-600" />
             </div>
-            <div className="h-4 w-full overflow-hidden rounded-full bg-muted">
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{fmtMoney(stats.totalSpent)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">of {fmtMoney(stats.totalBudget)} budget</p>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                 style={{ width: `${calcProgress(stats.totalSpent, stats.totalBudget)}%` }}
               />
             </div>
-            <p className="text-sm text-muted-foreground">
-              {formatRate(calcRate(stats.totalSpent, stats.totalBudget))}% of budget used
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Performance by Type Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Performance by Campaign Type</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={performanceByType}>
-                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                <XAxis dataKey="type" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip />
-                <Legend />
-                <Bar yAxisId="left" dataKey="revenue" fill="#3b82f6" name="Revenue ($)" />
-                <Bar yAxisId="right" dataKey="campaigns" fill="#10b981" name="# Campaigns" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Revenue by Campaign Type</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={performanceByType}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ type, revenue }) => `${type}: ${fmtMoney(revenue)}`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="revenue"
-                >
-                  {performanceByType.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => fmtMoney(value)} />
-              </PieChart>
-            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters and View Toggle */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+      <Card className="p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="relative flex-1 md:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -654,45 +570,88 @@ function CampaignsList() {
               className="pl-9"
             />
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {selectedCampaigns.length > 1 && (
-            <Button variant="outline" onClick={() => setShowComparison(!showComparison)}>
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Compare ({selectedCampaigns.length})
-            </Button>
-          )}
-          <div className="flex items-center rounded-lg border">
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              title="List view"
-              aria-label="List view"
-            >
-              <LayoutList className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-              aria-label="Grid view"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('calendar')}
-              title="Calendar view"
-              aria-label="Calendar view"
-            >
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center gap-2">
+            {selectedCampaigns.length > 1 && (
+              <Button variant="outline" onClick={() => setShowComparison(!showComparison)}>
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Compare ({selectedCampaigns.length})
+              </Button>
+            )}
+            <div className="flex items-center rounded-lg border">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                title="List view"
+                aria-label="List view"
+              >
+                <LayoutList className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                title="Grid view"
+                aria-label="Grid view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('calendar')}
+                title="Calendar view"
+                aria-label="Calendar view"
+              >
+                <CalendarIcon className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Quick Start Templates */}
+        <div className="border-t pt-3">
+          <p className="text-sm font-medium mb-2">Quick Start Templates</p>
+          <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
+            <Link to="/campaigns/create?type=EMAIL&template=newsletter" className="flex items-center gap-2 rounded-lg border p-2.5 transition-all hover:bg-muted hover:border-primary/30">
+              <div className="rounded-full bg-blue-100 p-1.5 flex-shrink-0">
+                <Mail className="h-3.5 w-3.5 text-blue-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">Newsletter</p>
+                <p className="text-xs text-muted-foreground truncate">Regular updates</p>
+              </div>
+            </Link>
+            <Link to="/campaigns/create?type=EMAIL&template=promotional" className="flex items-center gap-2 rounded-lg border p-2.5 transition-all hover:bg-muted hover:border-primary/30">
+              <div className="rounded-full bg-green-100 p-1.5 flex-shrink-0">
+                <Tag className="h-3.5 w-3.5 text-green-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">Promotional</p>
+                <p className="text-xs text-muted-foreground truncate">Special offers</p>
+              </div>
+            </Link>
+            <Link to="/campaigns/create?type=SMS&template=open-house" className="flex items-center gap-2 rounded-lg border p-2.5 transition-all hover:bg-muted hover:border-primary/30">
+              <div className="rounded-full bg-purple-100 p-1.5 flex-shrink-0">
+                <CalendarIcon className="h-3.5 w-3.5 text-purple-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">Open House</p>
+                <p className="text-xs text-muted-foreground truncate">SMS invites</p>
+              </div>
+            </Link>
+            <Link to="/campaigns/create?type=EMAIL&template=survey" className="flex items-center gap-2 rounded-lg border p-2.5 transition-all hover:bg-muted hover:border-primary/30">
+              <div className="rounded-full bg-orange-100 p-1.5 flex-shrink-0">
+                <ClipboardList className="h-3.5 w-3.5 text-orange-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">Survey</p>
+                <p className="text-xs text-muted-foreground truncate">Customer feedback</p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </Card>
 
       {/* Status Tabs */}
       <div className="flex gap-1 border-b">
@@ -719,6 +678,11 @@ function CampaignsList() {
           )
         })}
       </div>
+      </div>{/* End fixed top section */}
+
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 mt-4">
+      <div className="space-y-3">
 
       {/* Empty State */}
       {filteredCampaigns.length === 0 && !isLoading && viewMode !== 'calendar' && (
@@ -839,7 +803,7 @@ function CampaignsList() {
           </div>
           {paginatedCampaigns.map((campaign) => (
             <Card key={campaign.id} className="hover:shadow-lg hover:border-primary/30 transition-all duration-200">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 pt-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <input
@@ -848,20 +812,20 @@ function CampaignsList() {
                       onChange={() => toggleCampaignSelection(String(campaign.id))}
                       className="rounded"
                     />
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       {getTypeIcon(campaign.type)}
                     </div>
                     <div>
-                      <CardTitle className="text-lg">
+                      <CardTitle className="text-base">
                         <Link to={`/campaigns/${campaign.id}`} className="hover:text-primary">
                           {campaign.name}
                         </Link>
                       </CardTitle>
-                      <div className="mt-1 flex items-center space-x-2">
+                      <div className="mt-0.5 flex items-center space-x-2">
                         <Badge variant={getStatusVariant(campaign.status)}>
                           {campaign.status}
                         </Badge>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           Started {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                         </span>
                         {campaign.abTest && (
@@ -887,15 +851,15 @@ function CampaignsList() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0 pb-3">
                 <div className="grid grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Sent</p>
-                    <p className="text-2xl font-bold">{(campaign.sent ?? 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Sent</p>
+                    <p className="text-lg font-bold">{(campaign.sent ?? 0).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Opened</p>
-                    <p className="text-2xl font-bold">{(campaign.opened ?? 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Opened</p>
+                    <p className="text-lg font-bold">{(campaign.opened ?? 0).toLocaleString()}</p>
                     {campaign.sent > 0 && campaign.opened && (
                       <p className="text-xs text-muted-foreground">
                         {formatRate(calcOpenRate(campaign.opened, campaign.sent))}%
@@ -903,8 +867,8 @@ function CampaignsList() {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Clicked</p>
-                    <p className="text-2xl font-bold">{(campaign.clicked ?? 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Clicked</p>
+                    <p className="text-lg font-bold">{(campaign.clicked ?? 0).toLocaleString()}</p>
                     {campaign.sent > 0 && campaign.clicked && (
                       <p className="text-xs text-muted-foreground">
                         {formatRate(calcClickRate(campaign.clicked, campaign.sent))}%
@@ -912,20 +876,20 @@ function CampaignsList() {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">ROI</p>
-                    <p className="text-2xl font-bold">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground">ROI</p>
+                    <p className="text-lg font-bold">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</p>
                     <p className="text-xs text-muted-foreground">
                       {fmtMoney(campaign.revenue ?? 0)} revenue
                     </p>
                   </div>
                 </div>
                 {campaign.budget && (
-                  <div className="mt-4">
-                    <div className="flex justify-between text-sm text-muted-foreground mb-1">
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-0.5">
                       <span>Budget: {fmtMoney(campaign.budget)}</span>
                       <span>Spent: {fmtMoney(campaign.spent ?? 0)}</span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                         style={{ width: `${calcProgress(campaign.spent ?? 0, campaign.budget)}%` }}
@@ -941,7 +905,7 @@ function CampaignsList() {
 
       {/* Campaign Grid View */}
       {viewMode === 'grid' && filteredCampaigns.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {paginatedCampaigns.map((campaign) => (
             <Card
               key={campaign.id}
@@ -951,8 +915,8 @@ function CampaignsList() {
               role="article"
               aria-label={`Campaign: ${campaign.name}`}
             >
-              <CardHeader>
-                <div className="flex items-center justify-between mb-2">
+              <CardHeader className="pb-2 pt-3 px-4">
+                <div className="flex items-center justify-between mb-1">
                   <input
                     type="checkbox"
                     checked={selectedCampaigns.includes(String(campaign.id))}
@@ -963,6 +927,7 @@ function CampaignsList() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-7 w-7"
                       onClick={() => setShowRowMenu(showRowMenu === String(campaign.id) ? null : String(campaign.id))}
                       aria-label="Campaign actions"
                     >
@@ -973,71 +938,58 @@ function CampaignsList() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center justify-center mb-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex items-center justify-center mb-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     {getTypeIcon(campaign.type)}
                   </div>
                 </div>
-                <CardTitle className="text-center text-lg line-clamp-2">
+                <CardTitle className="text-center text-sm line-clamp-1">
                   <Link to={`/campaigns/${campaign.id}`} className="hover:text-primary">
                     {campaign.name}
                   </Link>
                 </CardTitle>
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-                  <Badge variant={getStatusVariant(campaign.status)} className="text-xs">
+                <div className="flex items-center justify-center gap-1 mt-1">
+                  <Badge variant={getStatusVariant(campaign.status)} className="text-[10px] px-1.5 py-0">
                     {campaign.status}
                   </Badge>
                   {campaign.abTest && (
-                    <Badge variant="outline" className="text-xs">
-                      A/B Test
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      A/B
                     </Badge>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="flex-1">
-                <div className="space-y-3">
+              <CardContent className="flex-1 px-4 pb-3 pt-0">
+                <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Sent</span>
-                    <span className="font-bold">{(campaign.sent ?? 0).toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">Sent</span>
+                    <span className="font-semibold text-sm">{(campaign.sent ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Opens</span>
-                    <div className="text-right">
-                      <span className="font-bold">{(campaign.opened ?? 0).toLocaleString()}</span>
-                      {campaign.sent > 0 && campaign.opened && (
-                        <p className="text-xs text-muted-foreground">
-                          {formatRate(calcOpenRate(campaign.opened, campaign.sent))}%
-                        </p>
-                      )}
-                    </div>
+                    <span className="text-xs text-muted-foreground">Opens</span>
+                    <span className="font-semibold text-sm">
+                      {(campaign.opened ?? 0).toLocaleString()}
+                      {campaign.sent > 0 && campaign.opened ? <span className="text-xs text-muted-foreground ml-1">{formatRate(calcOpenRate(campaign.opened, campaign.sent))}%</span> : null}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Clicks</span>
-                    <div className="text-right">
-                      <span className="font-bold">{(campaign.clicked ?? 0).toLocaleString()}</span>
-                      {campaign.sent > 0 && campaign.clicked && (
-                        <p className="text-xs text-muted-foreground">
-                          {formatRate(calcClickRate(campaign.clicked, campaign.sent))}%
-                        </p>
-                      )}
-                    </div>
+                    <span className="text-xs text-muted-foreground">Clicks</span>
+                    <span className="font-semibold text-sm">
+                      {(campaign.clicked ?? 0).toLocaleString()}
+                      {campaign.sent > 0 && campaign.clicked ? <span className="text-xs text-muted-foreground ml-1">{formatRate(calcClickRate(campaign.clicked, campaign.sent))}%</span> : null}
+                    </span>
                   </div>
-                  <div className="pt-2 border-t">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">ROI</span>
-                      <span className="text-lg font-bold text-green-600">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground text-right">
-                      {fmtMoney(campaign.revenue ?? 0)} revenue
-                    </p>
+                  <div className="pt-1.5 border-t flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">ROI</span>
+                    <span className="font-bold text-sm text-green-600">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</span>
                   </div>
                   {campaign.budget && (
-                    <div className="pt-2">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <div className="pt-1">
+                      <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
                         <span>Budget</span>
                         <span>{fmtMoney(campaign.spent ?? 0)} / {fmtMoney(campaign.budget)}</span>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                           style={{ width: `${calcProgress(campaign.spent ?? 0, campaign.budget)}%` }}
@@ -1046,8 +998,8 @@ function CampaignsList() {
                     </div>
                   )}
                 </div>
-                <div className="mt-4 pt-3 border-t">
-                  <p className="text-xs text-muted-foreground text-center">
+                <div className="mt-2 pt-2 border-t">
+                  <p className="text-[10px] text-muted-foreground text-center">
                     Started {campaign.startDate ? new Date(campaign.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                   </p>
                 </div>
@@ -1057,51 +1009,67 @@ function CampaignsList() {
         </div>
       )}
 
-      {/* Pagination Controls */}
-      {(viewMode === 'list' || viewMode === 'grid') && totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredCampaigns.length)} of {filteredCampaigns.length} campaigns
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => p - 1)}
-            >
-              Previous
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-              .reduce<(number | 'ellipsis')[]>((acc, p, i, arr) => {
-                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('ellipsis')
-                acc.push(p)
-                return acc
-              }, [])
-              .map((p, i) =>
-                p === 'ellipsis' ? (
-                  <span key={`e${i}`} className="px-1 text-muted-foreground">…</span>
-                ) : (
-                  <Button
-                    key={p}
-                    variant={currentPage === p ? 'default' : 'outline'}
-                    size="sm"
-                    className="min-w-[36px]"
-                    onClick={() => setCurrentPage(p)}
-                  >
-                    {p}
-                  </Button>
-                )
-              )}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(p => p + 1)}
-            >
-              Next
-            </Button>
+      </div>{/* End space-y-3 */}
+      </div>{/* End scrollable content area */}
+
+      {/* Fixed Bottom: Pagination Controls */}
+      {(viewMode === 'list' || viewMode === 'grid') && (
+        <div className="flex-shrink-0 pt-4 border-t">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Show</span>
+              <select className="border rounded-md p-1 text-sm" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-muted-foreground">
+                per page • Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, campaignsResponse?.pagination?.total || filteredCampaigns.length)} of {campaignsResponse?.pagination?.total || filteredCampaigns.length} campaigns
+              </span>
+            </div>
+            {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
+                Previous
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .reduce<(number | 'ellipsis')[]>((acc, p, i, arr) => {
+                  if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('ellipsis')
+                  acc.push(p)
+                  return acc
+                }, [])
+                .map((p, i) =>
+                  p === 'ellipsis' ? (
+                    <span key={`e${i}`} className="px-1 text-muted-foreground">…</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={currentPage === p ? 'default' : 'outline'}
+                      size="sm"
+                      className="min-w-[36px]"
+                      onClick={() => setCurrentPage(p)}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+            )}
           </div>
         </div>
       )}
@@ -1193,53 +1161,6 @@ function CampaignsList() {
           </Card>
         )
       })()}
-
-      {/* Quick Start Templates */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Start Templates</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link to="/campaigns/create?type=EMAIL&template=newsletter">
-              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
-                <div className="rounded-full bg-blue-100 p-2.5 w-fit mb-3">
-                  <Mail className="h-5 w-5 text-blue-600" />
-                </div>
-                <p className="font-medium">Newsletter</p>
-                <p className="text-xs text-muted-foreground mt-1">Regular updates to your audience</p>
-              </div>
-            </Link>
-            <Link to="/campaigns/create?type=EMAIL&template=promotional">
-              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
-                <div className="rounded-full bg-green-100 p-2.5 w-fit mb-3">
-                  <Tag className="h-5 w-5 text-green-600" />
-                </div>
-                <p className="font-medium">Promotional</p>
-                <p className="text-xs text-muted-foreground mt-1">Drive sales with special offers</p>
-              </div>
-            </Link>
-            <Link to="/campaigns/create?type=SMS&template=open-house">
-              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
-                <div className="rounded-full bg-purple-100 p-2.5 w-fit mb-3">
-                  <CalendarIcon className="h-5 w-5 text-purple-600" />
-                </div>
-                <p className="font-medium">Open House Invite</p>
-                <p className="text-xs text-muted-foreground mt-1">Invite leads to open houses via SMS</p>
-              </div>
-            </Link>
-            <Link to="/campaigns/create?type=EMAIL&template=survey">
-              <div className="cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:bg-muted hover:shadow-md hover:border-primary/30">
-                <div className="rounded-full bg-orange-100 p-2.5 w-fit mb-3">
-                  <ClipboardList className="h-5 w-5 text-orange-600" />
-                </div>
-                <p className="font-medium">Survey</p>
-                <p className="text-xs text-muted-foreground mt-1">Gather customer feedback</p>
-              </div>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
 
       </>)}
 
