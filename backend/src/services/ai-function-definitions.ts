@@ -834,6 +834,475 @@ export const AI_FUNCTIONS = [
       required: ['provider'],
     },
   },
+
+  // ============================================
+  // PIPELINE MANAGEMENT
+  // ============================================
+  {
+    name: 'get_pipelines',
+    description: 'List all sales pipelines with their stages',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'create_pipeline',
+    description: 'Create a new sales pipeline with stages',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Pipeline name' },
+        description: { type: 'string', description: 'Pipeline description' },
+        stages: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Stage names in order (e.g., ["New", "Contacted", "Qualified", "Won"])',
+        },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'move_lead_to_stage',
+    description: 'Move a lead to a different pipeline stage',
+    parameters: {
+      type: 'object',
+      properties: {
+        leadId: { type: 'string', description: 'ID of the lead to move' },
+        pipelineId: { type: 'string', description: 'Pipeline ID (optional, uses default if omitted)' },
+        stageId: { type: 'string', description: 'Target stage ID' },
+        stageName: { type: 'string', description: 'Target stage name (alternative to stageId)' },
+      },
+      required: ['leadId'],
+    },
+  },
+  {
+    name: 'get_pipeline_leads',
+    description: 'Get all leads in a specific pipeline, grouped by stage',
+    parameters: {
+      type: 'object',
+      properties: {
+        pipelineId: { type: 'string', description: 'Pipeline ID (uses default if omitted)' },
+      },
+    },
+  },
+
+  // ============================================
+  // GOAL TRACKING
+  // ============================================
+  {
+    name: 'create_goal',
+    description: 'Create a performance goal (e.g., close 10 deals this month)',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Goal name' },
+        metricType: {
+          type: 'string',
+          enum: ['LEADS_GENERATED', 'DEALS_CLOSED', 'REVENUE', 'CALLS_MADE', 'EMAILS_SENT', 'APPOINTMENTS_SET', 'CONVERSION_RATE'],
+          description: 'What metric to track',
+        },
+        targetValue: { type: 'number', description: 'Target value to achieve' },
+        period: {
+          type: 'string',
+          enum: ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'],
+          description: 'Goal period (default: MONTHLY)',
+        },
+        startDate: { type: 'string', description: 'Start date (ISO format, defaults to today)' },
+        endDate: { type: 'string', description: 'End date (ISO format, defaults to end of period)' },
+        notes: { type: 'string', description: 'Notes about the goal' },
+      },
+      required: ['name', 'metricType', 'targetValue'],
+    },
+  },
+  {
+    name: 'list_goals',
+    description: 'List all active goals with progress',
+    parameters: {
+      type: 'object',
+      properties: {
+        activeOnly: { type: 'boolean', description: 'Only show active goals (default: true)' },
+      },
+    },
+  },
+  {
+    name: 'update_goal',
+    description: 'Update a goal (target, name, progress, or mark complete)',
+    parameters: {
+      type: 'object',
+      properties: {
+        goalId: { type: 'string', description: 'ID of the goal' },
+        name: { type: 'string' },
+        targetValue: { type: 'number' },
+        currentValue: { type: 'number', description: 'Manually set current progress' },
+        isActive: { type: 'boolean' },
+        notes: { type: 'string' },
+      },
+      required: ['goalId'],
+    },
+  },
+  {
+    name: 'delete_goal',
+    description: 'Delete a goal',
+    parameters: {
+      type: 'object',
+      properties: {
+        goalId: { type: 'string', description: 'ID of the goal to delete' },
+      },
+      required: ['goalId'],
+    },
+  },
+
+  // ============================================
+  // CALL LOGGING
+  // ============================================
+  {
+    name: 'log_call',
+    description: 'Log a phone call with a lead',
+    parameters: {
+      type: 'object',
+      properties: {
+        leadId: { type: 'string', description: 'ID of the lead called' },
+        direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND'], description: 'Call direction' },
+        phoneNumber: { type: 'string', description: 'Phone number' },
+        outcome: {
+          type: 'string',
+          enum: ['ANSWERED', 'VOICEMAIL', 'NO_ANSWER', 'BUSY', 'WRONG_NUMBER', 'CALLBACK_REQUESTED', 'INTERESTED', 'NOT_INTERESTED'],
+          description: 'Call outcome',
+        },
+        duration: { type: 'number', description: 'Call duration in seconds' },
+        notes: { type: 'string', description: 'Call notes' },
+        followUpDate: { type: 'string', description: 'Follow-up date if needed (ISO format)' },
+      },
+      required: ['leadId', 'direction', 'phoneNumber'],
+    },
+  },
+  {
+    name: 'get_call_stats',
+    description: 'Get call statistics (total calls, answered, avg duration, etc.)',
+    parameters: {
+      type: 'object',
+      properties: {
+        timeRange: { type: 'string', enum: ['today', 'week', 'month', 'quarter'], description: 'Time range for stats' },
+      },
+    },
+  },
+  {
+    name: 'get_calls',
+    description: 'List recent calls with details',
+    parameters: {
+      type: 'object',
+      properties: {
+        leadId: { type: 'string', description: 'Filter by lead ID' },
+        limit: { type: 'number', description: 'Max results (default: 20)' },
+      },
+    },
+  },
+
+  // ============================================
+  // NOTIFICATIONS
+  // ============================================
+  {
+    name: 'get_notifications',
+    description: 'Get user notifications (unread or all)',
+    parameters: {
+      type: 'object',
+      properties: {
+        unreadOnly: { type: 'boolean', description: 'Only show unread notifications' },
+        limit: { type: 'number', description: 'Max results (default: 20)' },
+      },
+    },
+  },
+  {
+    name: 'get_unread_notification_count',
+    description: 'Get the count of unread notifications',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'mark_notifications_read',
+    description: 'Mark all notifications as read',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+
+  // ============================================
+  // LIST/SEARCH FUNCTIONS (Missing from existing)
+  // ============================================
+  {
+    name: 'list_campaigns',
+    description: 'List all marketing campaigns with status and basic stats',
+    parameters: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED', 'SCHEDULED'] },
+        limit: { type: 'number', description: 'Max results (default: 20)' },
+      },
+    },
+  },
+  {
+    name: 'list_workflows',
+    description: 'List all automation workflows with status',
+    parameters: {
+      type: 'object',
+      properties: {
+        activeOnly: { type: 'boolean', description: 'Only show active workflows' },
+      },
+    },
+  },
+  {
+    name: 'list_tasks',
+    description: 'List tasks with optional filters',
+    parameters: {
+      type: 'object',
+      properties: {
+        leadId: { type: 'string', description: 'Filter by lead' },
+        status: { type: 'string', enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] },
+        limit: { type: 'number', description: 'Max results (default: 20)' },
+      },
+    },
+  },
+  {
+    name: 'list_email_templates',
+    description: 'List all email templates',
+    parameters: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', description: 'Filter by category' },
+      },
+    },
+  },
+  {
+    name: 'list_sms_templates',
+    description: 'List all SMS templates',
+    parameters: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', description: 'Filter by category' },
+      },
+    },
+  },
+
+  // ============================================
+  // CUSTOM FIELDS
+  // ============================================
+  {
+    name: 'get_custom_fields',
+    description: 'List all custom field definitions for the CRM',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'create_custom_field',
+    description: 'Create a new custom field for leads (e.g., "Property Type", "Budget Range")',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Field display name' },
+        fieldKey: { type: 'string', description: 'Unique key (auto-generated from name if omitted)' },
+        type: {
+          type: 'string',
+          enum: ['TEXT', 'NUMBER', 'DATE', 'SELECT', 'MULTI_SELECT', 'BOOLEAN', 'EMAIL', 'PHONE', 'URL', 'TEXTAREA'],
+          description: 'Field data type',
+        },
+        required: { type: 'boolean', description: 'Whether the field is required' },
+        options: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Options for SELECT/MULTI_SELECT fields',
+        },
+        placeholder: { type: 'string', description: 'Placeholder text' },
+      },
+      required: ['name', 'type'],
+    },
+  },
+  {
+    name: 'delete_custom_field',
+    description: 'Delete a custom field definition',
+    parameters: {
+      type: 'object',
+      properties: {
+        fieldId: { type: 'string', description: 'ID of the custom field to delete' },
+      },
+      required: ['fieldId'],
+    },
+  },
+
+  // ============================================
+  // EXPORT DATA
+  // ============================================
+  {
+    name: 'export_data',
+    description: 'Export data as CSV (leads, activities, campaigns, etc.)',
+    parameters: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['leads', 'activities', 'campaigns', 'tasks'],
+          description: 'Type of data to export',
+        },
+        format: { type: 'string', enum: ['csv', 'json'], description: 'Export format (default: csv)' },
+        status: { type: 'string', description: 'Filter by status' },
+      },
+      required: ['type'],
+    },
+  },
+
+  // ============================================
+  // SAVED FILTERS & REPORTS
+  // ============================================
+  {
+    name: 'list_saved_filters',
+    description: 'List saved filter views for leads',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'create_saved_filter',
+    description: 'Save a lead filter view for quick access',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Filter name' },
+        filterConfig: {
+          type: 'object',
+          description: 'Filter configuration (status, score range, tags, etc.)',
+        },
+        color: { type: 'string', description: 'Color for the filter (hex)' },
+        icon: { type: 'string', description: 'Icon name' },
+      },
+      required: ['name', 'filterConfig'],
+    },
+  },
+  {
+    name: 'delete_saved_filter',
+    description: 'Delete a saved filter view',
+    parameters: {
+      type: 'object',
+      properties: {
+        filterId: { type: 'string', description: 'ID of the filter to delete' },
+      },
+      required: ['filterId'],
+    },
+  },
+  {
+    name: 'list_saved_reports',
+    description: 'List all saved reports',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'create_saved_report',
+    description: 'Create a saved report configuration',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Report name' },
+        description: { type: 'string' },
+        type: { type: 'string', enum: ['leads', 'campaigns', 'activities', 'revenue'] },
+        config: { type: 'object', description: 'Report configuration' },
+      },
+      required: ['name', 'type', 'config'],
+    },
+  },
+  {
+    name: 'delete_saved_report',
+    description: 'Delete a saved report',
+    parameters: {
+      type: 'object',
+      properties: {
+        reportId: { type: 'string', description: 'ID of the report to delete' },
+      },
+      required: ['reportId'],
+    },
+  },
+
+  // ============================================
+  // TEAM MANAGEMENT
+  // ============================================
+  {
+    name: 'list_team_members',
+    description: 'List all team members in the organization',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_user_profile',
+    description: 'Get the current user profile information',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'update_user_profile',
+    description: 'Update user profile (name, phone, timezone)',
+    parameters: {
+      type: 'object',
+      properties: {
+        firstName: { type: 'string' },
+        lastName: { type: 'string' },
+        phone: { type: 'string' },
+        timezone: { type: 'string', description: 'Timezone (e.g., America/New_York)' },
+      },
+    },
+  },
+  {
+    name: 'get_business_settings',
+    description: 'Get organization/business settings',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'update_business_settings',
+    description: 'Update organization/business settings',
+    parameters: {
+      type: 'object',
+      properties: {
+        companyName: { type: 'string' },
+        industry: { type: 'string' },
+        website: { type: 'string' },
+        phone: { type: 'string' },
+        address: { type: 'string' },
+        city: { type: 'string' },
+        state: { type: 'string' },
+        timezone: { type: 'string' },
+      },
+    },
+  },
+
+  // ============================================
+  // APPOINTMENTS LIST
+  // ============================================
+  {
+    name: 'list_appointments',
+    description: 'List upcoming and recent appointments/meetings',
+    parameters: {
+      type: 'object',
+      properties: {
+        leadId: { type: 'string', description: 'Filter by lead' },
+        status: { type: 'string', enum: ['SCHEDULED', 'CONFIRMED', 'CANCELLED', 'COMPLETED'] },
+        upcoming: { type: 'boolean', description: 'Only show upcoming (default: true)' },
+        limit: { type: 'number', description: 'Max results (default: 20)' },
+      },
+    },
+  },
 ];
 
 export interface FunctionArgs {
@@ -922,6 +1391,61 @@ export interface FunctionArgs {
   provider?: string;
   apiKey?: string;
   additionalConfig?: Record<string, unknown>;
+
+  // Pipeline fields
+  pipelineId?: string;
+  stageId?: string;
+  stageName?: string;
+  stages?: string[];
+
+  // Goal fields
+  goalId?: string;
+  metricType?: string;
+  targetValue?: number;
+  currentValue?: number;
+  period?: string;
+  startDate?: string;
+  endDate?: string;
+  isActive?: boolean;
+  activeOnly?: boolean;
+
+  // Call fields
+  direction?: string;
+  phoneNumber?: string;
+  outcome?: string;
+  followUpDate?: string;
+
+  // Notification fields
+  unreadOnly?: boolean;
+
+  // Custom field fields
+  fieldId?: string;
+  fieldKey?: string;
+  fieldType?: string;
+  options?: string[];
+  placeholder?: string;
+
+  // Export fields
+  format?: string;
+
+  // Saved filter/report fields
+  filterId?: string;
+  reportId?: string;
+  filterConfig?: Record<string, unknown>;
+  config?: Record<string, unknown>;
+  icon?: string;
+
+  // Settings fields
+  companyName?: string;
+  industry?: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  timezone?: string;
+
+  // Appointment list fields
+  upcoming?: boolean;
 }
 
 /**
@@ -934,12 +1458,14 @@ export const DESTRUCTIVE_FUNCTIONS = new Set([
   'delete_note', 'delete_tag', 'delete_campaign', 'delete_workflow',
   'delete_email_template', 'delete_sms_template', 'bulk_delete_leads',
   'send_campaign', 'disconnect_integration',
+  'delete_goal', 'delete_custom_field', 'delete_saved_filter', 'delete_saved_report',
 ]);
 
 export const ADMIN_ONLY_FUNCTIONS = new Set([
   'delete_lead', 'bulk_delete_leads', 'bulk_update_leads',
   'delete_campaign', 'delete_workflow', 'delete_email_template',
   'delete_sms_template', 'disconnect_integration',
+  'delete_custom_field', 'update_business_settings',
 ]);
 
 export const READ_ONLY_FUNCTIONS = new Set([
@@ -948,4 +1474,12 @@ export const READ_ONLY_FUNCTIONS = new Set([
   'get_conversion_funnel', 'get_campaign_analytics',
   'predict_conversion', 'get_next_action', 'analyze_engagement',
   'identify_at_risk_leads',
+  'get_pipelines', 'get_pipeline_leads', 'list_goals',
+  'get_call_stats', 'get_calls', 'get_notifications', 'get_unread_notification_count',
+  'list_campaigns', 'list_workflows', 'list_tasks',
+  'list_email_templates', 'list_sms_templates',
+  'get_custom_fields', 'export_data',
+  'list_saved_filters', 'list_saved_reports',
+  'list_team_members', 'get_user_profile', 'get_business_settings',
+  'list_appointments',
 ]);

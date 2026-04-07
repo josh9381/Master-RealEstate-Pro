@@ -320,8 +320,8 @@ const UsageAnalytics = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {activityData.length > 0 ? activityData.slice(0, 5).map((activity: Record<string, unknown>) => (
-              <div key={(activity.id as string) || `activity-${(activity.createdAt as string) || Math.random()}`} className="flex items-center justify-between p-3 border rounded-lg">
+            {activityData.length > 0 ? activityData.slice(0, 5).map((activity: Record<string, unknown>, index: number) => (
+              <div key={(activity.id as string) || `activity-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted text-sm font-medium">
                     {((activity.userName as string) || (typeof activity.user === 'object' && activity.user !== null ? (activity.user as Record<string, string>).firstName || (activity.user as Record<string, string>).name : activity.user as string) || 'S').toString().charAt(0)}

@@ -64,7 +64,7 @@ const AdminPanel = () => {
                     <Shield className="w-8 h-8 text-blue-500" />
                     <div>
                       <p className="font-medium">System Health</p>
-                      <p className="text-sm text-muted-foreground">All systems operational</p>
+                      <p className="text-sm text-muted-foreground">Monitored via health checks</p>
                     </div>
                   </div>
                   <Badge>Healthy</Badge>
@@ -75,7 +75,7 @@ const AdminPanel = () => {
                     <Database className="w-8 h-8 text-purple-500" />
                     <div>
                       <p className="font-medium">Database</p>
-                      <p className="text-sm text-muted-foreground">Last backup: 2 hours ago</p>
+                      <p className="text-sm text-muted-foreground">Check backup history in Database Maintenance</p>
                     </div>
                   </div>
                   <Badge>Active</Badge>

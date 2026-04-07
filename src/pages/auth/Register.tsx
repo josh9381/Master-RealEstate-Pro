@@ -29,6 +29,11 @@ function Register() {
       toast.error('Missing fields', 'Please fill in all required fields')
       return
     }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email)) {
+      toast.error('Invalid email', 'Please enter a valid email address')
+      return
+    }
     
     if (formData.password !== formData.confirmPassword) {
       toast.error('Password mismatch', 'Passwords do not match')

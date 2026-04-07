@@ -74,6 +74,7 @@ const CampaignAnalytics = lazyWithRetry(() => import('./pages/campaigns/Campaign
 const AIHub = lazyWithRetry(() => import('./pages/ai/AIHub'))
 const LeadScoring = lazyWithRetry(() => import('./pages/ai/LeadScoring'))
 const Segmentation = lazyWithRetry(() => import('./pages/leads/segments/Segmentation'))
+const AISegmentation = lazyWithRetry(() => import('./pages/ai/Segmentation'))
 const IntelligenceHub = lazyWithRetry(() => import('./pages/ai/IntelligenceHub'))
 const AIAnalytics = lazyWithRetry(() => import('./pages/ai/AIAnalytics'))
 const AISettings = lazyWithRetry(() => import('./pages/ai/AISettings'))
@@ -215,7 +216,7 @@ function App() {
         {/* AI Hub */}
         <Route path="/ai" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Hub"><AIHub /></PageErrorBoundary></Suspense></AIHubLayout>} />
         <Route path="/ai/lead-scoring" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Lead Scoring"><LeadScoring /></PageErrorBoundary></Suspense></AIHubLayout>} />
-        <Route path="/ai/segmentation" element={<Navigate to="/leads/segments" replace />} />
+        <Route path="/ai/segmentation" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="AI Segmentation"><AISegmentation /></PageErrorBoundary></Suspense></AIHubLayout>} />
         <Route path="/ai/intelligence" element={<AIHubLayout><Suspense fallback={<PageLoader />}><PageErrorBoundary pageName="Intelligence Hub"><IntelligenceHub /></PageErrorBoundary></Suspense></AIHubLayout>} />
         <Route path="/ai/predictive" element={<Navigate to="/ai/intelligence" replace />} />
         <Route path="/ai/insights" element={<Navigate to="/ai/intelligence" replace />} />

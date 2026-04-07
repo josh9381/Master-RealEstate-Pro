@@ -49,25 +49,27 @@ export function MessagePreview({
   }
 
   return (
-    <div className="bg-card text-card-foreground border border-border rounded-lg shadow-sm p-4 my-4">
+    <div className="bg-card text-card-foreground border border-border/60 rounded-xl shadow-sm p-4 my-4 hover:shadow-md transition-shadow">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="text-primary">{getIcon()}</div>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/10 to-indigo-500/10">
+            <span className="text-purple-600 dark:text-purple-400">{getIcon()}</span>
+          </div>
           <h3 className="font-semibold text-foreground">{getTitle()}</h3>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
+          <span className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full font-medium border border-purple-200/60 dark:border-purple-800/40">
             {content.tone}
           </span>
-          <span className="px-2 py-1 bg-muted text-muted-foreground rounded">
+          <span className="px-2.5 py-1 bg-muted text-muted-foreground rounded-full">
             {content.purpose}
           </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="bg-muted rounded p-3 mb-3">
+      <div className="bg-muted/50 rounded-xl p-3.5 mb-3 border border-border/30">
         {type === 'email' && (
           <>
             <div className="mb-2">
@@ -103,16 +105,16 @@ export function MessagePreview({
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Button onClick={onApply} size="sm" className="gap-2">
-          <Send className="w-4 h-4" />
+        <Button onClick={onApply} size="sm" className="gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-sm shadow-purple-500/20">
+          <Send className="w-3.5 h-3.5" />
           Apply to Campaign
         </Button>
-        <Button onClick={onEdit} variant="outline" size="sm" className="gap-2">
-          <Edit className="w-4 h-4" />
+        <Button onClick={onEdit} variant="outline" size="sm" className="gap-2 rounded-xl">
+          <Edit className="w-3.5 h-3.5" />
           Edit
         </Button>
-        <Button onClick={onCopy} variant="outline" size="sm" className="gap-2">
-          <Copy className="w-4 h-4" />
+        <Button onClick={onCopy} variant="outline" size="sm" className="gap-2 rounded-xl">
+          <Copy className="w-3.5 h-3.5" />
           Copy
         </Button>
       </div>

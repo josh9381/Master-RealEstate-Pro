@@ -1,4 +1,4 @@
-import { CreditCard, Building2, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { CreditCard, Building2, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -181,16 +181,20 @@ const PaymentMethods = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      {!method.isDefault && (
-                        <Button variant="outline" size="sm" onClick={() => toast.info('Payment method management is handled by your payment provider')}>
-                          Set as Default
-                        </Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => toast.info('Payment method management is handled by your payment provider')}>
-                        Edit
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => toast.info('Payment method management is handled by your payment provider')}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                      <Button variant="outline" size="sm" onClick={async () => {
+                        try {
+                          const result = await billingApi.getBillingPortal();
+                          const url = result?.data?.url || result?.url;
+                          if (url) {
+                            window.open(url, '_blank');
+                          } else {
+                            toast.info('Stripe billing portal is not available. Ensure Stripe is configured.');
+                          }
+                        } catch {
+                          toast.info('Stripe billing portal is not available. Ensure STRIPE_SECRET_KEY is configured.');
+                        }
+                      }}>
+                        Manage in Stripe
                       </Button>
                     </div>
                   </div>

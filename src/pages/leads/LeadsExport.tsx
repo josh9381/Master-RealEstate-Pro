@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { leadsApi, usersApi, exportApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { useAuthStore } from '@/store/authStore';
 import type { Lead, TeamMember } from '@/types';
 
@@ -59,6 +60,7 @@ const LeadsExport = () => {
   })
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(ALL_FIELDS))
   const { toast } = useToast();
+  const showConfirm = useConfirm();
 
   const [exportFormat, setExportFormat] = useState<'xlsx' | 'csv' | 'json'>('xlsx');
 
@@ -88,10 +90,26 @@ const LeadsExport = () => {
   };
 
   const handleExport = async (format: string) => {
+    // Validate date range
+    if (exportFilters.dateFrom && exportFilters.dateTo && exportFilters.dateFrom > exportFilters.dateTo) {
+      toast.error('"Date From" must be before "Date To"');
+      return;
+    }
+
+    // Warn about export cap if total leads exceed limit
+    const EXPORT_LIMIT = 1000;
+    if (totalLeads > EXPORT_LIMIT) {
+      const confirmed = await showConfirm({
+        title: 'Export Limit',
+        message: `Your export will be capped at ${EXPORT_LIMIT.toLocaleString()} records out of ${totalLeads.toLocaleString()} total leads. Narrow your filters to export specific subsets. Continue?`,
+        confirmLabel: 'Export Anyway',
+      });
+      if (!confirmed) return;
+    }
+
     setIsExporting(true);
     try {
       // Build query params from filters
-      const EXPORT_LIMIT = 1000;
       const params: Record<string, string | number> = { limit: EXPORT_LIMIT };
       if (exportFilters.status !== 'all') params.status = exportFilters.status.toUpperCase();
       if (exportFilters.assignedTo !== 'all') params.assignedTo = exportFilters.assignedTo;
@@ -212,6 +230,12 @@ const LeadsExport = () => {
   if (selectedFields.size < ALL_FIELDS.length) activeFilters.push(`${selectedFields.size}/${ALL_FIELDS.length} fields`);
 
   const handleMainExport = async () => {
+    // Validate date range
+    if (exportFilters.dateFrom && exportFilters.dateTo && exportFilters.dateFrom > exportFilters.dateTo) {
+      toast.error('"Date From" must be before "Date To"');
+      return;
+    }
+
     if (exportFormat === 'xlsx') {
       setIsExporting(true);
       try {
@@ -529,7 +553,7 @@ const LeadsExport = () => {
                     variant="ghost"
                     size="sm"
                     className="shrink-0 text-muted-foreground"
-                    onClick={() => toast.info('Server-side exports are downloaded directly. Run the export again to re-download.')}
+                    onClick={() => handleMainExport()}
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Re-export

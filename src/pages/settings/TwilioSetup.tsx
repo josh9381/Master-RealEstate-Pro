@@ -27,9 +27,9 @@ const TwilioSetup = () => {
   const [showAuthToken, setShowAuthToken] = useState(false);
   
   // Status indicators
-  const [_isConfigured, setIsConfigured] = useState(false);
+  const [, setIsConfigured] = useState(false);
   const [hasCredentials, setHasCredentials] = useState(false);
-  const [configMode, setConfigMode] = useState<'production' | 'mock' | 'environment'>('mock');
+  const [configMode, setConfigMode] = useState<'production' | 'mock' | 'environment'>('environment');
   const [lastTested, setLastTested] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   
@@ -134,7 +134,7 @@ const TwilioSetup = () => {
     setHasCredentials(credentialsExist);
     setConnected(!!config.isActive && credentialsExist);
     setIsConfigured(config.isActive && credentialsExist);
-    setConfigMode(credentialsExist ? 'production' : 'mock');
+    setConfigMode(credentialsExist ? 'production' : 'environment');
     
     // Sync SMS sub-settings
     if (config.smsCharLimit != null) setSmsCharLimit(config.smsCharLimit);
@@ -260,7 +260,7 @@ const TwilioSetup = () => {
       setConnected(result.mode !== 'mock');
       
       if (result.mode === 'mock') {
-        toast.success('Test SMS sent in MOCK mode (no actual delivery). Save your credentials first.');
+        toast.warning('No credentials configured — SMS was not actually delivered. Save your Twilio credentials first, then test again.');
       } else {
         toast.success(`Test SMS sent successfully in PRODUCTION mode!`);
       }
@@ -269,7 +269,7 @@ const TwilioSetup = () => {
       const message = (error as {response?: {data?: {error?: string}}, message?: string})?.response?.data?.error || (error as Error)?.message || 'Failed to send test SMS';
       toast.error(message);
       setConnected(false);
-      setConfigMode('mock');
+      setConfigMode('environment');
       setIsConfigured(false);
     } finally {
       setTestingConnection(false);
@@ -293,7 +293,7 @@ const TwilioSetup = () => {
       setHasCredentials(false);
       setConnected(false);
       setIsConfigured(false);
-      setConfigMode('mock');
+      setConfigMode('environment');
       setPhoneNumbers([]);
       
       queryClient.invalidateQueries({ queryKey: ['settings', 'twilio', 'config'] });

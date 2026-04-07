@@ -35,7 +35,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast'
-import { callsApi } from '@/lib/api'
+import { callsApi, settingsApi } from '@/lib/api'
 
 interface QueueLead {
   id: string
@@ -142,6 +142,21 @@ const CallCenter = () => {
     return `${m}:${s.toString().padStart(2, '0')}`
   }, [])
 
+  // Check if Twilio is configured
+  const { data: twilioConfig } = useQuery({
+    queryKey: ['twilio-config-status'],
+    queryFn: async () => {
+      try {
+        const config = await settingsApi.getSMSConfig()
+        return config?.config || config
+      } catch {
+        return null
+      }
+    },
+    staleTime: 300_000,
+  })
+  const isTwilioConfigured = !!(twilioConfig?.isActive && twilioConfig?.hasCredentials)
+
   // Smart call queue
   const { data: queueData, isLoading: queueLoading } = useQuery({
     queryKey: ['call-queue'],
@@ -218,8 +233,8 @@ const CallCenter = () => {
     const cleanPhone = selectedLead.phone.replace(/[^\d+]/g, '')
     window.open(`tel:${cleanPhone}`, '_self')
 
-    // Simulate connection after brief delay (real Twilio/WebRTC would use events)
-    setTimeout(() => setDialerStatus('connected'), 2000)
+    // Mark as connected — user manages call externally via their phone/dialer
+    setDialerStatus('connected')
   }
 
   const handleEndCall = useCallback(() => {
@@ -306,6 +321,26 @@ const CallCenter = () => {
           )}
         </div>
       </div>
+
+      {/* Twilio Not Configured Banner */}
+      {!isTwilioConfigured && (
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-amber-900 dark:text-amber-200">Twilio Integration Required</h4>
+                <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
+                  The Call Hub uses your device's native phone dialer. For VoIP calling directly from the browser,
+                  configure your Twilio credentials in{' '}
+                  <a href="/settings/twilio" className="underline font-medium">Settings → Twilio Setup</a>.
+                  Call logging and disposition tracking still works without Twilio.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Today Stats */}
       <div className="grid gap-4 md:grid-cols-5">
@@ -857,6 +892,7 @@ const CallCenter = () => {
             </div>
           ) : (
             <div className="space-y-2">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {recentCalls.map((call: any) => (
                 <div
                   key={call.id}

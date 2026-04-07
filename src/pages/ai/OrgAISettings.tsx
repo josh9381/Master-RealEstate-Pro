@@ -232,11 +232,14 @@ const OrgAISettings = () => {
       </div>
 
       {/* Section Nav */}
-      <div className="flex border-b">
+      <div className="flex border-b" role="tablist" aria-label="Organization AI settings sections">
         {sections.map((s) => (
           <button
             key={s.id}
             onClick={() => setActiveSection(s.id)}
+            role="tab"
+            aria-selected={activeSection === s.id}
+            aria-controls={`panel-${s.id}`}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeSection === s.id
                 ? 'border-primary text-primary'
@@ -251,7 +254,7 @@ const OrgAISettings = () => {
 
       {/* Model Selection */}
       {activeSection === 'model' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-model">
           <Card>
             <CardHeader>
               <CardTitle>Default AI Model</CardTitle>
@@ -319,7 +322,7 @@ const OrgAISettings = () => {
 
       {/* API Key */}
       {activeSection === 'apikey' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-apikey">
           <Card>
             <CardHeader>
               <CardTitle>Custom OpenAI API Key</CardTitle>
@@ -374,6 +377,7 @@ const OrgAISettings = () => {
                       />
                       <button
                         onClick={() => setShowApiKey(!showApiKey)}
+                        aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
                         className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
                       >
                         {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -409,7 +413,7 @@ const OrgAISettings = () => {
 
       {/* Personalization */}
       {activeSection === 'personalization' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-personalization">
           <Card>
             <CardHeader>
               <CardTitle>Team AI Personalization</CardTitle>
@@ -477,7 +481,7 @@ const OrgAISettings = () => {
 
       {/* Budget & Alerts */}
       {activeSection === 'budget' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-budget">
           <Card>
             <CardHeader>
               <CardTitle>AI Budget Alerts</CardTitle>

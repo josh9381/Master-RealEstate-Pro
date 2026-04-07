@@ -14,9 +14,15 @@ jest.mock('../../src/utils/encryption', () => ({
 jest.mock('../../src/lib/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
+  logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), pino: { child: jest.fn(() => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() })) } },
 }))
 
-import { listIntegrations, disconnectIntegration, getIntegrationStatus } from '../../src/controllers/integration.controller'
+jest.mock('../../src/services/integrationSync.service', () => ({
+  runSync: jest.fn(),
+}))
+
+import { listIntegrations, disconnectIntegration, getIntegrationStatus, syncIntegration } from '../../src/controllers/integration.controller'
+import { runSync } from '../../src/services/integrationSync.service'
 
 function mockReqRes(query = {}, body = {}, params = {}) {
   return {
@@ -71,6 +77,47 @@ describe('integration.controller', () => {
       await getIntegrationStatus(req, res)
 
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
+    })
+  })
+
+  describe('syncIntegration', () => {
+    it('runs sync and returns results', async () => {
+      const { req, res } = mockReqRes({}, {}, { provider: 'google' })
+      mockPrisma.integration.findUnique.mockResolvedValue({
+        id: 'i1', provider: 'google', isConnected: true, syncStatus: 'IDLE',
+        userId: 'u1', organizationId: 'org-1', credentials: null, config: null,
+      } as any)
+      ;(runSync as jest.Mock).mockResolvedValue({
+        recordsSynced: 10, recordsCreated: 2, recordsUpdated: 3,
+        recordsSkipped: 5, errors: [], duration: 123,
+      })
+
+      await syncIntegration(req, res)
+
+      expect(runSync).toHaveBeenCalled()
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({ recordsSynced: 10 }),
+      }))
+    })
+
+    it('returns 409 when sync is already in progress', async () => {
+      const { req, res } = mockReqRes({}, {}, { provider: 'google' })
+      mockPrisma.integration.findUnique.mockResolvedValue({
+        id: 'i1', provider: 'google', isConnected: true, syncStatus: 'SYNCING',
+      } as any)
+
+      await syncIntegration(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(409)
+      expect(runSync).not.toHaveBeenCalled()
+    })
+
+    it('throws NotFoundError when integration is not connected', async () => {
+      const { req, res } = mockReqRes({}, {}, { provider: 'google' })
+      mockPrisma.integration.findUnique.mockResolvedValue(null)
+
+      await expect(syncIntegration(req, res)).rejects.toThrow()
     })
   })
 })

@@ -188,8 +188,8 @@ const BillingPage = () => {
           <CardContent className="flex items-center gap-3 py-4">
             <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
             <div>
-              <p className="font-medium text-amber-900">Stripe Not Configured</p>
-              <p className="text-sm text-amber-800">Set STRIPE_SECRET_KEY to enable payment processing and plan upgrades.</p>
+              <p className="font-medium text-amber-900">Billing Not Available</p>
+              <p className="text-sm text-amber-800">Payment processing is not yet configured. Please contact your administrator to enable billing.</p>
             </div>
           </CardContent>
         </Card>

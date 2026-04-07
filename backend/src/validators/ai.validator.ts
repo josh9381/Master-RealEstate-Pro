@@ -155,7 +155,7 @@ export const leadIdParamSchema = z.object({
 
 // ── Phase 7: Org AI Settings ────────────────────────────────────────
 export const updateOrgAISettingsSchema = z.object({
-  openaiApiKey: z.string().max(200).optional(),
+  openaiApiKey: z.string().max(200).regex(/^sk-[a-zA-Z0-9_-]{20,}$/, 'Invalid API key format. Must start with "sk-" followed by at least 20 alphanumeric characters.').optional(),
   openaiOrgId: z.string().max(200).optional(),
   useOwnAIKey: z.boolean().optional(),
   aiSystemPrompt: z.string().max(5000).optional(),

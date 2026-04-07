@@ -3,7 +3,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
-import { Brain, Target, TrendingUp, Sparkles, BarChart3, RefreshCw, CheckCircle, Zap, Settings, MessageSquare, Wand2, FileText, ArrowRight, Bot, ChevronRight, Activity } from 'lucide-react';
+import { Brain, Target, TrendingUp, Sparkles, BarChart3, RefreshCw, CheckCircle, Zap, Settings, MessageSquare, Wand2, FileText, ArrowRight, Bot, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -169,19 +169,6 @@ const AIHub = () => {
     }
   }
 
-  // Derive a quick stat for each nav card from features list
-  const getFeatureStat = (keyword: string): string => {
-    const feature = aiFeatures.find(f =>
-      f.title.toLowerCase().includes(keyword.toLowerCase())
-    )
-    if (!feature) return ''
-    if (feature.leadsScored) return `${feature.leadsScored} leads scored`
-    if (feature.predictions) return `${feature.predictions} predictions`
-    if (feature.insights) return `${feature.insights} insights`
-    if (feature.accuracy) return `${feature.accuracy} accuracy`
-    return feature.status === 'active' ? 'Active' : feature.status || ''
-  }
-
   if (loading) {
     return <LoadingSkeleton rows={3} showChart={true} />;
   }
@@ -193,109 +180,33 @@ const AIHub = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">AI Hub</h1>
-        <p className="text-muted-foreground mt-2">
-          Your AI control center — monitor, configure, and understand your AI across the platform
-        </p>
-      </div>
-
-      {/* Section A: Navigation Cards (6 sub-pages) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Link to="/ai/lead-scoring" className="group">
-          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Target className="h-6 w-6 text-blue-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
-              <h3 className="font-semibold mt-3">Lead Scoring & Models</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {stats?.activeModels ? `${stats.activeModels} active model${stats.activeModels > 1 ? 's' : ''}, ${stats.avgAccuracy || 0}% accuracy` : getFeatureStat('scoring') || 'Score distribution & model config'}
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
+        <div className="absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-white/5 blur-2xl" />
+        <div className="absolute -top-8 -left-8 h-28 w-28 rounded-full bg-blue-400/10 blur-2xl" />
         <div className="relative">
-          <Card className="h-full opacity-60 pointer-events-none" aria-disabled="true">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-cyan-500/10 rounded-lg">
-                  <BarChart3 className="h-6 w-6 text-cyan-500" />
-                </div>
-                <Badge variant="outline" className="text-xs">Coming Soon</Badge>
-              </div>
-              <h3 className="font-semibold mt-3">AI Segmentation</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                AI-powered clustering &amp; auto-segmentation — coming soon
-              </p>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
+              <Brain className="h-5 w-5" />
+            </div>
+            <h1 className="text-3xl font-bold">AI Hub</h1>
+          </div>
+          <p className="text-white/70 ml-[52px]">
+            Your AI control center — monitor, configure, and understand your AI across the platform
+          </p>
         </div>
-
-        <Link to="/ai/intelligence" className="group">
-          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <Sparkles className="h-6 w-6 text-purple-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
-              <h3 className="font-semibold mt-3">Intelligence Hub</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {stats?.activeInsights ? `${stats.activeInsights} insights, ${stats.predictionsToday || 0} predictions` : 'Insights, predictions & forecasts'}
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link to="/ai/settings" className="group">
-          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-orange-500/10 rounded-lg">
-                  <Settings className="h-6 w-6 text-orange-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
-              <h3 className="font-semibold mt-3">AI Settings</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Configure your AI profile & preferences
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link to="/ai/analytics" className="group">
-          <Card className="hover:shadow-lg transition-all hover:border-primary/50 h-full">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="p-2 bg-indigo-500/10 rounded-lg">
-                  <Activity className="h-6 w-6 text-indigo-500" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
-              <h3 className="font-semibold mt-3">AI Analytics</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Performance metrics & usage analytics
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
       </div>
 
       {/* Section B: "Where AI is Working" Status Bar */}
-      <Card>
+      <Card className="border-border/60">
         <CardContent className="py-4">
           <div className="flex items-center gap-2 mb-3">
-            <Brain className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">AI is active across your CRM</span>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-purple-500/10 to-indigo-500/10">
+              <Brain className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <span className="text-sm font-semibold">AI is active across your CRM</span>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {embeddedFeatures.map((feature) => {
               // Check if the feature is active from API data
               const apiFeature = aiFeatures.find(f =>
@@ -305,14 +216,14 @@ const AIHub = () => {
               return (
                 <div
                   key={feature.name}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50 text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40 text-sm hover:bg-muted/80 transition-colors"
                 >
-                  <feature.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="font-medium">{feature.name}</span>
-                  <span className="text-muted-foreground">
-                    ({apiFeature?.leadsScored ? `${apiFeature.leadsScored} scored` : feature.description})
+                  <feature.icon className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                  <span className="font-medium text-foreground/90">{feature.name}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {apiFeature?.leadsScored ? `${apiFeature.leadsScored} scored` : feature.description}
                   </span>
-                  <div className={`h-2 w-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <div className={`h-2 w-2 rounded-full ${isActive ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-gray-400'}`} />
                 </div>
               )
             })}
@@ -544,6 +455,10 @@ const AIHub = () => {
             <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/settings')} aria-label="Configure AI profile">
               <Settings className="h-4 w-4 mr-2" />
               Configure AI Profile
+            </Button>
+            <Button variant="outline" className="justify-start" onClick={() => navigate('/ai/cost-dashboard')} aria-label="View cost dashboard">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Cost Dashboard
             </Button>
           </div>
         </CardContent>

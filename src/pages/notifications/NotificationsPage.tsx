@@ -154,15 +154,15 @@ export function NotificationsPage() {
   }
 
   const handleMarkSelectedAsRead = async () => {
-    try {
-      const count = selectedIds.length
-      await Promise.all(selectedIds.map(id => notificationsApi.markAsRead(id)))
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
-      setSelectedIds([])
+    const count = selectedIds.length
+    const results = await Promise.allSettled(selectedIds.map(id => notificationsApi.markAsRead(id)))
+    const failed = results.filter(r => r.status === 'rejected').length
+    queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    setSelectedIds([])
+    if (failed > 0) {
+      toast.warning(`Marked ${count - failed} as read, ${failed} failed`)
+    } else {
       toast.success(`Marked ${count} notifications as read`)
-    } catch (error) {
-      logger.error('Failed to mark selected as read:', error)
-      toast.error('Failed to mark selected as read')
     }
   }
 
@@ -171,15 +171,15 @@ export function NotificationsPage() {
   }
 
   const handleDeleteSelected = async () => {
-    try {
-      const count = selectedIds.length
-      await Promise.all(selectedIds.map(id => notificationsApi.deleteNotification(id)))
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
-      setSelectedIds([])
+    const count = selectedIds.length
+    const results = await Promise.allSettled(selectedIds.map(id => notificationsApi.deleteNotification(id)))
+    const failed = results.filter(r => r.status === 'rejected').length
+    queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    setSelectedIds([])
+    if (failed > 0) {
+      toast.warning(`Deleted ${count - failed} notifications, ${failed} failed`)
+    } else {
       toast.success(`Deleted ${count} notifications`)
-    } catch (error) {
-      logger.error('Failed to delete selected notifications:', error)
-      toast.error('Failed to delete selected notifications')
     }
   }
 

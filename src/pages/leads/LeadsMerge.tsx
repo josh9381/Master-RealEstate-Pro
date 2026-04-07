@@ -152,13 +152,9 @@ const LeadsMerge = () => {
       });
       setExpandedPair(null);
     } catch (error: unknown) {
-      const err = error as { response?: { status?: number } }
-      if (err?.response?.status === 404) {
-        toast.error('Merge endpoint not available yet.');
-      } else {
-        logger.error('Error merging leads:', error);
-        toast.error('Failed to merge leads');
-      }
+      logger.error('Error merging leads:', error);
+      const err = error as { response?: { data?: { message?: string } } }
+      toast.error(err?.response?.data?.message || 'Failed to merge leads');
     }
   };
 
@@ -225,7 +221,7 @@ const LeadsMerge = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.autoMerged}</div>
-            <p className="text-xs text-muted-foreground" title="Auto-merge rules are coming soon">Coming Soon</p>
+            <p className="text-xs text-muted-foreground" title="Auto-merge rules are coming soon">Auto-merge rules coming soon</p>
           </CardContent>
         </Card>
       </div>

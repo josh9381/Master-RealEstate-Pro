@@ -13,6 +13,7 @@ import { DateRangePicker, DateRange, computeDateRange } from '@/components/share
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
+import { useToast } from '@/hooks/useToast';
 import {
   BarChart,
   Bar,
@@ -28,6 +29,7 @@ import {
 
 const ConversionReports = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
 
   const { data: conversionResult, isLoading: loading, isError, error, refetch } = useQuery({
@@ -158,8 +160,9 @@ const ConversionReports = () => {
               a.download = 'conversion-report.json';
               a.click();
               URL.revokeObjectURL(url);
+              toast.success('Report exported successfully');
             } catch {
-              // Export failed — data may be malformed
+              toast.error('Failed to export report');
             }
           }}>Export Report</Button>
         </div>

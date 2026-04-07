@@ -49,6 +49,20 @@ const HealthCheckDashboard = () => {
     refetchInterval: AUTO_REFRESH_INTERVAL,
   });
 
+  // Fetch real admin stats for the key metrics cards
+  const { data: adminStats } = useQuery({
+    queryKey: ['admin', 'stats-health'],
+    queryFn: async () => {
+      try {
+        const response = await adminApi.getStats();
+        return response.data || response;
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: AUTO_REFRESH_INTERVAL,
+  });
+
   const lastRefresh = dataUpdatedAt ? new Date(dataUpdatedAt) : new Date();
 
   const handleRefresh = () => {
@@ -104,7 +118,7 @@ const HealthCheckDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Key Metrics */}
+      {/* Key Metrics — populated from real admin stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -112,8 +126,8 @@ const HealthCheckDashboard = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">99.2%</div>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
+            <div className="text-2xl font-bold">{adminStats?.systemHealth?.uptime ?? '—'}</div>
+            <p className="text-xs text-muted-foreground">Process uptime</p>
           </CardContent>
         </Card>
         <Card>
@@ -122,8 +136,8 @@ const HealthCheckDashboard = () => {
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">234ms</div>
-            <p className="text-xs text-muted-foreground">Average</p>
+            <div className="text-2xl font-bold">{adminStats?.systemHealth?.apiResponseTime != null ? `${adminStats.systemHealth.apiResponseTime}ms` : '—'}</div>
+            <p className="text-xs text-muted-foreground">DB ping latency</p>
           </CardContent>
         </Card>
         <Card>
@@ -132,7 +146,7 @@ const HealthCheckDashboard = () => {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0.12%</div>
+            <div className="text-2xl font-bold">{adminStats?.systemHealth?.errorRate ?? '—'}</div>
             <p className="text-xs text-muted-foreground">Last hour</p>
           </CardContent>
         </Card>
@@ -142,8 +156,8 @@ const HealthCheckDashboard = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">58</div>
-            <p className="text-xs text-muted-foreground">Online now</p>
+            <div className="text-2xl font-bold">{adminStats?.activeSessions ?? '—'}</div>
+            <p className="text-xs text-muted-foreground">Last 24 hours</p>
           </CardContent>
         </Card>
       </div>
@@ -209,7 +223,7 @@ const HealthCheckDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Resource Usage */}
+      {/* Resource Usage — derived from real stats */}
       <Card>
         <CardHeader>
           <CardTitle>Resource Usage</CardTitle>
@@ -217,101 +231,94 @@ const HealthCheckDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              { name: 'CPU Usage', value: 45, max: 100, unit: '%', icon: Cpu },
-              { name: 'Memory Usage', value: 6.4, max: 16, unit: 'GB', icon: HardDrive },
-              { name: 'Disk Usage', value: 234, max: 500, unit: 'GB', icon: Database },
-              { name: 'Network I/O', value: 12.3, max: 100, unit: 'Mbps', icon: Network },
-            ].map((resource) => (
-              <div key={resource.name}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <resource.icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{resource.name}</span>
+            {(() => {
+              const storage = adminStats?.stats?.storageUsed;
+              const storageNum = storage ? parseFloat(storage) : 0;
+              const resources = [
+                { name: 'Database Storage', value: storageNum, max: 10, unit: 'GB', icon: Database },
+                { name: 'Total Messages', value: adminStats?.stats?.totalMessages ?? 0, max: Math.max(adminStats?.stats?.totalMessages ?? 0, 100000), unit: '', icon: HardDrive },
+                { name: 'API Calls (24h)', value: adminStats?.stats?.apiCalls ?? 0, max: Math.max(adminStats?.stats?.apiCalls ?? 0, 10000), unit: '', icon: Network },
+                { name: 'Active Sessions', value: adminStats?.activeSessions ?? 0, max: Math.max(adminStats?.stats?.totalUsers ?? 1, 1), unit: 'users', icon: Cpu },
+              ];
+              return resources.map((resource) => (
+                <div key={resource.name}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <resource.icon className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{resource.name}</span>
+                    </div>
+                    <span className="text-sm">
+                      {typeof resource.value === 'number' ? resource.value.toLocaleString() : resource.value}{resource.unit ? ` ${resource.unit}` : ''}
+                    </span>
                   </div>
-                  <span className="text-sm">
-                    {resource.value} / {resource.max} {resource.unit}
-                  </span>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${
+                        calcRate(resource.value, resource.max, 0) > 80
+                          ? 'bg-red-600'
+                          : calcRate(resource.value, resource.max, 0) > 60
+                          ? 'bg-orange-600'
+                          : 'bg-green-600'
+                      }`}
+                      style={{ width: `${Math.min(calcRate(resource.value, resource.max, 0), 100)}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${
-                      calcRate(resource.value, resource.max, 0) > 80
-                        ? 'bg-red-600'
-                        : calcRate(resource.value, resource.max, 0) > 60
-                        ? 'bg-orange-600'
-                        : 'bg-green-600'
-                    }`}
-                    style={{ width: `${calcRate(resource.value, resource.max, 0)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </CardContent>
       </Card>
 
-      {/* Recent Incidents */}
+      {/* Recent Incidents — derived from degraded/down services */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Incidents</CardTitle>
-          <CardDescription>System events and issues</CardDescription>
+          <CardDescription>System events detected from health checks</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              {
-                title: 'Email Service Degradation',
-                description: 'SMTP server experiencing high latency',
-                severity: 'warning',
-                time: '15 min ago',
-                status: 'investigating',
-              },
-              {
-                title: 'Search Service Outage',
-                description: 'Elasticsearch cluster unreachable',
-                severity: 'critical',
-                time: '1 hour ago',
-                status: 'investigating',
-              },
-              {
-                title: 'Database Connection Spike',
-                description: 'Temporary increase in connection pool usage',
-                severity: 'info',
-                time: '3 hours ago',
-                status: 'resolved',
-              },
-            ].map((incident) => (
-              <div key={`${incident.time}-${incident.severity}`} className="flex items-start justify-between p-3 border rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <div
-                    className={`h-2 w-2 rounded-full mt-2 ${
-                      incident.severity === 'critical'
-                        ? 'bg-red-500'
-                        : incident.severity === 'warning'
-                        ? 'bg-orange-500'
-                        : 'bg-blue-500'
-                    }`}
-                  />
-                  <div>
-                    <h4 className="font-semibold text-sm">{incident.title}</h4>
-                    <p className="text-sm text-muted-foreground mt-1">{incident.description}</p>
-                    <div className="flex items-center space-x-2 mt-2">
-                      <Badge variant="outline">{incident.status}</Badge>
-                      <span className="text-xs text-muted-foreground">{incident.time}</span>
+            {(() => {
+              const incidents = services
+                .filter((s) => s.status === 'degraded' || s.status === 'down')
+                .map((s) => ({
+                  title: `${s.name} ${s.status === 'down' ? 'Outage' : 'Degradation'}`,
+                  description: `${s.name} is ${s.status}. Latency: ${s.latency}`,
+                  severity: s.status === 'down' ? 'critical' : 'warning',
+                  status: 'detected',
+                }));
+              if (incidents.length === 0) {
+                return (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                    <p>No incidents detected. All services are healthy.</p>
+                  </div>
+                );
+              }
+              return incidents.map((incident) => (
+                <div key={incident.title} className="flex items-start justify-between p-3 border rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <div
+                      className={`h-2 w-2 rounded-full mt-2 ${
+                        incident.severity === 'critical' ? 'bg-red-500' : 'bg-orange-500'
+                      }`}
+                    />
+                    <div>
+                      <h4 className="font-semibold text-sm">{incident.title}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">{incident.description}</p>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Badge variant="outline">{incident.status}</Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => toast.info(`Incident: ${incident.title}\n${incident.description}\nStatus: ${incident.status}`)}>
-                  View
-                </Button>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </CardContent>
       </Card>
 
-      {/* System Information */}
+      {/* System Information — real values from admin stats */}
       <Card>
         <CardHeader>
           <CardTitle>System Information</CardTitle>
@@ -321,69 +328,69 @@ const HealthCheckDashboard = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Application Version</span>
-                <span className="font-medium">v2.4.1</span>
+                <span className="text-muted-foreground">Organization</span>
+                <span className="font-medium">{adminStats?.organization?.name ?? '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Database Version</span>
-                <span className="font-medium">PostgreSQL 14.5</span>
+                <span className="text-muted-foreground">Subscription Tier</span>
+                <span className="font-medium">{adminStats?.organization?.subscriptionTier ?? '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Redis Version</span>
-                <span className="font-medium">7.0.5</span>
+                <span className="text-muted-foreground">Database Health</span>
+                <Badge variant={adminStats?.systemHealth?.database === 'healthy' ? 'default' : 'destructive'}>
+                  {adminStats?.systemHealth?.database ?? '—'}
+                </Badge>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Node.js Version</span>
-                <span className="font-medium">v18.17.1</span>
+                <span className="text-muted-foreground">Last Backup</span>
+                <span className="font-medium">
+                  {adminStats?.stats?.lastBackup
+                    ? new Date(adminStats.stats.lastBackup).toLocaleString()
+                    : 'No backups yet'}
+                </span>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Server Region</span>
-                <span className="font-medium">us-east-1</span>
+                <span className="text-muted-foreground">Total Users</span>
+                <span className="font-medium">{adminStats?.stats?.totalUsers?.toLocaleString() ?? '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Last Deploy</span>
-                <span className="font-medium">3 days ago</span>
+                <span className="text-muted-foreground">Total Leads</span>
+                <span className="font-medium">{adminStats?.stats?.totalLeads?.toLocaleString() ?? '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Requests</span>
-                <span className="font-medium">1,234,567</span>
+                <span className="text-muted-foreground">API Calls (24h)</span>
+                <span className="font-medium">{adminStats?.stats?.apiCalls?.toLocaleString() ?? '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Environment</span>
-                <Badge variant="default">Production</Badge>
+                <span className="text-muted-foreground">Storage Used</span>
+                <span className="font-medium">{adminStats?.stats?.storageUsed ?? '—'}</span>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Health Check Endpoints */}
+      {/* Health Check Endpoints — derived from real service health probes */}
       <Card>
         <CardHeader>
           <CardTitle>Health Check Endpoints</CardTitle>
-          <CardDescription>API endpoints for monitoring</CardDescription>
+          <CardDescription>Live probe results from the health API</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { endpoint: '/api/health', status: 200, response: '23ms' },
-              { endpoint: '/api/health/db', status: 200, response: '12ms' },
-              { endpoint: '/api/health/cache', status: 200, response: '2ms' },
-              { endpoint: '/api/health/storage', status: 200, response: '67ms' },
-              { endpoint: '/api/health/search', status: 503, response: 'N/A' },
-            ].map((endpoint) => (
-              <div key={endpoint.endpoint} className="flex items-center justify-between p-3 border rounded-lg font-mono">
+            {services.map((service) => (
+              <div key={service.name} className="flex items-center justify-between p-3 border rounded-lg font-mono">
                 <div className="flex items-center space-x-3">
                   <Badge
-                    variant={endpoint.status === 200 ? 'default' : 'destructive'}
+                    variant={service.status === 'healthy' ? 'default' : service.status === 'degraded' ? 'secondary' : 'destructive'}
                   >
-                    {endpoint.status}
+                    {service.status === 'healthy' ? '200' : service.status === 'degraded' ? '200' : '503'}
                   </Badge>
-                  <span className="text-sm">{endpoint.endpoint}</span>
+                  <span className="text-sm">{service.name}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">{endpoint.response}</span>
+                <span className="text-xs text-muted-foreground">{service.latency}</span>
               </div>
             ))}
           </div>

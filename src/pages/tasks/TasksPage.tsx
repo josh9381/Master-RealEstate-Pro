@@ -65,7 +65,7 @@ export default function TasksPage() {
   })
 
   // Fetch team members for assignee dropdown
-  const { data: teamMembers = [] } = useQuery<TeamMember[]>({
+  const { data: teamMembers = [], isError: teamMembersError } = useQuery<TeamMember[]>({
     queryKey: ['team-members'],
     queryFn: () => usersApi.getTeamMembers(),
     staleTime: 120_000,
@@ -663,6 +663,7 @@ export default function TasksPage() {
                 onChange={(e) => setTaskForm(prev => ({ ...prev, assignedToId: e.target.value }))}
               >
                 <option value="">Unassigned</option>
+                {teamMembersError && <option disabled>Failed to load team members</option>}
                 {teamMembers.map((member: TeamMember) => (
                   <option key={member.id} value={member.id}>
                     {member.firstName} {member.lastName}

@@ -120,7 +120,7 @@ router.get('/predictions/:leadId', aiController.getPredictions)
 
 // AI Assistant Features (usage-tracked)
 router.post('/enhance-message', checkAIUsage('enhancements'), validateBody(enhanceMessageSchema), aiController.enhanceMessage)
-router.post('/suggest-actions', validateBody(suggestActionsSchema), aiController.suggestActions)
+router.post('/suggest-actions', checkAIUsage('aiMessages'), validateBody(suggestActionsSchema), aiController.suggestActions)
 
 // AI Chatbot (OpenAI GPT-4) — usage-tracked
 router.post('/chat', checkAIUsage('aiMessages'), validateBody(chatWithAISchema), aiController.chatWithAI)

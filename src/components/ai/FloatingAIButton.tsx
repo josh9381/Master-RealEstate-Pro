@@ -64,7 +64,7 @@ export function FloatingAIButton() {
       <button
         onClick={() => toggleOpen(true)}
         className={cn(
-          "fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl",
+          "fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white shadow-lg shadow-purple-500/30 transition-all hover:scale-110 hover:shadow-xl hover:shadow-purple-500/40",
           isOpen && "scale-0 opacity-0"
         )}
         aria-label="Open AI Assistant (Alt+A)"
@@ -73,15 +73,18 @@ export function FloatingAIButton() {
         
         {/* Notification Badge */}
         {hasNewSuggestion && (
-          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold">
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-pink-600 text-[10px] font-bold shadow-sm shadow-rose-500/30 ring-2 ring-background">
             1
           </span>
         )}
         
-        {/* Pulse Animation — stops after 10s */}
+        {/* Glow Ring Animation — stops after 10s */}
         {showPulse && (
-          <span className="absolute inset-0 animate-ping rounded-full bg-purple-400 opacity-75" />
+          <span className="absolute inset-0 animate-ping rounded-2xl bg-purple-400/50" />
         )}
+
+        {/* Subtle ambient glow */}
+        <span className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 blur-lg opacity-40" />
       </button>
 
       {/* AI Assistant Panel */}

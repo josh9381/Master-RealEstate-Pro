@@ -244,6 +244,7 @@ export async function updateOrgAISettings(
     aiBudgetAlertEnabled?: boolean
   }
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateData: any = {}
 
   if (settings.useOwnAIKey !== undefined) updateData.useOwnAIKey = settings.useOwnAIKey
@@ -304,7 +305,7 @@ export async function updateOrgAISettings(
     },
   }).then(org => ({
     ...org,
-    openaiApiKey: org.openaiApiKey ? maskSensitive(org.openaiApiKey) : null,
+    openaiApiKey: org.openaiApiKey ? (() => { try { return maskSensitive(decrypt(org.openaiApiKey)) } catch { return 'sk-••••••••' } })() : null,
   }))
 }
 
@@ -340,7 +341,7 @@ export async function getOrgAISettings(organizationId: string) {
   return {
     useOwnAIKey: org.useOwnAIKey,
     hasApiKey: !!org.openaiApiKey,
-    openaiApiKeyMasked: org.openaiApiKey ? maskSensitive('sk-' + org.openaiApiKey.slice(-10)) : null,
+    openaiApiKeyMasked: org.openaiApiKey ? (() => { try { return maskSensitive(decrypt(org.openaiApiKey)) } catch { return 'sk-••••••••' } })() : null,
     openaiOrgId: org.openaiOrgId,
     aiSystemPrompt: org.aiSystemPrompt,
     aiDefaultTone: org.aiDefaultTone,

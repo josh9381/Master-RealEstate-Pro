@@ -18,7 +18,7 @@ const EmailConfiguration = () => {
   
   // Status indicators
   const [isConfigured, setIsConfigured] = useState(false);
-  const [configMode, setConfigMode] = useState<'production' | 'mock' | 'environment'>('mock');
+  const [configMode, setConfigMode] = useState<'production' | 'mock' | 'environment'>('environment');
   const [lastTested, setLastTested] = useState<string | null>(null);
   
   // Show/hide API key
@@ -97,7 +97,7 @@ const EmailConfiguration = () => {
       setFromName(config.fromName || 'Your CRM Team');
       setFromEmail(config.fromEmail || 'noreply@yourcrm.com');
       setIsConfigured(config.isActive && apiKeyStored);
-      setConfigMode(apiKeyStored ? 'production' : 'mock');
+      setConfigMode(apiKeyStored ? 'production' : 'environment');
     }
   }, [emailConfigData]);
 
@@ -152,11 +152,11 @@ const EmailConfiguration = () => {
       
       // Update status based on test result
       setLastTested(new Date().toLocaleString());
-      setConfigMode(result.mode === 'mock' ? 'mock' : 'production');
+      setConfigMode(result.mode === 'mock' ? 'environment' : 'production');
       setIsConfigured(result.mode !== 'mock');
       
       if (result.mode === 'mock') {
-        toast.success(`Test email sent in MOCK mode (no actual delivery). Save your API key first.`);
+        toast.warning(`No API key configured — email was not actually delivered. Save your SendGrid API key first, then test again.`);
       } else {
         toast.success(`Test email sent successfully in PRODUCTION mode! Check ${fromEmail}`);
       }
@@ -165,7 +165,7 @@ const EmailConfiguration = () => {
       const err = error as { response?: { data?: { error?: string } }; message?: string }
       const message = err.response?.data?.error || err.message || 'Failed to send test email';
       toast.error(message);
-      setConfigMode('mock');
+      setConfigMode('environment');
       setIsConfigured(false);
     } finally {
       setTestingConnection(false);

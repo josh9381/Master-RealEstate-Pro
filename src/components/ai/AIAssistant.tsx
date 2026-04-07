@@ -1,10 +1,10 @@
 import { logger } from '@/lib/logger'
-import { useState, useRef, useEffect } from 'react'
-import { X, Send, Sparkles, TrendingUp, MessageSquare, ThumbsUp, ThumbsDown, AlertTriangle, Check } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { X, Send, Sparkles, TrendingUp, MessageSquare, ThumbsUp, ThumbsDown, AlertTriangle, Check, Trash2, Copy, MoreVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { sendChatMessage, getChatHistory } from '@/services/aiService'
+import { sendChatMessage, getChatHistory, clearChatHistory } from '@/services/aiService'
 import { useToast } from '@/hooks/useToast'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { MessagePreview } from './MessagePreview'
@@ -86,8 +86,12 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
     }
   } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
   const hasLoadedHistory = useRef(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const loadChatHistory = async () => {
     if (hasLoadedHistory.current || isLoadingHistory) return
@@ -116,11 +120,66 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
   useEffect(() => {
     if (isOpen) {
       loadChatHistory()
+      // Focus the input after opening with a small delay for transition
+      setTimeout(() => inputRef.current?.focus(), 350)
     }
     if (isOpen && onSuggestionRead) {
       onSuggestionRead()
     }
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMenu])
+
+  // Escape key to close panel
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        if (showMenu) {
+          setShowMenu(false)
+        } else {
+          onClose()
+        }
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isOpen, showMenu, onClose])
+
+  const handleClearChat = useCallback(async () => {
+    setShowMenu(false)
+    try {
+      await clearChatHistory()
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        content: "Chat history cleared. How can I help you?",
+        timestamp: new Date(),
+      }])
+      hasLoadedHistory.current = false
+      setMessagePreview(null)
+      setPendingConfirmation(null)
+      toast.success('Chat history cleared')
+    } catch {
+      toast.error('Failed to clear chat history')
+    }
+  }, [toast])
+
+  const handleCopyMessage = useCallback((messageContent: string, messageId: string) => {
+    navigator.clipboard.writeText(messageContent)
+    setCopiedMessageId(messageId)
+    setTimeout(() => setCopiedMessageId(null), 2000)
+  }, [])
 
   const suggestions: Suggestion[] = [
     {
@@ -454,25 +513,42 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
       logger.error('AI chat error:', err)
       
       const errorResponse = err as { response?: { data?: { message?: string }; status?: number } }
+      const status = errorResponse.response?.status
       
       const aiMsg = getAIUnavailableMessage(err)
+
+      // Build context-aware error message
+      let errorContent: string
+      if (aiMsg) {
+        errorContent = aiMsg
+      } else if (status === 429) {
+        errorContent = "You've reached your AI usage limit for this period. Upgrade your plan or wait for the limit to reset."
+      } else if (status === 403) {
+        errorContent = "You don't have permission to use this AI feature. Please contact your administrator."
+      } else if (status === 400) {
+        errorContent = errorResponse.response?.data?.message || "I couldn't process that request. Please try rephrasing your message."
+      } else if (errorResponse.response?.data?.message) {
+        errorContent = errorResponse.response.data.message
+      } else {
+        errorContent = "I'm having trouble connecting right now. Please try again in a moment."
+      }
 
       // Show error message in chat
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: aiMsg ||
-                 errorResponse.response?.data?.message || 
-                 "I'm having trouble connecting right now. Please try again in a moment.",
+        content: errorContent,
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
       
-      // Show toast notification
-      toast.error(
-        'AI Unavailable',
-        'OpenAI API key not configured. Contact admin to enable AI features.'
-      )
+      // Only show toast for server/config errors, not user-facing errors
+      if (!status || status >= 500) {
+        toast.error(
+          'AI Unavailable',
+          'The AI service is temporarily unavailable. Please try again later.'
+        )
+      }
     } finally {
       setIsTyping(false)
     }
@@ -533,38 +609,74 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
       {/* Panel */}
       <div
         className={cn(
-          "fixed right-0 top-0 z-[55] flex h-full w-full flex-col bg-background shadow-2xl transition-all duration-300 sm:w-[400px]",
+          "fixed right-0 top-0 z-[55] flex h-full w-full flex-col bg-background shadow-2xl transition-all duration-300 sm:w-[420px] sm:rounded-l-2xl",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b bg-gradient-to-r from-purple-600 to-blue-600 p-4 text-white">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="h-5 w-5" />
-            <h2 className="font-semibold">AI Assistant</h2>
+        <div className="relative flex items-center justify-between border-b p-4 text-white overflow-hidden">
+          {/* Gradient background with mesh pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
+          <div className="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-white/5 blur-xl" />
+          <div className="absolute -top-4 -left-4 h-20 w-20 rounded-full bg-blue-400/10 blur-xl" />
+          
+          <div className="relative flex items-center space-x-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-[15px] leading-tight">AI Assistant</h2>
+              <p className="text-[11px] text-white/60 font-medium">Powered by GPT-4</p>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 hover:bg-white/20 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="relative flex items-center gap-1">
+            {/* Menu Button */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="relative rounded-xl p-1.5 hover:bg-white/15 transition-colors backdrop-blur-sm"
+                aria-label="Chat options"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-border/60 bg-background shadow-xl py-1 z-10">
+                  <button
+                    onClick={handleClearChat}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Clear Chat History
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="relative rounded-xl p-1.5 hover:bg-white/15 transition-colors backdrop-blur-sm"
+              aria-label="Close AI Assistant"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Suggestions */}
         {messages.length === 1 && (
-          <div className="border-b bg-muted/30 p-4">
-            <p className="mb-3 text-xs font-medium text-muted-foreground">SUGGESTED ACTIONS</p>
+          <div className="border-b bg-gradient-to-b from-muted/40 to-transparent p-4">
+            <p className="mb-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Suggested Actions</p>
             <div className="space-y-2">
               {suggestions.map((suggestion) => (
                 <button
                   key={suggestion.id}
                   onClick={suggestion.action}
-                  className="w-full rounded-lg border bg-background p-3 text-left transition-all hover:border-primary hover:shadow-md"
+                  className="w-full rounded-xl border border-border/60 bg-background p-3 text-left transition-all hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-md hover:shadow-purple-500/5 group"
                 >
                   <div className="flex items-start space-x-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                      <suggestion.icon className="h-4 w-4 text-primary" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 group-hover:from-purple-500/20 group-hover:to-blue-500/20 transition-colors">
+                      <suggestion.icon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{suggestion.title}</p>
@@ -581,6 +693,21 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* History Loading Skeleton */}
+          {isLoadingHistory && (
+            <div className="space-y-4 animate-pulse">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className={cn("flex", i % 2 === 0 ? "justify-end" : "justify-start")}>
+                  {i % 2 !== 0 && <div className="h-7 w-7 rounded-lg bg-muted mr-2 shrink-0" />}
+                  <div className={cn("rounded-2xl px-4 py-3", i % 2 === 0 ? "bg-purple-200/30 dark:bg-purple-800/20 w-[65%]" : "bg-muted/70 w-[75%]")}>
+                    <div className="h-3 bg-muted-foreground/10 rounded w-full mb-2" />
+                    <div className="h-3 bg-muted-foreground/10 rounded w-3/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {messages.map((message) => (
             <div
               key={message.id}
@@ -589,12 +716,17 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 message.role === 'user' ? "justify-end" : "justify-start"
               )}
             >
+              {message.role === 'assistant' && (
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/15 to-indigo-500/15 mr-2 mt-0.5">
+                  <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                </div>
+              )}
               <div
                 className={cn(
-                  "max-w-[85%] rounded-lg px-4 py-2",
+                  "max-w-[80%] rounded-2xl px-4 py-2.5",
                   message.role === 'user'
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm shadow-purple-500/20"
+                    : "bg-muted/70 border border-border/40"
                 )}
               >
                 <p className="text-sm whitespace-pre-line" style={{ lineHeight: '1.6' }}>
@@ -607,11 +739,21 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                     return <span key={i}>{boldProcessed}{i < arr.length - 1 && <br />}</span>
                   })}
                 </p>
-                <p className="mt-1 text-xs opacity-70">
+                <p className={cn("mt-1 text-[10px]", message.role === 'user' ? "text-white/50" : "text-muted-foreground/60")}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
                 {message.role === 'assistant' && (
                   <div className="flex items-center gap-1 mt-1.5 -mb-0.5">
+                    <button
+                      onClick={() => handleCopyMessage(message.content, message.id)}
+                      className={cn(
+                        'p-0.5 rounded hover:bg-background/60 transition-colors',
+                        copiedMessageId === message.id ? 'text-green-600' : 'text-muted-foreground/50 hover:text-foreground'
+                      )}
+                      title={copiedMessageId === message.id ? 'Copied!' : 'Copy message'}
+                    >
+                      {copiedMessageId === message.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    </button>
                     <button
                       onClick={() => {
                         aiApi.submitChatFeedback(message.id, { feedback: 'positive' }).catch(() => {})
@@ -679,11 +821,14 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
           {/* Typing Indicator */}
           {isTyping && (
             <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-lg bg-muted px-4 py-3">
-                <div className="flex space-x-1">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" style={{ animationDelay: '0ms' }} />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" style={{ animationDelay: '150ms' }} />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" style={{ animationDelay: '300ms' }} />
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/15 to-indigo-500/15 mr-2 mt-0.5">
+                <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 animate-pulse" />
+              </div>
+              <div className="rounded-2xl bg-muted/70 border border-border/40 px-4 py-3">
+                <div className="flex space-x-1.5 items-center">
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400/60" style={{ animationDelay: '0ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400/60" style={{ animationDelay: '150ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400/60" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             </div>
@@ -718,12 +863,12 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
         )}
 
         {/* Tone Selector */}
-        <div className="px-4 py-2 border-t bg-muted/30">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">AI PERSONALITY</label>
+        <div className="px-4 py-2.5 border-t bg-gradient-to-b from-muted/20 to-muted/40">
+          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">AI Personality</label>
           <select
             value={selectedTone}
             onChange={(e) => setSelectedTone(e.target.value)}
-            className="text-sm border border-input rounded-md px-2 py-1 w-full bg-background"
+            className="text-sm border border-border/60 rounded-xl px-3 py-1.5 w-full bg-background hover:border-purple-300 dark:hover:border-purple-700 transition-colors focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400"
           >
             <option value="PROFESSIONAL">🎯 Professional - Formal & Business-like</option>
             <option value="FRIENDLY">😊 Friendly - Warm & Conversational</option>
@@ -735,14 +880,14 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
 
         {/* Quick Actions */}
         {messages.length <= 3 && (
-          <div className="px-4 py-2 border-t bg-muted/20">
-            <label className="text-xs font-medium text-muted-foreground mb-2 block">QUICK ACTIONS</label>
-            <div className="flex flex-wrap gap-2">
+          <div className="px-4 py-2.5 border-t bg-muted/10">
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">Quick Actions</label>
+            <div className="flex flex-wrap gap-1.5">
               {quickActions.map((action, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleQuickQuestion(action.question)}
-                  className="px-3 py-1.5 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors border border-purple-200 dark:border-purple-800"
+                  className="px-3 py-1.5 text-xs rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 text-purple-700 dark:text-purple-300 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-800/30 dark:hover:to-indigo-800/30 transition-all border border-purple-200/60 dark:border-purple-800/50 hover:shadow-sm font-medium"
                 >
                   {action.label}
                 </button>
@@ -752,22 +897,28 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
         )}
 
         {/* Input */}
-        <div className="border-t p-4">
-          <div className="flex space-x-2">
+        <div className="border-t p-4 bg-background">
+          <div className="flex items-center space-x-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1 focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/10 transition-all">
             <Input
+              ref={inputRef}
               value={input}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
               onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Ask me anything..."
-              className="flex-1"
+              className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
               disabled={isTyping}
             />
-            <Button onClick={() => handleSendMessage()} size="icon" disabled={isTyping || !input.trim()} aria-label="Send message">
+            <button 
+              onClick={() => handleSendMessage()} 
+              disabled={isTyping || !input.trim()} 
+              aria-label="Send message"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm shadow-purple-500/25 disabled:opacity-40 disabled:shadow-none hover:shadow-md hover:shadow-purple-500/30 transition-all disabled:cursor-not-allowed"
+            >
               <Send className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground text-center">
-            💡 Powered by GPT-4 with real-time CRM data access
+          <p className="mt-2.5 text-[10px] text-muted-foreground/60 text-center font-medium tracking-wide">
+            Powered by GPT-4 with real-time CRM data
           </p>
         </div>
       </div>

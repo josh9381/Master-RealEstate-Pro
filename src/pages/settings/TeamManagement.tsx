@@ -153,11 +153,6 @@ const TeamManagement = () => {
     }
   };
 
-  const bulkImportUsers = () => {
-    toast.info('Bulk import functionality coming soon');
-    setShowBulkImport(false);
-  };
-
   const roles = [
     {
       name: 'Owner',
@@ -313,9 +308,9 @@ const TeamManagement = () => {
                 <p>CSV format: email, name, role</p>
                 <p>Example: john@company.com, John Doe, Sales Rep</p>
               </div>
-              <Button className="w-full" onClick={bulkImportUsers}>
+              <Button className="w-full" disabled>
                 <Upload className="h-4 w-4 mr-2" />
-                Import Users
+                Import Users (Coming Soon)
               </Button>
             </CardContent>
           </Card>

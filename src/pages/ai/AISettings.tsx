@@ -282,11 +282,14 @@ const AISettings = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b">
+      <div className="flex border-b" role="tablist" aria-label="AI settings sections">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`panel-${tab.id}`}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-primary text-primary'
@@ -301,7 +304,7 @@ const AISettings = () => {
 
       {/* Tab Content */}
       {activeTab === 'profile' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-profile">
           {/* Default Tone & Communication Settings */}
           <Card>
             <CardHeader>
@@ -459,7 +462,7 @@ const AISettings = () => {
       )}
 
       {activeTab === 'compose' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-compose">
           {/* Email & Content Defaults */}
           <Card>
             <CardHeader>
@@ -546,6 +549,9 @@ const AISettings = () => {
                   </div>
                   <button
                     onClick={() => updateForm('composer', 'autoGenerate', !form.composer.autoGenerate)}
+                    role="switch"
+                    aria-checked={form.composer.autoGenerate}
+                    aria-label="Auto-generate on open"
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       form.composer.autoGenerate ? 'bg-primary' : 'bg-muted'
                     }`}
@@ -565,6 +571,9 @@ const AISettings = () => {
                   </div>
                   <button
                     onClick={() => updateForm('composer', 'showAdvanced', !form.composer.showAdvanced)}
+                    role="switch"
+                    aria-checked={form.composer.showAdvanced}
+                    aria-label="Show advanced options"
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       form.composer.showAdvanced ? 'bg-primary' : 'bg-muted'
                     }`}
@@ -584,6 +593,9 @@ const AISettings = () => {
                   </div>
                   <button
                     onClick={() => updateForm('chatbot', 'autoSuggestActions', !form.chatbot.autoSuggestActions)}
+                    role="switch"
+                    aria-checked={form.chatbot.autoSuggestActions}
+                    aria-label="Auto-suggest actions"
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       form.chatbot.autoSuggestActions ? 'bg-primary' : 'bg-muted'
                     }`}
@@ -603,6 +615,9 @@ const AISettings = () => {
                   </div>
                   <button
                     onClick={() => updateForm('chatbot', 'enableProactive', !form.chatbot.enableProactive)}
+                    role="switch"
+                    aria-checked={form.chatbot.enableProactive}
+                    aria-label="Proactive insights"
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       form.chatbot.enableProactive ? 'bg-primary' : 'bg-muted'
                     }`}
@@ -693,7 +708,7 @@ const AISettings = () => {
       )}
 
       {activeTab === 'usage' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-usage">
           {/* Usage Statistics */}
           <Card>
             <CardHeader>
@@ -784,6 +799,7 @@ const AISettings = () => {
       )}
 
       {activeTab === 'toggles' && (
+        <div role="tabpanel" id="panel-toggles">
         <Card>
           <CardHeader>
             <CardTitle>Feature Toggles</CardTitle>
@@ -866,6 +882,7 @@ const AISettings = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* Dirty state indicator */}

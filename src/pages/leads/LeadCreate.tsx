@@ -90,6 +90,12 @@ export default function LeadCreate() {
     if (formData.phone && !/^[+]?[\d\s()-]{7,}$/.test(formData.phone)) {
       newErrors.phone = 'Please enter a valid phone number (digits, +, -, (, ), spaces)'
     }
+    if (formData.dealValue && (isNaN(Number(formData.dealValue)) || Number(formData.dealValue) < 0)) {
+      newErrors.dealValue = 'Deal value must be a positive number'
+    }
+    if (formData.zipCode && !/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
+      newErrors.zipCode = 'Please enter a valid ZIP code (e.g. 10001 or 10001-1234)'
+    }
     if (formData.budgetMin && formData.budgetMax && parseFloat(formData.budgetMin) > parseFloat(formData.budgetMax)) {
       newErrors.budgetMin = 'Budget minimum cannot exceed budget maximum'
     }
@@ -426,6 +432,7 @@ export default function LeadCreate() {
                       name="bedsMin"
                       value={formData.bedsMin}
                       onChange={handleInputChange}
+                      onKeyDown={(e) => ['e', 'E', '-', '+', '.'].includes(e.key) && e.preventDefault()}
                       min="0"
                       placeholder="e.g. 3"
                       className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -439,6 +446,7 @@ export default function LeadCreate() {
                       name="bathsMin"
                       value={formData.bathsMin}
                       onChange={handleInputChange}
+                      onKeyDown={(e) => ['e', 'E', '-', '+', '.'].includes(e.key) && e.preventDefault()}
                       min="0"
                       placeholder="e.g. 2"
                       className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -454,6 +462,8 @@ export default function LeadCreate() {
                         name="dealValue"
                         value={formData.dealValue}
                         onChange={handleInputChange}
+                        onKeyDown={(e) => ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault()}
+                        min="0"
                         placeholder="50000"
                         className="pl-10"
                       />
@@ -524,8 +534,11 @@ export default function LeadCreate() {
                         value={formData.zipCode}
                         onChange={handleInputChange}
                         placeholder="10001"
+                        pattern="\d{5}(-\d{4})?"
+                        maxLength={10}
                         className="mt-1"
                       />
+                      {errors.zipCode && <p className="text-sm text-red-500 mt-1">{errors.zipCode}</p>}
                     </div>
                   </div>
                   

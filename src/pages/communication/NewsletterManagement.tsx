@@ -217,9 +217,7 @@ const NewsletterManagement = () => {
                         </Button>
                       </>
                     )}
-                    <Button variant="ghost" size="sm" disabled title="Newsletter management coming soon" onClick={() => {
-                      toast.info('Delete is not available yet');
-                    }}>
+                    <Button variant="ghost" size="sm" disabled title="Delete will be available when newsletter management launches">
                       Delete
                     </Button>
                   </div>
@@ -339,8 +337,7 @@ const NewsletterManagement = () => {
             ].map((template) => (
               <div
                 key={template.name}
-                className="p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors"
-                onClick={() => toast.info(`Selected template: ${template.name}`)}
+                className="p-4 border rounded-lg opacity-60 cursor-default"
               >
                 <div className="flex items-center justify-center h-24 bg-muted rounded-lg mb-3">
                   <FileText className="h-8 w-8 text-muted-foreground" />

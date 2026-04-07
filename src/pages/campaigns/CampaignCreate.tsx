@@ -454,7 +454,7 @@ function CampaignCreate() {
       const merged = { ...prev, ...newErrors }
       // Remove keys that were valid this pass
       Object.keys(prev).forEach(k => { if (!(k in newErrors)) delete merged[k] })
-      return newErrors  // only show current step errors
+      return merged
     })
 
     if (Object.keys(newErrors).length > 0) {

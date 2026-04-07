@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Download, FileText, Database, Filter, Calendar, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
-import { exportApi } from '@/lib/api';
+import { exportApi, leadsApi, usersApi } from '@/lib/api';
 
 const DataExportWizard = () => {
   const { toast } = useToast();
@@ -17,6 +18,24 @@ const DataExportWizard = () => {
   };
 
   const [exporting, setExporting] = useState(false);
+
+  // Fetch real record count
+  const { data: totalLeads = 0 } = useQuery({
+    queryKey: ['export-lead-count'],
+    queryFn: async () => {
+      const response = await leadsApi.getLeads({ limit: 1 });
+      return response.data?.pagination?.total || response.data?.total || 0;
+    },
+  });
+
+  // Fetch team members for filter dropdown
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['export-team-members'],
+    queryFn: async () => {
+      const members = await usersApi.getTeamMembers();
+      return Array.isArray(members) ? members : [];
+    },
+  });
 
   const handleExport = async () => {
     if (!selectedDataType) {
@@ -71,7 +90,7 @@ const DataExportWizard = () => {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24,567</div>
+            <div className="text-2xl font-bold">{totalLeads.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Available for export</p>
           </CardContent>
         </Card>
@@ -224,9 +243,11 @@ const DataExportWizard = () => {
               <label className="text-sm font-medium mb-2 block">Assigned To</label>
               <select className="w-full px-3 py-2 border rounded-lg">
                 <option>All Users</option>
-                <option>John Doe</option>
-                <option>Sarah Johnson</option>
-                <option>Mike Wilson</option>
+                {teamMembers.map((member: { id: string; name?: string; firstName?: string; lastName?: string }) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim()}
+                  </option>
+                ))}
                 <option>Unassigned</option>
               </select>
             </div>

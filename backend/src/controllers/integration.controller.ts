@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { Prisma } from '@prisma/client';
 import { UnauthorizedError, NotFoundError } from '../middleware/errorHandler';
-import { encrypt, decrypt } from '../utils/encryption';
+import { encrypt } from '../utils/encryption';
+import { runSync } from '../services/integrationSync.service';
 
 /**
  * List all integrations
@@ -178,10 +179,28 @@ export async function syncIntegration(req: Request, res: Response): Promise<void
     throw new NotFoundError(`${provider} integration not found or not connected`);
   }
 
-  // Integration sync is not yet implemented — return honest status
-  res.status(501).json({
-    success: false,
-    message: `Sync for ${provider} is not yet available. This feature is coming soon.`
+  // Prevent concurrent syncs
+  if (integration.syncStatus === 'SYNCING') {
+    res.status(409).json({
+      success: false,
+      message: `Sync for ${provider} is already in progress.`,
+    });
+    return;
+  }
+
+  const result = await runSync(integration);
+
+  res.status(200).json({
+    success: true,
+    message: `${provider} sync completed`,
+    data: {
+      recordsSynced: result.recordsSynced,
+      recordsCreated: result.recordsCreated,
+      recordsUpdated: result.recordsUpdated,
+      recordsSkipped: result.recordsSkipped,
+      errors: result.errors,
+      duration: result.duration,
+    },
   });
 }
 

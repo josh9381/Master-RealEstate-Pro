@@ -69,7 +69,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   }, [searchQuery])
 
   // Fetch leads
-  const { data: leadsData } = useQuery({
+  const { data: leadsData, isError: leadsError } = useQuery({
     queryKey: ['search-leads', debouncedQuery],
     queryFn: async () => {
       if (!debouncedQuery) return null
@@ -80,7 +80,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   })
 
   // Fetch campaigns
-  const { data: campaignsData } = useQuery({
+  const { data: campaignsData, isError: campaignsError } = useQuery({
     queryKey: ['search-campaigns', debouncedQuery],
     queryFn: async () => {
       if (!debouncedQuery) return null
@@ -91,7 +91,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   })
 
   // Fetch workflows
-  const { data: workflowsData } = useQuery({
+  const { data: workflowsData, isError: workflowsError } = useQuery({
     queryKey: ['search-workflows', debouncedQuery],
     queryFn: async () => {
       if (!debouncedQuery) return null
@@ -108,11 +108,13 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     { id: 'campaigns', type: 'page', title: 'Campaigns', description: 'Create and manage campaigns', url: '/campaigns', icon: <Target className="w-4 h-4" /> },
     { id: 'automation', type: 'page', title: 'Automation', description: 'Workflow automation', url: '/workflows', icon: <Zap className="w-4 h-4" /> },
     { id: 'analytics', type: 'page', title: 'Analytics', description: 'View reports and insights', url: '/analytics', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'communications', type: 'page', title: 'Communications', description: 'Inbox and messages', url: '/communications', icon: <Mail className="w-4 h-4" /> },
+    { id: 'communications', type: 'page', title: 'Communications', description: 'Inbox and messages', url: '/communication/inbox', icon: <Mail className="w-4 h-4" /> },
     { id: 'settings', type: 'page', title: 'Settings', description: 'Account and preferences', url: '/settings', icon: <Settings className="w-4 h-4" /> },
     { id: 'billing', type: 'page', title: 'Billing', description: 'Subscription and invoices', url: '/billing', icon: <DollarSign className="w-4 h-4" /> },
     { id: 'admin', type: 'page', title: 'Admin Panel', description: 'Organization management', url: '/admin', icon: <Users className="w-4 h-4" /> },
   ], [])
+
+  const hasSearchError = leadsError || campaignsError || workflowsError
 
   // Combine all search results
   const searchResults = useMemo(() => {
@@ -347,6 +349,9 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
               <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p className="font-medium">No results found</p>
               <p className="text-sm mt-1">Try searching with different keywords</p>
+              {hasSearchError && (
+                <p className="text-sm mt-2 text-amber-600">Some search results may be unavailable due to a connection issue.</p>
+              )}
             </div>
           ) : (
             <div className="py-2">

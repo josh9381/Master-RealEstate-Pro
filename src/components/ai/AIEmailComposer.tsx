@@ -129,16 +129,23 @@ export function AIEmailComposer({
       />
 
       {/* Modal */}
-      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background shadow-2xl">
+      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border/40 bg-background shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b bg-gradient-to-r from-purple-600 to-blue-600 p-4 text-white rounded-t-lg">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="h-5 w-5" />
-            <h2 className="font-semibold">AI Email Composer</h2>
+        <div className="relative flex items-center justify-between border-b p-4 text-white rounded-t-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
+          <div className="relative flex items-center space-x-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="font-semibold">AI Email Composer</h2>
+              <p className="text-[11px] text-white/60">Generate professional emails with AI</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 hover:bg-white/20 transition-colors"
+            className="relative rounded-xl p-1.5 hover:bg-white/15 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>

@@ -78,15 +78,16 @@ export function MessageEnhancerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="message-enhancer-title" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-card text-card-foreground rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" tabIndex={-1}>
+      <div className="bg-card text-card-foreground rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-border/40" tabIndex={-1}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg">
+        <div className="relative flex items-center justify-between p-5 border-b overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 dark:from-purple-950/30 dark:via-indigo-950/20 dark:to-blue-950/30" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-sm shadow-purple-500/20">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 id="message-enhancer-title" className="text-xl font-bold text-foreground">AI Message Enhancer</h2>
+              <h2 id="message-enhancer-title" className="text-lg font-bold text-foreground">AI Message Enhancer</h2>
               <p className="text-sm text-muted-foreground">Transform your message with AI-powered rewriting</p>
             </div>
           </div>
@@ -94,7 +95,7 @@ export function MessageEnhancerModal({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="hover:bg-background/50"
+            className="relative hover:bg-background/50 rounded-xl"
             aria-label="Close enhancer"
           >
             <X className="h-5 w-5" />
@@ -105,18 +106,18 @@ export function MessageEnhancerModal({
         <div className="flex-1 overflow-y-auto p-6">
           {/* Tone Selector */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-foreground mb-3">
+            <label className="block text-sm font-semibold text-foreground mb-3">
               Select Tone
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
               {TONE_OPTIONS.map((tone) => (
                 <button
                   key={tone.value}
                   onClick={() => setSelectedTone(tone.value)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                  className={`p-3 rounded-xl border-2 text-left transition-all ${
                     selectedTone === tone.value
-                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/30 shadow-sm'
-                      : 'border-border hover:border-muted-foreground/30 hover:bg-muted'
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/20 shadow-sm shadow-purple-500/10'
+                      : 'border-border/60 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-muted/50'
                   }`}
                 >
                   <div className="font-medium text-sm">{tone.label}</div>

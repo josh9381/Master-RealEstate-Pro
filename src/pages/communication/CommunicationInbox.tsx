@@ -1107,6 +1107,9 @@ const CommunicationInbox = () => {
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Enter') handleForwardConfirm() }}
             />
+            {forwardEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forwardEmail.trim()) && (
+              <p className="text-xs text-destructive mt-1">Please enter a valid email address</p>
+            )}
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setShowForwardDialog(false); setForwardEmail('') }}>Cancel</AlertDialogCancel>

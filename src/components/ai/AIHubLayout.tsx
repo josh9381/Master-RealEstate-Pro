@@ -11,6 +11,8 @@ import {
   DollarSign,
   Search,
   ChevronRight,
+  Menu,
+  X,
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
@@ -46,7 +48,7 @@ const aiNav: NavGroup[] = [
       {
         id: 'segmentation',
         label: 'Segmentation',
-        path: '/leads/segments',
+        path: '/ai/segmentation',
         icon: Sparkles,
         description: 'AI-driven segmentation',
         keywords: ['segment', 'group', 'cluster', 'audience', 'ai'],
@@ -114,6 +116,7 @@ interface AIHubLayoutProps {
 export const AIHubLayout = ({ children }: AIHubLayoutProps) => {
   const location = useLocation();
   const [search, setSearch] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isHub = location.pathname === '/ai';
 
@@ -135,8 +138,30 @@ export const AIHubLayout = ({ children }: AIHubLayoutProps) => {
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] -mx-6 -mb-6">
+      {/* Mobile sidebar toggle */}
+      <button
+        className="fixed top-20 left-4 z-50 lg:hidden p-2 rounded-md bg-background border shadow-sm"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+      >
+        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </button>
+
+      {/* Sidebar backdrop for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-72 border-r bg-muted/30 flex-shrink-0 overflow-y-auto">
+      <aside className={cn(
+        'w-72 border-r bg-muted/30 flex-shrink-0 overflow-y-auto',
+        'fixed inset-y-0 left-0 z-40 lg:static lg:z-auto',
+        'transition-transform duration-200 ease-in-out',
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      )}>
         <div className="p-4 space-y-4">
           {/* Header */}
           <div className="flex items-center gap-2 px-2">
@@ -163,6 +188,7 @@ export const AIHubLayout = ({ children }: AIHubLayoutProps) => {
             <div>
               <Link
                 to="/ai"
+                onClick={() => setSidebarOpen(false)}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
                   isHub
@@ -190,6 +216,7 @@ export const AIHubLayout = ({ children }: AIHubLayoutProps) => {
                       <Link
                         key={item.id}
                         to={item.path}
+                        onClick={() => setSidebarOpen(false)}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors group',
                           isActive

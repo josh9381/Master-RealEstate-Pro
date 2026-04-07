@@ -37,7 +37,29 @@ const AICostDashboard = () => {
     queryKey: ['ai', 'cost-dashboard', timeRange],
     queryFn: async () => {
       const res = await aiApi.getCostDashboard(timeRange);
-      return res.data as CostData;
+      const d = res.data;
+      // Normalize backend response shape to CostData
+      const totalCost = d.totalCost ?? d.currentMonth?.cost ?? 0;
+      const totalTokens = d.totalTokens ?? d.currentMonth?.tokens ?? 0;
+      const totalRequests = d.totalRequests ?? d.modelBreakdown?.reduce((s: number, m: { requests?: number }) => s + (m.requests || 0), 0) ?? 0;
+      const budget = d.budget ?? {};
+      return {
+        period: d.period || `Last ${timeRange} days`,
+        totalCost,
+        totalTokens,
+        totalRequests,
+        byModel: d.byModel ?? d.modelBreakdown ?? [],
+        byUser: d.byUser ?? d.userBreakdown ?? [],
+        costHistory: d.costHistory ?? [],
+        budget: {
+          warning: budget.warning ?? 25,
+          caution: budget.caution ?? 50,
+          hardLimit: budget.hardLimit ?? 100,
+          alertEnabled: budget.alertEnabled ?? true,
+          currentSpend: budget.currentSpend ?? budget.currentCost ?? totalCost,
+          percentUsed: budget.percentUsed ?? (budget.hardLimit ? ((budget.currentCost ?? totalCost) / budget.hardLimit) * 100 : 0),
+        },
+      } as CostData;
     },
   });
 
@@ -92,13 +114,14 @@ const AICostDashboard = () => {
           <select
             value={String(timeRange)}
             onChange={(e) => setTimeRange(Number(e.target.value))}
+            aria-label="Select time range"
             className="rounded-md border bg-background px-3 py-1.5 text-sm"
           >
             <option value="7">Last 7 days</option>
             <option value="30">Last 30 days</option>
             <option value="90">Last 90 days</option>
           </select>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <Button variant="outline" size="sm" onClick={() => refetch()} aria-label="Refresh data">
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>

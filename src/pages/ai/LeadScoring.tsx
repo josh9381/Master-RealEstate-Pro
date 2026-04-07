@@ -366,7 +366,7 @@ const LeadScoring = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b">
+      <div className="flex border-b" role="tablist" aria-label="Lead scoring sections">
         {[
           { id: 'scores' as ScoringTab, label: 'Scores & Config' },
           { id: 'charts' as ScoringTab, label: 'Model Performance' },
@@ -375,6 +375,9 @@ const LeadScoring = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`panel-${tab.id}`}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-primary text-primary'
@@ -499,7 +502,7 @@ const LeadScoring = () => {
       )}
 
       {/* Model Status */}
-      {activeTab === 'scores' && (<>
+      {activeTab === 'scores' && (<div role="tabpanel" id="panel-scores">
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -580,6 +583,13 @@ const LeadScoring = () => {
             <CardDescription>Latest lead scoring results</CardDescription>
           </CardHeader>
           <CardContent>
+            {recentScores.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No scored leads yet. Run scoring to see results here.</p>
+              </div>
+            ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -634,6 +644,8 @@ const LeadScoring = () => {
                 ))}
               </TableBody>
             </Table>
+            </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -774,11 +786,11 @@ const LeadScoring = () => {
           </div>
         </CardContent>
       </Card>
-      </>)}
+      </div>)}
 
       {/* Charts & Model Performance Tab */}
       {activeTab === 'charts' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-charts">
           {/* Model Accuracy Trend */}
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
@@ -966,7 +978,7 @@ const LeadScoring = () => {
 
       {/* Training & Data Tab */}
       {activeTab === 'training' && (
-        <div className="space-y-6">
+        <div className="space-y-6" role="tabpanel" id="panel-training">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">

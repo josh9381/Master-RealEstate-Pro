@@ -268,6 +268,8 @@ function CampaignsList() {
     const failed = results.filter(r => r.status === 'rejected').length
     if (failed > 0) {
       toast.error(`Failed to update ${failed} of ${selectedCampaigns.length} campaigns`)
+    } else {
+      toast.success(`Updated ${selectedCampaigns.length} campaign(s) to ${newStatus}`)
     }
     queryClient.invalidateQueries({ queryKey: ['campaigns'] })
 
@@ -431,7 +433,7 @@ function CampaignsList() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 10rem)' }}>
+    <div className="flex flex-col space-y-4">
 
 
 
@@ -449,7 +451,7 @@ function CampaignsList() {
 
       {typeFilter !== 'PHONE' && (<>
       {/* Fixed Top Section */}
-      <div className="flex-shrink-0 space-y-4">
+      <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -485,70 +487,70 @@ function CampaignsList() {
       />
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
-            <div className="rounded-full bg-blue-100 p-2.5">
-              <Target className="h-4 w-4 text-blue-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium">Active Campaigns</CardTitle>
+            <div className="rounded-full bg-blue-100 p-1.5">
+              <Target className="h-3.5 w-3.5 text-blue-600" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.active}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Currently running</p>
+          <CardContent className="pb-3 px-4">
+            <div className="text-2xl font-bold">{stats.active}</div>
+            <p className="text-[11px] text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Messages Sent</CardTitle>
-            <div className="rounded-full bg-green-100 p-2.5">
-              <Users className="h-4 w-4 text-green-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium">Messages Sent</CardTitle>
+            <div className="rounded-full bg-green-100 p-1.5">
+              <Users className="h-3.5 w-3.5 text-green-600" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.totalSent.toLocaleString()}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Across all campaigns</p>
+          <CardContent className="pb-3 px-4">
+            <div className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</div>
+            <p className="text-[11px] text-muted-foreground">Across all campaigns</p>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <div className="rounded-full bg-purple-100 p-2.5">
-              <DollarSign className="h-4 w-4 text-purple-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium">Total Revenue</CardTitle>
+            <div className="rounded-full bg-purple-100 p-1.5">
+              <DollarSign className="h-3.5 w-3.5 text-purple-600" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{fmtMoney(stats.totalRevenue)}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Total generated</p>
+          <CardContent className="pb-3 px-4">
+            <div className="text-2xl font-bold">{fmtMoney(stats.totalRevenue)}</div>
+            <p className="text-[11px] text-muted-foreground">Total generated</p>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average ROI</CardTitle>
-            <div className="rounded-full bg-orange-100 p-2.5">
-              <TrendingUp className="h-4 w-4 text-orange-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium">Average ROI</CardTitle>
+            <div className="rounded-full bg-orange-100 p-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-orange-600" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.avgROI}%</div>
-            <p className="mt-1 text-xs text-muted-foreground">Return on investment</p>
+          <CardContent className="pb-3 px-4">
+            <div className="text-2xl font-bold">{stats.avgROI}%</div>
+            <p className="text-[11px] text-muted-foreground">Return on investment</p>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Budget</CardTitle>
-            <div className="rounded-full bg-indigo-100 p-2.5">
-              <DollarSign className="h-4 w-4 text-indigo-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium">Budget</CardTitle>
+            <div className="rounded-full bg-indigo-100 p-1.5">
+              <DollarSign className="h-3.5 w-3.5 text-indigo-600" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{fmtMoney(stats.totalSpent)}</div>
-            <p className="mt-1 text-xs text-muted-foreground">of {fmtMoney(stats.totalBudget)} budget</p>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+          <CardContent className="pb-3 px-4">
+            <div className="text-2xl font-bold">{fmtMoney(stats.totalSpent)}</div>
+            <p className="text-[11px] text-muted-foreground">of {fmtMoney(stats.totalBudget)} budget</p>
+            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                 style={{ width: `${calcProgress(stats.totalSpent, stats.totalBudget)}%` }}
@@ -678,10 +680,10 @@ function CampaignsList() {
           )
         })}
       </div>
-      </div>{/* End fixed top section */}
+      </div>{/* End top section */}
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto min-h-0 mt-4">
+      {/* Content Area - scrollable, max ~10 campaign rows visible */}
+      <div className="max-h-[800px] overflow-y-auto">
       <div className="space-y-3">
 
       {/* Empty State */}
@@ -1010,7 +1012,7 @@ function CampaignsList() {
       )}
 
       </div>{/* End space-y-3 */}
-      </div>{/* End scrollable content area */}
+      </div>{/* End content area */}
 
       {/* Fixed Bottom: Pagination Controls */}
       {(viewMode === 'list' || viewMode === 'grid') && (
@@ -1146,7 +1148,12 @@ function CampaignsList() {
                         </Link>
                       ))}
                       {(campaignsByDay[day] || []).length > 3 && (
-                        <p className="text-[10px] text-muted-foreground text-center">+{(campaignsByDay[day] || []).length - 3} more</p>
+                        <button
+                          className="text-[10px] text-primary hover:underline text-center w-full"
+                          onClick={() => { setViewMode('list'); }}
+                        >
+                          +{(campaignsByDay[day] || []).length - 3} more
+                        </button>
                       )}
                     </div>
                   </div>
@@ -1179,12 +1186,15 @@ function CampaignsList() {
                 onChange={(e) => setNewStatus(e.target.value as Campaign['status'])}
               >
                 <option value="">Select status...</option>
+                <option value="DRAFT">Draft</option>
+                <option value="SCHEDULED">Scheduled</option>
                 <option value="ACTIVE">Active</option>
                 <option value="PAUSED">Paused</option>
                 <option value="COMPLETED">Completed</option>
-                <option value="DRAFT">Draft</option>
-                <option value="SCHEDULED">Scheduled</option>
               </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Note: Some transitions may be rejected by the server if invalid (e.g., Completed → Draft).
+              </p>
             </div>
           <DialogFooter>
               <Button

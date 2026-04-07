@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { validateBody } from '../middleware/validate';
 import { asyncHandler } from '../utils/asyncHandler';
+import { prisma } from '../config/database';
 import {
   listIntegrations,
   connectIntegration,
@@ -64,8 +65,25 @@ router.post('/:provider/sync', asyncHandler(syncIntegration));
  * @desc    Update integration provider settings
  * @access  Private
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.put('/:provider/settings', asyncHandler(async (req: any, res: any) => {
-  res.json({ success: true, message: `${req.params.provider} settings updated` });
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+  const { provider } = req.params;
+  const settings = req.body;
+
+  await prisma.integration.updateMany({
+    where: {
+      userId: req.user.userId,
+      provider,
+    },
+    data: {
+      config: settings,
+    },
+  });
+
+  res.json({ success: true, message: `${provider} settings updated` });
 }));
 
 export default router;

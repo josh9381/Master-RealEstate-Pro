@@ -120,6 +120,7 @@ export function TagsManager() {
   const tags: TagData[] = (() => {
     const raw = tagsResponse?.data?.tags || tagsResponse?.data || tagsResponse?.tags || tagsResponse || []
     if (!Array.isArray(raw)) return []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return raw.map((t: any) => ({
       id: t.id,
       name: t.name,
@@ -207,10 +208,6 @@ export function TagsManager() {
     }
   }
 
-  const handleMergeTags = () => {
-    toast.info('Merge tags functionality coming soon')
-  }
-
   // Separate default vs custom tags
   const defaultTags = tags.filter((t: TagData) => DEFAULT_TAG_NAMES.has(t.name))
   const customTags = tags.filter((t: TagData) => !DEFAULT_TAG_NAMES.has(t.name))
@@ -246,7 +243,7 @@ export function TagsManager() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleMergeTags}>
+          <Button variant="outline" disabled title="Merge tags functionality coming soon">
             <Combine className="mr-2 h-4 w-4" />
             Merge Tags
           </Button>

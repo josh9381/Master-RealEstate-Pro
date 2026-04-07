@@ -116,6 +116,7 @@ export default function ActivityPage() {
       color: colorMap[(a.type || 'note').toLowerCase()] || 'text-gray-500',
       leadName: a.lead ? `${a.lead.firstName || ''} ${a.lead.lastName || ''}`.trim() : undefined,
     }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rawActivities])
 
   const totalCount = activitiesResponse?.data?.total || activitiesResponse?.total || activities.length
@@ -184,15 +185,15 @@ export default function ActivityPage() {
           <div className="text-sm text-muted-foreground">Total Activities</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: typeof activities[number]) => a.type === 'email').length}</div>
+          <div className="text-2xl font-bold">{activitiesResponse?.data?.emailCount ?? activitiesResponse?.emailCount ?? activities.filter((a: typeof activities[number]) => a.type === 'email').length}</div>
           <div className="text-sm text-muted-foreground">Emails Sent</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: typeof activities[number]) => a.type === 'call').length}</div>
+          <div className="text-2xl font-bold">{activitiesResponse?.data?.callCount ?? activitiesResponse?.callCount ?? activities.filter((a: typeof activities[number]) => a.type === 'call').length}</div>
           <div className="text-sm text-muted-foreground">Calls Made</div>
         </Card>
         <Card className="p-4">
-          <div className="text-2xl font-bold">{activities.filter((a: typeof activities[number]) => a.type === 'meeting').length}</div>
+          <div className="text-2xl font-bold">{activitiesResponse?.data?.meetingCount ?? activitiesResponse?.meetingCount ?? activities.filter((a: typeof activities[number]) => a.type === 'meeting').length}</div>
           <div className="text-sm text-muted-foreground">Meetings</div>
         </Card>
       </div>

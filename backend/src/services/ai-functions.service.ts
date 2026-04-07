@@ -2065,6 +2065,1065 @@ Generate the script:`;
     }
   }
 
+  // ============================================
+  // PIPELINE MANAGEMENT
+  // ============================================
+
+  async getPipelines(organizationId: string): Promise<string> {
+    try {
+      const pipelines = await prisma.pipeline.findMany({
+        where: { organizationId },
+        include: {
+          stages: { orderBy: { order: 'asc' } },
+          _count: { select: { leads: true } },
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        pipelines: pipelines.map(p => ({
+          id: p.id,
+          name: p.name,
+          type: p.type,
+          isDefault: p.isDefault,
+          leadCount: p._count.leads,
+          stages: p.stages.map(s => ({ id: s.id, name: s.name, order: s.order, color: s.color })),
+        })),
+        count: pipelines.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get pipelines' });
+    }
+  }
+
+  async createPipeline(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.name) return JSON.stringify({ error: 'name is required' });
+
+      const pipeline = await prisma.pipeline.create({
+        data: {
+          name: args.name,
+          description: args.description || '',
+          organizationId,
+        },
+      });
+
+      // Create stages if provided
+      const stageNames = args.stages || ['New', 'Contacted', 'Qualified', 'Proposal', 'Won'];
+      for (let i = 0; i < stageNames.length; i++) {
+        await prisma.pipelineStage.create({
+          data: {
+            name: stageNames[i],
+            order: i,
+            pipelineId: pipeline.id,
+            isWinStage: i === stageNames.length - 1,
+          },
+        });
+      }
+
+      return JSON.stringify({
+        success: true,
+        pipeline: { id: pipeline.id, name: pipeline.name },
+        message: `✅ Created pipeline: ${pipeline.name} with ${stageNames.length} stages`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to create pipeline' });
+    }
+  }
+
+  async moveLeadToStage(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.leadId) return JSON.stringify({ error: 'leadId is required' });
+
+      const lead = await prisma.lead.findFirst({
+        where: { id: args.leadId, organizationId },
+      });
+      if (!lead) return JSON.stringify({ error: 'Lead not found' });
+
+      let stageId = args.stageId;
+
+      // If stageName provided instead of stageId, look it up
+      if (!stageId && args.stageName) {
+        const pipelineId = args.pipelineId || lead.pipelineId;
+        if (!pipelineId) {
+          // Use default pipeline
+          const defaultPipeline = await prisma.pipeline.findFirst({
+            where: { organizationId, isDefault: true },
+            include: { stages: true },
+          });
+          if (!defaultPipeline) return JSON.stringify({ error: 'No default pipeline found' });
+          const stage = defaultPipeline.stages.find(
+            s => s.name.toLowerCase() === args.stageName!.toLowerCase()
+          );
+          if (!stage) return JSON.stringify({ error: `Stage "${args.stageName}" not found` });
+          stageId = stage.id;
+        } else {
+          const stage = await prisma.pipelineStage.findFirst({
+            where: { pipelineId, name: { equals: args.stageName, mode: 'insensitive' } },
+          });
+          if (!stage) return JSON.stringify({ error: `Stage "${args.stageName}" not found` });
+          stageId = stage.id;
+        }
+      }
+
+      if (!stageId) return JSON.stringify({ error: 'stageId or stageName required' });
+
+      await prisma.lead.update({
+        where: { id: args.leadId },
+        data: { pipelineStageId: stageId },
+      });
+
+      return JSON.stringify({
+        success: true,
+        message: `✅ Moved ${lead.firstName} ${lead.lastName} to new stage`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to move lead' });
+    }
+  }
+
+  async getPipelineLeads(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      let pipelineId = args.pipelineId;
+      if (!pipelineId) {
+        const defaultPipeline = await prisma.pipeline.findFirst({
+          where: { organizationId, isDefault: true },
+        });
+        if (!defaultPipeline) return JSON.stringify({ error: 'No default pipeline found' });
+        pipelineId = defaultPipeline.id;
+      }
+
+      const stages = await prisma.pipelineStage.findMany({
+        where: { pipelineId },
+        orderBy: { order: 'asc' },
+        include: {
+          leads: {
+            where: { organizationId },
+            select: { id: true, firstName: true, lastName: true, score: true, status: true },
+            take: 20,
+          },
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        stages: stages.map(s => ({
+          name: s.name,
+          leadCount: s.leads.length,
+          leads: s.leads.map(l => ({
+            id: l.id,
+            name: `${l.firstName} ${l.lastName}`,
+            score: l.score,
+            status: l.status,
+          })),
+        })),
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get pipeline leads' });
+    }
+  }
+
+  // ============================================
+  // GOAL TRACKING
+  // ============================================
+
+  async createGoal(organizationId: string, userId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.name || !args.metricType || args.targetValue === undefined) {
+        return JSON.stringify({ error: 'name, metricType, and targetValue are required' });
+      }
+
+      const now = new Date();
+      const period = args.period || 'MONTHLY';
+      let endDate: Date;
+      if (args.endDate) {
+        endDate = new Date(args.endDate);
+      } else {
+        endDate = new Date(now);
+        if (period === 'DAILY') endDate.setDate(endDate.getDate() + 1);
+        else if (period === 'WEEKLY') endDate.setDate(endDate.getDate() + 7);
+        else if (period === 'MONTHLY') endDate.setMonth(endDate.getMonth() + 1);
+        else if (period === 'QUARTERLY') endDate.setMonth(endDate.getMonth() + 3);
+        else endDate.setFullYear(endDate.getFullYear() + 1);
+      }
+
+      const goal = await prisma.goal.create({
+        data: {
+          name: args.name,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          metricType: args.metricType as any,
+          targetValue: args.targetValue,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          period: period as any,
+          startDate: args.startDate ? new Date(args.startDate) : now,
+          endDate,
+          notes: args.notes || null,
+          userId,
+          organizationId,
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        goal: { id: goal.id, name: goal.name, targetValue: goal.targetValue, period: goal.period },
+        message: `✅ Created goal: ${goal.name} (Target: ${goal.targetValue})`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to create goal' });
+    }
+  }
+
+  async listGoals(organizationId: string, userId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const activeOnly = args.activeOnly !== false;
+      const where: Prisma.GoalWhereInput = { organizationId, userId };
+      if (activeOnly) where.isActive = true;
+
+      const goals = await prisma.goal.findMany({
+        where,
+        orderBy: { endDate: 'asc' },
+      });
+
+      return JSON.stringify({
+        success: true,
+        goals: goals.map(g => ({
+          id: g.id,
+          name: g.name,
+          metricType: g.metricType,
+          targetValue: g.targetValue,
+          currentValue: g.currentValue,
+          progress: g.targetValue > 0 ? Math.round((g.currentValue / g.targetValue) * 100) : 0,
+          period: g.period,
+          endDate: g.endDate.toISOString().split('T')[0],
+          isActive: g.isActive,
+        })),
+        count: goals.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list goals' });
+    }
+  }
+
+  async updateGoal(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.goalId) return JSON.stringify({ error: 'goalId is required' });
+
+      const updateData: Record<string, unknown> = {};
+      if (args.name) updateData.name = args.name;
+      if (args.targetValue !== undefined) updateData.targetValue = args.targetValue;
+      if (args.currentValue !== undefined) updateData.currentValue = args.currentValue;
+      if (args.isActive !== undefined) updateData.isActive = args.isActive;
+      if (args.notes) updateData.notes = args.notes;
+
+      const goal = await prisma.goal.update({
+        where: { id: args.goalId },
+        data: updateData,
+      });
+
+      return JSON.stringify({
+        success: true,
+        message: `✅ Updated goal: ${goal.name}`,
+        goal: { id: goal.id, name: goal.name, targetValue: goal.targetValue, currentValue: goal.currentValue },
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to update goal' });
+    }
+  }
+
+  async deleteGoal(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.goalId) return JSON.stringify({ error: 'goalId is required' });
+
+      const goal = await prisma.goal.findFirst({ where: { id: args.goalId, organizationId } });
+      if (!goal) return JSON.stringify({ error: 'Goal not found' });
+
+      await prisma.goal.delete({ where: { id: args.goalId } });
+
+      return JSON.stringify({ success: true, message: `✅ Deleted goal: ${goal.name}` });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to delete goal' });
+    }
+  }
+
+  // ============================================
+  // CALL LOGGING
+  // ============================================
+
+  async logCall(organizationId: string, userId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.leadId || !args.direction || !args.phoneNumber) {
+        return JSON.stringify({ error: 'leadId, direction, and phoneNumber are required' });
+      }
+
+      const lead = await prisma.lead.findFirst({ where: { id: args.leadId, organizationId } });
+      if (!lead) return JSON.stringify({ error: 'Lead not found' });
+
+      const call = await prisma.call.create({
+        data: {
+          organizationId,
+          leadId: args.leadId,
+          calledById: userId,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          direction: args.direction as any,
+          phoneNumber: args.phoneNumber,
+          status: 'COMPLETED',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          outcome: (args.outcome || 'ANSWERED') as any,
+          duration: typeof args.duration === 'number' ? args.duration : undefined,
+          notes: args.notes || null,
+          followUpDate: args.followUpDate ? new Date(args.followUpDate) : undefined,
+        },
+      });
+
+      // Log activity
+      await prisma.activity.create({
+        data: {
+          type: 'CALL_MADE',
+          title: `${args.direction} Call`,
+          description: `${args.direction} call to ${lead.firstName} ${lead.lastName}${args.outcome ? ` - ${args.outcome}` : ''}`,
+          leadId: args.leadId,
+          organizationId,
+          userId,
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        call: { id: call.id, direction: call.direction, outcome: call.outcome },
+        message: `✅ Logged ${args.direction.toLowerCase()} call with ${lead.firstName} ${lead.lastName}`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to log call' });
+    }
+  }
+
+  async getCallStats(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const timeRange = args.timeRange || 'month';
+      const daysAgo = timeRange === 'today' ? 1 : timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 90;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - daysAgo);
+
+      const [total, answered, voicemail, noAnswer, avgDuration] = await Promise.all([
+        prisma.call.count({ where: { organizationId, createdAt: { gte: startDate } } }),
+        prisma.call.count({ where: { organizationId, createdAt: { gte: startDate }, outcome: 'ANSWERED' } }),
+        prisma.call.count({ where: { organizationId, createdAt: { gte: startDate }, outcome: 'VOICEMAIL' } }),
+        prisma.call.count({ where: { organizationId, createdAt: { gte: startDate }, outcome: 'NO_ANSWER' } }),
+        prisma.call.aggregate({ where: { organizationId, createdAt: { gte: startDate } }, _avg: { duration: true } }),
+      ]);
+
+      return JSON.stringify({
+        success: true,
+        stats: {
+          timeRange,
+          totalCalls: total,
+          answered,
+          voicemail,
+          noAnswer,
+          avgDurationSeconds: avgDuration._avg.duration ? Math.round(avgDuration._avg.duration) : 0,
+          answerRate: total > 0 ? `${Math.round((answered / total) * 100)}%` : '0%',
+        },
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get call stats' });
+    }
+  }
+
+  async getCalls(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const where: Prisma.CallWhereInput = { organizationId };
+      if (args.leadId) where.leadId = args.leadId;
+
+      const calls = await prisma.call.findMany({
+        where,
+        take: args.limit || 20,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, direction: true, phoneNumber: true, status: true, outcome: true,
+          duration: true, notes: true, createdAt: true,
+          lead: { select: { firstName: true, lastName: true } },
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        calls: calls.map(c => ({
+          id: c.id,
+          direction: c.direction,
+          phoneNumber: c.phoneNumber,
+          outcome: c.outcome,
+          duration: c.duration,
+          notes: c.notes,
+          leadName: c.lead ? `${c.lead.firstName} ${c.lead.lastName}` : null,
+          date: c.createdAt,
+        })),
+        count: calls.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get calls' });
+    }
+  }
+
+  // ============================================
+  // NOTIFICATIONS
+  // ============================================
+
+  async getNotifications(organizationId: string, userId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const where: Prisma.NotificationWhereInput = { userId, organizationId };
+      if (args.unreadOnly) where.read = false;
+
+      const notifications = await prisma.notification.findMany({
+        where,
+        take: args.limit || 20,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, type: true, title: true, message: true, read: true, link: true, createdAt: true },
+      });
+
+      return JSON.stringify({
+        success: true,
+        notifications,
+        count: notifications.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get notifications' });
+    }
+  }
+
+  async getUnreadNotificationCount(organizationId: string, userId: string): Promise<string> {
+    try {
+      const count = await prisma.notification.count({
+        where: { userId, organizationId, read: false },
+      });
+
+      return JSON.stringify({ success: true, unreadCount: count });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get unread count' });
+    }
+  }
+
+  async markNotificationsRead(organizationId: string, userId: string): Promise<string> {
+    try {
+      const result = await prisma.notification.updateMany({
+        where: { userId, organizationId, read: false },
+        data: { read: true },
+      });
+
+      return JSON.stringify({
+        success: true,
+        message: `✅ Marked ${result.count} notifications as read`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to mark notifications read' });
+    }
+  }
+
+  // ============================================
+  // LIST/SEARCH FUNCTIONS
+  // ============================================
+
+  async listCampaigns(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const where: Prisma.CampaignWhereInput = { organizationId };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (args.status) where.status = args.status as any;
+
+      const campaigns = await prisma.campaign.findMany({
+        where,
+        take: args.limit || 20,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, name: true, type: true, status: true, sent: true, opened: true,
+          clicked: true, createdAt: true,
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        campaigns: campaigns.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type,
+          status: c.status,
+          sent: c.sent,
+          opened: c.opened,
+          clicked: c.clicked,
+        })),
+        count: campaigns.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list campaigns' });
+    }
+  }
+
+  async listWorkflows(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const where: Prisma.WorkflowWhereInput = { organizationId };
+      if (args.activeOnly) where.isActive = true;
+
+      const workflows = await prisma.workflow.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, name: true, description: true, isActive: true, triggerType: true,
+          executions: true, lastRunAt: true,
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        workflows: workflows.map(w => ({
+          id: w.id,
+          name: w.name,
+          description: w.description,
+          isActive: w.isActive,
+          triggerType: w.triggerType,
+          executions: w.executions,
+          lastRunAt: w.lastRunAt,
+        })),
+        count: workflows.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list workflows' });
+    }
+  }
+
+  async listTasks(organizationId: string, userId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const where: Prisma.TaskWhereInput = { organizationId };
+      if (args.leadId) where.leadId = args.leadId;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (args.status) where.status = args.status as any;
+
+      const tasks = await prisma.task.findMany({
+        where,
+        take: args.limit || 20,
+        orderBy: { dueDate: 'asc' },
+        select: {
+          id: true, title: true, description: true, dueDate: true, priority: true,
+          status: true, completedAt: true,
+          lead: { select: { firstName: true, lastName: true } },
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        tasks: tasks.map(t => ({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          dueDate: t.dueDate,
+          priority: t.priority,
+          status: t.status,
+          completed: !!t.completedAt,
+          leadName: t.lead ? `${t.lead.firstName} ${t.lead.lastName}` : null,
+        })),
+        count: tasks.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list tasks' });
+    }
+  }
+
+  async listEmailTemplates(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const where: Prisma.EmailTemplateWhereInput = { organizationId };
+      if (args.category) where.category = args.category;
+
+      const templates = await prisma.emailTemplate.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, name: true, subject: true, category: true },
+      });
+
+      return JSON.stringify({
+        success: true,
+        templates,
+        count: templates.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list email templates' });
+    }
+  }
+
+  async listSMSTemplates(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const where: Prisma.SMSTemplateWhereInput = { organizationId };
+      if (args.category) where.category = args.category;
+
+      const templates = await prisma.sMSTemplate.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, name: true, body: true, category: true },
+      });
+
+      return JSON.stringify({
+        success: true,
+        templates,
+        count: templates.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list SMS templates' });
+    }
+  }
+
+  // ============================================
+  // CUSTOM FIELDS
+  // ============================================
+
+  async getCustomFields(organizationId: string): Promise<string> {
+    try {
+      const fields = await prisma.customFieldDefinition.findMany({
+        where: { organizationId },
+        orderBy: { order: 'asc' },
+      });
+
+      return JSON.stringify({
+        success: true,
+        fields: fields.map(f => ({
+          id: f.id,
+          name: f.name,
+          fieldKey: f.fieldKey,
+          type: f.type,
+          required: f.required,
+          options: f.options,
+          placeholder: f.placeholder,
+        })),
+        count: fields.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get custom fields' });
+    }
+  }
+
+  async createCustomField(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.name || !args.type) return JSON.stringify({ error: 'name and type are required' });
+
+      const fieldKey = args.fieldKey || args.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+
+      const field = await prisma.customFieldDefinition.create({
+        data: {
+          name: args.name,
+          fieldKey,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          type: (args.type === 'SELECT' || args.type === 'MULTI_SELECT' ? 'DROPDOWN' : args.type) as any,
+          required: !!args.required,
+          options: args.options ? args.options : undefined,
+          placeholder: args.placeholder || null,
+          organizationId,
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        field: { id: field.id, name: field.name, fieldKey: field.fieldKey, type: field.type },
+        message: `✅ Created custom field: ${field.name}`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to create custom field' });
+    }
+  }
+
+  async deleteCustomField(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.fieldId) return JSON.stringify({ error: 'fieldId is required' });
+
+      await prisma.customFieldDefinition.delete({
+        where: { id: args.fieldId, organizationId },
+      });
+
+      return JSON.stringify({ success: true, message: '✅ Custom field deleted' });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to delete custom field' });
+    }
+  }
+
+  // ============================================
+  // EXPORT DATA
+  // ============================================
+
+  async exportData(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.type) return JSON.stringify({ error: 'type is required' });
+
+      const exportType = args.type;
+      let data: unknown[];
+
+      if (exportType === 'leads') {
+        data = await prisma.lead.findMany({
+          where: { organizationId },
+          select: { id: true, firstName: true, lastName: true, email: true, phone: true, status: true, score: true, source: true, createdAt: true },
+          take: 1000,
+        });
+      } else if (exportType === 'activities') {
+        data = await prisma.activity.findMany({
+          where: { organizationId },
+          select: { id: true, type: true, title: true, description: true, createdAt: true },
+          take: 1000,
+        });
+      } else if (exportType === 'campaigns') {
+        data = await prisma.campaign.findMany({
+          where: { organizationId },
+          select: { id: true, name: true, type: true, status: true, sent: true, opened: true, clicked: true, createdAt: true },
+        });
+      } else if (exportType === 'tasks') {
+        data = await prisma.task.findMany({
+          where: { organizationId },
+          select: { id: true, title: true, status: true, priority: true, dueDate: true, completedAt: true },
+          take: 1000,
+        });
+      } else {
+        return JSON.stringify({ error: `Unknown export type: ${exportType}` });
+      }
+
+      if (args.format === 'json') {
+        return JSON.stringify({
+          success: true,
+          exportType,
+          format: 'json',
+          data,
+          count: data.length,
+          message: `✅ Exported ${data.length} ${exportType} records as JSON`,
+        });
+      }
+
+      // CSV format
+      if (data.length === 0) {
+        return JSON.stringify({ success: true, csv: '', count: 0, message: 'No data to export' });
+      }
+
+      const headers = Object.keys(data[0] as Record<string, unknown>);
+      const csvRows = [
+        headers.join(','),
+        ...data.map(row => headers.map(h => {
+          const val = (row as Record<string, unknown>)[h];
+          return typeof val === 'string' && val.includes(',') ? `"${val}"` : String(val ?? '');
+        }).join(',')),
+      ];
+
+      return JSON.stringify({
+        success: true,
+        exportType,
+        format: 'csv',
+        csv: csvRows.join('\n'),
+        count: data.length,
+        message: `✅ Exported ${data.length} ${exportType} records as CSV`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to export data' });
+    }
+  }
+
+  // ============================================
+  // SAVED FILTERS & REPORTS
+  // ============================================
+
+  async listSavedFilters(organizationId: string, userId: string): Promise<string> {
+    try {
+      const filters = await prisma.savedFilterView.findMany({
+        where: { organizationId, OR: [{ userId }, { isShared: true }] },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return JSON.stringify({
+        success: true,
+        filters: filters.map(f => ({
+          id: f.id,
+          name: f.name,
+          icon: f.icon,
+          color: f.color,
+          isDefault: f.isDefault,
+          isShared: f.isShared,
+        })),
+        count: filters.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list saved filters' });
+    }
+  }
+
+  async createSavedFilter(organizationId: string, userId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.name || !args.filterConfig) {
+        return JSON.stringify({ error: 'name and filterConfig are required' });
+      }
+
+      const filter = await prisma.savedFilterView.create({
+        data: {
+          name: args.name,
+          filterConfig: args.filterConfig as Prisma.InputJsonValue,
+          color: args.color || null,
+          icon: args.icon || null,
+          userId,
+          organizationId,
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        filter: { id: filter.id, name: filter.name },
+        message: `✅ Created saved filter: ${filter.name}`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to create saved filter' });
+    }
+  }
+
+  async deleteSavedFilter(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.filterId) return JSON.stringify({ error: 'filterId is required' });
+
+      await prisma.savedFilterView.delete({ where: { id: args.filterId } });
+
+      return JSON.stringify({ success: true, message: '✅ Saved filter deleted' });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to delete saved filter' });
+    }
+  }
+
+  async listSavedReports(organizationId: string, _userId: string): Promise<string> {
+    try {
+      const reports = await prisma.savedReport.findMany({
+        where: { organizationId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, name: true, description: true, type: true, createdAt: true },
+      });
+
+      return JSON.stringify({
+        success: true,
+        reports,
+        count: reports.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list saved reports' });
+    }
+  }
+
+  async createSavedReport(organizationId: string, userId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.name || !args.type || !args.config) {
+        return JSON.stringify({ error: 'name, type, and config are required' });
+      }
+
+      const report = await prisma.savedReport.create({
+        data: {
+          name: args.name,
+          description: args.description || null,
+          type: args.type,
+          config: args.config as Prisma.InputJsonValue,
+          userId,
+          organizationId,
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        report: { id: report.id, name: report.name },
+        message: `✅ Created saved report: ${report.name}`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to create saved report' });
+    }
+  }
+
+  async deleteSavedReport(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      if (!args.reportId) return JSON.stringify({ error: 'reportId is required' });
+
+      await prisma.savedReport.delete({ where: { id: args.reportId } });
+
+      return JSON.stringify({ success: true, message: '✅ Saved report deleted' });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to delete saved report' });
+    }
+  }
+
+  // ============================================
+  // TEAM & SETTINGS
+  // ============================================
+
+  async listTeamMembers(organizationId: string): Promise<string> {
+    try {
+      const members = await prisma.user.findMany({
+        where: { organizationId },
+        select: { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true },
+      });
+
+      return JSON.stringify({
+        success: true,
+        members: members.map(m => ({
+          id: m.id,
+          name: `${m.firstName} ${m.lastName}`,
+          email: m.email,
+          role: m.role,
+          isActive: m.isActive,
+        })),
+        count: members.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list team members' });
+    }
+  }
+
+  async getUserProfile(userId: string): Promise<string> {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true, firstName: true, lastName: true, email: true, phone: true,
+          role: true, timezone: true, isActive: true,
+          organization: { select: { name: true } },
+        },
+      });
+
+      if (!user) return JSON.stringify({ error: 'User not found' });
+
+      return JSON.stringify({
+        success: true,
+        profile: {
+          id: user.id,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          timezone: user.timezone,
+          organization: user.organization?.name,
+        },
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get profile' });
+    }
+  }
+
+  async updateUserProfile(userId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (args.firstName) updateData.firstName = args.firstName;
+      if (args.lastName) updateData.lastName = args.lastName;
+      if (args.phone) updateData.phone = args.phone;
+      if (args.timezone) updateData.timezone = args.timezone;
+
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+      });
+
+      return JSON.stringify({
+        success: true,
+        message: `✅ Updated profile for ${user.firstName} ${user.lastName}`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to update profile' });
+    }
+  }
+
+  async getBusinessSettings(organizationId: string): Promise<string> {
+    try {
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { id: true, name: true },
+      });
+
+      if (!org) return JSON.stringify({ error: 'Organization not found' });
+
+      const settings = await prisma.businessSettings.findFirst({
+        where: { organizationId },
+        select: {
+          companyName: true, industry: true, website: true, phone: true,
+          address: true,
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        settings: {
+          organizationName: org.name,
+          ...settings,
+        },
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to get business settings' });
+    }
+  }
+
+  async updateBusinessSettings(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      // Update organization name if provided
+      if (args.companyName) {
+        await prisma.organization.update({
+          where: { id: organizationId },
+          data: { name: args.companyName },
+        });
+      }
+
+      // Update business settings
+      const settingsData: Record<string, unknown> = {};
+      if (args.companyName) settingsData.companyName = args.companyName;
+      if (args.industry) settingsData.industry = args.industry;
+      if (args.website) settingsData.website = args.website;
+      if (args.phone) settingsData.phone = args.phone;
+      if (args.address) settingsData.address = args.address;
+
+      const existing = await prisma.businessSettings.findFirst({ where: { organizationId } });
+      if (existing) {
+        await prisma.businessSettings.update({
+          where: { id: existing.id },
+          data: settingsData,
+        });
+      }
+
+      return JSON.stringify({
+        success: true,
+        message: `✅ Updated business settings`,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to update business settings' });
+    }
+  }
+
+  // ============================================
+  // APPOINTMENTS LIST
+  // ============================================
+
+  async listAppointments(organizationId: string, args: FunctionArgs): Promise<string> {
+    try {
+      const where: Prisma.AppointmentWhereInput = { organizationId };
+      if (args.leadId) where.leadId = args.leadId;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (args.status) where.status = args.status as any;
+      if (args.upcoming !== false) where.startTime = { gte: new Date() };
+
+      const appointments = await prisma.appointment.findMany({
+        where,
+        take: args.limit || 20,
+        orderBy: { startTime: 'asc' },
+        select: {
+          id: true, title: true, description: true, startTime: true, endTime: true,
+          location: true, status: true,
+          lead: { select: { firstName: true, lastName: true } },
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        appointments: appointments.map(a => ({
+          id: a.id,
+          title: a.title,
+          description: a.description,
+          startTime: a.startTime,
+          endTime: a.endTime,
+          location: a.location,
+          status: a.status,
+          leadName: a.lead ? `${a.lead.firstName} ${a.lead.lastName}` : null,
+        })),
+        count: appointments.length,
+      });
+    } catch (error) {
+      return JSON.stringify({ error: 'Failed to list appointments' });
+    }
+  }
+
   private extractSubjectLine(email: string): string {
     const subjectMatch = email.match(/Subject:?\s*(.+)/i);
     return subjectMatch ? subjectMatch[1].trim() : 'Follow Up';
@@ -2222,6 +3281,61 @@ Generate the script:`;
       case 'get_next_action': return this.getNextAction(organizationId, sanitizedArgs);
       case 'analyze_engagement': return this.analyzeEngagement(organizationId, sanitizedArgs);
       case 'identify_at_risk_leads': return this.identifyAtRiskLeads(organizationId, sanitizedArgs);
+
+      // Pipeline Management
+      case 'get_pipelines': return this.getPipelines(organizationId);
+      case 'create_pipeline': return this.createPipeline(organizationId, sanitizedArgs);
+      case 'move_lead_to_stage': return this.moveLeadToStage(organizationId, sanitizedArgs);
+      case 'get_pipeline_leads': return this.getPipelineLeads(organizationId, sanitizedArgs);
+
+      // Goal Tracking
+      case 'create_goal': return this.createGoal(organizationId, userId, sanitizedArgs);
+      case 'list_goals': return this.listGoals(organizationId, userId, sanitizedArgs);
+      case 'update_goal': return this.updateGoal(organizationId, sanitizedArgs);
+      case 'delete_goal': return this.deleteGoal(organizationId, sanitizedArgs);
+
+      // Call Logging
+      case 'log_call': return this.logCall(organizationId, userId, sanitizedArgs);
+      case 'get_call_stats': return this.getCallStats(organizationId, sanitizedArgs);
+      case 'get_calls': return this.getCalls(organizationId, sanitizedArgs);
+
+      // Notifications
+      case 'get_notifications': return this.getNotifications(organizationId, userId, sanitizedArgs);
+      case 'get_unread_notification_count': return this.getUnreadNotificationCount(organizationId, userId);
+      case 'mark_notifications_read': return this.markNotificationsRead(organizationId, userId);
+
+      // List/Search Functions
+      case 'list_campaigns': return this.listCampaigns(organizationId, sanitizedArgs);
+      case 'list_workflows': return this.listWorkflows(organizationId, sanitizedArgs);
+      case 'list_tasks': return this.listTasks(organizationId, userId, sanitizedArgs);
+      case 'list_email_templates': return this.listEmailTemplates(organizationId, sanitizedArgs);
+      case 'list_sms_templates': return this.listSMSTemplates(organizationId, sanitizedArgs);
+
+      // Custom Fields
+      case 'get_custom_fields': return this.getCustomFields(organizationId);
+      case 'create_custom_field': return this.createCustomField(organizationId, sanitizedArgs);
+      case 'delete_custom_field': return this.deleteCustomField(organizationId, sanitizedArgs);
+
+      // Export
+      case 'export_data': return this.exportData(organizationId, sanitizedArgs);
+
+      // Saved Filters & Reports
+      case 'list_saved_filters': return this.listSavedFilters(organizationId, userId);
+      case 'create_saved_filter': return this.createSavedFilter(organizationId, userId, sanitizedArgs);
+      case 'delete_saved_filter': return this.deleteSavedFilter(organizationId, sanitizedArgs);
+      case 'list_saved_reports': return this.listSavedReports(organizationId, userId);
+      case 'create_saved_report': return this.createSavedReport(organizationId, userId, sanitizedArgs);
+      case 'delete_saved_report': return this.deleteSavedReport(organizationId, sanitizedArgs);
+
+      // Team & Settings
+      case 'list_team_members': return this.listTeamMembers(organizationId);
+      case 'get_user_profile': return this.getUserProfile(userId);
+      case 'update_user_profile': return this.updateUserProfile(userId, sanitizedArgs);
+      case 'get_business_settings': return this.getBusinessSettings(organizationId);
+      case 'update_business_settings': return this.updateBusinessSettings(organizationId, sanitizedArgs);
+
+      // Appointments List
+      case 'list_appointments': return this.listAppointments(organizationId, sanitizedArgs);
       
       default: return JSON.stringify({ error: `Unknown function: ${functionName}` });
     }

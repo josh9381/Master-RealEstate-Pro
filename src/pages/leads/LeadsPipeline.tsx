@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import { fmtMoney } from '@/lib/metricsCalculator'
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -82,6 +82,7 @@ function LeadsPipeline() {
   const { toast } = useToast()
   const showConfirm = useConfirm()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   // Fetch all pipelines for this org
   const { data: pipelinesResponse, isLoading: loadingPipelines } = useQuery({
@@ -336,7 +337,7 @@ function LeadsPipeline() {
     } else if (action === 'Email' && lead.email) {
       window.location.href = `mailto:${lead.email}`
     } else {
-      toast.info(`Navigate to lead details to send ${action}`)
+      navigate(`/leads/${lead.id}`)
     }
   }
 

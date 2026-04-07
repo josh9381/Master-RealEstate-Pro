@@ -156,10 +156,11 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/videos')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/videos') } }}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer relative" onClick={() => navigate('/help/videos')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/videos') } }}>
           <CardContent className="pt-6">
             <Video className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Video Tutorials</h3>
+            <span className="inline-block px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 rounded-full mb-2">Coming Soon</span>
             <p className="text-sm text-muted-foreground mb-4">
               Step-by-step video walkthroughs
             </p>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { formatRate, calcRate } from '@/lib/metricsCalculator';
+import { useToast } from '@/hooks/useToast';
 import {
   AreaChart,
   Area,
@@ -26,6 +27,7 @@ import { HelpTooltip } from '@/components/ui/HelpTooltip';
 const LeadAnalytics = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: leadData = null, isLoading: loading, isError: leadError, error: leadErrorObj, refetch } = useQuery({
     queryKey: ['lead-analytics'],
@@ -122,8 +124,9 @@ const LeadAnalytics = () => {
               a.download = `lead-analytics-${new Date().toISOString().split('T')[0]}.json`
               a.click()
               URL.revokeObjectURL(url)
+              toast.success('Report exported successfully')
             } catch {
-              // Export failed
+              toast.error('Failed to export report')
             }
           }}>
             <Download className="h-4 w-4 mr-2" />

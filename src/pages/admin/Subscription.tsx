@@ -267,7 +267,7 @@ export default function SubscriptionPage() {
                       </p>
                       {isExpiringSoon && (
                         <p className="text-sm text-orange-700 mb-3">
-                          After your trial ends, you'll be moved to the FREE plan unless you upgrade.
+                          After your trial ends, you'll be moved to the Starter plan unless you upgrade.
                         </p>
                       )}
                       <div className="flex gap-2">

@@ -64,7 +64,7 @@ const InsightsTab = () => {
     onError: () => toast.error('Failed to save preferences'),
   })
 
-  const { data: insightsData, refetch } = useQuery({
+  const { data: insightsData, refetch, isLoading, isError } = useQuery({
     queryKey: ['ai', 'intelligence-insights'],
     queryFn: async () => {
       const [oldInsights, allRecommendations, newDashboard, modelRaw, trends] = await Promise.all([
@@ -202,7 +202,22 @@ const InsightsTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+          Loading insights...
+        </div>
+      )}
+      {isError && (
+        <Card className="border-destructive">
+          <CardContent className="py-6 text-center">
+            <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-2" />
+            <p className="text-sm font-medium">Failed to load insights</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>Retry</Button>
+          </CardContent>
+        </Card>
+      )}
+      {!isLoading && !isError && (<>
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -575,7 +590,7 @@ const InsightsTab = () => {
       <div className="space-y-3">
         {/* Tab Navigation */}
         <div className="flex items-center justify-between">
-          <div className="flex border-b">
+          <div className="flex border-b" role="tablist" aria-label="Insights status filter">
             {[
               { id: 'active' as InsightsSubTab, label: 'Active Insights' },
               { id: 'acted' as InsightsSubTab, label: 'Acted On' },
@@ -584,6 +599,9 @@ const InsightsTab = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`panel-${tab.id}`}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
                     ? 'border-primary text-primary'
@@ -824,6 +842,7 @@ const InsightsTab = () => {
           )
         })()}
       </div>
+      </>)}
     </div>
   );
 };
