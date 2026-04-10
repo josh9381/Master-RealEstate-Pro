@@ -13,7 +13,7 @@ import {
 import { analyticsApi } from '@/lib/api';
 import { formatRate } from '@/lib/metricsCalculator';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
-import { CHART_COLORS } from '@/lib/chartColors';
+import { CHART_COLORS, semanticColors } from '@/lib/chartColors';
 
 const MONTH_OPTIONS = [
   { value: 1, label: 'Last Month' },
@@ -23,7 +23,7 @@ const MONTH_OPTIONS = [
 ];
 
 const PRIORITY_COLORS: Record<string, string> = {
-  LOW: '#6b7280', MEDIUM: '#3b82f6', HIGH: '#f59e0b', URGENT: '#ef4444',
+  LOW: semanticColors.muted, MEDIUM: semanticColors.primary, HIGH: semanticColors.warning, URGENT: semanticColors.destructive,
 };
 const PRIORITY_LABELS: Record<string, string> = {
   LOW: '○ Low', MEDIUM: '◐ Medium', HIGH: '◑ High', URGENT: '● Urgent',
@@ -67,10 +67,10 @@ const FollowUpAnalytics = () => {
   const monthlyTrend = result?.monthlyTrend || [];
 
   const statusData = [
-    { name: 'Completed', value: summary.completed || 0, color: '#10b981' },
-    { name: 'Fired', value: summary.fired || 0, color: '#3b82f6' },
-    { name: 'Pending', value: summary.pending || 0, color: '#f59e0b' },
-    { name: 'Overdue', value: summary.overdue || 0, color: '#ef4444' },
+    { name: 'Completed', value: summary.completed || 0, color: semanticColors.success },
+    { name: 'Fired', value: summary.fired || 0, color: semanticColors.primary },
+    { name: 'Pending', value: summary.pending || 0, color: semanticColors.warning },
+    { name: 'Overdue', value: summary.overdue || 0, color: semanticColors.destructive },
   ].filter((d) => d.value > 0);
 
   const channelData = [

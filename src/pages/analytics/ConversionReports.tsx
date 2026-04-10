@@ -229,7 +229,7 @@ const ConversionReports = () => {
         </CardHeader>
         <CardContent>
           {funnelUnavailable && (
-            <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
+            <div className="mb-4 p-3 bg-warning/10 border border-warning/20 rounded-lg text-sm text-warning">
               Funnel enrichment data temporarily unavailable. Showing status-based funnel.
             </div>
           )}
@@ -329,7 +329,7 @@ const ConversionReports = () => {
                   labelLine={false}
                   label={({ days, count }) => `${days}: ${count}`}
                   outerRadius={100}
-                  fill="#8884d8"
+                  fill={CHART_COLORS[0]}
                   dataKey="count"
                 >
                   {timeToConvert.map((entry) => (

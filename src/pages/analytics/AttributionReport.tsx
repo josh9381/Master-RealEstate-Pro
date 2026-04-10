@@ -103,8 +103,8 @@ const AttributionReport = () => {
                 onClick={() => setModel(opt.value)}
                 className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
                   model === opt.value
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-card text-muted-foreground border-border hover:border-blue-300'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card text-muted-foreground border-border hover:border-primary/50'
                 }`}
               >
                 {opt.label}
@@ -147,7 +147,7 @@ const AttributionReport = () => {
                     <p className="text-sm text-muted-foreground">Conversions</p>
                     <p className="text-2xl font-bold text-foreground">{data.conversions}</p>
                   </div>
-                  <Users className="h-8 w-8 text-blue-500 opacity-40" />
+                  <Users className="h-8 w-8 text-primary opacity-40" />
                 </div>
               </CardContent>
             </Card>
@@ -158,7 +158,7 @@ const AttributionReport = () => {
                     <p className="text-sm text-muted-foreground">Total Revenue</p>
                     <p className="text-2xl font-bold text-foreground">{formatCurrency(data.totalRevenue)}</p>
                   </div>
-                  <DollarSign className="h-8 w-8 text-green-500 opacity-40" />
+                  <DollarSign className="h-8 w-8 text-success opacity-40" />
                 </div>
               </CardContent>
             </Card>
