@@ -32,17 +32,17 @@ interface SupportTicket {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  OPEN: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  IN_PROGRESS: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  RESOLVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  OPEN: 'bg-primary/10 text-primary',
+  IN_PROGRESS: 'bg-warning/10 text-warning',
+  RESOLVED: 'bg-success/10 text-success',
   CLOSED: 'bg-muted text-muted-foreground',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  LOW: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  MEDIUM: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-  HIGH: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  URGENT: 'bg-red-200 text-red-900 dark:bg-red-900/40 dark:text-red-200',
+  LOW: 'bg-success/10 text-success',
+  MEDIUM: 'bg-warning/10 text-warning',
+  HIGH: 'bg-destructive/10 text-destructive',
+  URGENT: 'bg-destructive/20 text-destructive',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -202,7 +202,7 @@ const SupportTicketSystem = () => {
         {/* Messages thread */}
         <div className="space-y-3">
           {(detail.messages || []).map((msg) => (
-            <Card key={msg.id} className={msg.isStaffReply ? 'border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20' : ''}>
+            <Card key={msg.id} className={msg.isStaffReply ? 'border-primary/20 bg-primary/5' : ''}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">
@@ -335,7 +335,7 @@ const SupportTicketSystem = () => {
                 </Button>
               </div>
               {createMutation.isError && (
-                <p className="text-sm text-red-600">Failed to create ticket. Please try again.</p>
+                <p className="text-sm text-destructive">Failed to create ticket. Please try again.</p>
               )}
             </form>
           </CardContent>
@@ -402,7 +402,7 @@ const SupportTicketSystem = () => {
         <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Open</CardTitle>
-            <Ticket className="h-4 w-4 text-blue-600" />
+            <Ticket className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.open ?? '\u2014'}</div>
@@ -412,7 +412,7 @@ const SupportTicketSystem = () => {
         <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
+            <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.inProgress ?? '\u2014'}</div>
@@ -422,7 +422,7 @@ const SupportTicketSystem = () => {
         <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.resolved ?? '\u2014'}</div>
@@ -550,13 +550,13 @@ const SupportTicketSystem = () => {
       )}
 
       {/* Contact Support */}
-      <Card className="border-blue-200">
+      <Card className="border-primary/20">
         <CardContent className="pt-6">
           <div className="flex items-start space-x-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
             <div>
-              <h4 className="font-semibold text-blue-900">Need Immediate Assistance?</h4>
-              <p className="text-sm text-blue-800 mt-1">
+              <h4 className="font-semibold text-foreground">Need Immediate Assistance?</h4>
+              <p className="text-sm text-muted-foreground mt-1">
                 Our support team is available during business hours. For urgent issues, please create a ticket with <strong>Urgent</strong> priority and we&apos;ll prioritize it.
               </p>
             </div>

@@ -282,11 +282,11 @@ const WorkflowsList = () => {
 
       {/* Quick Tips Banner */}
       {workflows.length === 0 && (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <WorkflowIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <WorkflowIcon className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-lg mb-2">Welcome to Workflows! 🚀</h3>
@@ -295,15 +295,15 @@ const WorkflowsList = () => {
                 </p>
                 <div className="grid gap-2 md:grid-cols-3">
                   <div className="flex items-start gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
                     <span>Auto-email new leads within minutes</span>
                   </div>
                   <div className="flex items-start gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
                     <span>Create tasks when lead status changes</span>
                   </div>
                   <div className="flex items-start gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
                     <span>Send reminders for inactive leads</span>
                   </div>
                 </div>
@@ -325,7 +325,7 @@ const WorkflowsList = () => {
           <CardContent>
             <div className="text-3xl font-bold bg-gradient-to-br from-blue-600 to-blue-800 bg-clip-text text-transparent">{stats.totalWorkflows}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="font-semibold text-green-600 dark:text-green-400">{stats.activeWorkflows} active</span>, {stats.inactiveWorkflows} paused
+              <span className="font-semibold text-success">{stats.activeWorkflows} active</span>, {stats.inactiveWorkflows} paused
             </p>
             <div className="mt-3 h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
               <div 
@@ -344,7 +344,7 @@ const WorkflowsList = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold bg-gradient-to-br from-green-600 to-green-800 bg-clip-text text-transparent">{stats.totalExecutions.toLocaleString()}</div>
-            <p className="text-xs text-green-600 dark:text-green-400 font-semibold mt-1">All time runs</p>
+            <p className="text-xs text-success font-semibold mt-1">All time runs</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50/50 to-transparent dark:from-emerald-950/20">
@@ -378,9 +378,9 @@ const WorkflowsList = () => {
             <div className="text-3xl font-bold bg-gradient-to-br from-red-600 to-red-800 bg-clip-text text-transparent">{stats.failedExecutions}</div>
             <p className="text-xs font-semibold mt-1 flex items-center gap-1">
               {stats.failedExecutions > 0 ? (
-                <span className="text-red-600 dark:text-red-400">⚠️ Need attention</span>
+                <span className="text-destructive">⚠️ Need attention</span>
               ) : (
-                <span className="text-green-600 dark:text-green-400">✨ All good!</span>
+                <span className="text-success">✨ All good!</span>
               )}
             </p>
           </CardContent>
@@ -403,8 +403,8 @@ const WorkflowsList = () => {
             <div className="grid gap-4 md:grid-cols-2 w-full mb-8">
               <Link to="/workflows/builder" className="block">
                 <div className="p-4 bg-card rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-3">
-                    <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
+                    <Plus className="h-5 w-5 text-primary" />
                   </div>
                   <h4 className="font-semibold mb-1">Start from Scratch</h4>
                   <p className="text-xs text-muted-foreground">Build a custom workflow tailored to your needs</p>
@@ -413,8 +413,8 @@ const WorkflowsList = () => {
 
               <Link to="/workflows/builder?templates=true" className="block">
                 <div className="p-4 bg-card rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
-                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-3">
-                    <ChevronRight className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center mb-3">
+                    <ChevronRight className="h-5 w-5 text-success" />
                   </div>
                   <h4 className="font-semibold mb-1">Start from a Template</h4>
                   <p className="text-xs text-muted-foreground">Choose from pre-built workflow templates</p>
@@ -487,14 +487,14 @@ const WorkflowsList = () => {
 
                       {/* Workflow Flow Preview */}
                       {getActionsList(workflow.actions).length > 0 && (
-                        <div className="py-3 px-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-sm">
+                        <div className="py-3 px-4 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-xl border-2 border-primary/20 shadow-sm">
                           <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="font-bold text-blue-700 dark:text-blue-300 capitalize px-2.5 py-1 bg-white/60 dark:bg-gray-800/60 rounded-md shadow-sm">
+                            <span className="font-bold text-primary capitalize px-2.5 py-1 bg-white/60 dark:bg-gray-800/60 rounded-md shadow-sm">
                               When {workflow.triggerType.replace(/_/g, ' ').toLowerCase()}
                             </span>
                             {getActionsList(workflow.actions).map((action, idx: number) => (
                               <div key={idx} className="flex items-center gap-2">
-                                <ChevronRight className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                                <ChevronRight className="h-4 w-4 text-primary/60" />
                                 <span className="text-foreground capitalize font-medium px-2.5 py-1 bg-white/40 dark:bg-gray-800/40 rounded-md shadow-sm">
                                   {action.type?.replace(/_/g, ' ').toLowerCase() || 'then action'}
                                 </span>
@@ -520,7 +520,7 @@ const WorkflowsList = () => {
                             variant="outline" 
                             size="sm"
                             onClick={() => toggleWorkflowStatus(workflow.id)}
-                            className="shadow-sm hover:shadow-md transition-shadow border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950"
+                            className="shadow-sm hover:shadow-md transition-shadow border-success/20 text-success hover:bg-success/5"
                           >
                             <Play className="h-4 w-4 mr-2" />
                             Activate
@@ -536,7 +536,7 @@ const WorkflowsList = () => {
                           variant="ghost" 
                           size="sm"
                           onClick={() => viewAnalytics(workflow.id)}
-                          className="hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors"
+                          className="hover:bg-primary/5 transition-colors"
                         >
                           <BarChart3 className="h-4 w-4 mr-2" />
                           Analytics
@@ -548,7 +548,7 @@ const WorkflowsList = () => {
                           disabled={workflow.isActive}
                           title={workflow.isActive ? 'Pause workflow before deleting' : 'Delete workflow'}
                           aria-label={`Delete ${workflow.name}`}
-                          className="hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400 disabled:opacity-50 transition-colors"
+                          className="hover:bg-destructive/5 hover:text-destructive disabled:opacity-50 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -618,14 +618,14 @@ const WorkflowsList = () => {
 
                   {/* Workflow Flow Preview */}
                   {getActionsList(workflow.actions).length > 0 && (
-                    <div className="py-2 px-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+                    <div className="py-2 px-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-md border border-primary/20">
                       <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                        <span className="font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap capitalize">
+                        <span className="font-semibold text-primary whitespace-nowrap capitalize">
                           {workflow.triggerType.replace(/_/g, ' ').toLowerCase()}
                         </span>
                         {getActionsList(workflow.actions).map((action, idx: number) => (
                           <div key={idx} className="flex items-center gap-1.5">
-                            <ChevronRight className="h-3 w-3 text-blue-400 flex-shrink-0" />
+                            <ChevronRight className="h-3 w-3 text-primary/60 flex-shrink-0" />
                             <span className="text-foreground whitespace-nowrap capitalize">
                               {action.type?.replace(/_/g, ' ').toLowerCase() || 'action'}
                             </span>
@@ -747,7 +747,7 @@ const WorkflowsList = () => {
                   <CardContent>
                     <div className="text-2xl font-bold">
                       {analyticsWorkflow.isActive ? (
-                        <Badge className="bg-green-100 text-green-800">Active</Badge>
+                        <Badge className="bg-success/10 text-success">Active</Badge>
                       ) : (
                         <Badge className="bg-muted text-foreground">Paused</Badge>
                       )}

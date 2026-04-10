@@ -53,7 +53,7 @@ function SetupProgress({ items }: { items: SetupItem[] }) {
             <svg className="h-14 w-14 -rotate-90" viewBox="0 0 56 56">
               <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor" strokeWidth="4" className="text-muted/40" />
               <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor" strokeWidth="4"
-                className={pct === 100 ? 'text-green-500' : 'text-primary'}
+                className={pct === 100 ? 'text-success' : 'text-primary'}
                 strokeDasharray={`${(pct / 100) * 150.8} 150.8`}
                 strokeLinecap="round"
               />
@@ -71,9 +71,9 @@ function SetupProgress({ items }: { items: SetupItem[] }) {
             const Icon = item.icon;
             return (
               <Link key={item.id} to={item.path}>
-                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-dashed border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-950/40 transition-colors">
-                  <div className="p-1.5 rounded-md bg-yellow-100 dark:bg-yellow-900/40">
-                    <Icon className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-dashed border-warning/30 bg-warning/10 hover:bg-warning/15 transition-colors">
+                  <div className="p-1.5 rounded-md bg-warning/15">
+                    <Icon className="h-4 w-4 text-warning" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.label}</p>
@@ -88,7 +88,7 @@ function SetupProgress({ items }: { items: SetupItem[] }) {
       )}
       {incomplete.length === 0 && (
         <CardContent className="pt-0">
-          <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+          <div className="flex items-center gap-2 text-success">
             <CheckCircle2 className="h-4 w-4" />
             <span className="text-sm font-medium">All set! Your workspace is fully configured.</span>
           </div>
@@ -159,17 +159,17 @@ const SettingsHub = () => {
 
   // Quick actions
   const quickActions = [
-    { label: 'Change Password', icon: Lock, path: '/settings/security', color: 'text-blue-600 bg-blue-100 dark:bg-blue-950 dark:text-blue-400' },
-    { label: 'Enable 2FA', icon: Key, path: '/settings/security', color: 'text-green-600 bg-green-100 dark:bg-green-950 dark:text-green-400' },
+    { label: 'Change Password', icon: Lock, path: '/settings/security', color: 'text-primary bg-primary/10' },
+    { label: 'Enable 2FA', icon: Key, path: '/settings/security', color: 'text-success bg-success/10' },
     { label: 'Update Profile', icon: User, path: '/settings/profile', color: 'text-purple-600 bg-purple-100 dark:bg-purple-950 dark:text-purple-400' },
-    { label: 'Configure Email', icon: Mail, path: '/settings/email', color: 'text-orange-600 bg-orange-100 dark:bg-orange-950 dark:text-orange-400' },
+    { label: 'Configure Email', icon: Mail, path: '/settings/email', color: 'text-warning bg-warning/10' },
     { label: 'Set Up SMS', icon: Phone, path: '/settings/twilio', color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' },
     { label: 'Manage Tags', icon: Tag, path: '/settings/tags', color: 'text-pink-600 bg-pink-100 dark:bg-pink-950 dark:text-pink-400' },
   ];
 
   // Security score styling
-  const scoreColor = securityScore >= 80 ? 'text-green-600 dark:text-green-400' : securityScore >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400';
-  const scoreBg = securityScore >= 80 ? 'bg-green-100 dark:bg-green-950/40' : securityScore >= 50 ? 'bg-yellow-100 dark:bg-yellow-950/40' : 'bg-red-100 dark:bg-red-950/40';
+  const scoreColor = securityScore >= 80 ? 'text-success' : securityScore >= 50 ? 'text-warning' : 'text-destructive';
+  const scoreBg = securityScore >= 80 ? 'bg-success/10' : securityScore >= 50 ? 'bg-warning/10' : 'bg-destructive/10';
   const ScoreIcon = securityScore >= 80 ? CheckCircle2 : securityScore >= 50 ? AlertTriangle : AlertCircle;
 
   return (
@@ -207,11 +207,11 @@ const SettingsHub = () => {
               </div>
               <div className="mt-3">
                 {profileComplete ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                  <span className="flex items-center gap-1 text-xs text-success">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Profile complete
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400">
+                  <span className="flex items-center gap-1 text-xs text-warning">
                     <AlertTriangle className="h-3.5 w-3.5" /> Needs attention
                   </span>
                 )}
@@ -248,8 +248,8 @@ const SettingsHub = () => {
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-lg ${emailConfigured ? 'bg-green-100 dark:bg-green-950/40' : 'bg-muted'}`}>
-                  <Mail className={`h-5 w-5 ${emailConfigured ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`} />
+                <div className={`p-2.5 rounded-lg ${emailConfigured ? 'bg-success/10' : 'bg-muted'}`}>
+                  <Mail className={`h-5 w-5 ${emailConfigured ? 'text-success' : 'text-muted-foreground'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground">Email (SendGrid)</p>
@@ -258,7 +258,7 @@ const SettingsHub = () => {
               </div>
               <div className="mt-3">
                 {emailConfigured ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                  <span className="flex items-center gap-1 text-xs text-success">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Ready to send
                   </span>
                 ) : (
@@ -276,8 +276,8 @@ const SettingsHub = () => {
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-lg ${smsConfigured ? 'bg-green-100 dark:bg-green-950/40' : 'bg-muted'}`}>
-                  <Phone className={`h-5 w-5 ${smsConfigured ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`} />
+                <div className={`p-2.5 rounded-lg ${smsConfigured ? 'bg-success/10' : 'bg-muted'}`}>
+                  <Phone className={`h-5 w-5 ${smsConfigured ? 'text-success' : 'text-muted-foreground'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground">SMS & Voice (Twilio)</p>
@@ -286,7 +286,7 @@ const SettingsHub = () => {
               </div>
               <div className="mt-3">
                 {smsConfigured ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                  <span className="flex items-center gap-1 text-xs text-success">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Ready to send
                   </span>
                 ) : (
@@ -450,14 +450,14 @@ const SettingsHub = () => {
               return (
                 <Link key={item.label} to={item.path}>
                   <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
-                    <div className={`p-2 rounded-lg ${item.status ? 'bg-green-100 dark:bg-green-950/40' : 'bg-muted'}`}>
-                      <Icon className={`h-4 w-4 ${item.status ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`} />
+                    <div className={`p-2 rounded-lg ${item.status ? 'bg-success/10' : 'bg-muted'}`}>
+                      <Icon className={`h-4 w-4 ${item.status ? 'text-success' : 'text-muted-foreground'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.label}</p>
                       <p className="text-xs text-muted-foreground">{item.detail}</p>
                     </div>
-                    <div className={`h-2 w-2 rounded-full flex-shrink-0 ${item.status ? 'bg-green-500' : 'bg-muted-foreground/30'}`} />
+                    <div className={`h-2 w-2 rounded-full flex-shrink-0 ${item.status ? 'bg-success' : 'bg-muted-foreground/30'}`} />
                   </div>
                 </Link>
               );

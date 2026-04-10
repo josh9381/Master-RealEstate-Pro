@@ -50,9 +50,9 @@ const describeCron = (cron: string): string => {
 // ── Type styling ───────────────────────────────────────────────────────────────
 
 const nodeTypeConfig: Record<string, { label: string; color: string; bg: string; icon: React.ComponentType<{className?: string}> }> = {
-  trigger:   { label: 'Trigger',       color: 'text-blue-700 dark:text-blue-300',   bg: 'bg-blue-100 dark:bg-blue-900/40',     icon: Zap },
-  condition: { label: 'Condition',     color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-100 dark:bg-amber-900/40',   icon: GitBranch },
-  action:    { label: 'Action',        color: 'text-green-700 dark:text-green-300', bg: 'bg-green-100 dark:bg-green-900/40',   icon: Play },
+  trigger:   { label: 'Trigger',       color: 'text-primary',   bg: 'bg-primary/10',     icon: Zap },
+  condition: { label: 'Condition',     color: 'text-warning', bg: 'bg-warning/10',   icon: GitBranch },
+  action:    { label: 'Action',        color: 'text-success', bg: 'bg-success/10',   icon: Play },
   delay:     { label: 'Delay / Wait',  color: 'text-purple-700 dark:text-purple-300', bg: 'bg-purple-100 dark:bg-purple-900/40', icon: Clock },
 };
 
@@ -355,7 +355,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                 </FieldGroup>
               )}
               {schedVal && cronOk && (
-                <div className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-400 font-medium bg-green-50 dark:bg-green-950/30 p-2 rounded-md">
+                <div className="flex items-center gap-1.5 text-xs text-success font-medium bg-success/10 p-2 rounded-md">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Runs: {cronDesc || schedVal}
                 </div>
               )}
@@ -368,15 +368,15 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
                   placeholder="0 9 * * *"
                   value={schedVal}
                   onChange={(e) => updateConfig('schedule', e.target.value)}
-                  className={schedVal && !cronOk ? 'border-red-400 focus:ring-red-400' : ''}
+                  className={schedVal && !cronOk ? 'border-destructive focus:ring-destructive' : ''}
                 />
                 {schedVal && !cronOk && (
-                  <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <p className="text-xs text-destructive flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> Invalid cron — use 5 fields: minute hour day month weekday
                   </p>
                 )}
                 {cronDesc && (
-                  <div className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-400 font-medium bg-green-50 dark:bg-green-950/30 p-2 rounded-md">
+                  <div className="flex items-center gap-1.5 text-xs text-success font-medium bg-success/10 p-2 rounded-md">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Runs: {cronDesc}
                   </div>
                 )}
@@ -409,12 +409,12 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             title="Triggered by an external system"
             description="An outside app (Zapier, website form, etc.) sends data to a unique URL."
           />
-          <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-sm space-y-1">
+          <div className="p-3 bg-primary/10 rounded-lg text-sm space-y-1">
             <p className="font-medium">Your webhook URL will appear after saving.</p>
             <p className="text-xs text-muted-foreground">
               The external system sends a POST request with JSON containing{' '}
-              <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">leadId</code> and any extra{' '}
-              <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">data</code>.
+              <code className="px-1 py-0.5 bg-primary/15 rounded text-xs">leadId</code> and any extra{' '}
+              <code className="px-1 py-0.5 bg-primary/15 rounded text-xs">data</code>.
             </p>
           </div>
         </>
@@ -723,13 +723,13 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <span className="text-xs text-muted-foreground">{msg.length}/160 characters</span>
             <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${charPercent > 90 ? 'bg-red-500' : charPercent > 75 ? 'bg-amber-500' : 'bg-green-500'}`}
+                className={`h-full rounded-full transition-all ${charPercent > 90 ? 'bg-destructive' : charPercent > 75 ? 'bg-warning' : 'bg-success'}`}
                 style={{ width: `${Math.min(100, charPercent)}%` }}
               />
             </div>
           </div>
           {hasVars && msg.length > 120 && (
-            <div className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-md">
+            <div className="flex items-start gap-1.5 text-xs text-warning p-2 bg-warning/10 rounded-md">
               <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
               <span>Variables like [FirstName] expand at send time and may push the message over 160 chars.</span>
             </div>
@@ -945,7 +945,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               <Input id="score-change" type="number" className="w-28" placeholder="e.g., +10" value={scoreVal ?? ''} onChange={(e) => updateConfig('scoreChange', parseInt(e.target.value) || 0)} />
               <span className="text-sm text-muted-foreground">points</span>
               {scoreVal != null && scoreVal !== 0 && (
-                <Badge variant="outline" className={scoreVal > 0 ? 'text-green-600 border-green-300' : 'text-red-600 border-red-300'}>
+                <Badge variant="outline" className={scoreVal > 0 ? 'text-success border-success/30' : 'text-destructive border-destructive/30'}>
                   {scoreVal > 0 ? `+${scoreVal}` : scoreVal}
                 </Badge>
               )}
@@ -981,13 +981,13 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           <FieldGroup label="Headers (optional)" htmlFor="webhook-headers" hint='JSON object, e.g. {"Authorization": "Bearer xxx"}'>
             <textarea
               id="webhook-headers"
-              className={`w-full p-2 border rounded-md font-mono text-xs min-h-[50px] bg-background dark:border-border ${!hdrsOk ? 'border-red-400' : ''}`}
+              className={`w-full p-2 border rounded-md font-mono text-xs min-h-[50px] bg-background dark:border-border ${!hdrsOk ? 'border-destructive' : ''}`}
               placeholder={'{\n  "Authorization": "Bearer xxx"\n}'}
               value={hdrs}
               onChange={(e) => updateConfig('headers', e.target.value)}
             />
             {!hdrsOk && (
-              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+              <p className="text-xs text-destructive flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" /> Invalid JSON — must be a JSON object
               </p>
             )}
@@ -1110,9 +1110,9 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
-          <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-xs font-medium text-red-800 dark:text-red-200 mb-1">Please fix the following:</p>
-            <ul className="text-xs text-red-700 dark:text-red-300 space-y-0.5">
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <p className="text-xs font-medium text-destructive mb-1">Please fix the following:</p>
+            <ul className="text-xs text-destructive/80 space-y-0.5">
               {validationErrors.map((err, i) => (
                 <li key={i} className="flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3 shrink-0" /> {err}

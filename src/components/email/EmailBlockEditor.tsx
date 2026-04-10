@@ -394,7 +394,7 @@ export function EmailBlockEditor({
                   <Copy className="h-3.5 w-3.5" />
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); removeBlock(block.id) }}
-                  className="p-0.5 rounded hover:bg-accent text-red-500" title="Delete">
+                  className="p-0.5 rounded hover:bg-accent text-destructive" title="Delete">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -653,7 +653,7 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
                 {SOCIAL_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <Input className="h-7 text-xs flex-1" placeholder="https://..." value={n.href} onChange={(e) => updateNetwork(idx, 'href', e.target.value)} />
-              <button onClick={() => removeNetwork(idx)} className="text-red-500 p-0.5 hover:bg-red-50 rounded">
+              <button onClick={() => removeNetwork(idx)} className="text-destructive p-0.5 hover:bg-destructive/10 rounded">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -797,7 +797,7 @@ function renderTextContent(text: string): string {
   // Links: [text](url)
   html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" style="color:#2563eb">$1</a>')
   // Bullet lists: lines starting with • or -
-  html = html.replace(/^[•\-]\s+(.+)$/gm, '<li>$1</li>')
+  html = html.replace(/^[•-]\s+(.+)$/gm, '<li>$1</li>')
   if (html.includes('<li>')) {
     html = html.replace(/(<li>.*<\/li>)/gs, '<ul style="margin:4px 0;padding-left:20px">$1</ul>')
   }

@@ -28,7 +28,7 @@ export class ChartErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground gap-2">
-          <AlertTriangle className="h-6 w-6 text-amber-500" />
+          <AlertTriangle className="h-6 w-6 text-warning" />
           <p className="text-sm">
             {this.props.chartName
               ? `Unable to render ${this.props.chartName} chart`

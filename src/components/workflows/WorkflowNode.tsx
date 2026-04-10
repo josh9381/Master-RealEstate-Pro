@@ -70,11 +70,11 @@ const getNodeIcon = (type: NodeType, iconName?: string, config?: Record<string, 
 const getNodeColor = (type: NodeType) => {
   switch (type) {
     case 'trigger':
-      return 'border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20';
+      return 'border-l-4 border-l-primary bg-primary/5';
     case 'condition':
-      return 'border-l-4 border-l-yellow-500 bg-yellow-50 dark:bg-yellow-950/20';
+      return 'border-l-4 border-l-warning bg-warning/5';
     case 'action':
-      return 'border-l-4 border-l-green-500 bg-green-50 dark:bg-green-950/20';
+      return 'border-l-4 border-l-success bg-success/5';
     case 'delay':
       return 'border-l-4 border-l-purple-500 bg-purple-50 dark:bg-purple-950/20';
     default:
@@ -85,11 +85,11 @@ const getNodeColor = (type: NodeType) => {
 const getTypeBadgeColor = (type: NodeType) => {
   switch (type) {
     case 'trigger':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+      return 'bg-primary/10 text-primary';
     case 'condition':
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+      return 'bg-warning/10 text-warning';
     case 'action':
-      return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+      return 'bg-success/10 text-success';
     case 'delay':
       return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
     default:
@@ -182,13 +182,13 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               });
               return meaningfulKeys.length > 0 ? (
                 <div className="mt-2">
-                  <p className="text-xs text-green-600 dark:text-green-400">
+                  <p className="text-xs text-success">
                     ✓ Configured
                   </p>
                 </div>
               ) : (
                 <div className="mt-2">
-                  <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                  <p className="text-xs text-warning">
                     ⚠ Needs configuration
                   </p>
                 </div>
@@ -214,7 +214,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900 dark:hover:text-blue-300"
+                className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary"
                 onClick={(e) => { e.stopPropagation(); onDuplicate(node.id); }}
                 title="Duplicate node"
               >

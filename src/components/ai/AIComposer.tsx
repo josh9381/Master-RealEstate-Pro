@@ -632,8 +632,8 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         )}
         
         {!initializing && (generating || isStreaming) && (
-          <div className="flex flex-col items-center justify-center py-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-            <RefreshCw className="h-6 w-6 animate-spin text-blue-500 mb-2" />
+          <div className="flex flex-col items-center justify-center py-4 bg-primary/10 rounded-lg">
+            <RefreshCw className="h-6 w-6 animate-spin text-primary mb-2" />
             <span className="text-sm text-muted-foreground">
               {isStreaming ? '✨ Streaming enhanced message...' : '✨ Enhancing your message...'}
             </span>
@@ -645,10 +645,10 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         {message && !generating && !isStreaming && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-green-600 dark:text-green-400">✨ AI Enhanced Version</label>
+              <label className="text-sm font-medium text-success">✨ AI Enhanced Version</label>
               <Badge variant="secondary" className="text-xs">Ready to use</Badge>
             </div>
-            <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 rounded-lg p-4 border-2 border-green-200 dark:border-green-800">
+            <div className="bg-gradient-to-br from-success/10 to-primary/10 rounded-lg p-4 border-2 border-success/20">
               <p className="text-sm whitespace-pre-wrap">{message}</p>
             </div>
           </div>
@@ -657,17 +657,17 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         {/* Streaming Display */}
         {isStreaming && streamedMessage && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-blue-600 dark:text-blue-400">✨ Generating...</label>
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-800">
+            <label className="text-sm font-medium text-primary">✨ Generating...</label>
+            <div className="bg-gradient-to-br from-primary/10 to-purple-50 dark:from-primary/10 dark:to-purple-950 rounded-lg p-4 border-2 border-primary/20">
               <p className="text-sm whitespace-pre-wrap">{streamedMessage}</p>
-              <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse ml-1"></span>
+              <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1"></span>
             </div>
           </div>
         )}
         
         {/* Smart Suggestions */}
         {suggestions.length > 0 && (
-          <div className="bg-yellow-50 dark:bg-yellow-950 rounded-lg p-3">
+          <div className="bg-warning/10 rounded-lg p-3">
             <p className="text-sm">
               💡 <strong>AI Suggests:</strong> {suggestions[0].text}
             </p>

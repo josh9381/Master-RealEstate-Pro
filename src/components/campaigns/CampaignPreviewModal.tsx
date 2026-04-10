@@ -55,14 +55,14 @@ export function CampaignPreviewModal({
         <div className="space-y-6">
           {/* Warnings Section */}
           {hasWarnings && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                  <h4 className="font-semibold text-warning mb-2">
                     Warning{(preview.warnings?.length || 0) > 1 ? 's' : ''}
                   </h4>
-                  <ul className="space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+                  <ul className="space-y-1 text-sm text-warning/80">
                     {(preview.warnings || []).map((warning, idx) => (
                       <li key={idx}>• {warning}</li>
                     ))}
@@ -74,30 +74,30 @@ export function CampaignPreviewModal({
 
           {/* Campaign Overview */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
+            <div className="bg-primary/10 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-primary mb-2">
                 <Users className="w-5 h-5" />
                 <span className="text-sm font-medium">Recipients</span>
               </div>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              <p className="text-2xl font-bold text-foreground">
                 {(preview.recipientCount || 0).toLocaleString()}
               </p>
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+              <p className="text-xs text-primary mt-1">
                 {preview.campaignType === 'EMAIL' && 'Email recipients'}
                 {preview.campaignType === 'SMS' && 'Phone numbers'}
                 {preview.campaignType === 'PHONE' && 'Call recipients'}
               </p>
             </div>
 
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
+            <div className="bg-success/10 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-success mb-2">
                 <DollarSign className="w-5 h-5" />
                 <span className="text-sm font-medium">Estimated Cost</span>
               </div>
-              <p className={`text-2xl font-bold ${isHighCost ? 'text-red-600 dark:text-red-400' : 'text-green-900 dark:text-green-100'}`}>
+              <p className={`text-2xl font-bold ${isHighCost ? 'text-destructive' : 'text-foreground'}`}>
                 ${(preview.cost?.total || 0).toFixed(2)}
               </p>
-              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              <p className="text-xs text-success mt-1">
                 ${formatCurrency(preview.cost?.perRecipient || 0)} per {(preview.campaignType || '').toLowerCase()}
               </p>
             </div>
@@ -230,7 +230,7 @@ export function CampaignPreviewModal({
           <Button
             onClick={onConfirm}
             disabled={isLoading || noRecipients}
-            className={isHighCost ? 'bg-red-600 hover:bg-red-700' : ''}
+            className={isHighCost ? 'bg-destructive hover:bg-destructive/90' : ''}
           >
             {isLoading ? (
               <>

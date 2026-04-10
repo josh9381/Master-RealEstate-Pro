@@ -134,7 +134,7 @@ export function UsageBadge({ resource }: UsageBadgeProps) {
   
   return (
     <span className={`text-xs font-medium ${
-      isAtLimit ? 'text-red-600' : isNearLimit ? 'text-orange-600' : 'text-muted-foreground'
+      isAtLimit ? 'text-destructive' : isNearLimit ? 'text-warning' : 'text-muted-foreground'
     }`}>
       {usage.current.toLocaleString()} / {usage.limit.toLocaleString()}
       {isNearLimit && !isAtLimit && ' ⚠️'}

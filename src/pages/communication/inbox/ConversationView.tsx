@@ -94,8 +94,8 @@ const getChannelIcon = (type: string) => {
 
 const getChannelColor = (type: string) => {
   switch (type) {
-    case 'email': return 'text-blue-500'
-    case 'sms': return 'text-green-500'
+    case 'email': return 'text-primary'
+    case 'sms': return 'text-success'
     case 'call': return 'text-purple-500'
     default: return 'text-muted-foreground'
   }
@@ -103,10 +103,10 @@ const getChannelColor = (type: string) => {
 
 const getChannelBubbleColor = (type: string) => {
   switch (type) {
-    case 'email': return 'bg-blue-500 text-white rounded-br-md'
-    case 'sms': return 'bg-green-500 text-white rounded-br-md'
+    case 'email': return 'bg-primary text-white rounded-br-md'
+    case 'sms': return 'bg-success text-white rounded-br-md'
     case 'call': return 'bg-purple-500 text-white rounded-br-md'
-    default: return 'bg-blue-500 text-white rounded-br-md'
+    default: return 'bg-primary text-white rounded-br-md'
   }
 }
 
@@ -383,9 +383,9 @@ export const ConversationView = ({
                     </span>
                     {showChannelBadge && (
                       <Badge variant="outline" className={`text-[10px] h-4 px-1 gap-0.5 ${
-                        message.type === 'sms' ? 'border-green-300 text-green-700 bg-green-50' :
+                        message.type === 'sms' ? 'border-success/20 text-success bg-success/10' :
                         message.type === 'call' ? 'border-purple-300 text-purple-700 bg-purple-50' :
-                        'border-blue-300 text-blue-700 bg-blue-50'
+                        'border-primary/20 text-primary bg-primary/10'
                       }`}>
                         {message.type === 'sms' ? 'SMS' : message.type === 'call' ? 'Call' : 'Email'}
                       </Badge>
@@ -427,7 +427,7 @@ export const ConversationView = ({
                             ) : message.status === 'sent' ? (
                               <Check className="h-3 w-3" />
                             ) : message.status === 'failed' ? (
-                              <X className="h-3 w-3 text-red-500" />
+                              <X className="h-3 w-3 text-destructive" />
                             ) : (
                               <Clock className="h-3 w-3" />
                             )}
@@ -504,7 +504,7 @@ export const ConversationView = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h4 className="font-semibold flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-green-600" />
+                    <Sparkles className="h-4 w-4 text-success" />
                     AI Enhanced Version
                   </h4>
                   <select
@@ -537,14 +537,14 @@ export const ConversationView = ({
                   <div className="bg-muted border rounded-lg p-3 text-sm min-h-[100px] whitespace-pre-wrap">{replyText}</div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-green-600 mb-1 block">Enhanced Version</label>
-                  <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3 text-sm min-h-[100px] whitespace-pre-wrap">{enhancedMessage}</div>
+                  <label className="text-xs font-medium text-success mb-1 block">Enhanced Version</label>
+                  <div className="bg-success/10 border-2 border-success/20 rounded-lg p-3 text-sm min-h-[100px] whitespace-pre-wrap">{enhancedMessage}</div>
                 </div>
               </div>
 
               <div className="flex gap-2 justify-end">
                 <Button size="sm" variant="outline" onClick={onCancelEnhance}>Cancel</Button>
-                <Button size="sm" onClick={onApplyEnhanced} className="bg-green-600 hover:bg-green-700">Use Enhanced Version</Button>
+                <Button size="sm" onClick={onApplyEnhanced} className="bg-success hover:bg-success/90">Use Enhanced Version</Button>
               </div>
             </div>
           )}
@@ -611,7 +611,7 @@ export const ConversationView = ({
                           className="w-full justify-start text-left gap-2"
                           onClick={() => { onShowTemplates(false); navigate('/communication/templates') }}
                         >
-                          <Mail className="h-4 w-4 text-blue-500" />
+                          <Mail className="h-4 w-4 text-primary" />
                           Manage Email Templates
                         </Button>
                         <Button
@@ -620,7 +620,7 @@ export const ConversationView = ({
                           className="w-full justify-start text-left gap-2"
                           onClick={() => { onShowTemplates(false); navigate('/communication/sms-templates') }}
                         >
-                          <MessageSquare className="h-4 w-4 text-green-500" />
+                          <MessageSquare className="h-4 w-4 text-success" />
                           Manage SMS Templates
                         </Button>
                       </div>
@@ -714,7 +714,7 @@ export const ConversationView = ({
                 <div className="relative">
                   <Button
                     onClick={onSendReply}
-                    className={`${replyChannel === 'sms' ? 'bg-green-600 hover:bg-green-700' : ''} pr-8`}
+                    className={`${replyChannel === 'sms' ? 'bg-success hover:bg-success/90' : ''} pr-8`}
                   >
                     <Send className="h-4 w-4 mr-1" />
                     {replyChannel === 'sms' ? 'SMS' : 'Email'}

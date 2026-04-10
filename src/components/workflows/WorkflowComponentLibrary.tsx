@@ -288,9 +288,9 @@ const allComponentsList: WorkflowComponent[] = [
 
 const categoryFilters: { key: ComponentCategory; label: string; color: string; activeColor: string; count: number }[] = [
   { key: 'all', label: 'All', color: 'bg-muted text-foreground dark:bg-card dark:text-muted-foreground', activeColor: 'bg-foreground text-background', count: allComponentsList.length },
-  { key: 'triggers', label: 'Triggers', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300', activeColor: 'bg-blue-600 text-white', count: triggers.length },
-  { key: 'conditions', label: 'Conditions', color: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300', activeColor: 'bg-yellow-500 text-white', count: conditions.length },
-  { key: 'actions', label: 'Actions', color: 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300', activeColor: 'bg-green-600 text-white', count: actions.length },
+  { key: 'triggers', label: 'Triggers', color: 'bg-primary/10 text-primary', activeColor: 'bg-primary text-white', count: triggers.length },
+  { key: 'conditions', label: 'Conditions', color: 'bg-warning/10 text-warning', activeColor: 'bg-warning text-white', count: conditions.length },
+  { key: 'actions', label: 'Actions', color: 'bg-success/10 text-success', activeColor: 'bg-success text-white', count: actions.length },
   { key: 'utilities', label: 'Utilities', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300', activeColor: 'bg-purple-600 text-white', count: utilities.length },
 ];
 
@@ -302,9 +302,9 @@ const categoryBorderColor: Record<string, string> = {
 };
 
 const categoryIconBg: Record<string, string> = {
-  triggers: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
-  conditions: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300',
-  actions: 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300',
+  triggers: 'bg-primary/10 text-primary',
+  conditions: 'bg-warning/10 text-warning',
+  actions: 'bg-success/10 text-success',
   utilities: 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
 };
 
@@ -432,7 +432,7 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
                 transition-all duration-200 group
                 ${borderColor}
                 ${isAdded
-                  ? 'bg-green-50 dark:bg-green-950/30 border border-l-[3px] border-green-300 dark:border-green-700'
+                  ? 'bg-success/10 border border-l-[3px] border-success/30'
                   : 'bg-background hover:bg-accent/50 border border-l-[3px] border-transparent hover:border-border'
                 }
                 ${mode === 'drag' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
@@ -468,7 +468,7 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
               {/* Added feedback */}
               {isAdded && (
                 <div className="flex-shrink-0">
-                  <Check className="h-3.5 w-3.5 text-green-600" />
+                  <Check className="h-3.5 w-3.5 text-success" />
                 </div>
               )}
             </div>

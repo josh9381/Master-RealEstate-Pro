@@ -206,9 +206,9 @@ const ComplianceSettings = () => {
           <CardContent>
             <div className="flex items-center space-x-2">
               {tcpaEnabled ? (
-                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium">Compliant</span></>
+                <><CheckCircle className="h-5 w-5 text-success" /><span className="text-sm font-medium">Compliant</span></>
               ) : (
-                <><AlertTriangle className="h-5 w-5 text-yellow-600" /><span className="text-sm font-medium text-yellow-600">Not Enabled</span></>
+                <><AlertTriangle className="h-5 w-5 text-warning" /><span className="text-sm font-medium text-warning">Not Enabled</span></>
               )}
             </div>
           </CardContent>
@@ -221,9 +221,9 @@ const ComplianceSettings = () => {
           <CardContent>
             <div className="flex items-center space-x-2">
               {dncEnabled ? (
-                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium">Protected</span></>
+                <><CheckCircle className="h-5 w-5 text-success" /><span className="text-sm font-medium">Protected</span></>
               ) : (
-                <><AlertTriangle className="h-5 w-5 text-yellow-600" /><span className="text-sm font-medium text-yellow-600">Not Enabled</span></>
+                <><AlertTriangle className="h-5 w-5 text-warning" /><span className="text-sm font-medium text-warning">Not Enabled</span></>
               )}
             </div>
           </CardContent>
@@ -236,9 +236,9 @@ const ComplianceSettings = () => {
           <CardContent>
             <div className="flex items-center space-x-2">
               {gdprEnabled ? (
-                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium">Enabled</span></>
+                <><CheckCircle className="h-5 w-5 text-success" /><span className="text-sm font-medium">Enabled</span></>
               ) : (
-                <><AlertTriangle className="h-5 w-5 text-yellow-600" /><span className="text-sm font-medium text-yellow-600">Disabled</span></>
+                <><AlertTriangle className="h-5 w-5 text-warning" /><span className="text-sm font-medium text-warning">Disabled</span></>
               )}
             </div>
           </CardContent>
@@ -251,9 +251,9 @@ const ComplianceSettings = () => {
           <CardContent>
             <div className="flex items-center space-x-2">
               {auditEnabled ? (
-                <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium">Enabled</span></>
+                <><CheckCircle className="h-5 w-5 text-success" /><span className="text-sm font-medium">Enabled</span></>
               ) : (
-                <><AlertTriangle className="h-5 w-5 text-yellow-600" /><span className="text-sm font-medium text-yellow-600">Disabled</span></>
+                <><AlertTriangle className="h-5 w-5 text-warning" /><span className="text-sm font-medium text-warning">Disabled</span></>
               )}
             </div>
           </CardContent>
@@ -267,12 +267,12 @@ const ComplianceSettings = () => {
           <CardDescription>Configure calling and texting compliance rules</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
             <div className="flex items-center space-x-2 mb-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <h4 className="font-semibold text-green-900">TCPA Compliance Active</h4>
+              <CheckCircle className="h-5 w-5 text-success" />
+              <h4 className="font-semibold text-success">TCPA Compliance Active</h4>
             </div>
-            <p className="text-sm text-green-700">
+            <p className="text-sm text-success/80">
               All outbound calls and SMS are protected by TCPA compliance rules.
             </p>
           </div>
@@ -516,15 +516,15 @@ const ComplianceSettings = () => {
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-green-600">—</p>
+              <p className="text-3xl font-bold text-success">—</p>
               <p className="text-sm text-muted-foreground mt-1">Active Consents</p>
             </div>
             <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-orange-600">—</p>
+              <p className="text-3xl font-bold text-warning">—</p>
               <p className="text-sm text-muted-foreground mt-1">Pending Renewals</p>
             </div>
             <div className="p-4 border rounded-lg text-center">
-              <p className="text-3xl font-bold text-red-600">—</p>
+              <p className="text-3xl font-bold text-destructive">—</p>
               <p className="text-sm text-muted-foreground mt-1">Withdrawn</p>
             </div>
           </div>
@@ -591,9 +591,9 @@ const ComplianceSettings = () => {
             {auditLogs.length > 0 ? auditLogs.map((log: { id?: string; type?: string; title?: string; user?: { firstName?: string; lastName?: string }; createdAt?: string }, index: number) => (
               <div key={log.id || index} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center space-x-3">
-                  {log.type?.includes('STATUS') ? <AlertTriangle className="h-5 w-5 text-orange-600" /> :
-                   log.type?.includes('NOTE') || log.type?.includes('CREATED') ? <CheckCircle className="h-5 w-5 text-green-600" /> :
-                   <FileText className="h-5 w-5 text-blue-600" />}
+                  {log.type?.includes('STATUS') ? <AlertTriangle className="h-5 w-5 text-warning" /> :
+                   log.type?.includes('NOTE') || log.type?.includes('CREATED') ? <CheckCircle className="h-5 w-5 text-success" /> :
+                   <FileText className="h-5 w-5 text-primary" />}
                   <div>
                     <p className="font-medium text-sm">{log.title || log.type || 'Activity'}</p>
                     <p className="text-xs text-muted-foreground">

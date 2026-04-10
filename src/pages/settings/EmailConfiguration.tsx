@@ -283,7 +283,7 @@ const EmailConfiguration = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex items-center space-x-3">
               {isConfigured ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="h-5 w-5 text-success" />
               ) : (
                 <div className="h-5 w-5 rounded-full border-2 border-border" />
               )}
@@ -298,7 +298,7 @@ const EmailConfiguration = () => {
             </div>
             <div className="flex items-center space-x-3">
               {lastTested ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="h-5 w-5 text-success" />
               ) : (
                 <div className="h-5 w-5 rounded-full border-2 border-border" />
               )}
@@ -314,8 +314,8 @@ const EmailConfiguration = () => {
           </div>
           
           {configMode === 'mock' && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
+            <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-sm text-warning">
                 <strong>Mock Mode:</strong> Emails will be logged but not actually sent. 
                 Add your SendGrid API key above and save to enable production mode.
               </p>
@@ -323,8 +323,8 @@ const EmailConfiguration = () => {
           )}
           
           {configMode === 'production' && (
-            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
+            <div className="mt-4 p-3 bg-success/10 border border-success/20 rounded-lg">
+              <p className="text-sm text-success">
                 <strong>Production Mode:</strong> Emails will be sent using your SendGrid API key. 
                 All campaign emails will be delivered to recipients.
               </p>
@@ -383,7 +383,7 @@ const EmailConfiguration = () => {
               <label className="text-sm font-medium mb-2 block">
                 SendGrid API Key
                 {hasStoredKey && (
-                  <span className="ml-2 text-xs text-green-600 font-normal">✓ Stored Securely</span>
+                  <span className="ml-2 text-xs text-success font-normal">✓ Stored Securely</span>
                 )}
               </label>
               <div className="relative">
@@ -415,7 +415,7 @@ const EmailConfiguration = () => {
                 </p>
               )}
               {password && (
-                <p className="text-xs text-green-600 mt-1">
+                <p className="text-xs text-success mt-1">
                   ✓ New key entered. Click "Save Settings" to update.
                 </p>
               )}
@@ -736,11 +736,11 @@ const EmailConfiguration = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-3xl font-bold text-blue-600">{usageStats.sent.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-primary">{usageStats.sent.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mt-1">Sent</p>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-3xl font-bold text-green-600">
+              <p className="text-3xl font-bold text-success">
                 {formatRate(usageStats.deliveryRate, 1)}%
               </p>
               <p className="text-sm text-muted-foreground mt-1">Delivered</p>
@@ -749,7 +749,7 @@ const EmailConfiguration = () => {
               </p>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-3xl font-bold text-orange-600">
+              <p className="text-3xl font-bold text-warning">
                 {formatRate(usageStats.openRate, 1)}%
               </p>
               <p className="text-sm text-muted-foreground mt-1">Opened</p>
@@ -758,7 +758,7 @@ const EmailConfiguration = () => {
               </p>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-3xl font-bold text-red-600">
+              <p className="text-3xl font-bold text-destructive">
                 {formatRate(usageStats.bounceRate, 1)}%
               </p>
               <p className="text-sm text-muted-foreground mt-1">Bounced</p>
@@ -812,7 +812,7 @@ function SuppressedContactsCard() {
           <div className="text-sm text-muted-foreground">Loading suppressed contacts...</div>
         ) : suppressed.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+            <CheckCircle className="h-8 w-8 mx-auto mb-2 text-success" />
             <p className="font-medium">No suppressed contacts</p>
             <p className="text-sm mt-1">All email addresses are currently deliverable</p>
           </div>
@@ -821,7 +821,7 @@ function SuppressedContactsCard() {
             {suppressed.map((contact) => (
               <div key={contact.id || contact.email} className="flex items-center justify-between p-3 border rounded-lg text-sm">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" />
                   <div>
                     <p className="font-medium">{contact.email}</p>
                     <p className="text-xs text-muted-foreground">{contact.reason}</p>

@@ -417,13 +417,13 @@ const TeamManagement = () => {
                       {member.avatar}
                     </div>
                     {member.isOnline && (
-                      <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></div>
+                      <div className="absolute bottom-0 right-0 h-3 w-3 bg-success rounded-full border-2 border-white"></div>
                     )}
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
                       <h4 className="font-medium">{member.name}</h4>
-                      {member.role === 'Owner' && <Crown className="h-4 w-4 text-yellow-500" />}
+                      {member.role === 'Owner' && <Crown className="h-4 w-4 text-warning" />}
                       <Badge
                         variant={member.status === 'active' ? 'success' : 'warning'}
                         className="text-xs"
@@ -431,7 +431,7 @@ const TeamManagement = () => {
                         {member.status}
                       </Badge>
                       {member.isOnline && (
-                        <Badge variant="outline" className="text-xs text-green-600">
+                        <Badge variant="outline" className="text-xs text-success">
                           Online
                         </Badge>
                       )}
@@ -472,7 +472,7 @@ const TeamManagement = () => {
                         size="sm"
                         onClick={() => removeMember(member.id)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </>
                   )}
@@ -514,7 +514,7 @@ const TeamManagement = () => {
                 <div className="space-y-1">
                   {role.permissions.map((permission) => (
                     <div key={permission} className="flex items-center text-sm">
-                      <span className="text-green-600 mr-2">✓</span>
+                      <span className="text-success mr-2">✓</span>
                       <span>{permission}</span>
                     </div>
                   ))}
@@ -558,19 +558,19 @@ const TeamManagement = () => {
                     <tr key={permission} className="border-b">
                       <td className="py-3 px-4">{permission}</td>
                       <td className="text-center py-3 px-4">
-                        <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
+                        <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
                       </td>
                       <td className="text-center py-3 px-4">
-                        <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
+                        <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
                       </td>
                       <td className="text-center py-3 px-4">
                         {['View leads', 'Create leads', 'Send campaigns', 'View analytics'].includes(permission) && (
-                          <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
                         )}
                       </td>
                       <td className="text-center py-3 px-4">
                         {['View leads', 'Send campaigns'].includes(permission) && (
-                          <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
                         )}
                       </td>
                     </tr>
@@ -653,11 +653,11 @@ const TeamManagement = () => {
                       <div className="flex gap-4 text-xs text-muted-foreground mt-1">
                         <span>{member.leads} leads</span>
                         <span>{member.deals} deals</span>
-                        <span className="text-green-600 font-medium">{member.revenue}</span>
+                        <span className="text-success font-medium">{member.revenue}</span>
                       </div>
                     </div>
                   </div>
-                  {index === 0 && <Award className="h-6 w-6 text-yellow-500" />}
+                  {index === 0 && <Award className="h-6 w-6 text-warning" />}
                 </div>
               )) : (
                 <div className="text-center py-6 text-muted-foreground">

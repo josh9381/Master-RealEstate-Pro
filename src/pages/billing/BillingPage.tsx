@@ -158,12 +158,12 @@ const BillingPage = () => {
           <>
             <div className="w-full bg-secondary rounded-full h-2">
               <div
-                className={`h-2 rounded-full ${pct >= 90 ? 'bg-red-500' : pct >= 75 ? 'bg-yellow-500' : 'bg-primary'}`}
+                className={`h-2 rounded-full ${pct >= 90 ? 'bg-destructive' : pct >= 75 ? 'bg-warning' : 'bg-primary'}`}
                 style={{ width: `${Math.min(pct, 100)}%` }}
               />
             </div>
             {pct >= 75 && (
-              <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-warning mt-1 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" /> Approaching limit
               </p>
             )}
@@ -184,12 +184,12 @@ const BillingPage = () => {
 
       {/* Stripe Not Configured Banner */}
       {subStatus && !subStatus.stripeConfigured && (
-        <Card className="border-amber-300 bg-amber-50">
+        <Card className="border-warning/30 bg-warning/10">
           <CardContent className="flex items-center gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+            <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0" />
             <div>
-              <p className="font-medium text-amber-900">Billing Not Available</p>
-              <p className="text-sm text-amber-800">Payment processing is not yet configured. Please contact your administrator to enable billing.</p>
+              <p className="font-medium text-warning">Billing Not Available</p>
+              <p className="text-sm text-warning/80">Payment processing is not yet configured. Please contact your administrator to enable billing.</p>
             </div>
           </CardContent>
         </Card>
@@ -197,10 +197,10 @@ const BillingPage = () => {
 
       {/* Trial Banner */}
       {isTrial && (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
           <CardContent className="flex items-center justify-between py-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-full"><Crown className="w-6 h-6 text-blue-600" /></div>
+              <div className="p-2 bg-primary/10 rounded-full"><Crown className="w-6 h-6 text-primary" /></div>
               <div>
                 <h3 className="font-semibold text-lg">Trial Period Active</h3>
                 <p className="text-sm text-muted-foreground">
@@ -259,7 +259,7 @@ const BillingPage = () => {
                       <h3 className="text-3xl font-bold flex items-center gap-3">
                         {subscriptionData.subscription?.name || currentPlanId}
                         {['PROFESSIONAL', 'ELITE', 'TEAM', 'ENTERPRISE'].includes(tier || '') && (
-                          <Crown className="w-7 h-7 text-amber-500" />
+                          <Crown className="w-7 h-7 text-warning" />
                         )}
                       </h3>
                       <p className="text-lg font-semibold text-primary mt-1">

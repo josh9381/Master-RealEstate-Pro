@@ -54,14 +54,14 @@ interface ActivityTimelineProps {
 const mockActivities: Activity[] = []
 
 const activityConfig: Record<string, { icon: typeof Mail; color: string; bg: string }> = {
-  email: { icon: Mail, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  call: { icon: Phone, color: 'text-green-500', bg: 'bg-green-500/10' },
+  email: { icon: Mail, color: 'text-primary', bg: 'bg-primary/10' },
+  call: { icon: Phone, color: 'text-success', bg: 'bg-success/10' },
   sms: { icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-  note: { icon: FileText, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+  note: { icon: FileText, color: 'text-warning', bg: 'bg-warning/10' },
   status: { icon: CheckCircle, color: 'text-slate-500', bg: 'bg-slate-500/10' },
   status_change: { icon: CheckCircle, color: 'text-slate-500', bg: 'bg-slate-500/10' },
   meeting: { icon: Calendar, color: 'text-pink-500', bg: 'bg-pink-500/10' },
-  task: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  task: { icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
 }
 
 function formatRelativeDate(dateStr: string): string {

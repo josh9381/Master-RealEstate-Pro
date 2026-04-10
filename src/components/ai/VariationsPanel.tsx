@@ -31,16 +31,16 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
   
   // Get response rate color
   const getRateColor = (rate: number): string => {
-    if (rate >= 70) return 'text-green-600'
-    if (rate >= 50) return 'text-yellow-600'
-    return 'text-orange-600'
+    if (rate >= 70) return 'text-success'
+    if (rate >= 50) return 'text-warning'
+    return 'text-warning'
   }
 
   // Get rate badge variant
   const getRateBadge = (rate: number): string => {
-    if (rate >= 70) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-    if (rate >= 50) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-    return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+    if (rate >= 70) return 'bg-success/10 text-success'
+    if (rate >= 50) return 'bg-warning/10 text-warning'
+    return 'bg-warning/10 text-warning'
   }
 
   // Capitalize tone name
@@ -71,9 +71,9 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
               key={variation.id}
               className={`cursor-pointer transition-all hover:shadow-md ${
                 isSelected 
-                  ? 'border-blue-500 border-2 shadow-lg' 
+                  ? 'border-primary border-2 shadow-lg' 
                   : isBest 
-                  ? 'border-green-500 border-2' 
+                  ? 'border-success border-2' 
                   : 'border-border'
               }`}
               onClick={() => onSelect(variation)}
@@ -90,13 +90,13 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
                       {formatTone(variation.tone)}
                     </Badge>
                     {isBest && (
-                      <Badge className="gap-1 bg-green-600 text-white">
+                      <Badge className="gap-1 bg-success text-success-foreground">
                         <Star className="h-3 w-3 fill-current" />
                         Best
                       </Badge>
                     )}
                     {isSelected && (
-                      <Badge className="gap-1 bg-blue-600 text-white">
+                      <Badge className="gap-1 bg-primary text-primary-foreground">
                         <CheckCircle className="h-3 w-3" />
                         Selected
                       </Badge>
@@ -132,7 +132,7 @@ export const VariationsPanel: React.FC<VariationsPanelProps> = ({
                 </div>
                 
                 {/* AI Reasoning */}
-                <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950 rounded-lg p-2">
+                <div className="flex items-start gap-2 bg-primary/10 rounded-lg p-2">
                   <span className="text-xs">💡</span>
                   <p className="text-xs text-muted-foreground flex-1">
                     <strong>Why {formatRate(variation.predictedResponseRate)}%:</strong> {variation.reasoning}

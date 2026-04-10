@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useToast } from '@/hooks/useToast'
 import { useAuthStore } from '@/store/authStore'
-import { PasswordStrengthIndicator, isPasswordStrong } from '@/components/auth/PasswordStrengthIndicator'
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator'
+import { isPasswordStrong } from '@/components/auth/passwordUtils'
 
 function Register() {
   const navigate = useNavigate()

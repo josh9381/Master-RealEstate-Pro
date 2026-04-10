@@ -582,7 +582,7 @@ const EmailTemplatesLibrary = () => {
                       <Copy className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(template.id)}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
@@ -626,7 +626,7 @@ const EmailTemplatesLibrary = () => {
                     <Copy className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(template.id)}>
-                    <Trash2 className="h-4 w-4 text-red-500" />
+                    <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
               </div>
@@ -712,7 +712,7 @@ const EmailTemplatesLibrary = () => {
                     <FileText className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Details</span>
                     {formName.trim() && formSubject.trim() && (
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                     )}
                   </button>
                   <button
@@ -727,7 +727,7 @@ const EmailTemplatesLibrary = () => {
                     <Zap className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Content</span>
                     {formBody.trim() && (
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                     )}
                   </button>
                 </div>
@@ -745,8 +745,8 @@ const EmailTemplatesLibrary = () => {
                   {/* Template Name */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="template-name" className="text-sm font-medium">Template Name <span className="text-red-500">*</span></label>
-                      <span className={`text-xs ${formName.length > 80 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                      <label htmlFor="template-name" className="text-sm font-medium">Template Name <span className="text-destructive">*</span></label>
+                      <span className={`text-xs ${formName.length > 80 ? 'text-destructive' : 'text-muted-foreground'}`}>
                         {formName.length}/100
                       </span>
                     </div>
@@ -764,8 +764,8 @@ const EmailTemplatesLibrary = () => {
                   {/* Subject Line */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="template-subject" className="text-sm font-medium">Subject Line <span className="text-red-500">*</span></label>
-                      <span className={`text-xs ${formSubject.length > 120 ? 'text-red-500' : formSubject.length > 60 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                      <label htmlFor="template-subject" className="text-sm font-medium">Subject Line <span className="text-destructive">*</span></label>
+                      <span className={`text-xs ${formSubject.length > 120 ? 'text-destructive' : formSubject.length > 60 ? 'text-warning' : 'text-muted-foreground'}`}>
                         {formSubject.length}/150 {formSubject.length > 60 && formSubject.length <= 120 ? '— may be truncated on mobile' : ''}
                       </span>
                     </div>

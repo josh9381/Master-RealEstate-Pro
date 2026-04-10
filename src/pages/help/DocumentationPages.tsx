@@ -310,7 +310,7 @@ const DocumentationPages = () => {
                       <div className="text-3xl">{CATEGORY_ICONS[cat.name] || '\u{1F4C4}'}</div>
                       <div>
                         <h3 className="font-semibold mb-1">{cat.name}</h3>
-                        <p className="text-xs text-blue-600">{cat.articleCount} articles</p>
+                        <p className="text-xs text-primary">{cat.articleCount} articles</p>
                       </div>
                     </div>
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -323,13 +323,13 @@ const DocumentationPages = () => {
       </div>
 
       {/* Help */}
-      <Card className="border-blue-200">
+      <Card className="border-primary/20">
         <CardContent className="pt-6">
           <div className="flex items-start space-x-3">
-            <Book className="h-5 w-5 text-blue-600 mt-0.5" />
+            <Book className="h-5 w-5 text-primary mt-0.5" />
             <div>
-              <h4 className="font-semibold text-blue-900">Can&apos;t find what you&apos;re looking for?</h4>
-              <p className="text-sm text-blue-800 mt-1">
+              <h4 className="font-semibold text-foreground">Can&apos;t find what you&apos;re looking for?</h4>
+              <p className="text-sm text-muted-foreground mt-1">
                 Our support team is here to help. Submit a support ticket and we&apos;ll get back to you.
               </p>
             </div>

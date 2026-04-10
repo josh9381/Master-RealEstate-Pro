@@ -169,7 +169,7 @@ export function AIEmailComposer({
                 <Sparkles className="h-4 w-4 text-purple-600" />
                 <span className="text-sm font-medium">AI Confidence Score</span>
               </div>
-              <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+              <Badge className="bg-success/10 text-success hover:bg-success/10">
                 {confidenceScore}% Effective
               </Badge>
             </div>

@@ -108,12 +108,12 @@ export default function BillingSubscriptionPage() {
 
       {/* Stripe Not Configured Banner */}
       {subscription && !subscription.stripeConfigured && (
-        <Card className="p-4 border-amber-300 bg-amber-50">
+        <Card className="p-4 border-warning/30 bg-warning/10">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+            <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0" />
             <div>
-              <p className="font-medium text-amber-900">Stripe Not Configured</p>
-              <p className="text-sm text-amber-800">
+              <p className="font-medium text-warning">Stripe Not Configured</p>
+              <p className="text-sm text-warning/80">
                 Set the STRIPE_SECRET_KEY environment variable to enable payment processing, plan upgrades, and billing management.
               </p>
             </div>

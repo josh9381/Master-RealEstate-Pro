@@ -47,11 +47,11 @@ const shortcuts: Shortcut[] = [
 ]
 
 const categories = [
-  { name: 'Navigation', icon: Navigation, color: 'text-blue-500' },
+  { name: 'Navigation', icon: Navigation, color: 'text-primary' },
   { name: 'Actions', icon: Zap, color: 'text-purple-500' },
-  { name: 'Dashboard', icon: Search, color: 'text-green-500' },
-  { name: 'AI Features', icon: Keyboard, color: 'text-yellow-500' },
-  { name: 'Communication', icon: MessageSquare, color: 'text-cyan-500' },
+  { name: 'Dashboard', icon: Search, color: 'text-success' },
+  { name: 'AI Features', icon: Keyboard, color: 'text-warning' },
+  { name: 'Communication', icon: MessageSquare, color: 'text-info' },
 ]
 
 interface KeyboardShortcutsModalProps {

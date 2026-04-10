@@ -71,10 +71,10 @@ function formatOutcome(outcome: string): string {
 }
 
 function getScoreColor(score: number) {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-yellow-600'
-  if (score >= 40) return 'text-orange-500'
-  return 'text-red-500'
+  if (score >= 80) return 'text-success'
+  if (score >= 60) return 'text-warning'
+  if (score >= 40) return 'text-warning'
+  return 'text-destructive'
 }
 
 function getScoreLabel(score: number) {
@@ -324,13 +324,13 @@ const CallCenter = () => {
 
       {/* Twilio Not Configured Banner */}
       {!isTwilioConfigured && (
-        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
+        <Card className="border-warning/20 bg-warning/10">
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
               <div>
-                <h4 className="font-semibold text-amber-900 dark:text-amber-200">Twilio Integration Required</h4>
-                <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
+                <h4 className="font-semibold text-warning">Twilio Integration Required</h4>
+                <p className="text-sm text-warning mt-1">
                   The Call Hub uses your device's native phone dialer. For VoIP calling directly from the browser,
                   configure your Twilio credentials in{' '}
                   <a href="/settings/twilio" className="underline font-medium">Settings → Twilio Setup</a>.
@@ -505,13 +505,13 @@ const CallCenter = () => {
                   {/* Dialer Status Indicator */}
                   {dialerStatus !== 'idle' && (
                     <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium mt-3 ${
-                      dialerStatus === 'connecting' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
-                      dialerStatus === 'connected' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      dialerStatus === 'connecting' ? 'bg-warning/10 text-warning border border-warning/20' :
+                      dialerStatus === 'connected' ? 'bg-success/10 text-success border border-success/20' :
                       'bg-muted/50 text-muted-foreground border border-border'
                     }`}>
                       <span className={`inline-block h-2 w-2 rounded-full ${
-                        dialerStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                        dialerStatus === 'connected' ? 'bg-green-500 animate-pulse' :
+                        dialerStatus === 'connecting' ? 'bg-warning animate-pulse' :
+                        dialerStatus === 'connected' ? 'bg-success animate-pulse' :
                         'bg-muted-foreground'
                       }`} />
                       {dialerStatus === 'connecting' && 'Dialing...'}
@@ -581,10 +581,10 @@ const CallCenter = () => {
                       Call Script
                     </CardTitle>
                     <Badge variant="outline" className={`text-xs ${
-                      selectedLead.score >= 80 ? 'border-green-300 text-green-700' :
-                      selectedLead.score >= 60 ? 'border-yellow-300 text-yellow-700' :
-                      selectedLead.score >= 40 ? 'border-orange-300 text-orange-600' :
-                      'border-blue-300 text-blue-700'
+                      selectedLead.score >= 80 ? 'border-success/20 text-success' :
+                      selectedLead.score >= 60 ? 'border-warning/20 text-warning' :
+                      selectedLead.score >= 40 ? 'border-warning/20 text-warning' :
+                      'border-primary/20 text-primary'
                     }`}>
                       {getScoreLabel(selectedLead.score)} Lead Script
                     </Badge>
@@ -599,9 +599,9 @@ const CallCenter = () => {
                     if (isCallback) {
                       return (
                         <div className="space-y-2 text-sm">
-                          <p className="font-medium text-blue-700">📞 Scheduled Callback</p>
+                          <p className="font-medium text-primary">📞 Scheduled Callback</p>
                           <p className="text-muted-foreground italic">"Hi {firstName}, this is [Your Name] calling back as we discussed. Is this still a good time to chat?"</p>
-                          <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-800">
+                          <div className="bg-primary/10 rounded-lg p-2 text-xs text-primary">
                             <p className="font-medium">Tips:</p>
                             <ul className="list-disc ml-4 mt-1 space-y-0.5">
                               <li>Reference the previous conversation</li>
@@ -616,9 +616,9 @@ const CallCenter = () => {
                     if (temp === 'Hot') {
                       return (
                         <div className="space-y-2 text-sm">
-                          <p className="font-medium text-green-700">🔥 Hot Lead — Act Fast</p>
+                          <p className="font-medium text-success">🔥 Hot Lead — Act Fast</p>
                           <p className="text-muted-foreground italic">"Hi {firstName}, this is [Your Name] from [Company]. I noticed you've been {selectedLead.propertyType ? `looking at ${selectedLead.propertyType.toLowerCase()} properties` : 'active on our platform'} and I wanted to personally reach out. Do you have a moment?"</p>
-                          <div className="bg-green-50 rounded-lg p-2 text-xs text-green-800">
+                          <div className="bg-success/10 rounded-lg p-2 text-xs text-success">
                             <p className="font-medium">Tips:</p>
                             <ul className="list-disc ml-4 mt-1 space-y-0.5">
                               <li>Be direct and value-focused</li>
@@ -634,9 +634,9 @@ const CallCenter = () => {
                     if (temp === 'Warm') {
                       return (
                         <div className="space-y-2 text-sm">
-                          <p className="font-medium text-yellow-700">☀️ Warm Lead — Build Rapport</p>
+                          <p className="font-medium text-warning">☀️ Warm Lead — Build Rapport</p>
                           <p className="text-muted-foreground italic">"Hi {firstName}, this is [Your Name] from [Company]. I'm reaching out because I work with {selectedLead.transactionType === 'BUYING' ? 'buyers' : 'sellers'} in the area and would love to learn about your real estate goals. Have you started your search yet?"</p>
-                          <div className="bg-yellow-50 rounded-lg p-2 text-xs text-yellow-800">
+                          <div className="bg-warning/10 rounded-lg p-2 text-xs text-warning">
                             <p className="font-medium">Tips:</p>
                             <ul className="list-disc ml-4 mt-1 space-y-0.5">
                               <li>Ask open-ended questions about their timeline</li>
@@ -651,9 +651,9 @@ const CallCenter = () => {
                     // Cold lead
                     return (
                       <div className="space-y-2 text-sm">
-                        <p className="font-medium text-blue-700">❄️ Cold Lead — Qualify First</p>
+                        <p className="font-medium text-primary">❄️ Cold Lead — Qualify First</p>
                         <p className="text-muted-foreground italic">"Hi {firstName}, this is [Your Name] from [Company]. I noticed you {selectedLead.source ? `came to us through ${selectedLead.source}` : 'expressed interest in real estate'}. I'm just calling to see if you have any questions or if there's anything I can help with?"</p>
-                        <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-800">
+                        <div className="bg-primary/10 rounded-lg p-2 text-xs text-primary">
                           <p className="font-medium">Tips:</p>
                           <ul className="list-disc ml-4 mt-1 space-y-0.5">
                             <li>Keep it short — qualify in under 2 minutes</li>
@@ -693,7 +693,7 @@ const CallCenter = () => {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-green-200 hover:bg-green-50 hover:border-green-400 text-green-700 transition-colors"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-success/20 hover:bg-success/10 hover:border-success/40 text-success transition-colors"
                       onClick={() => handleDisposition('ANSWERED')}
                       disabled={logCallMutation.isPending}
                     >
@@ -702,7 +702,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-blue-200 hover:bg-blue-50 hover:border-blue-400 text-blue-700 transition-colors"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-primary transition-colors"
                       onClick={() => {
                         if (!callbackDate || !callbackTime) {
                           setShowCallbackPicker(true)
@@ -715,7 +715,7 @@ const CallCenter = () => {
                       <PhoneForwarded className="h-5 w-5" />
                       <span className="text-xs font-medium">Callback</span>
                       {callbackDate && callbackTime && (
-                        <span className="text-[9px] text-blue-500">{callbackDate} {callbackTime}</span>
+                        <span className="text-[9px] text-primary">{callbackDate} {callbackTime}</span>
                       )}
                     </Button>
                     <Button
@@ -738,7 +738,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-orange-200 hover:bg-orange-50 hover:border-orange-400 text-orange-600 transition-colors"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-warning/20 hover:bg-warning/10 hover:border-warning/40 text-warning transition-colors"
                       onClick={() => handleDisposition('NOT_INTERESTED')}
                       disabled={logCallMutation.isPending}
                     >
@@ -747,7 +747,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-red-200 hover:bg-red-50 hover:border-red-400 text-red-600 transition-colors"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-destructive/20 hover:bg-destructive/10 hover:border-destructive/40 text-destructive transition-colors"
                       onClick={() => handleDisposition('WRONG_NUMBER')}
                       disabled={logCallMutation.isPending}
                     >
@@ -774,7 +774,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-red-300 hover:bg-red-50 hover:border-red-500 text-red-700 transition-colors"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-destructive/20 hover:bg-destructive/10 hover:border-destructive/40 text-destructive transition-colors"
                       onClick={() => handleDisposition('DNC_REQUEST')}
                       disabled={logCallMutation.isPending}
                     >
@@ -790,14 +790,14 @@ const CallCenter = () => {
 
                   {/* Callback Scheduling Picker */}
                   {showCallbackPicker && (
-                    <div className="mt-4 p-4 border rounded-lg bg-blue-50/50 border-blue-200">
-                      <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                    <div className="mt-4 p-4 border rounded-lg bg-primary/10 border-primary/20">
+                      <h4 className="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         Schedule Callback
                       </h4>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs font-medium text-blue-700 mb-1 block">Date</label>
+                          <label className="text-xs font-medium text-primary mb-1 block">Date</label>
                           <input
                             type="date"
                             value={callbackDate}
@@ -807,7 +807,7 @@ const CallCenter = () => {
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-blue-700 mb-1 block">Time</label>
+                          <label className="text-xs font-medium text-primary mb-1 block">Time</label>
                           <input
                             type="time"
                             value={callbackTime}
@@ -899,11 +899,11 @@ const CallCenter = () => {
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-lg ${call.direction === 'INBOUND' ? 'bg-blue-100' : 'bg-green-100'}`}>
+                    <div className={`p-1.5 rounded-lg ${call.direction === 'INBOUND' ? 'bg-primary/10' : 'bg-success/10'}`}>
                       {call.direction === 'INBOUND' ? (
-                        <PhoneIncoming className="h-4 w-4 text-blue-600" />
+                        <PhoneIncoming className="h-4 w-4 text-primary" />
                       ) : (
-                        <PhoneOutgoing className="h-4 w-4 text-green-600" />
+                        <PhoneOutgoing className="h-4 w-4 text-success" />
                       )}
                     </div>
                     <div>

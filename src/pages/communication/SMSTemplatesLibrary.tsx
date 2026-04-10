@@ -416,7 +416,7 @@ const SMSTemplatesLibrary = () => {
                       <RefreshCw className="h-3 w-3" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setDeleteConfirmId(template.id)} title="Delete">
-                      <Trash2 className="h-3 w-3 text-red-500" />
+                      <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
                   </div>
                 </div>
@@ -490,8 +490,8 @@ const SMSTemplatesLibrary = () => {
             {/* Sticky Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b bg-background/95 backdrop-blur-sm shrink-0">
               <div className="flex items-center gap-4">
-                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-green-500/10">
-                  <MessageSquare className="h-5 w-5 text-green-600" />
+                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-success/10">
+                  <MessageSquare className="h-5 w-5 text-success" />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold">{editingTemplate ? 'Edit SMS Template' : 'Create SMS Template'}</h2>
@@ -515,7 +515,7 @@ const SMSTemplatesLibrary = () => {
                     <FileText className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Details</span>
                     {formName.trim() && (
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                     )}
                   </button>
                   <button
@@ -530,7 +530,7 @@ const SMSTemplatesLibrary = () => {
                     <Zap className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Message</span>
                     {formBody.trim() && (
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                     )}
                   </button>
                 </div>
@@ -548,8 +548,8 @@ const SMSTemplatesLibrary = () => {
                   {/* Template Name */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="sms-template-name" className="text-sm font-medium">Template Name <span className="text-red-500">*</span></label>
-                      <span className={`text-xs ${formName.length > 80 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                      <label htmlFor="sms-template-name" className="text-sm font-medium">Template Name <span className="text-destructive">*</span></label>
+                      <span className={`text-xs ${formName.length > 80 ? 'text-destructive' : 'text-muted-foreground'}`}>
                         {formName.length}/100
                       </span>
                     </div>
@@ -644,8 +644,8 @@ const SMSTemplatesLibrary = () => {
                   {/* Message Body */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="sms-template-body" className="text-sm font-medium">Message Body <span className="text-red-500">*</span></label>
-                      <span className={`text-xs ${formBody.length > 480 ? 'text-red-500' : formBody.length > 320 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                      <label htmlFor="sms-template-body" className="text-sm font-medium">Message Body <span className="text-destructive">*</span></label>
+                      <span className={`text-xs ${formBody.length > 480 ? 'text-destructive' : formBody.length > 320 ? 'text-warning' : 'text-muted-foreground'}`}>
                         {(() => { const seg = calculateSMSSegments(formBody); return `${seg.charCount}/${seg.encoding === 'UCS-2' ? 70 : 160} (${seg.encoding}) \u2022 ${seg.segmentCount} segment${seg.segmentCount !== 1 ? 's' : ''}${seg.segmentCount > 1 ? ` (${seg.segmentCount}x SMS cost)` : ''}` })()}
                       </span>
                     </div>

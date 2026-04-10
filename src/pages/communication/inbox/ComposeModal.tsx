@@ -175,9 +175,9 @@ export const ComposeModal = ({
                 placeholder={composeType === 'email' ? 'recipient@example.com' : composeType === 'sms' ? '+1 (555) 123-4567' : 'Contact name'}
                 value={composeTo}
                 onChange={(e) => { onToChange(e.target.value); setErrors(prev => ({ ...prev, to: '' })) }}
-                className={errors.to ? 'border-red-500' : ''}
+                className={errors.to ? 'border-destructive' : ''}
               />
-              {errors.to && <p className="text-xs text-red-500">{errors.to}</p>}
+              {errors.to && <p className="text-xs text-destructive">{errors.to}</p>}
               <p className="text-xs text-muted-foreground">
                 {composeLeadId ? 'Auto-filled from selected lead. You can edit if needed.' : 'Or enter recipient manually'}
               </p>
@@ -190,10 +190,10 @@ export const ComposeModal = ({
                   placeholder="Enter subject..."
                   value={composeSubject}
                   onChange={(e) => { onSubjectChange(e.target.value); setErrors(prev => ({ ...prev, subject: '' })) }}
-                  className={errors.subject ? 'border-red-500' : ''}
+                  className={errors.subject ? 'border-destructive' : ''}
                   maxLength={300}
                 />
-                {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
+                {errors.subject && <p className="text-xs text-destructive">{errors.subject}</p>}
               </div>
             )}
 
@@ -266,12 +266,12 @@ export const ComposeModal = ({
                 value={composeBody}
                 onChange={(e) => { onBodyChange(e.target.value); setErrors(prev => ({ ...prev, body: '' })) }}
                 rows={8}
-                className={`w-full p-3 border rounded-md resize-none ${errors.body ? 'border-red-500' : ''}`}
+                className={`w-full p-3 border rounded-md resize-none ${errors.body ? 'border-destructive' : ''}`}
                 placeholder={composeType === 'call' ? 'Enter call notes...' : 'Enter your message...'}
               />
-              {errors.body && <p className="text-xs text-red-500">{errors.body}</p>}
+              {errors.body && <p className="text-xs text-destructive">{errors.body}</p>}
               {composeType === 'sms' && (
-                <p className={`text-xs ${composeBody.length > 480 ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}>
+                <p className={`text-xs ${composeBody.length > 480 ? 'text-warning font-medium' : 'text-muted-foreground'}`}>
                   {(() => { const seg = calculateSMSSegments(composeBody); return `${seg.charCount} chars (${seg.encoding}) \u2022 ${seg.segmentCount} segment${seg.segmentCount !== 1 ? 's' : ''}` })()}
                   {calculateSMSSegments(composeBody).segmentCount > 1 && ` \u26a0\ufe0f (${calculateSMSSegments(composeBody).segmentCount}x SMS cost)`}
                   {composeBody.length > 480 && ' \u2014 consider email instead'}
