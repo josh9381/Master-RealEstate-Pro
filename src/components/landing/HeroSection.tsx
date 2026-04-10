@@ -61,14 +61,14 @@ export function HeroSection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
           <Link
             to="/auth/register"
-            className="group flex items-center gap-2 px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-0.5"
+            className="group flex items-center gap-2 px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ring-offset-transparent"
           >
             Get Started Free
             <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Link>
 
           {/* VOICEOVER 1 PLACEHOLDER: Wire up audio player for hero voiceover */}
-          <button className="group flex items-center gap-3 px-8 py-4 text-lg font-medium text-white/90 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+          <button className="group flex items-center gap-3 px-8 py-4 text-lg font-medium text-white/90 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ring-offset-transparent">
             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
               <Play className="h-5 w-5 text-white ml-0.5" />
             </div>

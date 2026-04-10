@@ -49,7 +49,7 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
     >
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
+        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
         aria-expanded={open}
       >
         <span className="font-semibold text-foreground">{q}</span>

@@ -29,14 +29,14 @@ export function CTASection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <Link
             to="/auth/register"
-            className="group flex items-center gap-2 px-8 py-4 text-lg font-semibold text-blue-700 bg-white rounded-xl hover:bg-blue-50 transition-all shadow-2xl shadow-black/10 hover:-translate-y-0.5"
+            className="group flex items-center gap-2 px-8 py-4 text-lg font-semibold text-blue-700 bg-white rounded-xl hover:bg-blue-50 transition-all shadow-2xl shadow-black/10 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ring-offset-transparent"
           >
             Start Free Today
             <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Link>
 
           {/* VOICEOVER 3 PLACEHOLDER: Wire up audio player for CTA voiceover */}
-          <button className="group flex items-center gap-3 px-8 py-4 text-lg font-medium text-white/90 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+          <button className="group flex items-center gap-3 px-8 py-4 text-lg font-medium text-white/90 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ring-offset-transparent">
             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
               <Play className="h-4 w-4 text-white ml-0.5" />
             </div>

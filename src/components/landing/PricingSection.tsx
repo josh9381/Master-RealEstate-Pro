@@ -106,7 +106,7 @@ export function PricingSection() {
 
               <Link
                 to="/auth/register"
-                className={`block w-full text-center py-3 px-6 rounded-xl font-semibold transition-all ${
+                className={`block w-full text-center py-3 px-6 rounded-xl font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
                   plan.highlighted
                     ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/25'
                     : 'bg-muted text-foreground hover:bg-muted/80'

@@ -74,7 +74,7 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="col-span-2">
-            <Link to="/" className="flex items-center gap-2 mb-4">
+            <Link to="/" className="flex items-center gap-2 mb-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               <div className="p-2 rounded-xl bg-blue-600">
                 <Building2 className="h-5 w-5 text-white" />
               </div>
@@ -92,7 +92,7 @@ export function Footer() {
                   key={s.label}
                   href={s.href}
                   aria-label={s.label}
-                  className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-blue-600 flex items-center justify-center text-muted-foreground hover:text-white transition-all duration-300"
+                  className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-blue-600 flex items-center justify-center text-muted-foreground hover:text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   {s.svg}
                 </a>
@@ -110,11 +110,11 @@ export function Footer() {
                 {links.map((link) => (
                   <li key={link.label}>
                     {link.href.startsWith('/') ? (
-                      <Link to={link.href} className="text-sm hover:text-white transition-colors">
+                      <Link to={link.href} className="text-sm hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                         {link.label}
                       </Link>
                     ) : (
-                      <a href={link.href} className="text-sm hover:text-white transition-colors">
+                      <a href={link.href} className="text-sm hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                         {link.label}
                       </a>
                     )}
