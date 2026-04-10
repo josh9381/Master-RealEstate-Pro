@@ -23,7 +23,7 @@ export function Tabs({ tabs, value, onChange, className }: TabsProps) {
           aria-selected={value === tab.value}
           onClick={() => onChange(tab.value)}
           className={cn(
-            'px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px',
+            'px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
             value === tab.value
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
