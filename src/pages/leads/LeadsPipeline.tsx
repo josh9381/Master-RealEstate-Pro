@@ -462,7 +462,7 @@ function LeadsPipeline() {
                         style={stage.color ? { backgroundColor: stage.color } : { backgroundColor: '#6B7280' }}
                       />
                       <CardTitle className="text-base">{stage.name}</CardTitle>
-                      {stage.isWinStage && <Badge variant="default" className="text-xs bg-green-600">Win</Badge>}
+                      {stage.isWinStage && <Badge variant="default" className="text-xs bg-success">Win</Badge>}
                       {stage.isLostStage && <Badge variant="secondary" className="text-xs">Lost</Badge>}
                     </div>
                     <div className="flex items-center gap-1">
@@ -488,7 +488,7 @@ function LeadsPipeline() {
                     <div className="flex flex-col">
                       <span className="text-muted-foreground">Value</span>
                       <div className="flex items-center gap-1 font-medium">
-                        <DollarSign className="h-3 w-3 text-green-500" />
+                        <DollarSign className="h-3 w-3 text-success" />
                         <span>{calculateTotalValue(stage.leads)}</span>
                       </div>
                     </div>

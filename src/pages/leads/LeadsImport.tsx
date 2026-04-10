@@ -560,7 +560,7 @@ function LeadsImport() {
                   <div className="text-sm text-muted-foreground">Columns Mapped</div>
                 </div>
                 <div className="p-4 rounded-lg bg-muted/50">
-                  <div className={`text-2xl font-bold ${(duplicateCheck?.duplicatesFound ?? 0) > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  <div className={`text-2xl font-bold ${(duplicateCheck?.duplicatesFound ?? 0) > 0 ? 'text-warning' : 'text-success'}`}>
                     {duplicateCheck?.duplicatesFound ?? 0}
                   </div>
                   <div className="text-sm text-muted-foreground">Duplicates Found</div>
@@ -589,7 +589,7 @@ function LeadsImport() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  <AlertTriangle className="h-5 w-5 text-warning" />
                   {duplicateCheck!.duplicatesFound} Duplicate{duplicateCheck!.duplicatesFound > 1 ? 's' : ''} Found
                 </CardTitle>
                 <CardDescription>
@@ -746,22 +746,22 @@ function LeadsImport() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
               Import Complete
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/20">
-                <div className="text-2xl font-bold text-green-600">{importResult.imported}</div>
+              <div className="p-4 rounded-lg bg-success/10">
+                <div className="text-2xl font-bold text-success">{importResult.imported}</div>
                 <div className="text-sm text-muted-foreground">Imported</div>
               </div>
-              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-                <div className="text-2xl font-bold text-blue-600">{importResult.updated}</div>
+              <div className="p-4 rounded-lg bg-primary/10">
+                <div className="text-2xl font-bold text-primary">{importResult.updated}</div>
                 <div className="text-sm text-muted-foreground">Updated</div>
               </div>
-              <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-950/20">
-                <div className="text-2xl font-bold text-yellow-600">{importResult.skipped}</div>
+              <div className="p-4 rounded-lg bg-warning/10">
+                <div className="text-2xl font-bold text-warning">{importResult.skipped}</div>
                 <div className="text-sm text-muted-foreground">Skipped</div>
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
@@ -772,7 +772,7 @@ function LeadsImport() {
 
             {importResult.duplicatesFound > 0 && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-yellow-500" />
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
                 <p className="text-sm">
                   {importResult.duplicatesFound} duplicate{importResult.duplicatesFound > 1 ? 's' : ''} were detected.
                   {duplicateAction === 'skip' && ' They were skipped.'}

@@ -221,7 +221,7 @@ export default function LeadCreate() {
                     required
                     className="mt-1"
                   />
-                  {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName}</p>}
+                  {errors.firstName && <p className="text-sm text-destructive mt-1">{errors.firstName}</p>}
                 </div>
                 
                 <div>
@@ -235,7 +235,7 @@ export default function LeadCreate() {
                     required
                     className="mt-1"
                   />
-                  {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName}</p>}
+                  {errors.lastName && <p className="text-sm text-destructive mt-1">{errors.lastName}</p>}
                 </div>
                 
                 <div>
@@ -253,7 +253,7 @@ export default function LeadCreate() {
                       className="pl-10"
                     />
                   </div>
-                  {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
+                  {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
                 </div>
                 
                 <div>
@@ -270,7 +270,7 @@ export default function LeadCreate() {
                       className="pl-10"
                     />
                   </div>
-                  {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
+                  {errors.phone && <p className="text-sm text-destructive mt-1">{errors.phone}</p>}
                 </div>
 
                 <div>
@@ -363,7 +363,7 @@ export default function LeadCreate() {
                       placeholder="e.g. 200000"
                       className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     />
-                    {errors.budgetMin && <p className="text-sm text-red-500 mt-1">{errors.budgetMin}</p>}
+                    {errors.budgetMin && <p className="text-sm text-destructive mt-1">{errors.budgetMin}</p>}
                   </div>
                   <div>
                     <label htmlFor="lead-budgetMax" className="text-sm font-medium">Budget Max ($)</label>
@@ -538,7 +538,7 @@ export default function LeadCreate() {
                         maxLength={10}
                         className="mt-1"
                       />
-                      {errors.zipCode && <p className="text-sm text-red-500 mt-1">{errors.zipCode}</p>}
+                      {errors.zipCode && <p className="text-sm text-destructive mt-1">{errors.zipCode}</p>}
                     </div>
                   </div>
                   

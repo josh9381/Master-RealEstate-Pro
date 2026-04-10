@@ -43,8 +43,8 @@ export function LeadStatsCards({ backendStats, totalLeads, globalTotal, currentP
               }
             </p>
           </div>
-          <div className="rounded-full bg-blue-100 p-3">
-            <Users className="h-6 w-6 text-blue-600" />
+          <div className="rounded-full bg-primary/10 p-3">
+            <Users className="h-6 w-6 text-primary" />
           </div>
         </div>
       </Card>
@@ -58,8 +58,8 @@ export function LeadStatsCards({ backendStats, totalLeads, globalTotal, currentP
               {qualified} of {total} leads qualified
             </p>
           </div>
-          <div className="rounded-full bg-green-100 p-3">
-            <Target className="h-6 w-6 text-green-600" />
+          <div className="rounded-full bg-success/10 p-3">
+            <Target className="h-6 w-6 text-success" />
           </div>
         </div>
       </Card>
@@ -88,8 +88,8 @@ export function LeadStatsCards({ backendStats, totalLeads, globalTotal, currentP
               {won} won of {closedTotal} closed leads
             </p>
           </div>
-          <div className="rounded-full bg-orange-100 p-3">
-            <Target className="h-6 w-6 text-orange-600" />
+          <div className="rounded-full bg-warning/10 p-3">
+            <Target className="h-6 w-6 text-warning" />
           </div>
         </div>
       </Card>

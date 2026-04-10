@@ -83,17 +83,17 @@ export function MassEmailModal({
                 setEmailSubject(e.target.value)
                 if (emailErrors.subject) setEmailErrors(prev => ({ ...prev, subject: undefined }))
               }}
-              className={`mt-1 ${emailErrors.subject ? 'border-red-500' : ''}`}
+              className={`mt-1 ${emailErrors.subject ? 'border-destructive' : ''}`}
             />
             {emailErrors.subject && (
-              <p className="text-xs text-red-500 mt-1">{emailErrors.subject}</p>
+              <p className="text-xs text-destructive mt-1">{emailErrors.subject}</p>
             )}
           </div>
 
           <div>
             <label className="text-sm font-medium">Message *</label>
             <textarea
-              className={`w-full mt-1 p-2 border rounded-md min-h-[200px] ${emailErrors.body ? 'border-red-500' : ''}`}
+              className={`w-full mt-1 p-2 border rounded-md min-h-[200px] ${emailErrors.body ? 'border-destructive' : ''}`}
               placeholder="Email body..."
               value={emailBody}
               onChange={(e) => {
@@ -102,7 +102,7 @@ export function MassEmailModal({
               }}
             />
             {emailErrors.body && (
-              <p className="text-xs text-red-500 mt-1">{emailErrors.body}</p>
+              <p className="text-xs text-destructive mt-1">{emailErrors.body}</p>
             )}
           </div>
 
@@ -153,7 +153,7 @@ export function TagsModal({
   const availableTags: string[] = (() => {
     const raw = tagsResponse?.data?.tags || tagsResponse?.data || tagsResponse?.tags || tagsResponse || []
     if (!Array.isArray(raw)) return []
-    return raw.map((t: any) => t.name).filter(Boolean)
+    return raw.map((t: { name: string }) => t.name).filter(Boolean)
   })()
 
   const handleToggleTag = (tag: string) => {
@@ -348,7 +348,7 @@ export function BulkDeleteModal({ selectedCount, onClose, onDelete }: BulkDelete
     <Dialog open={true} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="max-w-md">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="delete-title" className="text-xl font-bold text-red-600">Delete Leads</h2>
+          <h2 id="delete-title" className="text-xl font-bold text-destructive">Delete Leads</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
@@ -442,22 +442,22 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
                   <div>
                     <label className="text-sm font-medium">First Name *</label>
                     <Input value={editingLead.firstName} onChange={(e) => onLeadChange({...editingLead, firstName: e.target.value})} className="mt-1" placeholder="John" />
-                    {editErrors.firstName && <p className="text-sm text-red-500 mt-1">{editErrors.firstName}</p>}
+                    {editErrors.firstName && <p className="text-sm text-destructive mt-1">{editErrors.firstName}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium">Last Name *</label>
                     <Input value={editingLead.lastName} onChange={(e) => onLeadChange({...editingLead, lastName: e.target.value})} className="mt-1" placeholder="Doe" />
-                    {editErrors.lastName && <p className="text-sm text-red-500 mt-1">{editErrors.lastName}</p>}
+                    {editErrors.lastName && <p className="text-sm text-destructive mt-1">{editErrors.lastName}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium">Email *</label>
                     <Input type="email" value={editingLead.email} onChange={(e) => onLeadChange({...editingLead, email: e.target.value})} className="mt-1" placeholder="john@example.com" />
-                    {editErrors.email && <p className="text-sm text-red-500 mt-1">{editErrors.email}</p>}
+                    {editErrors.email && <p className="text-sm text-destructive mt-1">{editErrors.email}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium">Phone</label>
                     <Input value={editingLead.phone} onChange={(e) => onLeadChange({...editingLead, phone: e.target.value})} className="mt-1" placeholder="+1 (555) 123-4567" />
-                    {editErrors.phone && <p className="text-sm text-red-500 mt-1">{editErrors.phone}</p>}
+                    {editErrors.phone && <p className="text-sm text-destructive mt-1">{editErrors.phone}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium">Company</label>

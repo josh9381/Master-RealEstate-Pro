@@ -262,12 +262,12 @@ export function LeadsTable({
                           getRecentActivities(lead.id).map((activity, idx) => (
                             <div key={idx} className="flex items-start gap-3 text-sm">
                               <div className="mt-1">
-                                {activity.type === 'email' && <Mail className="h-4 w-4 text-blue-600" />}
-                                {activity.type === 'call' && <Phone className="h-4 w-4 text-green-600" />}
-                                {activity.type === 'note' && <FileText className="h-4 w-4 text-orange-600" />}
+                                {activity.type === 'email' && <Mail className="h-4 w-4 text-primary" />}
+                                {activity.type === 'call' && <Phone className="h-4 w-4 text-success" />}
+                                {activity.type === 'note' && <FileText className="h-4 w-4 text-warning" />}
                                 {activity.type === 'meeting' && <Users className="h-4 w-4 text-purple-600" />}
                                 {activity.type === 'task' && <Target className="h-4 w-4 text-indigo-600" />}
-                                {activity.type === 'status_change' && <TrendingUp className="h-4 w-4 text-yellow-600" />}
+                                {activity.type === 'status_change' && <TrendingUp className="h-4 w-4 text-warning" />}
                               </div>
                               <div className="flex-1">
                                 <p className="font-medium">{activity.desc}</p>

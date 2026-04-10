@@ -359,7 +359,7 @@ const Segmentation = () => {
                       <Edit className="h-3 w-3" />
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => handleDelete(segment.id)}>
-                      <Trash2 className="h-3 w-3 text-red-500" />
+                      <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
                   </div>
                 </div>
