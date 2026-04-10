@@ -109,7 +109,7 @@ export function PricingSection() {
                 className={`block w-full text-center py-3 px-6 rounded-xl font-semibold transition-all ${
                   plan.highlighted
                     ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/25'
-                    : 'bg-muted text-foreground hover:bg-muted'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
                 }`}
               >
                 {plan.cta}

@@ -82,18 +82,18 @@ export function CustomFieldsManager() {
   const fields: CustomField[] = (() => {
     const raw = fieldsResponse?.data?.fields || fieldsResponse?.fields || fieldsResponse?.data || fieldsResponse || []
     if (!Array.isArray(raw)) return []
-    return raw.map((f: any) => ({
-      id: f.id,
-      name: f.name,
-      fieldKey: f.fieldKey,
-      type: f.type,
-      required: f.required ?? false,
+    return raw.map((f: Record<string, unknown>) => ({
+      id: f.id as string,
+      name: f.name as string,
+      fieldKey: f.fieldKey as string,
+      type: f.type as CustomField['type'],
+      required: (f.required as boolean) ?? false,
       options: Array.isArray(f.options) ? f.options : undefined,
-      usageCount: f.usageCount || 0,
-      order: f.order ?? 0,
-      defaultValue: f.defaultValue,
-      placeholder: f.placeholder,
-      validation: f.validation,
+      usageCount: (f.usageCount as number) || 0,
+      order: (f.order as number) ?? 0,
+      defaultValue: f.defaultValue as string | undefined,
+      placeholder: f.placeholder as string | undefined,
+      validation: f.validation as string | undefined,
     }))
   })()
 
@@ -429,7 +429,13 @@ export function CustomFieldsManager() {
 
       {/* Add/Edit Field Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={editingField ? 'Edit Custom Field' : 'Add Custom Field'}
+          onKeyDown={(e) => { if (e.key === 'Escape') resetForm() }}
+        >
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <CardTitle>{editingField ? 'Edit Custom Field' : 'Add Custom Field'}</CardTitle>

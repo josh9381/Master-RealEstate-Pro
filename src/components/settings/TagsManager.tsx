@@ -512,7 +512,19 @@ export function TagsManager() {
 
       {/* Add/Edit Tag Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-label={editingTag ? 'Edit Tag' : 'Add New Tag'}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowAddModal(false)
+              setEditingTag(null)
+              setNewTag({ name: '', color: DEFAULT_COLOR })
+            }
+          }}
+        >
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle>{editingTag ? 'Edit Tag' : 'Add New Tag'}</CardTitle>
