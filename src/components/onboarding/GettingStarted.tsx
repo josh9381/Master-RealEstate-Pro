@@ -132,7 +132,7 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
               key={step.id}
               className={`relative p-4 rounded-xl border transition-all duration-200 ${
                 step.isComplete
-                  ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800'
+                  ? 'bg-success/10 border-success/20'
                   : 'bg-card border-border hover:border-primary/40 hover:shadow-md'
               }`}
             >
@@ -141,7 +141,7 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
                 <div
                   className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
                     step.isComplete
-                      ? 'bg-green-500 text-white'
+                      ? 'bg-success text-success-foreground'
                       : 'bg-primary/10 text-primary'
                   }`}
                 >
@@ -158,7 +158,7 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
 
               {/* Icon and content */}
               <div className="mb-3">
-                <step.icon className={`h-5 w-5 mb-2 ${step.isComplete ? 'text-green-600' : 'text-primary'}`} />
+                <step.icon className={`h-5 w-5 mb-2 ${step.isComplete ? 'text-success' : 'text-primary'}`} />
                 <h3 className="font-semibold text-sm">{step.title}</h3>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   {step.description}
