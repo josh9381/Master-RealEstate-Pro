@@ -158,11 +158,11 @@ function LeadsFollowups() {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'overdue':
-        return { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500' }
+        return { icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive' }
       case 'completed':
-        return { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500' }
+        return { icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', border: 'border-success' }
       default:
-        return { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500' }
+        return { icon: Clock, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary' }
     }
   }
 
@@ -345,7 +345,7 @@ function LeadsFollowups() {
             <Card 
               key={followup.id}
               className={`transition-all hover:shadow-md ${
-                followup.status === 'overdue' ? 'border-red-500/50' : ''
+                followup.status === 'overdue' ? 'border-destructive/50' : ''
               } ${
                 followup.status === 'completed' ? 'opacity-60' : ''
               }`}
@@ -455,7 +455,7 @@ function LeadsFollowups() {
                     </option>
                   ))}
                 </select>
-                {followupErrors.leadId && <p className="text-sm text-red-500 mt-1">{followupErrors.leadId}</p>}
+                {followupErrors.leadId && <p className="text-sm text-destructive mt-1">{followupErrors.leadId}</p>}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Type</label>
@@ -491,7 +491,7 @@ function LeadsFollowups() {
                   />
                 </div>
               </div>
-              {followupErrors.date && <p className="text-sm text-red-500 mt-1">{followupErrors.date}</p>}
+              {followupErrors.date && <p className="text-sm text-destructive mt-1">{followupErrors.date}</p>}
               <div>
                 <label className="text-sm font-medium mb-1 block">Priority</label>
                 <select

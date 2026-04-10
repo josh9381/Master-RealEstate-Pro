@@ -95,8 +95,8 @@ const WIZARD_STEPS: WizardStep[] = [
 function WelcomeStep() {
   return (
     <div className="text-center py-8">
-      <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-100 mb-6">
-        <Sparkles className="h-10 w-10 text-blue-600" />
+      <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-6">
+        <Sparkles className="h-10 w-10 text-primary" />
       </div>
       <h2 className="text-2xl font-bold text-foreground mb-3">Welcome to RealEstate Pro!</h2>
       <p className="text-muted-foreground max-w-md mx-auto mb-6">
@@ -110,7 +110,7 @@ function WelcomeStep() {
           { label: 'Integrations & Security', time: '1 min' },
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-2 p-3 rounded-lg bg-muted border border-border">
-            <Check className="h-4 w-4 text-blue-600 flex-shrink-0" />
+            <Check className="h-4 w-4 text-primary flex-shrink-0" />
             <div>
               <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
               <p className="text-xs text-muted-foreground">{item.time}</p>
@@ -172,7 +172,7 @@ function ProfileStep() {
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
@@ -186,7 +186,7 @@ function ProfileStep() {
             type="text"
             value={form.firstName}
             onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
             placeholder="John"
           />
         </div>
@@ -196,7 +196,7 @@ function ProfileStep() {
             type="text"
             value={form.lastName}
             onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
             placeholder="Smith"
           />
         </div>
@@ -207,7 +207,7 @@ function ProfileStep() {
           type="tel"
           value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
           placeholder="+1 (555) 123-4567"
         />
       </div>
@@ -217,7 +217,7 @@ function ProfileStep() {
           type="text"
           value={form.jobTitle}
           onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
           placeholder="Real Estate Agent"
         />
       </div>
@@ -226,7 +226,7 @@ function ProfileStep() {
         <select
           value={form.timezone}
           onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
         >
           {['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'Pacific/Honolulu'].map((tz) => (
             <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
@@ -236,7 +236,7 @@ function ProfileStep() {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        className="w-full py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
       >
         {saving ? 'Saving...' : 'Save Profile'}
       </button>
@@ -295,7 +295,7 @@ function BusinessStep() {
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
@@ -308,7 +308,7 @@ function BusinessStep() {
           type="text"
           value={form.companyName}
           onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
           placeholder="Pinnacle Realty Group"
         />
       </div>
@@ -318,7 +318,7 @@ function BusinessStep() {
           <select
             value={form.industry}
             onChange={(e) => setForm({ ...form, industry: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
           >
             {['Real Estate', 'Real Estate - Residential', 'Real Estate - Commercial', 'Mortgage & Lending', 'Property Management', 'Other'].map((i) => (
               <option key={i} value={i}>{i}</option>
@@ -330,7 +330,7 @@ function BusinessStep() {
           <select
             value={form.companySize}
             onChange={(e) => setForm({ ...form, companySize: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
           >
             {['1-10 employees', '11-50 employees', '51-200 employees', '201-500 employees', '500+ employees'].map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -344,7 +344,7 @@ function BusinessStep() {
           type="url"
           value={form.website}
           onChange={(e) => setForm({ ...form, website: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
           placeholder="https://www.yourcompany.com"
         />
       </div>
@@ -355,7 +355,7 @@ function BusinessStep() {
             type="email"
             value={form.billingEmail}
             onChange={(e) => setForm({ ...form, billingEmail: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
             placeholder="info@company.com"
           />
         </div>
@@ -365,7 +365,7 @@ function BusinessStep() {
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
             placeholder="+1 (555) 000-0000"
           />
         </div>
@@ -373,7 +373,7 @@ function BusinessStep() {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        className="w-full py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
       >
         {saving ? 'Saving...' : 'Save Business Info'}
       </button>
@@ -456,7 +456,7 @@ function EmailStep() {
   return (
     <div className="space-y-5 max-w-lg mx-auto">
       {hasExisting && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-success/10 border border-success/20 text-success text-sm">
           <Check className="h-4 w-4" />
           Email is already configured. You can update it below or skip this step.
         </div>
@@ -467,10 +467,10 @@ function EmailStep() {
           type="password"
           value={form.apiKey}
           onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none font-mono text-sm"
           placeholder={hasExisting ? '••••••••••• (key stored)' : 'SG.xxxxxx...'}
         />
-        <p className="text-xs text-muted-foreground mt-1">Get your key from <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">SendGrid Dashboard</a></p>
+        <p className="text-xs text-muted-foreground mt-1">Get your key from <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">SendGrid Dashboard</a></p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -479,7 +479,7 @@ function EmailStep() {
             type="text"
             value={form.fromName}
             onChange={(e) => setForm({ ...form, fromName: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
             placeholder="John at Pinnacle Realty"
           />
         </div>
@@ -489,7 +489,7 @@ function EmailStep() {
             type="email"
             value={form.fromEmail}
             onChange={(e) => setForm({ ...form, fromEmail: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
             placeholder="john@company.com"
           />
         </div>
@@ -505,7 +505,7 @@ function EmailStep() {
               type="text"
               value={form.smtpHost}
               onChange={(e) => setForm({ ...form, smtpHost: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm"
             />
           </div>
           <div>
@@ -513,7 +513,7 @@ function EmailStep() {
             <select
               value={form.smtpPort}
               onChange={(e) => setForm({ ...form, smtpPort: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm"
             >
               {['587', '465', '25', '2525'].map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -526,7 +526,7 @@ function EmailStep() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex-1 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
           {saving ? 'Saving...' : 'Save Email Config'}
         </button>
@@ -548,7 +548,7 @@ function EmailStep() {
               }
             }}
             disabled={testingEmail}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-success text-white font-medium rounded-lg hover:bg-success/90 disabled:opacity-50 transition-colors"
           >
             <Send className="h-4 w-4" />
             {testingEmail ? 'Sending...' : 'Test'}
@@ -634,7 +634,7 @@ function SMSStep() {
   return (
     <div className="space-y-5 max-w-lg mx-auto">
       {hasExisting && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-success/10 border border-success/20 text-success text-sm">
           <Check className="h-4 w-4" />
           Twilio is already configured. You can update it below or skip this step.
         </div>
@@ -645,7 +645,7 @@ function SMSStep() {
           type="text"
           value={form.accountSid}
           onChange={(e) => setForm({ ...form, accountSid: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none font-mono text-sm"
           placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         />
       </div>
@@ -655,10 +655,10 @@ function SMSStep() {
           type="password"
           value={form.authToken}
           onChange={(e) => setForm({ ...form, authToken: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none font-mono text-sm"
           placeholder={hasExisting ? '••••••••••• (token stored)' : '32-character token'}
         />
-        <p className="text-xs text-muted-foreground mt-1">Find it in your <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Twilio Console</a></p>
+        <p className="text-xs text-muted-foreground mt-1">Find it in your <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Twilio Console</a></p>
       </div>
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">Twilio Phone Number *</label>
@@ -666,14 +666,14 @@ function SMSStep() {
           type="tel"
           value={form.phoneNumber}
           onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
           placeholder="+15551234567"
         />
       </div>
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        className="w-full py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
       >
         {saving ? 'Verifying & Saving...' : 'Save Twilio Config'}
       </button>
@@ -685,7 +685,7 @@ function SMSStep() {
               type="tel"
               value={testPhone}
               onChange={(e) => setTestPhone(e.target.value)}
-              className="flex-1 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              className="flex-1 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm"
               placeholder="+1 your phone number"
             />
             <button
@@ -705,7 +705,7 @@ function SMSStep() {
                 }
               }}
               disabled={testingBusy}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-success text-white font-medium rounded-lg hover:bg-success/90 disabled:opacity-50 transition-colors text-sm"
             >
               <Send className="h-4 w-4" />
               {testingBusy ? 'Sending...' : 'Test SMS'}
@@ -721,15 +721,15 @@ function GoogleStep() {
   return (
     <div className="space-y-6 max-w-lg mx-auto">
       <div className="text-center py-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 mb-4">
-          <Clock className="h-8 w-8 text-blue-500" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
+          <Clock className="h-8 w-8 text-primary" />
         </div>
         <h3 className="text-lg font-bold text-foreground mb-2">Google Integration</h3>
         <p className="text-muted-foreground max-w-sm mx-auto mb-4">
           Google OAuth integration requires setup in your organization's Google Cloud Console.
           You can configure this in <strong>Settings → Integrations</strong> once you have your OAuth credentials ready.
         </p>
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium">
           <Clock className="h-4 w-4" />
           Configure in Settings after setup
         </div>
@@ -778,7 +778,7 @@ function SecurityStep() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
@@ -786,18 +786,18 @@ function SecurityStep() {
   return (
     <div className="space-y-6 max-w-lg mx-auto">
       {twoFactorEnabled ? (
-        <div className="flex items-center gap-2 p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
+        <div className="flex items-center gap-2 p-4 rounded-lg bg-success/10 border border-success/20 text-success">
           <Check className="h-5 w-5" />
           <div>
             <p className="font-medium">Two-factor authentication is enabled</p>
-            <p className="text-sm text-emerald-600">Your account is secure. You can manage 2FA in Settings.</p>
+            <p className="text-sm text-success">Your account is secure. You can manage 2FA in Settings.</p>
           </div>
         </div>
       ) : (
         <>
           <div className="text-center py-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 mb-4">
-              <Shield className="h-8 w-8 text-amber-600" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-warning/10 mb-4">
+              <Shield className="h-8 w-8 text-warning" />
             </div>
             <h3 className="text-lg font-bold text-foreground mb-2">Protect your account</h3>
             <p className="text-muted-foreground max-w-sm mx-auto">
@@ -809,7 +809,7 @@ function SecurityStep() {
             onClick={() => {
               toast.info('Head to Settings → Security to set up 2FA with your authenticator app')
             }}
-            className="w-full py-2.5 bg-amber-500 text-white font-medium rounded-lg hover:bg-amber-600 transition-colors"
+            className="w-full py-2.5 bg-warning text-white font-medium rounded-lg hover:bg-warning/90 transition-colors"
           >
             Set Up 2FA in Settings
           </button>
@@ -824,12 +824,12 @@ function SecurityStep() {
             { label: 'Email verified', done: emailVerified },
           ].map((item) => (
             <li key={item.label} className="flex items-center gap-2 text-sm">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${item.done ? 'bg-emerald-100 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${item.done ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
                 <Check className="h-3 w-3" />
               </div>
               <span className={item.done ? 'text-foreground/80' : 'text-muted-foreground'}>{item.label}</span>
               {!item.done && (
-                <span className="ml-auto text-xs text-amber-600 font-medium">Recommended</span>
+                <span className="ml-auto text-xs text-warning font-medium">Recommended</span>
               )}
             </li>
           ))}
@@ -846,8 +846,8 @@ function CompleteStep({ skippedSteps }: { skippedSteps: Set<string> }) {
 
   return (
     <div className="text-center py-8">
-      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 mb-6">
-        <Check className="h-10 w-10 text-emerald-600" />
+      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-success/10 mb-6">
+        <Check className="h-10 w-10 text-success" />
       </div>
       <h2 className="text-2xl font-bold text-foreground mb-3">You're all set!</h2>
       <p className="text-muted-foreground max-w-md mx-auto mb-6">
@@ -855,17 +855,17 @@ function CompleteStep({ skippedSteps }: { skippedSteps: Set<string> }) {
       </p>
 
       {criticalSkipped.length > 0 && (
-        <div className="max-w-md mx-auto mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-left">
+        <div className="max-w-md mx-auto mb-6 p-4 rounded-xl bg-warning/10 border border-warning/20 text-left">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <p className="text-sm font-semibold text-amber-800">You skipped some important steps</p>
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <p className="text-sm font-semibold text-warning">You skipped some important steps</p>
           </div>
           <ul className="space-y-1">
             {criticalSkipped.map((id) => {
               const step = WIZARD_STEPS.find((s) => s.id === id)
               return (
-                <li key={id} className="text-sm text-amber-700 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <li key={id} className="text-sm text-warning flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-warning" />
                   {step?.title} — configure in Settings to unlock full features
                 </li>
               )
@@ -989,8 +989,8 @@ export function SetupWizard() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl ${step.critical ? 'bg-amber-100' : 'bg-blue-100'}`}>
-              <step.icon className={`h-5 w-5 ${step.critical ? 'text-amber-600' : 'text-blue-600'}`} />
+            <div className={`p-2 rounded-xl ${step.critical ? 'bg-warning/10' : 'bg-primary/10'}`}>
+              <step.icon className={`h-5 w-5 ${step.critical ? 'text-warning' : 'text-primary'}`} />
             </div>
             <div>
               <h3 className="font-bold text-foreground">{step.title}</h3>
@@ -1011,7 +1011,7 @@ export function SetupWizard() {
         {/* Progress bar */}
         <div className="h-1 bg-muted">
           <div
-            className="h-full bg-blue-600 transition-all duration-500 ease-out"
+            className="h-full bg-primary transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -1020,12 +1020,12 @@ export function SetupWizard() {
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {/* Critical warning banner */}
           {step.critical && step.criticalWarning && (
-            <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="mb-6 p-4 rounded-xl bg-warning/10 border border-warning/20">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-800 mb-1">Important for your experience</p>
-                  <p className="text-sm text-amber-700">{step.criticalWarning}</p>
+                  <p className="text-sm font-semibold text-warning mb-1">Important for your experience</p>
+                  <p className="text-sm text-warning">{step.criticalWarning}</p>
                 </div>
               </div>
             </div>
@@ -1064,7 +1064,7 @@ export function SetupWizard() {
             )}
             <button
               onClick={handleNext}
-              className="flex items-center gap-1 px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              className="flex items-center gap-1 px-6 py-2.5 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
             >
               {isLast ? 'Go to Dashboard' : isFirst ? 'Get Started' : 'Continue'}
               {!isLast && <ChevronRight className="h-4 w-4" />}

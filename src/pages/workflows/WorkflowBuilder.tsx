@@ -803,9 +803,9 @@ const WorkflowBuilder = () => {
           />
           <div className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md border flex-shrink-0">
             <div className={`w-2 h-2 rounded-full ${
-              workflowStatus === 'running' ? 'bg-green-500 animate-pulse' :
-              workflowStatus === 'active' ? 'bg-blue-500' :
-              workflowStatus === 'paused' ? 'bg-yellow-500' :
+              workflowStatus === 'running' ? 'bg-success animate-pulse' :
+              workflowStatus === 'active' ? 'bg-primary' :
+              workflowStatus === 'paused' ? 'bg-warning' :
               'bg-gray-400'
             }`} />
             <span className="text-xs font-semibold uppercase tracking-wide">
@@ -846,8 +846,8 @@ const WorkflowBuilder = () => {
             {isSaving ? 'Saving...' : 'Save'}
             {hasUnsavedChanges && !isSaving && (
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-warning"></span>
               </span>
             )}
           </Button>
@@ -878,7 +878,7 @@ const WorkflowBuilder = () => {
               </div>
               <div className="bg-card p-3">
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Success Rate</p>
-                <p className={`text-xl font-bold mt-0.5 ${analyticsData?.successRate != null && analyticsData.successRate >= 95 ? 'text-green-600' : ''}`}>{analyticsData?.successRate != null ? `${Math.round(analyticsData.successRate)}%` : '—'}</p>
+                <p className={`text-xl font-bold mt-0.5 ${analyticsData?.successRate != null && analyticsData.successRate >= 95 ? 'text-success' : ''}`}>{analyticsData?.successRate != null ? `${Math.round(analyticsData.successRate)}%` : '—'}</p>
                 <p className="text-[10px] text-muted-foreground">{analyticsData?.successRate != null ? (analyticsData.successRate >= 95 ? 'Excellent' : 'All runs') : 'No data yet'}</p>
               </div>
               <div className="bg-card p-3">
@@ -888,7 +888,7 @@ const WorkflowBuilder = () => {
               </div>
               <div className="bg-card p-3">
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Active Runs</p>
-                <p className={`text-xl font-bold mt-0.5 ${activeExecutions > 0 ? 'text-blue-600' : ''}`}>{activeExecutions}</p>
+                <p className={`text-xl font-bold mt-0.5 ${activeExecutions > 0 ? 'text-primary' : ''}`}>{activeExecutions}</p>
                 <p className="text-[10px] text-muted-foreground">{activeExecutions > 0 ? 'Running now' : 'None active'}</p>
               </div>
             </div>
@@ -1060,7 +1060,7 @@ const WorkflowBuilder = () => {
                   variant={interactionMode === 'drag' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setInteractionMode('drag')}
-                  className={interactionMode === 'drag' ? 'bg-blue-600 hover:bg-blue-700 border-blue-600 transition-colors' : 'border-blue-300 text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors'}
+                  className={interactionMode === 'drag' ? 'bg-primary hover:bg-primary/90 border-primary transition-colors' : 'border-primary/30 text-primary hover:bg-primary/5 transition-colors'}
                 >
                   <GripVertical className="h-4 w-4 mr-2" />
                   Drag
@@ -1069,7 +1069,7 @@ const WorkflowBuilder = () => {
                   variant={interactionMode === 'click' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setInteractionMode('click')}
-                  className={interactionMode === 'click' ? 'bg-green-600 hover:bg-green-700 border-green-600 transition-colors' : 'border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950 transition-colors'}
+                  className={interactionMode === 'click' ? 'bg-success hover:bg-success/90 border-success transition-colors' : 'border-success/30 text-success hover:bg-success/5 transition-colors'}
                 >
                   <MousePointer2 className="h-4 w-4 mr-2" />
                   Click
@@ -1092,7 +1092,7 @@ const WorkflowBuilder = () => {
                     size="sm"
                     onClick={handleUndo}
                     title="Undo last deletion"
-                    className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
+                    className="border-warning/30 text-warning hover:bg-warning/5 transition-colors"
                   >
                     <Undo2 className="h-4 w-4 mr-2" />
                     Undo
@@ -1115,14 +1115,14 @@ const WorkflowBuilder = () => {
               });
               if (unconfigured.length === 0) return null;
               return (
-                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="mb-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                      <p className="text-sm font-medium text-warning">
                         {unconfigured.length} node{unconfigured.length > 1 ? 's' : ''} need{unconfigured.length === 1 ? 's' : ''} configuration
                       </p>
-                      <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                      <p className="text-xs text-warning/80 mt-0.5">
                         {unconfigured.map(n => n.label).join(', ')}
                         {' — '}click a node to configure it
                       </p>
@@ -1133,12 +1133,12 @@ const WorkflowBuilder = () => {
             })()}
             {/* Validation Warnings */}
             {validationErrors.length > 0 && (
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mb-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-yellow-900 mb-1">Workflow Validation Issues</h4>
-                    <ul className="text-xs text-yellow-800 space-y-1">
+                    <h4 className="text-sm font-semibold text-warning mb-1">Workflow Validation Issues</h4>
+                    <ul className="text-xs text-warning/80 space-y-1">
                       {validationErrors.map((error) => (
                         <li key={error}>• {error}</li>
                       ))}
@@ -1259,7 +1259,7 @@ const WorkflowBuilder = () => {
                 {isTestRunning && (
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 bg-blue-600 rounded-full animate-pulse"></div>
+                      <div className="h-2 w-2 bg-primary rounded-full animate-pulse"></div>
                       <span>Executing workflow...</span>
                     </div>
                   </div>
@@ -1395,14 +1395,14 @@ const WorkflowBuilder = () => {
                 {executionLogs.map((log) => (
                   <div key={log.id} className="border rounded-lg overflow-hidden text-xs">
                     <div className={`px-2.5 py-1.5 flex items-center justify-between ${
-                      log.status === 'success' ? 'bg-green-50 dark:bg-green-950/20' :
-                      log.status === 'failed' ? 'bg-red-50 dark:bg-red-950/20' :
-                      log.status === 'running' ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-muted/30'
+                      log.status === 'success' ? 'bg-success/10' :
+                      log.status === 'failed' ? 'bg-destructive/10' :
+                      log.status === 'running' ? 'bg-primary/10' : 'bg-muted/30'
                     }`}>
                       <div className="flex items-center gap-1.5">
-                        {log.status === 'success' && <CheckCircle2 className="h-3 w-3 text-green-600" />}
-                        {log.status === 'failed' && <XCircle className="h-3 w-3 text-red-600" />}
-                        {log.status === 'running' && <Activity className="h-3 w-3 text-blue-600 animate-pulse" />}
+                        {log.status === 'success' && <CheckCircle2 className="h-3 w-3 text-success" />}
+                        {log.status === 'failed' && <XCircle className="h-3 w-3 text-destructive" />}
+                        {log.status === 'running' && <Activity className="h-3 w-3 text-primary animate-pulse" />}
                         {log.status === 'info' && <Activity className="h-3 w-3 text-muted-foreground" />}
                         <span className="font-medium capitalize">{log.status}</span>
                         {log.leadName && (
@@ -1417,9 +1417,9 @@ const WorkflowBuilder = () => {
                       <div className="divide-y">
                         {log.steps.map((step) => (
                           <div key={step.id} className="px-2.5 py-1 flex items-center gap-2">
-                            {step.status === 'SUCCESS' && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
-                            {step.status === 'FAILED' && <XCircle className="h-3 w-3 text-red-500 flex-shrink-0" />}
-                            {step.status === 'RUNNING' && <Activity className="h-3 w-3 text-blue-500 animate-pulse flex-shrink-0" />}
+                            {step.status === 'SUCCESS' && <CheckCircle2 className="h-3 w-3 text-success flex-shrink-0" />}
+                            {step.status === 'FAILED' && <XCircle className="h-3 w-3 text-destructive flex-shrink-0" />}
+                            {step.status === 'RUNNING' && <Activity className="h-3 w-3 text-primary animate-pulse flex-shrink-0" />}
                             {step.status === 'PENDING' && <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
                             <span className="truncate">{step.actionLabel || step.actionType}</span>
                             <span className="text-muted-foreground ml-auto flex-shrink-0">

@@ -11,16 +11,17 @@ import { useConfirm } from '@/hooks/useConfirm';
 import { useToast } from '@/hooks/useToast';
 import { goalsApi } from '@/lib/api';
 import { calcRateClamped } from '@/lib/metricsCalculator';
+import { CHART_COLORS, semanticColors } from '@/lib/chartColors';
 
 const METRIC_TYPES = [
-  { value: 'LEADS_GENERATED', label: 'Leads Generated', icon: Users, color: '#3b82f6', unit: '' },
-  { value: 'DEALS_CLOSED', label: 'Deals Closed', icon: Trophy, color: '#10b981', unit: '' },
-  { value: 'REVENUE', label: 'Revenue', icon: DollarSign, color: '#f59e0b', unit: '$' },
-  { value: 'CONVERSION_RATE', label: 'Conversion Rate', icon: TrendingUp, color: '#8b5cf6', unit: '%' },
-  { value: 'CALLS_MADE', label: 'Calls Made', icon: Phone, color: '#06b6d4', unit: '' },
-  { value: 'APPOINTMENTS_SET', label: 'Appointments Set', icon: CalendarCheck, color: '#ec4899', unit: '' },
-  { value: 'RESPONSE_TIME', label: 'Avg Response Time (hrs)', icon: Clock, color: '#f97316', unit: 'h' },
-  { value: 'CUSTOM', label: 'Custom', icon: Zap, color: '#6b7280', unit: '' },
+  { value: 'LEADS_GENERATED', label: 'Leads Generated', icon: Users, color: CHART_COLORS[0], unit: '' },
+  { value: 'DEALS_CLOSED', label: 'Deals Closed', icon: Trophy, color: CHART_COLORS[2], unit: '' },
+  { value: 'REVENUE', label: 'Revenue', icon: DollarSign, color: CHART_COLORS[1], unit: '$' },
+  { value: 'CONVERSION_RATE', label: 'Conversion Rate', icon: TrendingUp, color: CHART_COLORS[7], unit: '%' },
+  { value: 'CALLS_MADE', label: 'Calls Made', icon: Phone, color: CHART_COLORS[4], unit: '' },
+  { value: 'APPOINTMENTS_SET', label: 'Appointments Set', icon: CalendarCheck, color: CHART_COLORS[5], unit: '' },
+  { value: 'RESPONSE_TIME', label: 'Avg Response Time (hrs)', icon: Clock, color: CHART_COLORS[3], unit: 'h' },
+  { value: 'CUSTOM', label: 'Custom', icon: Zap, color: CHART_COLORS[6], unit: '' },
 ];
 
 const PERIODS = [
@@ -368,7 +369,7 @@ const GoalTracking = () => {
                         <span className="text-muted-foreground">
                           {formatValue(goal.currentValue as number, goal.metricType as string)} / {formatValue(goal.targetValue as number, goal.metricType as string)}
                         </span>
-                        <span className={`font-medium ${isCompleted ? 'text-green-600' : 'text-foreground'}`}>
+                        <span className={`font-medium ${isCompleted ? 'text-success' : 'text-foreground'}`}>
                           {progress}%
                         </span>
                       </div>
@@ -382,7 +383,7 @@ const GoalTracking = () => {
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${Math.min(100, progress)}%`,
-                            backgroundColor: isCompleted ? '#10b981' : metric.color,
+                            backgroundColor: isCompleted ? semanticColors.success : metric.color,
                           }}
                         />
                       </div>
@@ -394,7 +395,7 @@ const GoalTracking = () => {
                         {daysLeft} days left
                       </span>
                       {isCompleted && (
-                        <span className="flex items-center gap-1 text-green-600 font-medium">
+                        <span className="flex items-center gap-1 text-success font-medium">
                           <Check className="h-3 w-3" /> Goal Achieved!
                         </span>
                       )}

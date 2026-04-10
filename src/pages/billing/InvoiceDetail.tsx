@@ -44,9 +44,9 @@ function formatCurrency(amount: number | undefined, currency = 'usd'): string {
 
 function statusColor(status: string): string {
   const s = status?.toLowerCase();
-  if (s === 'paid') return 'bg-green-100 text-green-800';
-  if (s === 'open' || s === 'draft') return 'bg-orange-100 text-orange-800';
-  if (s === 'void' || s === 'uncollectible') return 'bg-red-100 text-red-800';
+  if (s === 'paid') return 'bg-success/10 text-success';
+  if (s === 'open' || s === 'draft') return 'bg-warning/10 text-warning';
+  if (s === 'void' || s === 'uncollectible') return 'bg-destructive/10 text-destructive';
   return 'bg-muted text-foreground';
 }
 
@@ -131,21 +131,21 @@ const InvoiceDetail = () => {
       </div>
 
       {/* Invoice Status */}
-      <Card className={isPaid ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}>
+      <Card className={isPaid ? 'border-success/20 bg-success/5' : 'border-warning/20 bg-warning/5'}>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {isPaid ? (
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="h-8 w-8 text-success" />
               ) : (
-                <AlertCircle className="h-8 w-8 text-orange-600" />
+                <AlertCircle className="h-8 w-8 text-warning" />
               )}
               <div>
-                <h3 className={`text-2xl font-bold ${isPaid ? 'text-green-900' : 'text-orange-900'}`}>
+                <h3 className={`text-2xl font-bold ${isPaid ? 'text-success' : 'text-warning'}`}>
                   {invoice.status}
                 </h3>
                 {isPaid && invoice.paidAt && (
-                  <p className="text-green-800 mt-1">Payment received on {formatDate(invoice.paidAt)}</p>
+                  <p className="text-success/80 mt-1">Payment received on {formatDate(invoice.paidAt)}</p>
                 )}
               </div>
             </div>
@@ -191,10 +191,10 @@ const InvoiceDetail = () => {
         <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Status</CardTitle>
-            {isPaid ? <CheckCircle className="h-4 w-4 text-green-600" /> : <AlertCircle className="h-4 w-4 text-orange-600" />}
+            {isPaid ? <CheckCircle className="h-4 w-4 text-success" /> : <AlertCircle className="h-4 w-4 text-warning" />}
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${isPaid ? 'text-green-600' : 'text-orange-600'}`}>{invoice.status}</div>
+            <div className={`text-2xl font-bold ${isPaid ? 'text-success' : 'text-warning'}`}>{invoice.status}</div>
             <p className="text-xs text-muted-foreground">{isPaid ? 'Fully paid' : 'Payment pending'}</p>
           </CardContent>
         </Card>
@@ -282,9 +282,9 @@ const InvoiceDetail = () => {
                 <span className="font-bold text-lg">{formatCurrency(total, currency)}</span>
               </div>
               {isPaid && (
-                <div className="flex justify-between border-t pt-3 bg-green-50 -mx-4 px-4 py-2 rounded">
-                  <span className="font-bold text-green-900">Amount Paid</span>
-                  <span className="font-bold text-green-900">{formatCurrency(amountPaid, currency)}</span>
+                <div className="flex justify-between border-t pt-3 bg-success/5 -mx-4 px-4 py-2 rounded">
+                  <span className="font-bold text-success">Amount Paid</span>
+                  <span className="font-bold text-success">{formatCurrency(amountPaid, currency)}</span>
                 </div>
               )}
             </div>
@@ -301,7 +301,7 @@ const InvoiceDetail = () => {
         <CardContent>
           <p className="text-sm text-muted-foreground">
             If you have questions about this invoice, visit the{' '}
-            <a href="/help" className="text-blue-600 hover:underline">Help Center</a>{' '}
+            <a href="/help" className="text-primary hover:underline">Help Center</a>{' '}
             or open a support ticket.
           </p>
         </CardContent>

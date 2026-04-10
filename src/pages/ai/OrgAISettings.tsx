@@ -396,9 +396,9 @@ const OrgAISettings = () => {
                     />
                   </div>
 
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                    <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-info/10 border border-info/20">
+                    <Info className="h-4 w-4 text-info shrink-0 mt-0.5" />
+                    <p className="text-xs text-info">
                       Your API key is encrypted at rest and never exposed. When using your own key,
                       AI message and content generation limits are unlimited — you pay OpenAI directly
                       for token usage.
@@ -522,7 +522,7 @@ const OrgAISettings = () => {
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
                       <label className="text-sm font-medium flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-yellow-500" />
+                        <div className="h-2 w-2 rounded-full bg-warning" />
                         Warning Threshold
                       </label>
                       <div className="flex items-center gap-1">
@@ -541,7 +541,7 @@ const OrgAISettings = () => {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-orange-500" />
+                        <div className="h-2 w-2 rounded-full bg-warning" />
                         Caution Threshold
                       </label>
                       <div className="flex items-center gap-1">
@@ -560,7 +560,7 @@ const OrgAISettings = () => {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-red-500" />
+                        <div className="h-2 w-2 rounded-full bg-destructive" />
                         Hard Limit
                       </label>
                       <div className="flex items-center gap-1">
@@ -578,9 +578,9 @@ const OrgAISettings = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                    <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                    <p className="text-xs text-warning">
                       When the hard limit is reached, all AI generation endpoints will return a 429 error
                       until the next billing month. An admin can increase the limit at any time to unblock.
                     </p>

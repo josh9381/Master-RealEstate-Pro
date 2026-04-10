@@ -293,7 +293,7 @@ const LeadsMerge = () => {
       {duplicates.length === 0 && !isLoading && (
         <Card>
           <CardContent className="py-8 text-center">
-            <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+            <CheckCircle className="h-12 w-12 mx-auto mb-4 text-success" />
             <h3 className="text-lg font-semibold mb-2">No Duplicates Found</h3>
             <p className="text-muted-foreground">Your database is clean! No duplicate leads detected.</p>
           </CardContent>
@@ -375,7 +375,7 @@ const LeadsMerge = () => {
                           const isDifferent = val1 !== val2;
 
                           return (
-                            <tr key={key} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-950/10' : ''}>
+                            <tr key={key} className={isDifferent ? 'bg-warning/5' : ''}>
                               <td className="px-4 py-2.5 font-medium text-muted-foreground">{label}</td>
                               <td className="px-4 py-2.5">
                                 <button

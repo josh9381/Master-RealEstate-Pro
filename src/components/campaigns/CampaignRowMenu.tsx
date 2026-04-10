@@ -102,7 +102,7 @@ export function CampaignRowMenu({ campaign, actions }: CampaignRowMenuProps) {
       </button>
       <button
         onClick={() => actions.onDelete(id)}
-        className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+        className="flex w-full items-center px-4 py-2 text-sm text-destructive hover:bg-destructive/5"
       >
         <Trash2 className="mr-2 h-4 w-4" />
         Delete

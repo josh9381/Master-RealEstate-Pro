@@ -49,15 +49,15 @@ export function AdminStats() {
   
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
-        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
+        <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-red-900 dark:text-red-300 font-medium">Failed to load statistics</p>
-          <p className="text-red-700 dark:text-red-400 text-sm">Please try again</p>
+          <p className="text-destructive font-medium">Failed to load statistics</p>
+          <p className="text-destructive text-sm">Please try again</p>
         </div>
         <button 
           onClick={() => refetch()}
-          className="px-3 py-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-900/60 text-sm font-medium"
+          className="px-3 py-1.5 bg-destructive/10 text-destructive rounded-md hover:bg-destructive/20 text-sm font-medium"
         >
           Retry
         </button>
@@ -102,14 +102,14 @@ export function AdminStats() {
   
   const colorClasses = {
     blue: {
-      bg: 'bg-blue-100 dark:bg-blue-900/30',
-      text: 'text-blue-600 dark:text-blue-400',
-      ring: 'ring-blue-600',
+      bg: 'bg-primary/10',
+      text: 'text-primary',
+      ring: 'ring-primary',
     },
     green: {
-      bg: 'bg-green-100 dark:bg-green-900/30',
-      text: 'text-green-600 dark:text-green-400',
-      ring: 'ring-green-600',
+      bg: 'bg-success/10',
+      text: 'text-success',
+      ring: 'ring-success',
     },
     purple: {
       bg: 'bg-purple-100 dark:bg-purple-900/30',
@@ -117,9 +117,9 @@ export function AdminStats() {
       ring: 'ring-purple-600',
     },
     orange: {
-      bg: 'bg-orange-100 dark:bg-orange-900/30',
-      text: 'text-orange-600 dark:text-orange-400',
-      ring: 'ring-orange-600',
+      bg: 'bg-warning/10',
+      text: 'text-warning',
+      ring: 'ring-warning',
     },
   }
   

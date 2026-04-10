@@ -228,7 +228,7 @@ const GoogleIntegration = () => {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <CheckCircle className="h-4 w-4 text-success" />
                     <h4 className="font-semibold">Sync Emails</h4>
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -237,7 +237,7 @@ const GoogleIntegration = () => {
                 </div>
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <CheckCircle className="h-4 w-4 text-success" />
                     <h4 className="font-semibold">Send from CRM</h4>
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -312,7 +312,7 @@ const GoogleIntegration = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="p-4 border rounded-lg">
               <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-success" />
                 <h4 className="font-semibold">Two-Way Sync</h4>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -321,7 +321,7 @@ const GoogleIntegration = () => {
             </div>
             <div className="p-4 border rounded-lg">
               <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-success" />
                 <h4 className="font-semibold">Event Creation</h4>
               </div>
               <p className="text-sm text-muted-foreground">

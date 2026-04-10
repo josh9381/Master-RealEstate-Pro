@@ -6,6 +6,7 @@ import { Activity, TrendingUp, Zap, Brain, RefreshCw, ArrowLeft } from 'lucide-r
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { aiApi } from '@/lib/api'
 import { formatRate, calcRate } from '@/lib/metricsCalculator'
+import { CHART_COLORS } from '@/lib/chartColors'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { useState } from 'react'
@@ -122,7 +123,7 @@ const AIAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{latestLatency}ms</div>
-            <p className="text-xs text-green-600">Latest measurement</p>
+            <p className="text-xs text-success">Latest measurement</p>
           </CardContent>
         </Card>
 
@@ -133,7 +134,7 @@ const AIAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{avgAccuracy}%</div>
-            <p className="text-xs text-green-600">Average across models</p>
+            <p className="text-xs text-success">Average across models</p>
           </CardContent>
         </Card>
 
@@ -144,7 +145,7 @@ const AIAnalytics = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{latestThroughput}/min</div>
-            <p className="text-xs text-green-600">Current rate</p>
+            <p className="text-xs text-success">Current rate</p>
           </CardContent>
         </Card>
 
@@ -181,7 +182,7 @@ const AIAnalytics = () => {
                   <XAxis dataKey="date" />
                   <YAxis domain={['auto', 'auto']} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="accuracy" stroke="#3b82f6" strokeWidth={2} />
+                  <Line type="monotone" dataKey="accuracy" stroke={CHART_COLORS[0]} strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -208,7 +209,7 @@ const AIAnalytics = () => {
                   <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="throughput" fill="#10b981" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="throughput" fill={CHART_COLORS[2]} radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -246,7 +247,7 @@ const AIAnalytics = () => {
                   <div className="space-y-1">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-blue-500"
+                        className="h-full bg-primary"
                         style={{ width: `${model.accuracy}%` }}
                       />
                     </div>
@@ -255,7 +256,7 @@ const AIAnalytics = () => {
                   <div className="space-y-1">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-green-500"
+                        className="h-full bg-success"
                         style={{ width: `${model.speed}%` }}
                       />
                     </div>
@@ -296,7 +297,7 @@ const AIAnalytics = () => {
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
-                <Line type="monotone" dataKey="latency" stroke="#f59e0b" strokeWidth={2} />
+                  <Line type="monotone" dataKey="latency" stroke={CHART_COLORS[1]} strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           ) : (

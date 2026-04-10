@@ -145,10 +145,10 @@ export function CampaignExecutionStatus({ campaignId, onComplete }: CampaignExec
 
   const phaseIcon = {
     draft: <Clock className="h-5 w-5 text-muted-foreground" />,
-    queued: <Clock className="h-5 w-5 text-yellow-500" />,
-    sending: <Radio className="h-5 w-5 text-blue-500 animate-pulse" />,
-    completed: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-    paused: <AlertTriangle className="h-5 w-5 text-orange-500" />,
+    queued: <Clock className="h-5 w-5 text-warning" />,
+    sending: <Radio className="h-5 w-5 text-primary animate-pulse" />,
+    completed: <CheckCircle2 className="h-5 w-5 text-success" />,
+    paused: <AlertTriangle className="h-5 w-5 text-warning" />,
   };
 
   const phaseLabel = {
@@ -207,9 +207,9 @@ export function CampaignExecutionStatus({ campaignId, onComplete }: CampaignExec
             <div
               className={`h-full rounded-full transition-all duration-500 ${
                 status.phase === 'completed'
-                  ? 'bg-green-500'
+                  ? 'bg-success'
                   : status.phase === 'sending'
-                  ? 'bg-blue-500'
+                  ? 'bg-primary'
                   : 'bg-muted-foreground/30'
               }`}
               style={{ width: `${Math.max(status.progress, 2)}%` }}

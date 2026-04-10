@@ -24,22 +24,22 @@ export function ScoreBadge({
       return {
         label: 'Hot',
         icon: Flame,
-        className: 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200',
-        iconColor: 'text-red-500'
+        className: 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20',
+        iconColor: 'text-destructive'
       };
     } else if (score >= SCORE_THRESHOLDS.WARM) {
       return {
         label: 'Warm',
         icon: Thermometer,
-        className: 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-200',
-        iconColor: 'text-yellow-500'
+        className: 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20',
+        iconColor: 'text-warning'
       };
     } else if (score >= SCORE_THRESHOLDS.COOL) {
       return {
         label: 'Cool',
         icon: Snowflake,
-        className: 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200',
-        iconColor: 'text-blue-500'
+        className: 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20',
+        iconColor: 'text-primary'
       };
     } else {
       return {

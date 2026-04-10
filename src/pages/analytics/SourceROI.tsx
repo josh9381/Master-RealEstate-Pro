@@ -66,7 +66,7 @@ const SourceROI = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <DollarSign className="h-7 w-7 text-green-600" />
+            <DollarSign className="h-7 w-7 text-success" />
             Source ROI
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -87,7 +87,7 @@ const SourceROI = () => {
         <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Total Won</p>
-            <p className="text-2xl font-bold text-green-600">{totals.totalWon || 0}</p>
+            <p className="text-2xl font-bold text-success">{totals.totalWon || 0}</p>
           </CardContent>
         </Card>
         <Card className="transition-all duration-200 hover:shadow-md">
@@ -99,7 +99,7 @@ const SourceROI = () => {
         <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Overall Conversion</p>
-            <p className="text-2xl font-bold text-blue-600">{formatRate(totals.overallConversionRate || 0)}%</p>
+            <p className="text-2xl font-bold text-primary">{formatRate(totals.overallConversionRate || 0)}%</p>
           </CardContent>
         </Card>
       </div>
@@ -167,16 +167,16 @@ const SourceROI = () => {
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right text-muted-foreground">{s.totalLeads}</td>
-                      <td className="py-3 px-4 text-right text-green-600 font-medium">{s.wonLeads}</td>
-                      <td className="py-3 px-4 text-right text-red-500">{s.lostLeads}</td>
+                      <td className="py-3 px-4 text-right text-success font-medium">{s.wonLeads}</td>
+                      <td className="py-3 px-4 text-right text-destructive">{s.lostLeads}</td>
                       <td className="py-3 px-4 text-right">
                         <span className={`font-medium ${
-                          s.conversionRate > (totals.overallConversionRate || 0) ? 'text-green-600' : 'text-muted-foreground'
+                          s.conversionRate > (totals.overallConversionRate || 0) ? 'text-success' : 'text-muted-foreground'
                         }`}>
                           {formatRate(s.conversionRate)}%
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(s.revenue)}</td>
+                      <td className="py-3 px-4 text-right text-success font-medium">{formatCurrency(s.revenue)}</td>
                       <td className="py-3 px-4 text-right text-muted-foreground">{formatCurrency(s.avgDealSize)}</td>
                       <td className="py-3 px-4 text-right text-muted-foreground">{formatCurrency(s.revenuePerLead)}</td>
                     </tr>

@@ -145,8 +145,8 @@ const NewsletterManagement = () => {
               <div key={newsletter.id} className="p-4 border rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3 flex-1">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
-                      <Mail className="h-6 w-6 text-blue-600" />
+                    <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10">
+                      <Mail className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">

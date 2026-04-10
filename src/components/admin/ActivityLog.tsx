@@ -75,9 +75,9 @@ export function ActivityLog() {
   }
   
   const getActivityColor = (type: string) => {
-    if (type.includes('CREATED')) return 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30'
-    if (type.includes('UPDATED')) return 'text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
-    if (type.includes('DELETED')) return 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30'
+    if (type.includes('CREATED')) return 'text-success bg-success/10'
+    if (type.includes('UPDATED')) return 'text-primary bg-primary/10'
+    if (type.includes('DELETED')) return 'text-destructive bg-destructive/10'
     return 'text-muted-foreground bg-muted'
   }
   
@@ -105,7 +105,7 @@ export function ActivityLog() {
   if (error) {
     return (
       <div className="bg-card rounded-lg border border-border p-6">
-        <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+        <div className="flex items-center gap-3 text-destructive">
           <AlertCircle className="w-5 h-5" />
           <div className="flex-1">
             <p className="font-medium">Failed to load activity log</p>
@@ -170,12 +170,12 @@ export function ActivityLog() {
                       {activity.user.firstName && activity.user.lastName ? (
                         <span className="font-medium">
                           {activity.user.firstName} {activity.user.lastName}
-                          {isCurrentUser && <span className="text-blue-600"> (You)</span>}
+                          {isCurrentUser && <span className="text-primary"> (You)</span>}
                         </span>
                       ) : (
                         <span className="font-medium">
                           {activity.user.email}
-                          {isCurrentUser && <span className="text-blue-600"> (You)</span>}
+                          {isCurrentUser && <span className="text-primary"> (You)</span>}
                         </span>
                       )}
                       

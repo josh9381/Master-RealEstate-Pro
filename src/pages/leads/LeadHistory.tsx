@@ -335,13 +335,13 @@ const LeadHistory = () => {
                     <div
                       className={`relative z-10 flex items-center justify-center h-12 w-12 rounded-full border-4 border-background ${
                         event.color === 'blue'
-                          ? 'bg-blue-500'
+                          ? 'bg-primary'
                           : event.color === 'green'
-                          ? 'bg-green-500'
+                          ? 'bg-success'
                           : event.color === 'purple'
                           ? 'bg-purple-500'
                           : event.color === 'orange'
-                          ? 'bg-orange-500'
+                          ? 'bg-warning'
                           : event.color === 'teal'
                           ? 'bg-teal-500'
                           : 'bg-gray-500'

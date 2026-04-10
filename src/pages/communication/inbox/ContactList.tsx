@@ -53,8 +53,8 @@ interface ContactListProps {
 
 const channelIcon = (ch: string) => {
   switch (ch) {
-    case 'email': return <Mail className="h-3.5 w-3.5 text-blue-500" />
-    case 'sms': return <MessageSquare className="h-3.5 w-3.5 text-green-500" />
+    case 'email': return <Mail className="h-3.5 w-3.5 text-primary" />
+    case 'sms': return <MessageSquare className="h-3.5 w-3.5 text-success" />
     case 'call': return <Phone className="h-3.5 w-3.5 text-purple-500" />
     default: return null
   }

@@ -139,11 +139,11 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
           <p className="text-xs text-muted-foreground">Active</p>
         </div>
         <div className="rounded-lg border p-3 text-center">
-          <p className="text-2xl font-bold text-green-600">{completedTasks.length}</p>
+          <p className="text-2xl font-bold text-success">{completedTasks.length}</p>
           <p className="text-xs text-muted-foreground">Completed</p>
         </div>
         <div className="rounded-lg border p-3 text-center">
-          <p className={`text-2xl font-bold ${overdueTasks.length > 0 ? 'text-red-600' : ''}`}>
+          <p className={`text-2xl font-bold ${overdueTasks.length > 0 ? 'text-destructive' : ''}`}>
             {overdueTasks.length}
           </p>
           <p className="text-xs text-muted-foreground">Overdue</p>

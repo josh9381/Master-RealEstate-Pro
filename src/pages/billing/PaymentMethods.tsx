@@ -66,13 +66,13 @@ const PaymentMethods = () => {
 
       {/* Stripe Not Configured Notice */}
       {stripeMessage && stripeMessage.includes('not configured') && (
-        <Card className="border-amber-300 bg-amber-50">
+        <Card className="border-warning/30 bg-warning/10">
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
               <div>
-                <h4 className="font-semibold text-amber-900">Stripe Not Configured</h4>
-                <p className="text-sm text-amber-800 mt-1">
+                <h4 className="font-semibold text-warning">Stripe Not Configured</h4>
+                <p className="text-sm text-warning/80 mt-1">
                   Payment methods require Stripe integration. Set the STRIPE_SECRET_KEY environment variable to enable payment processing.
                 </p>
               </div>
@@ -115,7 +115,7 @@ const PaymentMethods = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Default Method</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-success" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -152,7 +152,7 @@ const PaymentMethods = () => {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Saved Payment Methods</h2>
             {paymentMethods.map((method) => (
-              <Card key={method.id} className={method.isDefault ? 'border-blue-500' : ''}>
+              <Card key={method.id} className={method.isDefault ? 'border-primary' : ''}>
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4">
@@ -206,13 +206,13 @@ const PaymentMethods = () => {
       )}
 
       {/* Security Notice */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-primary/20 bg-primary/5">
         <CardContent className="pt-6">
           <div className="flex items-start space-x-3">
-            <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
             <div>
-              <h4 className="font-semibold text-blue-900">Secure Payment Processing</h4>
-              <p className="text-sm text-blue-800 mt-1">
+              <h4 className="font-semibold text-primary">Secure Payment Processing</h4>
+              <p className="text-sm text-primary/80 mt-1">
                 All payment information is encrypted and securely stored. We use industry-standard
                 PCI DSS compliance to protect your financial data. Your card details are never
                 stored on our servers.

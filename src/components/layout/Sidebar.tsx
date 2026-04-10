@@ -149,11 +149,11 @@ export function Sidebar() {
                         {item.name === 'Subscription' && tier && (
                           <span className={cn(
                             "ml-auto text-xs px-1.5 py-0.5 rounded font-medium",
-                            tier === 'STARTER' && "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+                            tier === 'STARTER' && "bg-primary/10 text-primary",
                             tier === 'PROFESSIONAL' && "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
                             tier === 'ELITE' && "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-                            tier === 'TEAM' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-                            tier === 'ENTERPRISE' && "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+                            tier === 'TEAM' && "bg-success/10 text-success",
+                            tier === 'ENTERPRISE' && "bg-warning/10 text-warning",
                           )}>
                             {tier}
                           </span>

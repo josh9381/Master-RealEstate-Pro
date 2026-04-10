@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { CHART_COLORS } from '@/lib/chartColors';
 import {
   Users,
   SquareKanban,
@@ -106,8 +107,8 @@ export default function LeadsOverview() {
               <h3 className="mt-2 text-3xl font-bold">{total}</h3>
               <p className="mt-1 text-xs text-muted-foreground">All-time leads</p>
             </div>
-            <div className="rounded-full bg-blue-100 p-3">
-              <Users className="h-6 w-6 text-blue-600" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <Users className="h-6 w-6 text-primary" />
             </div>
           </div>
         </Card>
@@ -119,8 +120,8 @@ export default function LeadsOverview() {
               <h3 className="mt-2 text-3xl font-bold">{qualifiedRate}%</h3>
               <p className="mt-1 text-xs text-muted-foreground">{qualified} of {total} leads qualified</p>
             </div>
-            <div className="rounded-full bg-green-100 p-3">
-              <Target className="h-6 w-6 text-green-600" />
+            <div className="rounded-full bg-success/10 p-3">
+              <Target className="h-6 w-6 text-success" />
             </div>
           </div>
         </Card>
@@ -145,8 +146,8 @@ export default function LeadsOverview() {
               <h3 className="mt-2 text-3xl font-bold">{conversionRate}%</h3>
               <p className="mt-1 text-xs text-muted-foreground">{won} won of {closedTotal} closed</p>
             </div>
-            <div className="rounded-full bg-orange-100 p-3">
-              <Target className="h-6 w-6 text-orange-600" />
+            <div className="rounded-full bg-warning/10 p-3">
+              <Target className="h-6 w-6 text-warning" />
             </div>
           </div>
         </Card>
@@ -166,7 +167,7 @@ export default function LeadsOverview() {
                 <XAxis type="number" />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" name="Leads" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill={CHART_COLORS[0]} name="Leads" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -187,7 +188,7 @@ export default function LeadsOverview() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="#3b82f6" name="Number of Leads" />
+                <Bar dataKey="count" fill={CHART_COLORS[0]} name="Number of Leads" />
               </BarChart>
             </ResponsiveContainer>
           ) : (

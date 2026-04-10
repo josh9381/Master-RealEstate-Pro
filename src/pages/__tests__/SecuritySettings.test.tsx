@@ -30,6 +30,9 @@ vi.mock('@/store/authStore', () => ({
 
 vi.mock('@/components/auth/PasswordStrengthIndicator', () => ({
   PasswordStrengthIndicator: () => <div />,
+}))
+
+vi.mock('@/components/auth/passwordUtils', () => ({
   isPasswordStrong: vi.fn(() => true),
 }))
 

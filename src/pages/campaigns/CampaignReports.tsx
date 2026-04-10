@@ -54,9 +54,9 @@ const BENCHMARKS = {
 
 /** Color a rate relative to its benchmark */
 function benchmarkColor(rate: number, benchmark: number): string {
-  if (rate >= benchmark * 1.1) return 'text-green-600';
+  if (rate >= benchmark * 1.1) return 'text-success';
   if (rate >= benchmark * 0.9) return 'text-foreground';
-  return 'text-red-600';
+  return 'text-destructive';
 }
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
@@ -304,12 +304,12 @@ function CampaignDetailCard({ campaign, onNavigate }: { campaign: EnrichedCampai
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCell label="Sent" value={campaign.sent ?? 0} />
-        <StatCell label="Delivered" value={campaign.delivered ?? 0} rate={`${formatRate(calcDeliveryRate(campaign.delivered ?? 0, campaign.sent))}%`} rateColor="text-green-600" />
-        <StatCell label="Opened" value={campaign.opened ?? 0} rate={`${formatRate(calcOpenRate(campaign.opened ?? 0, campaign.sent))}%`} rateColor="text-blue-600" />
+        <StatCell label="Delivered" value={campaign.delivered ?? 0} rate={`${formatRate(calcDeliveryRate(campaign.delivered ?? 0, campaign.sent))}%`} rateColor="text-success" />
+        <StatCell label="Opened" value={campaign.opened ?? 0} rate={`${formatRate(calcOpenRate(campaign.opened ?? 0, campaign.sent))}%`} rateColor="text-primary" />
         <StatCell label="Clicked" value={campaign.clicked ?? 0} rate={`${formatRate(calcClickRate(campaign.clicked ?? 0, campaign.sent))}%`} rateColor="text-purple-600" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
-        <StatCell label="Bounced" value={campaign.bounced ?? 0} rate={`${formatRate(calcBounceRate(campaign.bounced ?? 0, campaign.sent))}%`} rateColor="text-red-600" large={false} />
+        <StatCell label="Bounced" value={campaign.bounced ?? 0} rate={`${formatRate(calcBounceRate(campaign.bounced ?? 0, campaign.sent))}%`} rateColor="text-destructive" large={false} />
         <StatCell label="Unsubscribed" value={campaign.unsubscribed ?? 0} rate={`${formatRate(calcUnsubscribeRate(campaign.unsubscribed ?? 0, campaign.sent), 2)}%`} large={false} />
         <StatCell label="Revenue Generated" value={fmtMoney(campaign.revenue ?? 0)} large={false} colSpan={2} />
       </div>
@@ -921,8 +921,8 @@ function DetailedReportsTab() {
                 return acc;
               }, { sent: 0, delivered: 0, opened: 0, clicked: 0, converted: 0 });
               const stages: FunnelStageData[] = [
-                { stage: 'Sent', count: totals.sent, percentage: 100, color: 'bg-blue-500' },
-                { stage: 'Delivered', count: totals.delivered, percentage: calcDeliveryRate(totals.delivered, totals.sent), color: 'bg-green-500' },
+                { stage: 'Sent', count: totals.sent, percentage: 100, color: 'bg-primary' },
+                { stage: 'Delivered', count: totals.delivered, percentage: calcDeliveryRate(totals.delivered, totals.sent), color: 'bg-success' },
                 { stage: 'Opened', count: totals.opened, percentage: calcOpenRate(totals.opened, totals.sent), color: 'bg-orange-500' },
                 { stage: 'Clicked', count: totals.clicked, percentage: calcClickRate(totals.clicked, totals.sent), color: 'bg-purple-500' },
                 { stage: 'Converted', count: totals.converted, percentage: calcConversionRate(totals.converted, totals.sent), color: 'bg-pink-500' },
@@ -938,10 +938,10 @@ function DetailedReportsTab() {
         <LeaderboardCard
           title="Best Open Rate"
           description="Campaigns with highest engagement"
-          indicatorColor="bg-green-600"
+          indicatorColor="bg-success"
           items={topByOpenRate}
           rateCalc={(item) => calcOpenRate(item.opened, item.sent)}
-          valueColor="text-green-600"
+          valueColor="text-success"
           onItemClick={(id) => navigate(`/campaigns/${id}`)}
         />
         <LeaderboardCard

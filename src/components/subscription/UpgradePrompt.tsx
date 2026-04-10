@@ -49,14 +49,14 @@ export function UpgradePrompt({
   
   if (variant === 'banner') {
     return (
-      <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 border-l-4 border-orange-500 dark:border-orange-600 p-4">
+      <div className="bg-warning/10 border-l-4 border-warning p-4">
         <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <h4 className="font-semibold text-orange-900 dark:text-orange-300 mb-1">
+            <h4 className="font-semibold text-warning mb-1">
               {currentTier} Plan Limit Reached
             </h4>
-            <p className="text-sm text-orange-800 dark:text-orange-400 mb-3">
+            <p className="text-sm text-warning mb-3">
               You've reached your limit of {limit.toLocaleString()} {resourceLabel}. 
               Upgrade your plan to add more.
             </p>
@@ -80,7 +80,7 @@ export function UpgradePrompt({
           {onClose && (
             <button
               onClick={handleDismiss}
-              className="text-orange-400 hover:text-orange-600 dark:text-orange-500 dark:hover:text-orange-300"
+              className="text-warning/60 hover:text-warning"
             >
               <X className="w-4 h-4" />
             </button>
@@ -96,8 +96,8 @@ export function UpgradePrompt({
         <Card className="w-full max-w-md mx-4">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-6 h-6 text-warning" />
               </div>
               
               <h3 className="text-xl font-bold text-foreground mb-2">
@@ -136,17 +136,17 @@ export function UpgradePrompt({
   
   // Inline variant (default)
   return (
-    <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/20">
+    <Card className="border-warning/20 bg-warning/5">
       <CardContent className="pt-6">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-            <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+          <div className="p-2 bg-warning/10 rounded-lg">
+            <AlertTriangle className="w-5 h-5 text-warning" />
           </div>
           <div className="flex-1">
-            <h4 className="font-semibold text-orange-900 dark:text-orange-300 mb-1">
+            <h4 className="font-semibold text-warning mb-1">
               Upgrade Required
             </h4>
-            <p className="text-sm text-orange-800 dark:text-orange-400 mb-3">
+            <p className="text-sm text-warning mb-3">
               You've reached your limit of {limit.toLocaleString()} {resourceLabel} on the {currentTier} plan.
             </p>
             <Button 

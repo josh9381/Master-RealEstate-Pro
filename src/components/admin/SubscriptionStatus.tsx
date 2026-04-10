@@ -64,11 +64,11 @@ export function SubscriptionStatus() {
   if (!data?.usage) return null
   
   const tierConfig: Record<string, { headerBg: string; headerBorder: string; icon: React.ReactNode | null }> = {
-    STARTER: { headerBg: 'bg-blue-50 dark:bg-blue-950/30', headerBorder: 'border-blue-100 dark:border-blue-900', icon: null },
+    STARTER: { headerBg: 'bg-primary/10', headerBorder: 'border-primary/20', icon: null },
     PROFESSIONAL: { headerBg: 'bg-purple-50 dark:bg-purple-950/30', headerBorder: 'border-purple-100 dark:border-purple-900', icon: <Crown className="w-4 h-4" /> },
     ELITE: { headerBg: 'bg-indigo-50 dark:bg-indigo-950/30', headerBorder: 'border-indigo-100 dark:border-indigo-900', icon: <Crown className="w-4 h-4" /> },
-    TEAM: { headerBg: 'bg-emerald-50 dark:bg-emerald-950/30', headerBorder: 'border-emerald-100 dark:border-emerald-900', icon: <Crown className="w-4 h-4" /> },
-    ENTERPRISE: { headerBg: 'bg-amber-50 dark:bg-amber-950/30', headerBorder: 'border-amber-100 dark:border-amber-900', icon: <Crown className="w-4 h-4" /> },
+    TEAM: { headerBg: 'bg-success/10', headerBorder: 'border-success/20', icon: <Crown className="w-4 h-4" /> },
+    ENTERPRISE: { headerBg: 'bg-warning/10', headerBorder: 'border-warning/20', icon: <Crown className="w-4 h-4" /> },
   }
   
   const config = tierConfig[tier || 'STARTER'] || tierConfig.STARTER
@@ -111,9 +111,9 @@ export function SubscriptionStatus() {
   }
   
   const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500'
-    if (percentage >= 75) return 'bg-yellow-500'
-    return 'bg-green-500'
+    if (percentage >= 90) return 'bg-destructive'
+    if (percentage >= 75) return 'bg-warning'
+    return 'bg-success'
   }
   
   return (
@@ -129,7 +129,7 @@ export function SubscriptionStatus() {
           </div>
           
           {isTrial && (
-            <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs font-medium rounded-md">
+            <span className="px-2 py-1 bg-warning/10 text-warning text-xs font-medium rounded-md">
               Trial Active
             </span>
           )}
@@ -180,7 +180,7 @@ export function SubscriptionStatus() {
               )}
               
               {isNearLimit && item.limit && (
-                <div className="flex items-center gap-1 mt-1 text-xs text-orange-600">
+                <div className="flex items-center gap-1 mt-1 text-xs text-warning">
                   <AlertTriangle className="w-3 h-3" />
                   <span>Approaching limit</span>
                 </div>

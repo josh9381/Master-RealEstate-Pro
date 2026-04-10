@@ -286,7 +286,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       ref={canvasRef}
       className={`
         relative h-full rounded-lg border-2 overflow-hidden
-        ${isDraggingOver ? 'border-primary bg-primary/5' : mode === 'drag' ? 'border-blue-300 dark:border-blue-700' : 'border-green-300 dark:border-green-700'}
+        ${isDraggingOver ? 'border-primary bg-primary/5' : mode === 'drag' ? 'border-primary/30' : 'border-success/30'}
         transition-colors duration-200
         ${mode === 'click' ? 'overflow-y-auto' : ''}
       `}
@@ -339,22 +339,22 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <button
                       onClick={() => onTemplateSelect?.('New Lead Welcome Series')}
-                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
                     >
-                      <Mail className="h-6 w-6 text-blue-600 mb-2" />
+                      <Mail className="h-6 w-6 text-primary mb-2" />
                       <h5 className="font-semibold text-sm mb-1">Lead Welcome</h5>
                       <p className="text-xs text-muted-foreground">3 nodes • Email sequence</p>
-                      <div className="mt-2 text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">Click to start →</div>
+                      <div className="mt-2 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Click to start →</div>
                     </button>
                     
                     <button
                       onClick={() => onTemplateSelect?.('Lead Score & Notify')}
-                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group"
+                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-success hover:bg-success/5 transition-all group"
                     >
-                      <TrendingUp className="h-6 w-6 text-green-600 mb-2" />
+                      <TrendingUp className="h-6 w-6 text-success mb-2" />
                       <h5 className="font-semibold text-sm mb-1">Lead Scoring</h5>
                       <p className="text-xs text-muted-foreground">4 nodes • Auto-qualify</p>
-                      <div className="mt-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">Click to start →</div>
+                      <div className="mt-2 text-xs text-success opacity-0 group-hover:opacity-100 transition-opacity">Click to start →</div>
                     </button>
                     
                     <button
@@ -576,8 +576,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       <div className="absolute top-4 left-4 z-20">
         <div className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-md ${
           mode === 'drag' 
-            ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' 
-            : 'bg-green-100 text-green-700 border-2 border-green-300'
+            ? 'bg-primary/10 text-primary border-2 border-primary/30' 
+            : 'bg-success/10 text-success border-2 border-success/30'
         }`}>
           {mode === 'drag' ? '🎯 Drag Mode' : '✨ Click Mode'}
         </div>
@@ -636,9 +636,9 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                     <div
                       key={node.id}
                       className={`absolute w-2 h-2 rounded-full ${
-                        node.type === 'trigger' ? 'bg-blue-500' :
-                        node.type === 'condition' ? 'bg-yellow-500' :
-                        node.type === 'action' ? 'bg-green-500' :
+                        node.type === 'trigger' ? 'bg-primary' :
+                        node.type === 'condition' ? 'bg-warning' :
+                        node.type === 'action' ? 'bg-success' :
                         'bg-purple-500'
                       } ${node.id === selectedNodeId ? 'ring-2 ring-offset-1 ring-primary' : ''}`}
                       style={{

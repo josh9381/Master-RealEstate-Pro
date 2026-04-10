@@ -235,12 +235,12 @@ const FeatureFlags = () => {
                 <div className="flex items-start space-x-4 flex-1">
                   <div
                     className={`p-2 rounded-lg ${
-                      feature.enabled ? 'bg-green-100' : 'bg-muted'
+                      feature.enabled ? 'bg-success/10' : 'bg-muted'
                     }`}
                   >
                     <Flag
                       className={`h-5 w-5 ${
-                        feature.enabled ? 'text-green-600' : 'text-muted-foreground'
+                        feature.enabled ? 'text-success' : 'text-muted-foreground'
                       }`}
                     />
                   </div>
@@ -291,7 +291,7 @@ const FeatureFlags = () => {
                       onChange={() => handleToggle(feature.id)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-gray-200 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-gray-200 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(feature.id)}>
                     <Edit className="h-4 w-4" />

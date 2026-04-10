@@ -72,13 +72,13 @@ export default function ActivityPage() {
   }
 
   const colorMap: Record<string, string> = {
-    email: 'text-blue-500',
-    call: 'text-green-500',
+    email: 'text-primary',
+    call: 'text-success',
     meeting: 'text-purple-500',
-    note: 'text-yellow-500',
-    sms: 'text-orange-500',
+    note: 'text-warning',
+    sms: 'text-warning',
     lead: 'text-indigo-500',
-    status_change: 'text-gray-500',
+    status_change: 'text-muted-foreground',
   }
 
   function getRelativeTime(dateStr: string): string {

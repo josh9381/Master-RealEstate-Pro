@@ -30,19 +30,19 @@ interface AuditLogsResponse {
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  LOGIN: 'bg-green-100 text-green-800',
+  LOGIN: 'bg-success/10 text-success',
   LOGOUT: 'bg-muted text-foreground',
-  LOGIN_FAILED: 'bg-red-100 text-red-800',
-  PASSWORD_CHANGED: 'bg-yellow-100 text-yellow-800',
-  CREATED: 'bg-blue-100 text-blue-800',
+  LOGIN_FAILED: 'bg-destructive/10 text-destructive',
+  PASSWORD_CHANGED: 'bg-warning/10 text-warning',
+  CREATED: 'bg-primary/10 text-primary',
   UPDATED: 'bg-purple-100 text-purple-800',
-  DELETED: 'bg-red-100 text-red-800',
-  SETTINGS_CHANGED: 'bg-orange-100 text-orange-800',
+  DELETED: 'bg-destructive/10 text-destructive',
+  SETTINGS_CHANGED: 'bg-warning/10 text-warning',
   SUBSCRIPTION_CHANGED: 'bg-indigo-100 text-indigo-800',
-  DATA_IMPORTED: 'bg-cyan-100 text-cyan-800',
+  DATA_IMPORTED: 'bg-info/10 text-info',
   DATA_EXPORTED: 'bg-teal-100 text-teal-800',
   BULK_ACTION: 'bg-pink-100 text-pink-800',
-  BACKUP_CREATED: 'bg-emerald-100 text-emerald-800',
+  BACKUP_CREATED: 'bg-success/10 text-success',
 }
 
 export default function AuditTrail() {
@@ -86,7 +86,7 @@ export default function AuditTrail() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Shield className="w-6 h-6 text-blue-600" />
+            <Shield className="w-6 h-6 text-primary" />
             Audit Trail
           </h1>
           <p className="text-muted-foreground mt-1">

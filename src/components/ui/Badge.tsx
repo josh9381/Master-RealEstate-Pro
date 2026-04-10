@@ -20,9 +20,9 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
             'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80':
               variant === 'destructive',
             'text-foreground': variant === 'outline',
-            'border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50':
+            'border-transparent bg-success/10 text-success hover:bg-success/20':
               variant === 'success',
-            'border-transparent bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50':
+            'border-transparent bg-warning/10 text-warning hover:bg-warning/20':
               variant === 'warning',
           },
           className

@@ -185,7 +185,7 @@ export function AISMSComposer({
               {/* Loading State */}
               {isGenerating && (
                 <div className="flex items-center justify-center space-x-2 rounded-lg border border-dashed bg-muted/30 p-3">
-                  <RefreshCw className="h-4 w-4 animate-spin text-green-600" />
+                  <RefreshCw className="h-4 w-4 animate-spin text-success" />
                   <span className="text-sm text-muted-foreground">
                     Generating new message...
                   </span>
@@ -241,7 +241,7 @@ export function AISMSComposer({
               <Badge 
                 variant={charCount > 160 ? "destructive" : "secondary"}
                 className={cn(
-                  charCount > 160 && charCount <= 320 && "bg-yellow-100 text-yellow-700 hover:bg-yellow-100"
+                  charCount > 160 && charCount <= 320 && "bg-warning/10 text-warning hover:bg-warning/10"
                 )}
               >
                 {charCount} chars
@@ -292,7 +292,7 @@ export function AISMSComposer({
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSend} disabled={isSending} className="bg-gradient-to-r from-green-600 to-emerald-600">
+            <Button onClick={handleSend} disabled={isSending} className="bg-gradient-to-r from-success to-success/80">
               <Send className="mr-2 h-4 w-4" />
               {isSending ? 'Sending...' : 'Send SMS'}
             </Button>

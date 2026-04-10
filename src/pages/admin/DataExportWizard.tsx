@@ -476,8 +476,8 @@ const DataExportWizard = () => {
                 className="flex items-center justify-between p-3 border rounded-lg"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-blue-100">
-                    <FileText className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10">
+                    <FileText className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm">{exportItem.type}</h4>

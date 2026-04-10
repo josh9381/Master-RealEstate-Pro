@@ -160,7 +160,7 @@ const HelpCenter = () => {
           <CardContent className="pt-6">
             <Video className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Video Tutorials</h3>
-            <span className="inline-block px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 rounded-full mb-2">Coming Soon</span>
+            <span className="inline-block px-2 py-0.5 text-xs font-medium bg-warning/10 text-warning rounded-full mb-2">Coming Soon</span>
             <p className="text-sm text-muted-foreground mb-4">
               Step-by-step video walkthroughs
             </p>

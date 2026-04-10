@@ -263,8 +263,8 @@ const NotificationSettings = () => {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="p-4 border rounded-lg">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Mail className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Mail className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <h4 className="font-semibold">Email</h4>
@@ -283,8 +283,8 @@ const NotificationSettings = () => {
             </div>
             <div className="p-4 border rounded-lg">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Bell className="h-5 w-5 text-green-600" />
+                <div className="p-2 bg-success/10 rounded-lg">
+                  <Bell className="h-5 w-5 text-success" />
                 </div>
                 <div>
                   <h4 className="font-semibold">Push</h4>

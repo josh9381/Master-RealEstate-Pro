@@ -166,9 +166,9 @@ function CommunicationHistory({
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'EMAIL':
-        return 'text-blue-600 bg-blue-50 dark:bg-blue-950/30'
+        return 'text-primary bg-primary/10'
       case 'SMS':
-        return 'text-green-600 bg-green-50 dark:bg-green-950/30'
+        return 'text-success bg-success/10'
       case 'CALL':
         return 'text-purple-600 bg-purple-50 dark:bg-purple-950/30'
       default:
@@ -178,9 +178,9 @@ function CommunicationHistory({
 
   const getDirectionIcon = (direction: string) => {
     return direction === 'INBOUND' ? (
-      <ArrowDownLeft className="h-3 w-3 text-blue-500" />
+      <ArrowDownLeft className="h-3 w-3 text-primary" />
     ) : (
-      <ArrowUpRight className="h-3 w-3 text-green-500" />
+      <ArrowUpRight className="h-3 w-3 text-success" />
     )
   }
 
@@ -254,14 +254,14 @@ function CommunicationHistory({
         </div>
         <div className="rounded-lg border p-3 text-center">
           <div className="flex items-center justify-center gap-1">
-            <Mail className="h-3.5 w-3.5 text-blue-500" />
+            <Mail className="h-3.5 w-3.5 text-primary" />
             <p className="text-2xl font-bold">{emailCount}</p>
           </div>
           <p className="text-xs text-muted-foreground">Emails</p>
         </div>
         <div className="rounded-lg border p-3 text-center">
           <div className="flex items-center justify-center gap-1">
-            <MessageSquare className="h-3.5 w-3.5 text-green-500" />
+            <MessageSquare className="h-3.5 w-3.5 text-success" />
             <p className="text-2xl font-bold">{smsCount}</p>
           </div>
           <p className="text-xs text-muted-foreground">SMS</p>
@@ -449,7 +449,7 @@ function CommunicationHistory({
                                 </div>
                               )}
                               {msg.followUpDate && (
-                                <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                <p className="flex items-center gap-1.5 text-xs text-warning mt-1">
                                   <Clock className="h-3 w-3" />
                                   Follow-up: {new Date(msg.followUpDate).toLocaleDateString('en-US', {
                                     month: 'short', day: 'numeric', year: 'numeric',

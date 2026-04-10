@@ -22,11 +22,11 @@ function getStrength(password: string): { score: number; label: string; color: s
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-red-500', bgColor: 'text-red-600 dark:text-red-400' };
-  if (score <= 3) return { score: 2, label: 'Fair', color: 'bg-orange-500', bgColor: 'text-orange-600 dark:text-orange-400' };
-  if (score <= 4) return { score: 3, label: 'Good', color: 'bg-yellow-500', bgColor: 'text-yellow-600 dark:text-yellow-400' };
-  if (score <= 5) return { score: 4, label: 'Strong', color: 'bg-green-500', bgColor: 'text-green-600 dark:text-green-400' };
-  return { score: 5, label: 'Very Strong', color: 'bg-green-600', bgColor: 'text-green-700 dark:text-green-400' };
+  if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-destructive', bgColor: 'text-destructive' };
+  if (score <= 3) return { score: 2, label: 'Fair', color: 'bg-warning', bgColor: 'text-warning' };
+  if (score <= 4) return { score: 3, label: 'Good', color: 'bg-warning', bgColor: 'text-warning' };
+  if (score <= 5) return { score: 4, label: 'Strong', color: 'bg-success', bgColor: 'text-success' };
+  return { score: 5, label: 'Very Strong', color: 'bg-success', bgColor: 'text-success' };
 }
 
 export function PasswordStrengthIndicator({ password, showRequirements = true }: PasswordStrengthIndicatorProps) {
@@ -68,11 +68,11 @@ export function PasswordStrengthIndicator({ password, showRequirements = true }:
           {requirements.map((req) => (
             <div key={req.text} className="flex items-center gap-1.5 text-xs">
               {req.met ? (
-                <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                <CheckCircle className="h-3.5 w-3.5 text-success shrink-0" />
               ) : (
                 <XCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               )}
-              <span className={req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+              <span className={req.met ? 'text-success' : 'text-muted-foreground'}>
                 {req.text}
               </span>
             </div>
@@ -80,15 +80,5 @@ export function PasswordStrengthIndicator({ password, showRequirements = true }:
         </div>
       )}
     </div>
-  );
-}
-
-export function isPasswordStrong(password: string): boolean {
-  return (
-    password.length >= 8 &&
-    /[A-Z]/.test(password) &&
-    /[a-z]/.test(password) &&
-    /[0-9]/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
   );
 }

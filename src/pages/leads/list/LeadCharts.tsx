@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/Card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Button } from '@/components/ui/Button'
 
+import { CHART_COLORS } from '@/lib/chartColors'
+
 const SOCIAL_MEDIA_SOURCES = ['linkedin', 'instagram', 'facebook ads', 'google ads', 'youtube', 'social media', 'social']
 
 interface LeadChartsProps {
@@ -62,7 +64,7 @@ export function LeadCharts({ sourceData, scoreData, pageCount, totalCount, isGlo
             <XAxis type="number" />
             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
             <Tooltip />
-            <Bar dataKey="value" fill="#3b82f6" name="Leads" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="value" fill={CHART_COLORS[0]} name="Leads" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -76,7 +78,7 @@ export function LeadCharts({ sourceData, scoreData, pageCount, totalCount, isGlo
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="count" fill="#3b82f6" name="Number of Leads" />
+            <Bar dataKey="count" fill={CHART_COLORS[0]} name="Number of Leads" />
           </BarChart>
         </ResponsiveContainer>
       </Card>

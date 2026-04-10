@@ -52,10 +52,10 @@ export const PredictionBadge = ({
         const prob = typeof value === 'number' ? value : parseFloat(value as string) || 0;
         return {
           icon: TrendingUp,
-          color: prob >= PROBABILITY_THRESHOLDS.HIGH ? 'bg-green-100 text-green-700 border-green-200' :
-                 prob >= PROBABILITY_THRESHOLDS.MEDIUM ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                 prob >= PROBABILITY_THRESHOLDS.LOW ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                 'bg-red-100 text-red-700 border-red-200',
+          color: prob >= PROBABILITY_THRESHOLDS.HIGH ? 'bg-success/10 text-success border-success/20' :
+                 prob >= PROBABILITY_THRESHOLDS.MEDIUM ? 'bg-warning/10 text-warning border-warning/20' :
+                 prob >= PROBABILITY_THRESHOLDS.LOW ? 'bg-warning/10 text-warning border-warning/20' :
+                 'bg-destructive/10 text-destructive border-destructive/20',
           label: label || 'Conversion',
           displayValue: `${prob}%`,
         };
@@ -64,8 +64,8 @@ export const PredictionBadge = ({
         const val = typeof value === 'number' ? value : parseFloat(value as string) || 0;
         return {
           icon: DollarSign,
-          color: val >= VALUE_THRESHOLDS.HIGH ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                 val >= VALUE_THRESHOLDS.MEDIUM ? 'bg-blue-100 text-blue-700 border-blue-200' :
+          color: val >= VALUE_THRESHOLDS.HIGH ? 'bg-success/10 text-success border-success/20' :
+                 val >= VALUE_THRESHOLDS.MEDIUM ? 'bg-primary/10 text-primary border-primary/20' :
                  'bg-muted text-foreground border-border',
           label: label || 'Est. Value',
           displayValue: fmtMoney(val),
@@ -85,9 +85,9 @@ export const PredictionBadge = ({
         const risk = riskValue.toLowerCase();
         return {
           icon: AlertTriangle,
-          color: risk === 'high' ? 'bg-red-100 text-red-700 border-red-200' :
-                 risk === 'medium' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                 'bg-green-100 text-green-700 border-green-200',
+          color: risk === 'high' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                 risk === 'medium' ? 'bg-warning/10 text-warning border-warning/20' :
+                 'bg-success/10 text-success border-success/20',
           label: label || 'Churn Risk',
           displayValue: riskValue.charAt(0).toUpperCase() + riskValue.slice(1),
         };

@@ -332,9 +332,9 @@ function LeadDetail() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    if (score >= 40) return 'text-blue-600'
+    if (score >= 80) return 'text-success'
+    if (score >= 60) return 'text-warning'
+    if (score >= 40) return 'text-primary'
     return 'text-gray-500'
   }
 
@@ -1190,7 +1190,7 @@ function LeadDetail() {
                           className="mt-1"
                           placeholder="John"
                         />
-                        {editErrors.firstName && <p className="text-sm text-red-500 mt-1">{editErrors.firstName}</p>}
+                        {editErrors.firstName && <p className="text-sm text-destructive mt-1">{editErrors.firstName}</p>}
                       </div>
                       <div>
                         <label className="text-sm font-medium">Last Name *</label>
@@ -1200,7 +1200,7 @@ function LeadDetail() {
                           className="mt-1"
                           placeholder="Doe"
                         />
-                        {editErrors.lastName && <p className="text-sm text-red-500 mt-1">{editErrors.lastName}</p>}
+                        {editErrors.lastName && <p className="text-sm text-destructive mt-1">{editErrors.lastName}</p>}
                       </div>
                     </div>
                   </div>
@@ -1222,7 +1222,7 @@ function LeadDetail() {
                       className="mt-1"
                       placeholder="john@example.com"
                     />
-                    {editErrors.email && <p className="text-sm text-red-500 mt-1">{editErrors.email}</p>}
+                    {editErrors.email && <p className="text-sm text-destructive mt-1">{editErrors.email}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium">Phone</label>
@@ -1232,7 +1232,7 @@ function LeadDetail() {
                       className="mt-1"
                       placeholder="+1 (555) 123-4567"
                     />
-                    {editErrors.phone && <p className="text-sm text-red-500 mt-1">{editErrors.phone}</p>}
+                    {editErrors.phone && <p className="text-sm text-destructive mt-1">{editErrors.phone}</p>}
                   </div>
                 </div>
               </div>

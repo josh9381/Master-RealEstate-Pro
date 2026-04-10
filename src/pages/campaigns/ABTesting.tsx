@@ -77,24 +77,24 @@ function MetricBar({ label, valueA, valueB, icon: Icon }: {
         <div>
           <div className="flex items-center justify-between mb-0.5">
             <span className="text-[10px] text-muted-foreground">A</span>
-            <span className={`text-xs font-semibold tabular-nums ${aWins ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}`}>
+            <span className={`text-xs font-semibold tabular-nums ${aWins ? 'text-primary' : 'text-muted-foreground'}`}>
               {valueA.toFixed(1)}%
             </span>
           </div>
           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-500 ${aWins ? 'bg-blue-500' : 'bg-muted-foreground/30'}`}
+            <div className={`h-full rounded-full transition-all duration-500 ${aWins ? 'bg-primary' : 'bg-muted-foreground/30'}`}
               style={{ width: `${(valueA / max) * 100}%` }} />
           </div>
         </div>
         <div>
           <div className="flex items-center justify-between mb-0.5">
             <span className="text-[10px] text-muted-foreground">B</span>
-            <span className={`text-xs font-semibold tabular-nums ${bWins ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+            <span className={`text-xs font-semibold tabular-nums ${bWins ? 'text-success' : 'text-muted-foreground'}`}>
               {valueB.toFixed(1)}%
             </span>
           </div>
           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-500 ${bWins ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`}
+            <div className={`h-full rounded-full transition-all duration-500 ${bWins ? 'bg-success' : 'bg-muted-foreground/30'}`}
               style={{ width: `${(valueB / max) * 100}%` }} />
           </div>
         </div>
@@ -241,7 +241,7 @@ const ABTesting = () => {
     },
   });
 
-  const tests = abData?.tests ?? [];
+  const tests = useMemo(() => abData?.tests ?? [], [abData?.tests]);
   const testResults = abData?.testResults ?? {};
   const stats = abData?.stats ?? { activeTests: 0, completedTests: 0, avgImprovement: 0, totalTested: 0 };
 
@@ -418,28 +418,28 @@ const ABTesting = () => {
 
       {/* Stats Row */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-primary">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Active Tests</p>
                 <p className="text-2xl font-bold mt-1">{stats.activeTests}</p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <FlaskConical className="h-5 w-5 text-blue-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <FlaskConical className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-success">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Completed</p>
                 <p className="text-2xl font-bold mt-1">{stats.completedTests}</p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Trophy className="h-5 w-5 text-emerald-500" />
+              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                <Trophy className="h-5 w-5 text-success" />
               </div>
             </div>
           </CardContent>
@@ -449,7 +449,7 @@ const ABTesting = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Avg Improvement</p>
-                <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                <p className="text-2xl font-bold mt-1 text-success">
                   {stats.avgImprovement > 0 ? `+${stats.avgImprovement}%` : '—'}
                 </p>
               </div>
@@ -459,15 +459,15 @@ const ABTesting = () => {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-amber-500">
+        <Card className="border-l-4 border-l-warning">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Total Tested</p>
                 <p className="text-2xl font-bold mt-1">{stats.totalTested.toLocaleString()}</p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <Users className="h-5 w-5 text-amber-500" />
+              <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
+                <Users className="h-5 w-5 text-warning" />
               </div>
             </div>
           </CardContent>
@@ -526,15 +526,15 @@ const ABTesting = () => {
                 >
                   {/* Icon */}
                   <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
-                    test.status === 'RUNNING' ? 'bg-blue-500/10' :
-                    test.status === 'COMPLETED' ? 'bg-emerald-500/10' :
-                    test.status === 'PAUSED' ? 'bg-amber-500/10' :
+                    test.status === 'RUNNING' ? 'bg-primary/10' :
+                    test.status === 'COMPLETED' ? 'bg-success/10' :
+                    test.status === 'PAUSED' ? 'bg-warning/10' :
                     'bg-muted'
                   }`}>
                     <TypeIcon className={`h-5 w-5 ${
-                      test.status === 'RUNNING' ? 'text-blue-500' :
-                      test.status === 'COMPLETED' ? 'text-emerald-500' :
-                      test.status === 'PAUSED' ? 'text-amber-500' :
+                      test.status === 'RUNNING' ? 'text-primary' :
+                      test.status === 'COMPLETED' ? 'text-success' :
+                      test.status === 'PAUSED' ? 'text-warning' :
                       'text-muted-foreground'
                     }`} />
                   </div>
@@ -575,7 +575,7 @@ const ABTesting = () => {
                           {test.winnerVariant === 'TIE' ? 'Tie' : `Variant ${test.winnerVariant}`}
                         </Badge>
                         {results && (
-                          <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                          <span className="text-sm font-medium text-success">
                             {(() => {
                               const diff = Math.abs(results.results.variantB.conversionRate - results.results.variantA.conversionRate);
                               return diff > 0 ? `+${diff.toFixed(1)}%` : '';
@@ -588,12 +588,12 @@ const ABTesting = () => {
                       <div className="flex items-center gap-3 text-xs">
                         <div className="text-center">
                           <p className="text-muted-foreground">A</p>
-                          <p className="font-semibold text-blue-600 dark:text-blue-400">{results.results.variantA.openRate.toFixed(1)}%</p>
+                          <p className="font-semibold text-primary">{results.results.variantA.openRate.toFixed(1)}%</p>
                         </div>
                         <span className="text-muted-foreground">vs</span>
                         <div className="text-center">
                           <p className="text-muted-foreground">B</p>
-                          <p className="font-semibold text-emerald-600 dark:text-emerald-400">{results.results.variantB.openRate.toFixed(1)}%</p>
+                          <p className="font-semibold text-success">{results.results.variantB.openRate.toFixed(1)}%</p>
                         </div>
                       </div>
                     )}

@@ -339,7 +339,7 @@ const DatabaseMaintenance = () => {
               </div>
               <Button variant="outline" onClick={handleCluster}>Cluster Tables</Button>
             </div>
-            <p className="text-xs text-orange-600">
+            <p className="text-xs text-warning">
               Warning: This operation locks the table and can take significant time
             </p>
           </div>
@@ -461,16 +461,16 @@ const DatabaseMaintenance = () => {
       </Card>
 
       {/* Danger Zone - Destructive operations removed for safety */}
-      <Card className="border-orange-200">
+      <Card className="border-warning/20">
         <CardHeader>
-          <CardTitle className="text-orange-600 flex items-center gap-2">
+          <CardTitle className="text-warning flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             Danger Zone
           </CardTitle>
           <CardDescription>Destructive database operations have been disabled for safety</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-orange-200 rounded-lg bg-orange-50">
+          <div className="flex items-center justify-between p-4 border border-warning/20 rounded-lg bg-warning/10">
             <div>
               <h4 className="font-semibold text-muted-foreground">Truncate All Tables</h4>
               <p className="text-sm text-muted-foreground mt-1">
@@ -479,7 +479,7 @@ const DatabaseMaintenance = () => {
             </div>
             <Button variant="outline" disabled>Disabled</Button>
           </div>
-          <div className="flex items-center justify-between p-4 border border-orange-200 rounded-lg bg-orange-50">
+          <div className="flex items-center justify-between p-4 border border-warning/20 rounded-lg bg-warning/10">
             <div>
               <h4 className="font-semibold text-muted-foreground">Drop Database</h4>
               <p className="text-sm text-muted-foreground mt-1">

@@ -361,8 +361,8 @@ const TwilioSetup = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex items-center space-x-3">
-              <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-green-100' : hasCredentials ? 'bg-yellow-100' : 'bg-muted'}`}>
-                <Power className={`h-6 w-6 ${connected ? 'text-green-600' : hasCredentials ? 'text-yellow-600' : 'text-muted-foreground'}`} />
+              <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-success/10' : hasCredentials ? 'bg-warning/10' : 'bg-muted'}`}>
+                <Power className={`h-6 w-6 ${connected ? 'text-success' : hasCredentials ? 'text-warning' : 'text-muted-foreground'}`} />
               </div>
               <div>
                 <p className="font-medium">
@@ -384,8 +384,8 @@ const TwilioSetup = () => {
             </div>
             <div className="flex items-center space-x-3">
               {lastTested ? (
-                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-green-100">
-                  <MessageSquare className="h-6 w-6 text-green-600" />
+                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-success/10">
+                  <MessageSquare className="h-6 w-6 text-success" />
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-muted">
@@ -404,8 +404,8 @@ const TwilioSetup = () => {
           </div>
           
           {configMode === 'mock' && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
+            <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-sm text-warning">
                 <strong>Mock Mode:</strong> SMS messages will be logged but not actually sent. 
                 Add your Twilio credentials above and save to enable production mode.
               </p>
@@ -413,8 +413,8 @@ const TwilioSetup = () => {
           )}
           
           {configMode === 'production' && (
-            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
+            <div className="mt-4 p-3 bg-success/10 border border-success/20 rounded-lg">
+              <p className="text-sm text-success">
                 <strong>Production Mode:</strong> SMS messages will be sent using your Twilio credentials. 
                 All campaign messages will be delivered to recipients.
               </p>
@@ -434,7 +434,7 @@ const TwilioSetup = () => {
             <label className="text-sm font-medium mb-2 block">
               Account SID
               {accountSid && accountSid.startsWith('AC') && (
-                <span className="ml-2 text-xs text-green-600 font-normal">✓ Stored</span>
+                <span className="ml-2 text-xs text-success font-normal">✓ Stored</span>
               )}
             </label>
             <div className="relative">
@@ -481,7 +481,7 @@ const TwilioSetup = () => {
             <label className="text-sm font-medium mb-2 block">
               Auth Token
               {hasCredentials && (
-                <span className="ml-2 text-xs text-green-600 font-normal">✓ Stored Securely</span>
+                <span className="ml-2 text-xs text-success font-normal">✓ Stored Securely</span>
               )}
             </label>
             <div className="relative">
@@ -513,7 +513,7 @@ const TwilioSetup = () => {
               </p>
             )}
             {authToken && (
-              <p className="text-xs text-green-600 mt-1">
+              <p className="text-xs text-success mt-1">
                 ✓ New token entered. Click "Save Credentials" to update.
               </p>
             )}
@@ -559,9 +559,9 @@ const TwilioSetup = () => {
           <CardDescription>Configure Twilio to send incoming messages to your CRM</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm font-medium text-blue-900 mb-2">🎯 Your Webhook URL</p>
-            <p className="text-xs text-blue-700 mb-3">
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+            <p className="text-sm font-medium text-primary mb-2">🎯 Your Webhook URL</p>
+            <p className="text-xs text-primary/80 mb-3">
               Copy this URL and paste it in your Twilio Phone Number settings
             </p>
             <div className="flex items-center space-x-2">
@@ -608,9 +608,9 @@ const TwilioSetup = () => {
               </ol>
             </div>
 
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs font-medium text-yellow-900 mb-1">⚠️ Important:</p>
-              <p className="text-xs text-yellow-700">
+            <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-xs font-medium text-warning mb-1">⚠️ Important:</p>
+              <p className="text-xs text-warning/80">
                 Make sure port 8000 is set to <strong>PUBLIC</strong> in your VS Code Ports tab, otherwise Twilio won't be able to reach your webhook.
               </p>
             </div>
@@ -910,7 +910,7 @@ const TwilioSetup = () => {
               <h4 className="font-semibold mb-3">SMS Messages</h4>
               <p className="text-3xl font-bold">{usageStats.smsCount.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mt-1">sent this month</p>
-              <p className="text-sm font-medium text-green-600 mt-2">
+              <p className="text-sm font-medium text-success mt-2">
                 ${(usageStats.smsCount * 0.01).toFixed(2)} cost
               </p>
             </div>
@@ -918,7 +918,7 @@ const TwilioSetup = () => {
               <h4 className="font-semibold mb-3">Voice Minutes</h4>
               <p className="text-3xl font-bold">{usageStats.callCount.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mt-1">minutes used</p>
-              <p className="text-sm font-medium text-green-600 mt-2">
+              <p className="text-sm font-medium text-success mt-2">
                 ${(usageStats.callCount * 0.10).toFixed(2)} cost
               </p>
             </div>
@@ -926,7 +926,7 @@ const TwilioSetup = () => {
               <h4 className="font-semibold mb-3">Phone Numbers</h4>
               <p className="text-3xl font-bold">{phoneNumbers.length}</p>
               <p className="text-sm text-muted-foreground mt-1">active numbers</p>
-              <p className="text-sm font-medium text-green-600 mt-2">
+              <p className="text-sm font-medium text-success mt-2">
                 ${(phoneNumbers.length * 1.00).toFixed(2)} cost
               </p>
             </div>
@@ -939,7 +939,7 @@ const TwilioSetup = () => {
                   Based on current usage
                 </p>
               </div>
-              <p className="text-2xl font-bold text-green-600">${usageStats.totalCost.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-success">${usageStats.totalCost.toFixed(2)}</p>
             </div>
           </div>
         </CardContent>

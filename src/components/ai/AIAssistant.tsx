@@ -748,7 +748,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                       onClick={() => handleCopyMessage(message.content, message.id)}
                       className={cn(
                         'p-0.5 rounded hover:bg-background/60 transition-colors',
-                        copiedMessageId === message.id ? 'text-green-600' : 'text-muted-foreground/50 hover:text-foreground'
+                        copiedMessageId === message.id ? 'text-success' : 'text-muted-foreground/50 hover:text-foreground'
                       )}
                       title={copiedMessageId === message.id ? 'Copied!' : 'Copy message'}
                     >
@@ -761,7 +761,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                       }}
                       className={cn(
                         'p-0.5 rounded hover:bg-background/60 transition-colors',
-                        message.feedback === 'positive' ? 'text-green-600' : 'text-muted-foreground/50 hover:text-green-600'
+                        message.feedback === 'positive' ? 'text-success' : 'text-muted-foreground/50 hover:text-success'
                       )}
                       title="Helpful"
                     >
@@ -774,7 +774,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                       }}
                       className={cn(
                         'p-0.5 rounded hover:bg-background/60 transition-colors',
-                        message.feedback === 'negative' ? 'text-red-500' : 'text-muted-foreground/50 hover:text-red-500'
+                        message.feedback === 'negative' ? 'text-destructive' : 'text-muted-foreground/50 hover:text-destructive'
                       )}
                       title="Not helpful"
                     >
@@ -788,19 +788,19 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
 
           {/* Destructive Action Confirmation Banner */}
           {pendingConfirmation && (
-            <div className="mx-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-3">
+            <div className="mx-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
               <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Confirm Action</span>
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                <span className="text-sm font-medium text-warning">Confirm Action</span>
               </div>
-              <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+              <p className="text-xs text-warning mb-3">
                 The AI wants to execute <strong>{pendingConfirmation.functionName.replace(/_/g, ' ')}</strong>. This action may modify your data.
               </p>
               <div className="flex gap-2">
                 <Button
                   size="sm"
                   onClick={handleConfirm}
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-xs"
+                  className="flex-1 bg-warning hover:bg-warning/90 text-warning-foreground text-xs"
                   disabled={isTyping}
                 >
                   <Check className="h-3 w-3 mr-1" /> Confirm

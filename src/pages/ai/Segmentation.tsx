@@ -28,8 +28,8 @@ const Segmentation = () => {
       {/* Coming Soon Hero */}
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="p-4 bg-cyan-500/10 rounded-full mb-6">
-            <BarChart3 className="h-12 w-12 text-cyan-500" />
+          <div className="p-4 bg-info/10 rounded-full mb-6">
+            <BarChart3 className="h-12 w-12 text-info" />
           </div>
           <h2 className="text-2xl font-bold mb-2">AI Segmentation is Coming Soon</h2>
           <p className="text-muted-foreground max-w-lg mb-8">

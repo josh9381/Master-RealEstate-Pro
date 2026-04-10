@@ -133,17 +133,17 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'border-l-red-500'
-      case 'medium': return 'border-l-yellow-500'
-      case 'low': return 'border-l-blue-500'
-      default: return 'border-l-gray-500'
+      case 'high': return 'border-l-destructive'
+      case 'medium': return 'border-l-warning'
+      case 'low': return 'border-l-primary'
+      default: return 'border-l-muted-foreground'
     }
   }
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 70) return 'text-green-700 bg-green-100'
-    if (confidence >= 50) return 'text-yellow-700 bg-yellow-100'
-    return 'text-orange-700 bg-orange-100'
+    if (confidence >= 70) return 'text-success bg-success/10'
+    if (confidence >= 50) return 'text-warning bg-warning/10'
+    return 'text-warning bg-warning/10'
   }
 
   if (isLoading) {
@@ -238,9 +238,9 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
                       <div
                         className={cn(
                           "h-full transition-all",
-                          suggestion.confidence >= 70 && "bg-green-500",
-                          suggestion.confidence >= 50 && suggestion.confidence < 70 && "bg-yellow-500",
-                          suggestion.confidence < 50 && "bg-orange-500"
+                          suggestion.confidence >= 70 && "bg-success",
+                          suggestion.confidence >= 50 && suggestion.confidence < 70 && "bg-warning",
+                          suggestion.confidence < 50 && "bg-warning"
                         )}
                         style={{ width: `${suggestion.confidence}%` }}
                       />

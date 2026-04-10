@@ -12,7 +12,8 @@ import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { settingsApi, authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import { PasswordStrengthIndicator, isPasswordStrong } from '@/components/auth/PasswordStrengthIndicator';
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
+import { isPasswordStrong } from '@/components/auth/passwordUtils';
 
 interface Session {
   id: string;
@@ -274,8 +275,8 @@ const SecuritySettings = () => {
         <CardContent>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className={`p-3 ${securityScore >= 80 ? 'bg-green-100' : securityScore >= 50 ? 'bg-yellow-100' : 'bg-red-100'} rounded-full`}>
-                <Shield className={`h-6 w-6 ${securityScore >= 80 ? 'text-green-600' : securityScore >= 50 ? 'text-yellow-600' : 'text-red-600'}`} />
+              <div className={`p-3 ${securityScore >= 80 ? 'bg-success/10' : securityScore >= 50 ? 'bg-warning/10' : 'bg-destructive/10'} rounded-full`}>
+                <Shield className={`h-6 w-6 ${securityScore >= 80 ? 'text-success' : securityScore >= 50 ? 'text-warning' : 'text-destructive'}`} />
               </div>
               <div>
                 <div className="text-3xl font-bold">{securityScore || '—'}/100</div>
@@ -289,11 +290,11 @@ const SecuritySettings = () => {
             </Badge>
           </div>
           <div className="w-full bg-secondary rounded-full h-2 mb-4">
-            <div className={`h-2 rounded-full ${securityScore >= 80 ? 'bg-green-600' : securityScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${securityScore}%` }}></div>
+            <div className={`h-2 rounded-full ${securityScore >= 80 ? 'bg-success' : securityScore >= 50 ? 'bg-warning' : 'bg-destructive'}`} style={{ width: `${securityScore}%` }}></div>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
-              <span className={twoFactorEnabled ? 'text-green-600' : 'text-muted-foreground'}>
+              <span className={twoFactorEnabled ? 'text-success' : 'text-muted-foreground'}>
                 {twoFactorEnabled ? '✓' : '✕'} Two-factor authentication {twoFactorEnabled ? 'enabled' : 'not enabled'}
               </span>
             </div>
@@ -404,8 +405,8 @@ const SecuritySettings = () => {
 
           {/* 2FA Disable Confirmation */}
           {showDisable2FA && (
-            <div className="p-4 border-2 border-red-200 rounded-lg bg-red-50 dark:bg-red-950/20 space-y-4">
-              <h4 className="font-medium text-red-600">Disable Two-Factor Authentication</h4>
+            <div className="p-4 border-2 border-destructive/20 rounded-lg bg-destructive/10 space-y-4">
+              <h4 className="font-medium text-destructive">Disable Two-Factor Authentication</h4>
               <p className="text-sm text-muted-foreground">
                 Enter your password and a 2FA code to disable two-factor authentication.
               </p>
@@ -500,13 +501,13 @@ const SecuritySettings = () => {
                 return (
                   <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-start space-x-3">
-                      <div className={`p-2 ${isFirst ? 'bg-green-100' : 'bg-secondary'} rounded-lg`}>
+                      <div className={`p-2 ${isFirst ? 'bg-success/10' : 'bg-secondary'} rounded-lg`}>
                         {session.deviceType === 'Mobile' ? (
-                          <Smartphone className={`h-5 w-5 ${isFirst ? 'text-green-600' : ''}`} />
+                          <Smartphone className={`h-5 w-5 ${isFirst ? 'text-success' : ''}`} />
                         ) : session.deviceType === 'Tablet' ? (
-                          <Globe className={`h-5 w-5 ${isFirst ? 'text-green-600' : ''}`} />
+                          <Globe className={`h-5 w-5 ${isFirst ? 'text-success' : ''}`} />
                         ) : (
-                          <Monitor className={`h-5 w-5 ${isFirst ? 'text-green-600' : ''}`} />
+                          <Monitor className={`h-5 w-5 ${isFirst ? 'text-success' : ''}`} />
                         )}
                       </div>
                       <div>
@@ -551,18 +552,18 @@ const SecuritySettings = () => {
       </Card>
 
       {/* Danger Zone */}
-      <Card className="border-red-200">
+      <Card className="border-destructive/20">
         <CardHeader>
           <div className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <CardTitle className="text-red-600">Danger Zone</CardTitle>
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
           </div>
           <CardDescription>Irreversible actions for your account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {showDeleteConfirm ? (
-            <div className="p-4 border border-red-200 rounded-lg space-y-4">
-              <h4 className="font-medium text-red-600">Confirm Account Deletion</h4>
+            <div className="p-4 border border-destructive/20 rounded-lg space-y-4">
+              <h4 className="font-medium text-destructive">Confirm Account Deletion</h4>
               <p className="text-sm text-muted-foreground">
                 This action is permanent and cannot be undone. All your data will be deleted.
               </p>
@@ -589,7 +590,7 @@ const SecuritySettings = () => {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
+            <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg">
               <div>
                 <h4 className="font-medium">Delete Account</h4>
                 <p className="text-sm text-muted-foreground">

@@ -83,10 +83,10 @@ const AICostDashboard = () => {
 
   const budgetColor = {
     disabled: 'text-muted-foreground',
-    ok: 'text-green-600',
-    warning: 'text-yellow-600',
-    caution: 'text-orange-600',
-    exceeded: 'text-red-600',
+    ok: 'text-success',
+    warning: 'text-warning',
+    caution: 'text-warning',
+    exceeded: 'text-destructive',
   }[budgetStatus];
 
   const budgetBadge = {
@@ -199,10 +199,10 @@ const AICostDashboard = () => {
               <div className="h-3 rounded-full bg-muted overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${
-                    budgetStatus === 'exceeded' ? 'bg-red-500' :
-                    budgetStatus === 'caution' ? 'bg-orange-500' :
-                    budgetStatus === 'warning' ? 'bg-yellow-500' :
-                    'bg-green-500'
+                    budgetStatus === 'exceeded' ? 'bg-destructive' :
+                    budgetStatus === 'caution' ? 'bg-warning' :
+                    budgetStatus === 'warning' ? 'bg-warning' :
+                    'bg-success'
                   }`}
                   style={{ width: `${Math.min(100, data.budget.percentUsed)}%` }}
                 />
@@ -214,9 +214,9 @@ const AICostDashboard = () => {
               </div>
             </div>
             {budgetStatus === 'exceeded' && (
-              <div className="flex items-start gap-2 mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-red-700 dark:text-red-300">
+              <div className="flex items-start gap-2 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-xs text-destructive">
                   Budget hard limit reached. AI generation is blocked until the next billing cycle or an admin increases the limit.
                 </p>
               </div>

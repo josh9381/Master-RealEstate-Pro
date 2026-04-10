@@ -7,6 +7,44 @@
  * Wong (2011) and Tol palettes adapted for web.
  */
 
+/**
+ * Read a CSS custom property from the document root and convert HSL → hex.
+ * Falls back to `fallback` when running outside a browser (SSR/tests)
+ * or when the variable is not defined.
+ */
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100
+  l /= 100
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
+    return Math.round(255 * color).toString(16).padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
+}
+
+export function getCSSColor(varName: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue(`--${varName}`)
+    .trim()
+  if (!raw) return fallback
+  const parts = raw.split(/\s+/).map(Number)
+  if (parts.length !== 3 || parts.some(isNaN)) return fallback
+  return hslToHex(parts[0], parts[1], parts[2])
+}
+
+/** Semantic chart colors that resolve CSS variables at call-time (hex for Recharts) */
+export const semanticColors = {
+  get primary()     { return getCSSColor('primary',     '#3b82f6') },
+  get success()     { return getCSSColor('success',     '#22c55e') },
+  get warning()     { return getCSSColor('warning',     '#f59e0b') },
+  get destructive() { return getCSSColor('destructive', '#ef4444') },
+  get info()        { return getCSSColor('info',        '#3b82f6') },
+  get muted()       { return getCSSColor('muted-foreground', '#6b7280') },
+} as const
+
 /** Primary 8-color palette for charts, graphs, pie/donut charts (colorblind-safe) */
 export const CHART_COLORS = [
   '#0077BB', // strong blue
