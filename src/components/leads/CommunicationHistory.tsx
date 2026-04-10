@@ -356,10 +356,13 @@ function CommunicationHistory({
             return (
               <Card
                 key={msg.id}
-                className={`cursor-pointer transition-colors hover:bg-muted/30 ${
+                tabIndex={0}
+                role="button"
+                className={`cursor-pointer transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
                   !msg.read && msg.direction === 'INBOUND' ? 'border-l-2 border-l-primary' : ''
                 }`}
                 onClick={() => setExpandedId(isExpanded ? null : msg.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedId(isExpanded ? null : msg.id) } }}
               >
                 <CardContent className="p-3">
                   <div className="flex items-start gap-3">

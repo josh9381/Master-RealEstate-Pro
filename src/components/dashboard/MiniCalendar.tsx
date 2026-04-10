@@ -97,7 +97,7 @@ export function MiniCalendar({ eventDates = [], selectedDate, onDateSelect, clas
               type="button"
               onClick={() => onDateSelect?.(new Date(year, month, day))}
               className={cn(
-                'relative flex flex-col items-center justify-center h-8 w-full rounded text-xs transition-colors',
+                'relative flex flex-col items-center justify-center h-8 w-full rounded text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background',
                 isSelected
                   ? 'bg-primary text-primary-foreground font-semibold'
                   : isToday

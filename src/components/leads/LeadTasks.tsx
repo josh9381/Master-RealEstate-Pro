@@ -182,7 +182,7 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
               autoFocus
             />
             <textarea
-              className="w-full p-2 border rounded-md text-sm resize-none min-h-[60px]"
+              className="w-full p-2 border rounded-md text-sm resize-none min-h-[60px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
               placeholder="Description (optional)..."
               value={newTask.description}
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
@@ -191,7 +191,7 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
               <div className="flex-1">
                 <label className="text-xs font-medium text-muted-foreground">Priority</label>
                 <select
-                  className="w-full mt-1 p-2 border rounded-md text-sm"
+                  className="w-full mt-1 p-2 border rounded-md text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
                   value={newTask.priority}
                   onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as 'low' | 'medium' | 'high' })}
                 >
@@ -271,7 +271,7 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
                 <div className="flex items-start gap-3">
                   {/* Checkbox */}
                   <button
-                    className="mt-0.5 shrink-0"
+                    className="mt-0.5 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
                     onClick={() => {
                       if (task.status !== 'COMPLETED') {
                         completeTaskMutation.mutate(task.id)
