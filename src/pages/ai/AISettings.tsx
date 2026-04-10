@@ -744,7 +744,7 @@ const AISettings = () => {
                               <Icon className="h-4 w-4 text-muted-foreground" />
                               <span className="text-sm font-medium">{label}</span>
                             </div>
-                            <span className={`text-sm font-medium ${isNearLimit ? 'text-red-600' : ''}`}>
+                            <span className={`text-sm font-medium ${isNearLimit ? 'text-destructive' : ''}`}>
                               {used.toLocaleString()} / {limit > 0 ? limit.toLocaleString() : '∞'}
                             </span>
                           </div>
@@ -752,7 +752,7 @@ const AISettings = () => {
                             <div className="w-full bg-secondary rounded-full h-2">
                               <div
                                 className={`h-2 rounded-full transition-all ${
-                                  isNearLimit ? 'bg-red-500' : 'bg-primary'
+                                  isNearLimit ? 'bg-destructive' : 'bg-primary'
                                 }`}
                                 style={{ width: `${pct}%` }}
                               />

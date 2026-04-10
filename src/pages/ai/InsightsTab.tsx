@@ -8,6 +8,7 @@ import { aiApi, tasksApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import intelligenceService, { type DashboardInsights, type ScoringModel } from '@/services/intelligenceService';
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
+import { CHART_COLORS } from '@/lib/chartColors';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -194,9 +195,9 @@ const InsightsTab = () => {
   };
 
   const categoryColors = {
-    Opportunity: 'bg-green-100 text-green-600',
-    Risk: 'bg-red-100 text-red-600',
-    Optimization: 'bg-blue-100 text-blue-600',
+    Opportunity: 'bg-success/10 text-success',
+    Risk: 'bg-destructive/10 text-destructive',
+    Optimization: 'bg-primary/10 text-primary',
     Trend: 'bg-purple-100 text-purple-600',
   };
 
@@ -341,7 +342,7 @@ const InsightsTab = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-yellow-500" />
+              <Zap className="h-5 w-5 text-warning" />
               Top Opportunities
             </CardTitle>
             <CardDescription>Leads with highest conversion probability</CardDescription>
@@ -391,14 +392,14 @@ const InsightsTab = () => {
                 <Line 
                   type="monotone" 
                   dataKey="avgProbability" 
-                  stroke="#3b82f6" 
+                  stroke={CHART_COLORS[0]} 
                   strokeWidth={2}
                   name="Avg Probability (%)"
                 />
                 <Line 
                   type="monotone" 
                   dataKey="conversions" 
-                  stroke="#10b981" 
+                  stroke={CHART_COLORS[2]} 
                   strokeWidth={2}
                   name="Conversions"
                 />
@@ -446,7 +447,7 @@ const InsightsTab = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-yellow-500" />
+              <Lightbulb className="h-5 w-5 text-warning" />
               AI Recommendations
             </CardTitle>
             <CardDescription>All actionable recommendations grouped by category</CardDescription>
@@ -762,10 +763,10 @@ const InsightsTab = () => {
                           )}
 
                           {insight.actedOn && insight.actionTaken && (
-                            <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 mb-3">
+                            <div className="bg-success/10 rounded-lg p-3 mb-3">
                               <p className="text-sm">
-                                <span className="font-medium text-green-700 dark:text-green-400">Action Taken:</span>{' '}
-                                <span className="text-green-600 dark:text-green-300">{insight.actionTaken}</span>
+                                <span className="font-medium text-success">Action Taken:</span>{' '}
+                                <span className="text-success">{insight.actionTaken}</span>
                                 {insight.actedOnAt && (
                                   <span className="text-xs text-muted-foreground ml-2">
                                     on {new Date(insight.actedOnAt).toLocaleDateString()}

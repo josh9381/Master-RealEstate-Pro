@@ -456,7 +456,7 @@ const LeadScoring = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label id="label-emailOptOutPenalty" className="text-sm font-medium">Email Opt-Out Penalty</label>
-                      <span className="text-sm font-bold tabular-nums w-10 text-right text-red-600">
+                      <span className="text-sm font-bold tabular-nums w-10 text-right text-destructive">
                         {configForm.emailOptOutPenalty ?? -50}
                       </span>
                     </div>
@@ -622,10 +622,10 @@ const LeadScoring = () => {
                     <TableCell>
                       <div className="flex items-center">
                         {lead.trend === 'up' && (
-                          <TrendingUp className="h-4 w-4 text-green-600" />
+                          <TrendingUp className="h-4 w-4 text-success" />
                         )}
                         {lead.trend === 'down' && (
-                          <TrendingUp className="h-4 w-4 text-red-600 rotate-180" />
+                          <TrendingUp className="h-4 w-4 text-destructive rotate-180" />
                         )}
                         {lead.trend === 'stable' && <span className="text-muted-foreground">—</span>}
                       </div>
@@ -700,14 +700,14 @@ const LeadScoring = () => {
                       <div key={c.name} className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-medium">{c.name}</span>
-                          <span className={`font-bold tabular-nums ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+                          <span className={`font-bold tabular-nums ${isNegative ? 'text-destructive' : 'text-success'}`}>
                             {isNegative ? '' : '+'}{formatRate(c.points, 1)} pts
                             {c.count > 1 && <span className="text-muted-foreground font-normal"> ({c.count} × {c.weight})</span>}
                           </span>
                         </div>
                         <div className="w-full bg-secondary rounded-full h-2">
                           <div
-                            className={`h-2 rounded-full ${isNegative ? 'bg-red-500' : 'bg-green-500'}`}
+                            className={`h-2 rounded-full ${isNegative ? 'bg-destructive' : 'bg-success'}`}
                             style={{ width: `${barWidth}%` }}
                           />
                         </div>
@@ -766,10 +766,10 @@ const LeadScoring = () => {
               const dCount = recentScores.filter((l: { score: number }) => l.score < 40).length
               const pct = (n: number) => calcRate(n, total, 0)
               const grades = [
-                { label: 'A Grade (80-100)', count: aCount, color: 'bg-green-500' },
-                { label: 'B Grade (60-79)', count: bCount, color: 'bg-blue-500' },
-                { label: 'C Grade (40-59)', count: cCount, color: 'bg-yellow-500' },
-                { label: 'D Grade (0-39)', count: dCount, color: 'bg-red-500' },
+                { label: 'A Grade (80-100)', count: aCount, color: 'bg-success' },
+                { label: 'B Grade (60-79)', count: bCount, color: 'bg-primary' },
+                { label: 'C Grade (40-59)', count: cCount, color: 'bg-warning' },
+                { label: 'D Grade (0-39)', count: dCount, color: 'bg-destructive' },
               ]
               return grades.map(g => (
                 <div key={g.label} className="space-y-2">
@@ -806,7 +806,7 @@ const LeadScoring = () => {
                       <XAxis dataKey="month" />
                       <YAxis />
                       <Tooltip />
-                      <Line type="monotone" dataKey="accuracy" stroke="#3b82f6" strokeWidth={2} />
+                      <Line type="monotone" dataKey="accuracy" stroke={CHART_COLORS[0]} strokeWidth={2} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
@@ -862,17 +862,17 @@ const LeadScoring = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">{item.metric}</span>
                         {item.status === 'excellent' ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <CheckCircle className="h-4 w-4 text-success" />
                         ) : item.status === 'good' ? (
-                          <CheckCircle className="h-4 w-4 text-blue-500" />
+                          <CheckCircle className="h-4 w-4 text-primary" />
                         ) : (
-                          <AlertCircle className="h-4 w-4 text-yellow-500" />
+                          <AlertCircle className="h-4 w-4 text-warning" />
                         )}
                       </div>
                       <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className={`h-full ${
-                            item.status === 'excellent' ? 'bg-green-500' : item.status === 'good' ? 'bg-blue-500' : 'bg-yellow-500'
+                            item.status === 'excellent' ? 'bg-success' : item.status === 'good' ? 'bg-primary' : 'bg-warning'
                           }`}
                           style={{ width: `${item.score}%` }}
                         />
@@ -903,7 +903,7 @@ const LeadScoring = () => {
                     <XAxis dataKey="month" />
                     <YAxis />
                     <Tooltip />
-                    <Line type="monotone" dataKey="predictions" stroke="#10b981" strokeWidth={2} />
+                    <Line type="monotone" dataKey="predictions" stroke={CHART_COLORS[2]} strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -931,7 +931,7 @@ const LeadScoring = () => {
                     return (
                       <div key={entry.id || index} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${improved ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                          <div className={`p-2 rounded-lg ${improved ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}`}>
                             {improved ? <TrendingUp className="h-4 w-4" /> : <Activity className="h-4 w-4" />}
                           </div>
                           <div>
@@ -1015,7 +1015,7 @@ const LeadScoring = () => {
                       </div>
                       <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className={`h-full transition-all ${model.status === 'complete' ? 'bg-green-500' : 'bg-blue-500'}`}
+                          className={`h-full transition-all ${model.status === 'complete' ? 'bg-success' : 'bg-primary'}`}
                           style={{ width: `${model.progress || 0}%` }}
                         />
                       </div>

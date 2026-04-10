@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { aiApi } from '@/lib/api';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { CHART_COLORS } from '@/lib/chartColors';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import {
   LineChart,
@@ -200,7 +201,7 @@ const PredictionsTab = () => {
                   type="monotone"
                   dataKey="total"
                   name="Total Leads"
-                  stroke="#82ca9d"
+                  stroke={CHART_COLORS[2]}
                   strokeWidth={2}
                   dot={{ r: 4 }}
                 />
@@ -229,9 +230,9 @@ const PredictionsTab = () => {
                   <div
                     className={`p-2 rounded-lg ${
                       prediction.status === 'positive'
-                        ? 'bg-green-100 text-green-600'
+                        ? 'bg-success/10 text-success'
                         : prediction.status === 'warning'
-                        ? 'bg-yellow-100 text-yellow-600'
+                        ? 'bg-warning/10 text-warning'
                         : 'bg-muted text-muted-foreground'
                     }`}
                   >
@@ -308,9 +309,9 @@ const PredictionsTab = () => {
                   <div
                     className={`p-2 rounded-lg ${
                       prediction.status === 'positive'
-                        ? 'bg-green-100 text-green-600'
+                        ? 'bg-success/10 text-success'
                         : prediction.status === 'warning'
-                        ? 'bg-yellow-100 text-yellow-600'
+                        ? 'bg-warning/10 text-warning'
                         : 'bg-muted text-muted-foreground'
                     }`}
                   >
@@ -385,7 +386,7 @@ const PredictionsTab = () => {
                     <div className="w-full bg-secondary rounded-full h-2">
                       <div
                         className={`h-2 rounded-full ${
-                          prediction.confidence >= 80 ? 'bg-green-500' : prediction.confidence >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                          prediction.confidence >= 80 ? 'bg-success' : prediction.confidence >= 60 ? 'bg-warning' : 'bg-destructive'
                         }`}
                         style={{ width: `${prediction.confidence}%` }}
                       />

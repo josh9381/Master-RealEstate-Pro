@@ -223,7 +223,7 @@ const AIHub = () => {
                   <span className="text-muted-foreground text-xs">
                     {apiFeature?.leadsScored ? `${apiFeature.leadsScored} scored` : feature.description}
                   </span>
-                  <div className={`h-2 w-2 rounded-full ${isActive ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-gray-400'}`} />
+                  <div className={`h-2 w-2 rounded-full ${isActive ? 'bg-success shadow-sm shadow-success/50' : 'bg-muted-foreground/40'}`} />
                 </div>
               )
             })}
@@ -305,13 +305,13 @@ const AIHub = () => {
                   <div key={item.label} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">{item.label}</span>
-                      <span className={`font-medium ${isDanger ? 'text-red-600' : isWarning ? 'text-yellow-600' : ''}`}>
+                      <span className={`font-medium ${isDanger ? 'text-destructive' : isWarning ? 'text-warning' : ''}`}>
                         {item.used.toLocaleString()} / {isUnlimited ? '∞' : (item.limit as number).toLocaleString()}
                       </span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${isDanger ? 'bg-red-500' : isWarning ? 'bg-yellow-500' : 'bg-primary'}`}
+                        className={`h-full rounded-full transition-all ${isDanger ? 'bg-destructive' : isWarning ? 'bg-warning' : 'bg-primary'}`}
                         style={{ width: isUnlimited ? '0%' : `${pct}%` }}
                       />
                     </div>
@@ -355,10 +355,10 @@ const AIHub = () => {
                     <div
                       className={`p-1.5 rounded-lg shrink-0 ${
                         insight.type === 'opportunity'
-                          ? 'bg-green-100 text-green-600'
+                          ? 'bg-success/10 text-success'
                           : insight.type === 'warning'
-                          ? 'bg-yellow-100 text-yellow-600'
-                          : 'bg-blue-100 text-blue-600'
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-primary/10 text-primary'
                       }`}
                     >
                       <Sparkles className="h-4 w-4" />
