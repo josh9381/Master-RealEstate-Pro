@@ -59,6 +59,7 @@ import { MiniCalendar } from '@/components/dashboard/MiniCalendar'
 import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer'
 import { useDashboardPreferences } from '@/hooks/useDashboardPreferences'
 import { cn } from '@/lib/utils'
+import { LEAD_SOURCE_COLORS, CHART_COLORS, semanticColors } from '@/lib/chartColors'
 import type { Campaign, ConversionStage, RevenueMonth, ActivityRecord, DashboardActivity, DashboardTask, DashboardCampaign, DashboardAlert } from '@/types'
 
 // Types
@@ -229,14 +230,13 @@ function Dashboard() {
 
   // Transform API data for charts
   // Lead source data for pie chart — aggregate to top 5 + "Other" for readability
-  const LEAD_SOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#6b7280'] as const // from chartColors
   const leadSourceData = useMemo(() => {
     if (!leadAnalyticsData?.bySource) return []
     const all = Object.entries(leadAnalyticsData.bySource)
       .map(([name, value]) => ({ name, value: typeof value === 'number' ? value : 0 }))
       .sort((a, b) => b.value - a.value)
     if (all.length <= 6) {
-      return all.map((s, i) => ({ ...s, color: LEAD_SOURCE_COLORS[i] || '#6b7280' }))
+      return all.map((s, i) => ({ ...s, color: LEAD_SOURCE_COLORS[i] || LEAD_SOURCE_COLORS[5] }))
     }
     const top5 = all.slice(0, 5)
     const otherValue = all.slice(5).reduce((sum, s) => sum + s.value, 0)
@@ -1054,7 +1054,7 @@ function Dashboard() {
                   <div className="w-16 h-5">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={stat.sparkline}>
-                        <Line type="monotone" dataKey="v" stroke={stat.trend === 'up' ? '#22c55e' : '#ef4444'} strokeWidth={1.5} dot={false} />
+                        <Line type="monotone" dataKey="v" stroke={stat.trend === 'up' ? semanticColors.success : semanticColors.destructive} strokeWidth={1.5} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -1063,11 +1063,11 @@ function Dashboard() {
               <div className="flex items-center justify-between mt-1">
                 <p className="flex items-center text-xs text-muted-foreground">
                   {stat.trend === 'up' ? (
-                    <TrendingUp className="mr-1 h-3.5 w-3.5 text-green-500" />
+                    <TrendingUp className="mr-1 h-3.5 w-3.5 text-success" />
                   ) : (
-                    <TrendingDown className="mr-1 h-3.5 w-3.5 text-red-500" />
+                    <TrendingDown className="mr-1 h-3.5 w-3.5 text-destructive" />
                   )}
-                  <span className={stat.trend === 'up' ? 'text-green-500' : 'text-red-500'}>
+                  <span className={stat.trend === 'up' ? 'text-success' : 'text-destructive'}>
                     {stat.change}
                   </span>
                 </p>
@@ -1140,12 +1140,12 @@ function Dashboard() {
                   <AreaChart data={revenueData} aria-label="Revenue and deals trend chart">
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0}/>
                       </linearGradient>
                       <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        <stop offset="5%" stopColor={CHART_COLORS[2]} stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor={CHART_COLORS[2]} stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -1153,8 +1153,8 @@ function Dashboard() {
                     <YAxis tickFormatter={(v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `$${(v / 1_000).toFixed(0)}K` : `$${v}`} tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(value: number, name: string) => [name === 'revenue' ? fmtMoney(value) : value, name === 'revenue' ? 'Revenue' : 'Deals']} />
                     <Legend />
-                    <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRevenue)" />
-                    <Area type="monotone" dataKey="deals" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" />
+                    <Area type="monotone" dataKey="revenue" stroke={CHART_COLORS[0]} fillOpacity={1} fill="url(#colorRevenue)" />
+                    <Area type="monotone" dataKey="deals" stroke={CHART_COLORS[2]} fillOpacity={1} fill="url(#colorLeads)" />
                   </AreaChart>
                 </ResponsiveContainer>
                 )}
@@ -1196,7 +1196,7 @@ function Dashboard() {
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="stage" width={90} tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#3b82f6" />
+                    <Bar dataKey="count" fill={CHART_COLORS[0]} />
                   </BarChart>
                 </ResponsiveContainer>
                 )}
@@ -1296,7 +1296,7 @@ function Dashboard() {
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="conversions" fill="#f59e0b" />
+                    <Bar dataKey="conversions" fill={semanticColors.warning} />
                   </BarChart>
                 </ResponsiveContainer>
                 )}
