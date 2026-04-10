@@ -18,11 +18,11 @@ export function OrganizationHeader() {
   const isTrial = isTrialActive()
   
   const tierColors: Record<string, string> = {
-    STARTER: 'bg-blue-100 text-blue-800',
+    STARTER: 'bg-primary/10 text-primary',
     PROFESSIONAL: 'bg-purple-100 text-purple-800',
     ELITE: 'bg-indigo-100 text-indigo-800',
-    TEAM: 'bg-emerald-100 text-emerald-800',
-    ENTERPRISE: 'bg-amber-100 text-amber-800',
+    TEAM: 'bg-success/10 text-success',
+    ENTERPRISE: 'bg-warning/10 text-warning',
   }
   
   const tierIcons: Record<string, React.ReactNode | null> = {
@@ -45,7 +45,7 @@ export function OrganizationHeader() {
               className="w-12 h-12 rounded-lg object-cover"
             />
           ) : (
-            <div className="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
           )}
@@ -63,9 +63,9 @@ export function OrganizationHeader() {
         <div className="flex items-center gap-3">
           {/* Trial Badge */}
           {isTrial && trialEndsAt && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
-              <Calendar className="w-4 h-4 text-orange-600" />
-              <span className="text-sm font-medium text-orange-900">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/20 rounded-lg">
+              <Calendar className="w-4 h-4 text-warning" />
+              <span className="text-sm font-medium text-warning">
                 Trial ends {format(new Date(trialEndsAt), 'MMM dd, yyyy')}
               </span>
             </div>
@@ -87,10 +87,10 @@ export function OrganizationHeader() {
           const daysLeft = Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
           if (daysLeft <= 7) {
             return (
-              <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                <p className="text-sm text-orange-900">
+              <div className="mt-3 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                <p className="text-sm text-warning">
                   <strong>⚠️ Your trial ends in {daysLeft} days.</strong>{' '}
-                  <a href="/admin/subscription" className="underline font-medium hover:text-orange-700">
+                  <a href="/admin/subscription" className="underline font-medium hover:text-warning/80">
                     Upgrade now
                   </a>{' '}
                   to continue using all features.

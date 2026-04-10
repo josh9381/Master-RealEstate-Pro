@@ -65,9 +65,9 @@ export function TeamManagement() {
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'ADMIN':
-        return <Shield className="w-4 h-4 text-amber-600" />
+        return <Shield className="w-4 h-4 text-warning" />
       case 'MANAGER':
-        return <UserCog className="w-4 h-4 text-blue-600" />
+        return <UserCog className="w-4 h-4 text-primary" />
       default:
         return <UserIcon className="w-4 h-4 text-muted-foreground" />
     }
@@ -75,8 +75,8 @@ export function TeamManagement() {
   
   const getRoleBadge = (role: string) => {
     const styles = {
-      ADMIN: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
-      MANAGER: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+      ADMIN: 'bg-warning/10 text-warning border-warning/20',
+      MANAGER: 'bg-primary/10 text-primary border-primary/20',
       USER: 'bg-muted text-muted-foreground border-border',
     }
     return (
@@ -190,7 +190,7 @@ export function TeamManagement() {
                         }
                       </p>
                       {member.id === user?.id && (
-                        <span className="text-xs text-blue-600 font-medium">(You)</span>
+                        <span className="text-xs text-primary font-medium">(You)</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -208,7 +208,7 @@ export function TeamManagement() {
                   </div>
                   
                   <div className="flex items-center gap-1">
-                    <div className={`w-2 h-2 rounded-full ${member.isActive ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
+                    <div className={`w-2 h-2 rounded-full ${member.isActive ? 'bg-success' : 'bg-muted-foreground/40'}`} />
                     <span className="text-xs text-muted-foreground">
                       {member.isActive ? 'Active' : 'Inactive'}
                     </span>
