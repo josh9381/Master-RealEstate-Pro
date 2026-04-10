@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { campaignsApi, CampaignsQuery } from '@/lib/api';
 import { calcROI, formatRate, fmtMoney } from '@/lib/metricsCalculator';
+import { CHART_COLORS } from '@/lib/chartColors';
 import { Campaign } from '@/types';
 
 const quickLinks = [
@@ -104,8 +105,8 @@ export default function CampaignsOverview() {
               <h3 className="mt-2 text-3xl font-bold">{stats.active}</h3>
               <p className="mt-1 text-xs text-muted-foreground">{stats.total} total campaigns</p>
             </div>
-            <div className="rounded-full bg-blue-100 p-3">
-              <Megaphone className="h-6 w-6 text-blue-600" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <Megaphone className="h-6 w-6 text-primary" />
             </div>
           </div>
         </Card>
@@ -117,8 +118,8 @@ export default function CampaignsOverview() {
               <h3 className="mt-2 text-3xl font-bold">{stats.totalSent.toLocaleString()}</h3>
               <p className="mt-1 text-xs text-muted-foreground">Across all campaigns</p>
             </div>
-            <div className="rounded-full bg-green-100 p-3">
-              <Users className="h-6 w-6 text-green-600" />
+            <div className="rounded-full bg-success/10 p-3">
+              <Users className="h-6 w-6 text-success" />
             </div>
           </div>
         </Card>
@@ -164,7 +165,7 @@ export default function CampaignsOverview() {
                 <XAxis type="number" />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" name="Campaigns" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill={CHART_COLORS[0]} name="Campaigns" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -185,7 +186,7 @@ export default function CampaignsOverview() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="#3b82f6" name="Number of Campaigns" />
+                <Bar dataKey="count" fill={CHART_COLORS[0]} name="Number of Campaigns" />
               </BarChart>
             </ResponsiveContainer>
           ) : (

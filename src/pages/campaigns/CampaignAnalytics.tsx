@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { campaignsApi } from '@/lib/api';
-import { LINE_CHART_COLORS } from '@/lib/chartColors';
+import { LINE_CHART_COLORS, CHART_COLORS } from '@/lib/chartColors';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { DateRangePicker, DateRange, DateRangePreset } from '@/components/shared/DateRangePicker';
@@ -48,10 +48,10 @@ import {
 import type { EnrichedCampaign } from '@/types';
 
 const CHANNEL_COLORS: Record<string, string> = {
-  EMAIL: '#3b82f6',
-  SMS: '#10b981',
-  PHONE: '#f59e0b',
-  SOCIAL: '#8b5cf6',
+  EMAIL: CHART_COLORS[0],
+  SMS: CHART_COLORS[2],
+  PHONE: CHART_COLORS[1],
+  SOCIAL: CHART_COLORS[7],
 };
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -142,7 +142,7 @@ function CampaignAnalytics() {
     return Object.entries(byType).map(([type, count]) => ({
       name: CHANNEL_LABELS[type] || type,
       value: count,
-      color: CHANNEL_COLORS[type] || '#6b7280',
+      color: CHANNEL_COLORS[type] || CHART_COLORS[6],
     }));
   }, [campaigns]);
 
@@ -388,8 +388,8 @@ function CampaignAnalytics() {
                 <YAxis yAxisId="right" orientation="right" />
                 <Tooltip />
                 <Legend />
-                <Bar yAxisId="left" dataKey="revenue" fill="#3b82f6" name="Revenue ($)" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="right" dataKey="campaigns" fill="#10b981" name="# Campaigns" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="left" dataKey="revenue" fill={CHART_COLORS[0]} name="Revenue ($)" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="right" dataKey="campaigns" fill={CHART_COLORS[2]} name="# Campaigns" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -410,7 +410,7 @@ function CampaignAnalytics() {
                   labelLine={false}
                   label={({ type, revenue }) => `${type}: ${fmtMoney(revenue)}`}
                   outerRadius={100}
-                  fill="#8884d8"
+                  fill={CHART_COLORS[0]}
                   dataKey="revenue"
                 >
                   {performanceByType.map((_entry, index) => (

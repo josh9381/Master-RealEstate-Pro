@@ -484,7 +484,7 @@ function CampaignDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatRate(deliverabilityData.deliveryRate ?? 0)}%</div>
+              <div className="text-2xl font-bold text-success">{formatRate(deliverabilityData.deliveryRate ?? 0)}%</div>
               <p className="text-xs text-muted-foreground">{(deliverabilityData.delivered ?? 0).toLocaleString()} of {(deliverabilityData.sent ?? 0).toLocaleString()} delivered</p>
             </CardContent>
           </Card>
@@ -496,7 +496,7 @@ function CampaignDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${(deliverabilityData.bounceRate ?? 0) > 5 ? 'text-red-600' : 'text-muted-foreground'}`}>
+              <div className={`text-2xl font-bold ${(deliverabilityData.bounceRate ?? 0) > 5 ? 'text-destructive' : 'text-muted-foreground'}`}>
                 {formatRate(deliverabilityData.bounceRate ?? 0)}%
                 {(deliverabilityData.bounceRate ?? 0) > 5 && <span className="text-sm ml-1">(High)</span>}
               </div>
@@ -513,7 +513,7 @@ function CampaignDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${(deliverabilityData.complaintRate ?? 0) > 0.1 ? 'text-red-600' : 'text-muted-foreground'}`}>
+              <div className={`text-2xl font-bold ${(deliverabilityData.complaintRate ?? 0) > 0.1 ? 'text-destructive' : 'text-muted-foreground'}`}>
                 {formatRate(deliverabilityData.complaintRate ?? 0)}%
               </div>
               <p className="text-xs text-muted-foreground">{(deliverabilityData.spamComplaints ?? 0).toLocaleString()} complaints</p>
@@ -688,10 +688,10 @@ function CampaignDetail() {
                       <span className="font-medium">{location.location}</span>
                     </div>
                     <div className="flex gap-4 text-sm">
-                      <span className="text-green-600">
+                      <span className="text-success">
                         {location.opens} opens
                       </span>
-                      <span className="text-blue-600">
+                      <span className="text-primary">
                         {location.clicks} clicks
                       </span>
                     </div>
@@ -699,7 +699,7 @@ function CampaignDetail() {
                   <div className="flex gap-2">
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-green-500"
+                        className="h-full bg-success"
                         style={{
                           width: `${calcRate(location.opens, Math.max(...realGeoData.map((g: { opens: number }) => g.opens), 1), 0)}%`,
                         }}
@@ -707,7 +707,7 @@ function CampaignDetail() {
                     </div>
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-blue-500"
+                        className="h-full bg-primary"
                         style={{
                           width: `${calcRate(location.clicks, Math.max(...realGeoData.map((g: { clicks: number }) => g.clicks), 1), 0)}%`,
                         }}
@@ -979,7 +979,7 @@ function CampaignDetail() {
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle><span className="text-red-600">Delete Campaign</span></DialogTitle>
+            <DialogTitle><span className="text-destructive">Delete Campaign</span></DialogTitle>
             <DialogDescription>
               Are you sure you want to delete "{campaign.name}"? This action cannot be undone and all campaign data will be permanently removed.
             </DialogDescription>
@@ -1010,12 +1010,12 @@ export default CampaignDetail
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   PENDING: { label: 'Pending', className: 'bg-muted text-foreground' },
-  SENT: { label: 'Sent', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
-  DELIVERED: { label: 'Delivered', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
-  OPENED: { label: 'Opened', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },
+  SENT: { label: 'Sent', className: 'bg-primary/10 text-primary' },
+  DELIVERED: { label: 'Delivered', className: 'bg-success/10 text-success' },
+  OPENED: { label: 'Opened', className: 'bg-success/10 text-success' },
   CLICKED: { label: 'Clicked', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
-  BOUNCED: { label: 'Bounced', className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
-  UNSUBSCRIBED: { label: 'Unsubscribed', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' },
+  BOUNCED: { label: 'Bounced', className: 'bg-destructive/10 text-destructive' },
+  UNSUBSCRIBED: { label: 'Unsubscribed', className: 'bg-warning/10 text-warning' },
   CONVERTED: { label: 'Converted', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' },
 }
 
