@@ -758,7 +758,7 @@ function CampaignDetail() {
                 Revenue Generated
               </div>
               <div className="text-2xl font-bold">{fmtMoney(campaign.revenue ?? 0)}</div>
-              <div className="text-xs text-blue-600">
+              <div className="text-xs text-primary">
                 {campaign.budget && campaign.budget > 0 ? `Budget: ${fmtMoney(campaign.budget)}` : 'No budget set'}
               </div>
             </div>
@@ -793,7 +793,7 @@ function CampaignDetail() {
           </DialogHeader>
 
           <div className="prose prose-sm max-w-none dark:prose-invert">
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-lg border">
+            <div className="bg-card p-8 rounded-lg border">
               {(campaign.type || '').toUpperCase() === 'EMAIL' ? (
                 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.fullContent || campaign.body || '<p>No content available</p>') }} />
               ) : (
@@ -1009,7 +1009,7 @@ export default CampaignDetail
 // ─── Per-Recipient Activity Section ─────────────────────────────
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
-  PENDING: { label: 'Pending', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+  PENDING: { label: 'Pending', className: 'bg-muted text-foreground' },
   SENT: { label: 'Sent', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
   DELIVERED: { label: 'Delivered', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
   OPENED: { label: 'Opened', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },

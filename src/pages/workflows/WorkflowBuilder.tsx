@@ -797,7 +797,7 @@ const WorkflowBuilder = () => {
           <Input
             value={workflowName}
             onChange={(e) => setWorkflowName(e.target.value)}
-            className="text-lg font-bold p-1 h-auto w-52 focus-visible:ring-1 border border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:border-primary bg-transparent hover:bg-muted/50"
+            className="text-lg font-bold p-1 h-auto w-52 focus-visible:ring-1 border border-dashed border-border hover:border-border focus:border-primary bg-transparent hover:bg-muted/50 transition-colors"
             placeholder="Workflow name"
             aria-label="Workflow name"
           />
@@ -858,7 +858,7 @@ const WorkflowBuilder = () => {
       {showMetricsPanel && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setShowMetricsPanel(false)} />
-          <div className="absolute top-12 right-4 z-40 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="absolute top-12 right-4 z-40 w-80 bg-card rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 animate-in fade-in slide-in-from-top-2 duration-150">
             <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 rounded-t-xl">
               <div className="flex items-center gap-2">
                 <div className="p-1 bg-primary/10 rounded">
@@ -866,27 +866,27 @@ const WorkflowBuilder = () => {
                 </div>
                 <h3 className="text-sm font-semibold">Performance Metrics</h3>
               </div>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted" onClick={() => setShowMetricsPanel(false)}>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted transition-colors" onClick={() => setShowMetricsPanel(false)}>
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-px bg-border">
-              <div className="bg-white dark:bg-gray-800 p-3">
+              <div className="bg-card p-3">
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Executions</p>
                 <p className="text-xl font-bold mt-0.5">{analyticsData?.totalExecutions ?? 0}</p>
                 <p className="text-[10px] text-muted-foreground">{analyticsData?.totalExecutions ? 'All time' : 'No data yet'}</p>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-3">
+              <div className="bg-card p-3">
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Success Rate</p>
                 <p className={`text-xl font-bold mt-0.5 ${analyticsData?.successRate != null && analyticsData.successRate >= 95 ? 'text-green-600' : ''}`}>{analyticsData?.successRate != null ? `${Math.round(analyticsData.successRate)}%` : '—'}</p>
                 <p className="text-[10px] text-muted-foreground">{analyticsData?.successRate != null ? (analyticsData.successRate >= 95 ? 'Excellent' : 'All runs') : 'No data yet'}</p>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-3">
+              <div className="bg-card p-3">
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Avg Duration</p>
                 <p className="text-xl font-bold mt-0.5">{analyticsData?.avgDuration != null ? `${Math.round(analyticsData.avgDuration)}s` : '—'}</p>
                 <p className="text-[10px] text-muted-foreground">{analyticsData?.avgDuration != null ? 'Per execution' : 'No data yet'}</p>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-3">
+              <div className="bg-card p-3">
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Active Runs</p>
                 <p className={`text-xl font-bold mt-0.5 ${activeExecutions > 0 ? 'text-blue-600' : ''}`}>{activeExecutions}</p>
                 <p className="text-[10px] text-muted-foreground">{activeExecutions > 0 ? 'Running now' : 'None active'}</p>
@@ -931,7 +931,7 @@ const WorkflowBuilder = () => {
               <select
                 value={templateFilter}
                 onChange={(e) => setTemplateFilter(e.target.value)}
-                className="px-3 py-2 border rounded-md text-sm bg-background text-foreground dark:border-gray-600"
+                className="px-3 py-2 border rounded-md text-sm bg-background text-foreground border-border transition-colors"
               >
                 <option value="all">All Templates</option>
                 <option value="email">Email</option>
@@ -1033,7 +1033,7 @@ const WorkflowBuilder = () => {
               id="notifyOnFailure"
               checked={notifyOnFailure}
               onChange={(e) => setNotifyOnFailure(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-gray-300"
+              className="h-3.5 w-3.5 rounded border-border"
             />
             <label htmlFor="notifyOnFailure" className="text-xs text-muted-foreground cursor-pointer">
               Notify on failure
@@ -1060,7 +1060,7 @@ const WorkflowBuilder = () => {
                   variant={interactionMode === 'drag' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setInteractionMode('drag')}
-                  className={interactionMode === 'drag' ? 'bg-blue-600 hover:bg-blue-700 border-blue-600' : 'border-blue-300 text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950'}
+                  className={interactionMode === 'drag' ? 'bg-blue-600 hover:bg-blue-700 border-blue-600 transition-colors' : 'border-blue-300 text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors'}
                 >
                   <GripVertical className="h-4 w-4 mr-2" />
                   Drag
@@ -1069,7 +1069,7 @@ const WorkflowBuilder = () => {
                   variant={interactionMode === 'click' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setInteractionMode('click')}
-                  className={interactionMode === 'click' ? 'bg-green-600 hover:bg-green-700 border-green-600' : 'border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950'}
+                  className={interactionMode === 'click' ? 'bg-green-600 hover:bg-green-700 border-green-600 transition-colors' : 'border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950 transition-colors'}
                 >
                   <MousePointer2 className="h-4 w-4 mr-2" />
                   Click
@@ -1080,7 +1080,7 @@ const WorkflowBuilder = () => {
                     size="sm"
                     onClick={autoArrangeNodes}
                     title="Auto-arrange nodes in a clean layout"
-                    className="border-purple-300 text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950"
+                    className="border-purple-300 text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950 transition-colors"
                   >
                     <Activity className="h-4 w-4 mr-2" />
                     Auto-Arrange
@@ -1092,7 +1092,7 @@ const WorkflowBuilder = () => {
                     size="sm"
                     onClick={handleUndo}
                     title="Undo last deletion"
-                    className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950"
+                    className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
                   >
                     <Undo2 className="h-4 w-4 mr-2" />
                     Undo
@@ -1368,7 +1368,7 @@ const WorkflowBuilder = () => {
       {showLogsPanel && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setShowLogsPanel(false)} />
-          <div className="absolute top-12 right-4 z-40 w-96 max-h-[60vh] bg-white dark:bg-gray-800 rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 flex flex-col animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="absolute top-12 right-4 z-40 w-96 max-h-[60vh] bg-card rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 flex flex-col animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between px-3 py-2.5 border-b bg-muted/30 rounded-t-xl flex-shrink-0">
             <div className="flex items-center gap-2">
               <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded">
@@ -1379,7 +1379,7 @@ const WorkflowBuilder = () => {
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{executionLogs.length}</Badge>
               )}
             </div>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted" onClick={() => setShowLogsPanel(false)}>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted transition-colors" onClick={() => setShowLogsPanel(false)}>
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>

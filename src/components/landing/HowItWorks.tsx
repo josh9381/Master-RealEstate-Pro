@@ -32,20 +32,20 @@ export function HowItWorks() {
   const { ref, isVisible } = useScrollAnimation()
 
   return (
-    <section id="how-it-works" className="py-24 bg-white" ref={ref}>
+    <section id="how-it-works" className="py-24 bg-background" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
             How It Works
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Up and running in{' '}
             <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
               three simple steps
             </span>
           </h2>
-          <p className="text-lg text-gray-500">
+          <p className="text-lg text-muted-foreground">
             No complicated setup. No lengthy onboarding. Start closing deals in minutes.
           </p>
         </div>
@@ -83,8 +83,8 @@ export function HowItWorks() {
                 </span>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>
-              <p className="text-gray-500 leading-relaxed max-w-xs mx-auto">{step.description}</p>
+              <h3 className="text-xl font-bold text-foreground mb-3">{step.title}</h3>
+              <p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">{step.description}</p>
             </div>
           ))}
         </div>

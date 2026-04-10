@@ -183,7 +183,7 @@ const SystemSettings = () => {
                 type="text"
                 value={systemName}
                 onChange={(e) => setSystemName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg transition-colors"
               />
             </div>
             <div>
@@ -192,7 +192,7 @@ const SystemSettings = () => {
                 type="text"
                 value={systemUrl}
                 onChange={(e) => setSystemUrl(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg transition-colors"
               />
             </div>
           </div>
@@ -202,14 +202,14 @@ const SystemSettings = () => {
               rows={3}
               value={systemDescription}
               onChange={(e) => setSystemDescription(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg transition-colors"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Default Language</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg" 
+                className="w-full px-3 py-2 border rounded-lg transition-colors" 
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
               >
@@ -223,7 +223,7 @@ const SystemSettings = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Default Timezone</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg" 
+                className="w-full px-3 py-2 border rounded-lg transition-colors" 
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
               >
@@ -239,7 +239,7 @@ const SystemSettings = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Date Format</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg" 
+                className="w-full px-3 py-2 border rounded-lg transition-colors" 
                 value={dateFormat}
                 onChange={(e) => setDateFormat(e.target.value)}
               >
@@ -251,7 +251,7 @@ const SystemSettings = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Time Format</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg" 
+                className="w-full px-3 py-2 border rounded-lg transition-colors" 
                 value={timeFormat}
                 onChange={(e) => setTimeFormat(e.target.value)}
               >
@@ -316,7 +316,7 @@ const SystemSettings = () => {
               type="number"
               value={sessionTimeout}
               onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg transition-colors"
             />
           </div>
           <div>
@@ -325,7 +325,7 @@ const SystemSettings = () => {
               type="number"
               value={maxLoginAttempts}
               onChange={(e) => setMaxLoginAttempts(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg transition-colors"
             />
           </div>
           <div>
@@ -334,7 +334,7 @@ const SystemSettings = () => {
               type="number"
               value={lockoutDuration}
               onChange={(e) => setLockoutDuration(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg transition-colors"
             />
           </div>
           <Button onClick={handleSaveSecuritySettings} disabled={saveSecurityMutation.isPending}>

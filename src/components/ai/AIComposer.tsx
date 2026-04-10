@@ -514,7 +514,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
               <button
                 key={suggestion}
                 onClick={() => setTopic(suggestion)}
-                className="text-xs px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded-full transition"
+                className="text-xs px-2 py-1 bg-primary/10 hover:bg-primary/20 rounded-full transition"
               >
                 {suggestion}
               </button>
@@ -625,8 +625,8 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         
         {/* AI Processing Status */}
         {initializing && (
-          <div className="flex flex-col items-center justify-center py-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-            <RefreshCw className="h-6 w-6 animate-spin text-gray-500 mb-2" />
+          <div className="flex flex-col items-center justify-center py-4 bg-muted/50 rounded-lg">
+            <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground mb-2" />
             <span className="text-sm text-muted-foreground">Loading composer...</span>
           </div>
         )}

@@ -122,7 +122,7 @@ export function UsageBadge({ resource }: UsageBadgeProps) {
   
   if (usage.limit === null || usage.limit === 'unlimited') {
     return (
-      <span className="text-xs text-gray-500">
+      <span className="text-xs text-muted-foreground">
         {usage.current.toLocaleString()} / Unlimited
       </span>
     )
@@ -134,7 +134,7 @@ export function UsageBadge({ resource }: UsageBadgeProps) {
   
   return (
     <span className={`text-xs font-medium ${
-      isAtLimit ? 'text-red-600' : isNearLimit ? 'text-orange-600' : 'text-gray-600'
+      isAtLimit ? 'text-red-600' : isNearLimit ? 'text-orange-600' : 'text-muted-foreground'
     }`}>
       {usage.current.toLocaleString()} / {usage.limit.toLocaleString()}
       {isNearLimit && !isAtLimit && ' ⚠️'}

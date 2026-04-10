@@ -254,13 +254,13 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
                       {editingId === String(activity.id) ? (
                         <div className="space-y-2">
                           <input
-                            className="w-full p-1.5 border rounded text-sm"
+                            className="w-full p-1.5 border rounded text-sm transition-colors"
                             value={editForm.title}
                             onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
                             placeholder="Title"
                           />
                           <textarea
-                            className="w-full p-1.5 border rounded text-sm min-h-[50px] resize-none"
+                            className="w-full p-1.5 border rounded text-sm min-h-[50px] resize-none transition-colors"
                             value={editForm.description}
                             onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
                             placeholder="Description"

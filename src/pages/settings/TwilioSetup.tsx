@@ -361,8 +361,8 @@ const TwilioSetup = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex items-center space-x-3">
-              <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-green-100' : hasCredentials ? 'bg-yellow-100' : 'bg-gray-100'}`}>
-                <Power className={`h-6 w-6 ${connected ? 'text-green-600' : hasCredentials ? 'text-yellow-600' : 'text-gray-400'}`} />
+              <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${connected ? 'bg-green-100' : hasCredentials ? 'bg-yellow-100' : 'bg-muted'}`}>
+                <Power className={`h-6 w-6 ${connected ? 'text-green-600' : hasCredentials ? 'text-yellow-600' : 'text-muted-foreground'}`} />
               </div>
               <div>
                 <p className="font-medium">
@@ -388,8 +388,8 @@ const TwilioSetup = () => {
                   <MessageSquare className="h-6 w-6 text-green-600" />
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-gray-100">
-                  <MessageSquare className="h-6 w-6 text-gray-400" />
+                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-muted">
+                  <MessageSquare className="h-6 w-6 text-muted-foreground" />
                 </div>
               )}
               <div>
@@ -452,7 +452,7 @@ const TwilioSetup = () => {
                     setAccountSid('');
                     setShowAccountSid(false);
                   }}
-                  className="absolute right-10 top-1/2 -translate-y-1/2 px-2 py-1 hover:bg-gray-100 rounded text-xs text-blue-600 border"
+                  className="absolute right-10 top-1/2 -translate-y-1/2 px-2 py-1 hover:bg-muted rounded text-xs text-primary border"
                   title="Clear to enter new Account SID"
                 >
                   Clear
@@ -461,13 +461,13 @@ const TwilioSetup = () => {
               <button
                 type="button"
                 onClick={() => setShowAccountSid(!showAccountSid)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
                 title={showAccountSid ? "Hide Account SID" : "Show Account SID"}
               >
                 {showAccountSid ? (
-                  <EyeOff className="h-4 w-4 text-gray-500" />
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <Eye className="h-4 w-4 text-gray-500" />
+                  <Eye className="h-4 w-4 text-muted-foreground" />
                 )}
               </button>
             </div>
@@ -496,13 +496,13 @@ const TwilioSetup = () => {
                 <button
                   type="button"
                   onClick={() => setShowAuthToken(!showAuthToken)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
                   title={showAuthToken ? "Hide Auth Token" : "Show Auth Token"}
                 >
                   {showAuthToken ? (
-                    <EyeOff className="h-4 w-4 text-gray-500" />
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-500" />
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                 </button>
               )}
@@ -569,7 +569,7 @@ const TwilioSetup = () => {
                 type="text"
                 readOnly
                 value={userId ? getBackendUrl(`/api/webhooks/twilio/sms/${userId}`) : 'Loading webhook URL...'}
-                className="flex-1 px-3 py-2 bg-white border rounded-lg font-mono text-xs"
+                className="flex-1 px-3 py-2 bg-card border rounded-lg font-mono text-xs"
               />
               <Button
                 variant="outline"
@@ -615,7 +615,7 @@ const TwilioSetup = () => {
               </p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div>
                 <p className="text-sm font-medium">Status Callback URL (Optional)</p>
                 <p className="text-xs text-muted-foreground mt-1">For delivery status updates</p>
@@ -716,7 +716,7 @@ const TwilioSetup = () => {
                 type="text"
                 value={phoneNumber || 'Not configured'}
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+                className="w-full px-3 py-2 border rounded-lg bg-muted/50 text-foreground"
               />
               <p className="text-xs text-muted-foreground mt-1">Configure in API Credentials section above</p>
             </div>
@@ -813,7 +813,7 @@ const TwilioSetup = () => {
                 type="text"
                 value={phoneNumber || 'Not configured'}
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+                className="w-full px-3 py-2 border rounded-lg bg-muted/50 text-foreground"
               />
               <p className="text-xs text-muted-foreground mt-1">Configure in API Credentials section above</p>
             </div>

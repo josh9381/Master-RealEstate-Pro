@@ -176,7 +176,7 @@ const ProfileSettings = () => {
               )}
               <button 
                 onClick={handlePhotoUpload}
-                className="absolute bottom-0 right-0 p-2 bg-white rounded-full border shadow-sm hover:bg-accent"
+                className="absolute bottom-0 right-0 p-2 bg-card rounded-full border shadow-sm hover:bg-accent transition-colors"
               >
                 <Camera className="h-4 w-4" />
               </button>
@@ -238,7 +238,7 @@ const ProfileSettings = () => {
           <div>
             <label className="text-sm font-medium mb-2 block">Language</label>
             <select 
-              className="w-full p-2 border rounded-md bg-background"
+              className="w-full p-2 border rounded-md bg-background transition-colors"
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
             >
@@ -253,7 +253,7 @@ const ProfileSettings = () => {
           <div>
             <label className="text-sm font-medium mb-2 block">Timezone</label>
             <select 
-              className="w-full p-2 border rounded-md bg-background"
+              className="w-full p-2 border rounded-md bg-background transition-colors"
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
             >
@@ -270,7 +270,7 @@ const ProfileSettings = () => {
           <div>
             <label className="text-sm font-medium mb-2 block">Date Format</label>
             <select 
-              className="w-full p-2 border rounded-md bg-background"
+              className="w-full p-2 border rounded-md bg-background transition-colors"
               value={dateFormat}
               onChange={(e) => setDateFormat(e.target.value)}
             >

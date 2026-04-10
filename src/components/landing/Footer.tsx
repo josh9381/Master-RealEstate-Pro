@@ -69,7 +69,7 @@ const socialIcons = [
 
 export function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-400">
+    <footer className="bg-gray-900 text-muted-foreground">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8">
           {/* Brand */}
@@ -82,7 +82,7 @@ export function Footer() {
                 RealEstate<span className="text-blue-400">Pro</span>
               </span>
             </Link>
-            <p className="text-sm text-gray-500 leading-relaxed max-w-xs mb-6">
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mb-6">
               The all-in-one CRM and marketing automation platform built for real estate professionals.
             </p>
             {/* Social links */}
@@ -92,7 +92,7 @@ export function Footer() {
                   key={s.label}
                   href={s.href}
                   aria-label={s.label}
-                  className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-blue-600 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+                  className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-blue-600 flex items-center justify-center text-muted-foreground hover:text-white transition-all duration-300"
                 >
                   {s.svg}
                 </a>
@@ -129,10 +129,10 @@ export function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} RealEstate Pro. All rights reserved.
           </p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Made with care for real estate professionals.
           </p>
         </div>

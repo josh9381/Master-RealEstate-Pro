@@ -233,7 +233,7 @@ export const ContactList = ({
                   key={contact.id}
                   className={`p-3 border-b cursor-pointer transition-colors hover:bg-accent ${
                     isSelected ? 'bg-accent' : ''
-                  } ${contact.totalUnread > 0 ? 'bg-blue-50/50' : ''} ${
+                  } ${contact.totalUnread > 0 ? 'bg-primary/10' : ''} ${
                     selectedContactIds.has(contact.id) ? 'bg-primary/10' : ''
                   }`}
                   onClick={() => bulkSelectMode ? onToggleContactSelect(contact.id) : onSelectContact(contact)}
@@ -245,7 +245,7 @@ export const ContactList = ({
                           type="checkbox"
                           checked={selectedContactIds.has(contact.id)}
                           onChange={() => onToggleContactSelect(contact.id)}
-                          className="w-4 h-4 rounded border-gray-300"
+                          className="w-4 h-4 rounded border-border"
                         />
                       </div>
                     )}

@@ -225,7 +225,7 @@ const SupportTicketSystem = () => {
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Type your reply..."
                 rows={4}
-                className="w-full px-3 py-2 border rounded-lg mb-3"
+                className="w-full px-3 py-2 border rounded-lg mb-3 transition-colors"
               />
               <div className="flex justify-end">
                 <Button
@@ -279,7 +279,7 @@ const SupportTicketSystem = () => {
                   <label htmlFor="ticket-category" className="text-sm font-medium">Category</label>
                   <select
                     id="ticket-category"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg transition-colors"
                     value={newTicket.category}
                     onChange={(e) => setNewTicket(s => ({ ...s, category: e.target.value }))}
                   >
@@ -291,7 +291,7 @@ const SupportTicketSystem = () => {
                   <label htmlFor="ticket-priority" className="text-sm font-medium">Priority</label>
                   <select
                     id="ticket-priority"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg transition-colors"
                     value={newTicket.priority}
                     onChange={(e) => setNewTicket(s => ({ ...s, priority: e.target.value }))}
                   >
@@ -308,7 +308,7 @@ const SupportTicketSystem = () => {
                   id="ticket-subject"
                   type="text"
                   placeholder="Brief description of your issue"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg transition-colors"
                   value={newTicket.subject}
                   onChange={(e) => setNewTicket(s => ({ ...s, subject: e.target.value }))}
                   required
@@ -320,7 +320,7 @@ const SupportTicketSystem = () => {
                   id="ticket-description"
                   placeholder="Provide detailed information about your issue..."
                   rows={6}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg transition-colors"
                   value={newTicket.description}
                   onChange={(e) => setNewTicket(s => ({ ...s, description: e.target.value }))}
                   required
@@ -369,13 +369,13 @@ const SupportTicketSystem = () => {
               <input
                 type="text"
                 placeholder="Search tickets..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg"
+                className="w-full pl-10 pr-4 py-2 border rounded-lg transition-colors"
                 value={filters.search}
                 onChange={(e) => { setFilters(f => ({ ...f, search: e.target.value })); setPage(1); }}
               />
             </div>
             <select
-              className="px-4 py-2 border rounded-lg"
+              className="px-4 py-2 border rounded-lg transition-colors"
               value={filters.status}
               onChange={(e) => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}
             >
@@ -386,7 +386,7 @@ const SupportTicketSystem = () => {
               <option value="CLOSED">Closed</option>
             </select>
             <select
-              className="px-4 py-2 border rounded-lg"
+              className="px-4 py-2 border rounded-lg transition-colors"
               value={filters.category}
               onChange={(e) => { setFilters(f => ({ ...f, category: e.target.value })); setPage(1); }}
             >
@@ -399,7 +399,7 @@ const SupportTicketSystem = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Open</CardTitle>
             <Ticket className="h-4 w-4 text-blue-600" />
@@ -409,7 +409,7 @@ const SupportTicketSystem = () => {
             <p className="text-xs text-muted-foreground">Awaiting response</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
             <Clock className="h-4 w-4 text-yellow-600" />
@@ -419,7 +419,7 @@ const SupportTicketSystem = () => {
             <p className="text-xs text-muted-foreground">Being worked on</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Resolved</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
@@ -429,10 +429,10 @@ const SupportTicketSystem = () => {
             <p className="text-xs text-muted-foreground">Resolved tickets</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Closed</CardTitle>
-            <AlertCircle className="h-4 w-4 text-gray-500" />
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.closed ?? '\u2014'}</div>

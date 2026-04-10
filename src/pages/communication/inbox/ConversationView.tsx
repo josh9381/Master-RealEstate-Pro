@@ -97,7 +97,7 @@ const getChannelColor = (type: string) => {
     case 'email': return 'text-blue-500'
     case 'sms': return 'text-green-500'
     case 'call': return 'text-purple-500'
-    default: return 'text-gray-500'
+    default: return 'text-muted-foreground'
   }
 }
 
@@ -184,6 +184,7 @@ export const ConversationView = ({
       const t = setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
       return () => clearTimeout(t)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact?.id])
 
   if (!selectedContact) {
@@ -396,7 +397,7 @@ export const ConversationView = ({
                   <div className={`rounded-2xl px-4 py-2 ${
                     isFromMe
                       ? getChannelBubbleColor(message.type)
-                      : 'bg-gray-200 text-gray-900 rounded-bl-md'
+                      : 'bg-muted text-foreground rounded-bl-md'
                   }`}>
                     {message.subject && (
                       <p className="font-semibold mb-2">{message.subject}</p>
@@ -533,7 +534,7 @@ export const ConversationView = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Your Draft</label>
-                  <div className="bg-gray-100 border rounded-lg p-3 text-sm min-h-[100px] whitespace-pre-wrap">{replyText}</div>
+                  <div className="bg-muted border rounded-lg p-3 text-sm min-h-[100px] whitespace-pre-wrap">{replyText}</div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-green-600 mb-1 block">Enhanced Version</label>

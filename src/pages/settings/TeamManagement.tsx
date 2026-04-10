@@ -210,7 +210,7 @@ const TeamManagement = () => {
               <div>
                 <label className="text-sm font-medium mb-2 block">Role</label>
                 <select
-                  className="w-full px-4 py-2 border rounded-md"
+                  className="w-full px-4 py-2 border rounded-md transition-colors"
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value)}
                 >
@@ -258,7 +258,7 @@ const TeamManagement = () => {
               <div>
                 <label className="text-sm font-medium mb-2 block">Role</label>
                 <select 
-                  className="w-full px-4 py-2 border rounded-md"
+                  className="w-full px-4 py-2 border rounded-md transition-colors"
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
                 >
@@ -344,7 +344,7 @@ const TeamManagement = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="cursor-pointer hover:border-primary" onClick={() => setShowActivityLogs(!showActivityLogs)}>
+        <Card className="cursor-pointer hover:border-primary transition-all duration-200" onClick={() => setShowActivityLogs(!showActivityLogs)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -376,7 +376,7 @@ const TeamManagement = () => {
             <p className="text-xs text-muted-foreground">Out of 10 total</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-primary" onClick={() => setShowLeaderboard(!showLeaderboard)}>
+        <Card className="cursor-pointer hover:border-primary transition-all duration-200" onClick={() => setShowLeaderboard(!showLeaderboard)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Top Performer</CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />
@@ -409,7 +409,7 @@ const TeamManagement = () => {
             ).map((member) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent"
+                className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
               >
                 <div className="flex items-center space-x-4">
                   <div className="relative">

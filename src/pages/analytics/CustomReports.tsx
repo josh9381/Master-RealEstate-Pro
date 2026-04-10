@@ -10,7 +10,8 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { analyticsApi, savedReportsApi, reportSchedulesApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
-import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { DateRangePicker, DateRange } from '@/components/shared/DateRangePicker';
+import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import { exportToCSV, exportToJSON, exportAnalyticsAsPDF, ExportColumn } from '@/lib/exportService';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import type { ReportConfig } from '@/types';
@@ -137,14 +138,14 @@ const ScheduledReportsSection = () => {
       </CardHeader>
       <CardContent>
         {showScheduleForm && (
-          <form onSubmit={handleCreateSchedule} className="mb-4 p-4 border rounded-lg space-y-3 bg-gray-50 dark:bg-gray-800/50">
+          <form onSubmit={handleCreateSchedule} className="mb-4 p-4 border rounded-lg space-y-3 bg-muted">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Report Type</label>
                 <select
                   value={scheduleForm.reportType}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, reportType: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
                 >
                   <option value="leads">Leads Report</option>
                   <option value="campaigns">Campaigns Report</option>
@@ -158,7 +159,7 @@ const ScheduledReportsSection = () => {
                 <select
                   value={scheduleForm.frequency}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
                 >
                   {FREQUENCIES.map((f) => (
                     <option key={f.value} value={f.value}>{f.label}</option>
@@ -171,7 +172,7 @@ const ScheduledReportsSection = () => {
                   type="time"
                   value={scheduleForm.timeOfDay}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, timeOfDay: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
                 />
               </div>
             </div>
@@ -182,7 +183,7 @@ const ScheduledReportsSection = () => {
                   <select
                     value={scheduleForm.dayOfWeek}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, dayOfWeek: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
                   >
                     {DAY_OPTIONS.map((d) => (
                       <option key={d.value} value={d.value}>{d.label}</option>
@@ -199,7 +200,7 @@ const ScheduledReportsSection = () => {
                     max={28}
                     value={scheduleForm.dayOfMonth}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, dayOfMonth: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
                   />
                 </div>
               )}
@@ -210,7 +211,7 @@ const ScheduledReportsSection = () => {
                   value={scheduleForm.recipients}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, recipients: e.target.value })}
                   placeholder="team@company.com, manager@company.com"
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
                 />
               </div>
             </div>
@@ -222,10 +223,10 @@ const ScheduledReportsSection = () => {
 
         <div className="space-y-3">
           {schedules.length === 0 && !showScheduleForm && (
-            <p className="text-sm text-gray-500 text-center py-4">No scheduled reports yet. Click "New Schedule" to create one.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">No scheduled reports yet. Click "New Schedule" to create one.</p>
           )}
           {schedules.map((sched: Record<string, unknown>) => (
-            <div key={sched.id as string} className={`flex items-center justify-between p-4 border rounded-lg ${!sched.isActive ? 'opacity-60' : ''}`}>
+            <div key={sched.id as string} className={`flex items-center justify-between p-4 border rounded-lg transition-all duration-200 hover:shadow-md ${!sched.isActive ? 'opacity-60' : ''}`}>
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="font-semibold capitalize">{(sched.reportType as string) || ((sched.savedReport as Record<string, string>)?.name) || 'Report'} Report</h4>
@@ -251,7 +252,7 @@ const ScheduledReportsSection = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="sm" onClick={() => toggleActive(sched)} title={sched.isActive ? 'Pause' : 'Resume'}>
+                <Button variant="ghost" size="sm" onClick={() => toggleActive(sched)} title={sched.isActive ? 'Pause' : 'Resume'} aria-label={sched.isActive ? 'Pause schedule' : 'Resume schedule'}>
                   {sched.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 </Button>
                 <Button
@@ -259,6 +260,7 @@ const ScheduledReportsSection = () => {
                   size="sm"
                   className="text-red-500 hover:text-red-700"
                   onClick={async () => { if (await showConfirm({ title: 'Delete Schedule', message: 'Delete this schedule?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMut.mutate(sched.id as string); }}
+                  aria-label="Delete schedule"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -495,7 +497,7 @@ const CustomReports = () => {
               {(['leads', 'campaigns', 'contacts', 'tasks'] as DataSourceType[]).map(ds => (
                 <button
                   key={ds}
-                  className="text-xs px-2 py-1 border rounded hover:bg-accent capitalize"
+                  className="text-xs px-2 py-1 border rounded hover:bg-accent capitalize transition-colors duration-200"
                   onClick={() => assignDataSource(widget.id, ds)}
                 >
                   {ds}
@@ -815,7 +817,7 @@ const CustomReports = () => {
             <CardContent>
               <div className="space-y-4">
                 {savedReports.length > 0 ? savedReports.map((report: Record<string, unknown>) => (
-                  <div key={report.id as string} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={report.id as string} className="flex items-center justify-between p-4 border rounded-lg transition-all duration-200 hover:shadow-md">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
                         <BarChart3 className="h-6 w-6 text-blue-600" />
@@ -1343,7 +1345,7 @@ const CustomReports = () => {
                                 {widget.dataSource && (
                                   <Badge variant="secondary" className="text-xs">{widget.dataSource}</Badge>
                                 )}
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeWidget(widget.id)}>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeWidget(widget.id)} aria-label="Remove widget">
                                   <X className="h-3 w-3" />
                                 </Button>
                               </div>

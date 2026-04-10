@@ -232,7 +232,7 @@ const PredictionsTab = () => {
                         ? 'bg-green-100 text-green-600'
                         : prediction.status === 'warning'
                         ? 'bg-yellow-100 text-yellow-600'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {prediction.status === 'positive' ? (
@@ -311,7 +311,7 @@ const PredictionsTab = () => {
                         ? 'bg-green-100 text-green-600'
                         : prediction.status === 'warning'
                         ? 'bg-yellow-100 text-yellow-600'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {prediction.status === 'positive' ? (

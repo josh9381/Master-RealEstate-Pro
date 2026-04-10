@@ -740,7 +740,7 @@ function CampaignCreate() {
               </label>
               <textarea
                 id="description"
-                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 placeholder="Describe your campaign..."
                 value={formData.description}
                 onChange={(e) => updateFormData({ description: e.target.value })}
@@ -1007,7 +1007,7 @@ function CampaignCreate() {
                         </div>
                       </div>
                       <textarea
-                        className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         placeholder="Enter your SMS message... Use the Personalize button to add recipient names, property details, etc."
                         maxLength={294}
                         value={formData.content}
@@ -1072,27 +1072,27 @@ function CampaignCreate() {
                       {showSmsPreview && (
                         <div className="w-[280px] rounded-[2rem] border-4 border-gray-800 dark:border-gray-300 bg-gray-100 dark:bg-gray-900 p-1 shadow-lg">
                           {/* Phone status bar */}
-                          <div className="flex items-center justify-between px-4 py-1 text-[10px] font-medium text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center justify-between px-4 py-1 text-[10px] font-medium text-muted-foreground">
                             <span>9:41</span>
                             <div className="w-20 h-5 bg-gray-800 dark:bg-gray-300 rounded-full" />
                             <span>5G</span>
                           </div>
                           {/* Chat header */}
-                          <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 text-center">
+                          <div className="bg-muted px-3 py-2 text-center">
                             <div className="text-xs font-semibold">Your Business</div>
                             <div className="text-[10px] text-muted-foreground">SMS</div>
                           </div>
                           {/* Message area */}
-                          <div className="bg-white dark:bg-gray-950 min-h-[260px] p-3 space-y-2">
+                          <div className="bg-card min-h-[260px] p-3 space-y-2">
                             {formData.content ? (
                               <>
-                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-gray-200 dark:bg-gray-800 px-3 py-2 text-xs leading-relaxed">
+                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted px-3 py-2 text-xs leading-relaxed">
                                   {formData.content.replace(/\{\{(\w+)\}\}/g, (_, key) => {
                                     const samples: Record<string, string> = { firstName: 'Sarah', lastName: 'Johnson', email: 'sarah@email.com', phone: '(555) 123-4567', propertyAddress: '123 Oak St', propertyType: 'Single Family', agentName: 'Mike', companyName: 'RE/MAX' }
                                     return samples[key] || `{{${key}}}`
                                   })}
                                 </div>
-                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-gray-200 dark:bg-gray-800 px-3 py-1.5 text-[10px] text-muted-foreground italic">
+                                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted px-3 py-1.5 text-[10px] text-muted-foreground italic">
                                   Reply STOP to opt out.
                                 </div>
                                 {formData.mediaUrl && /^https?:\/\/.+/.test(formData.mediaUrl) && (
@@ -1113,8 +1113,8 @@ function CampaignCreate() {
                             )}
                           </div>
                           {/* Input bar */}
-                          <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-b-[1.5rem]">
-                            <div className="bg-white dark:bg-gray-700 rounded-full px-3 py-1.5 text-[10px] text-muted-foreground">
+                          <div className="bg-muted px-3 py-2 rounded-b-[1.5rem]">
+                            <div className="bg-card rounded-full px-3 py-1.5 text-[10px] text-muted-foreground">
                               iMessage
                             </div>
                           </div>
@@ -1169,7 +1169,7 @@ function CampaignCreate() {
                     </div>
                   </div>
                   <textarea
-                    className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     placeholder="Enter your call script — or leave blank and configure later..."
                     value={formData.content}
                     onChange={(e) => updateFormData({ content: e.target.value })}
@@ -1195,7 +1195,7 @@ function CampaignCreate() {
                     </div>
                   </div>
                   <textarea
-                    className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     placeholder="Enter your social media post..."
                     maxLength={280}
                     value={formData.content}
@@ -1238,7 +1238,7 @@ function CampaignCreate() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-3">
-                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
+                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="radio"
                     name="audience"
@@ -1256,7 +1256,7 @@ function CampaignCreate() {
                   <Badge>{totalLeads} leads</Badge>
                 </label>
 
-                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
+                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="radio"
                     name="audience"
@@ -1274,7 +1274,7 @@ function CampaignCreate() {
                   <Badge>{newLeads} leads</Badge>
                 </label>
 
-                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
+                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="radio"
                     name="audience"
@@ -1292,7 +1292,7 @@ function CampaignCreate() {
                   <Badge>{warmLeads} leads</Badge>
                 </label>
 
-                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
+                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="radio"
                     name="audience"
@@ -1310,7 +1310,7 @@ function CampaignCreate() {
                   <Badge>{hotLeads} leads</Badge>
                 </label>
 
-                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
+                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="radio"
                     name="audience"
@@ -1380,7 +1380,7 @@ function CampaignCreate() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
+                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="radio"
                     name="schedule"
@@ -1397,7 +1397,7 @@ function CampaignCreate() {
                   </div>
                 </label>
 
-                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50">
+                <label className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="radio"
                     name="schedule"

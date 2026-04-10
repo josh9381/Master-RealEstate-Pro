@@ -248,13 +248,14 @@ function Dashboard() {
   }, [leadAnalyticsData])
 
   // Conversion funnel data
-  const conversionData = conversionFunnelData?.stages 
+  const conversionData = useMemo(() => conversionFunnelData?.stages 
     ? conversionFunnelData.stages.map((stage: ConversionStage) => ({
         stage: stage.name,
         count: stage.count || 0,
         rate: stage.percentage || 0
       }))
     : []
+  , [conversionFunnelData])
 
   // Campaign performance by type — only show conversions (opens/clicks not available in API)
   const campaignPerformance = campaignAnalyticsData?.byType
@@ -276,16 +277,16 @@ function Dashboard() {
   })) || [], [activityFeedData])
 
   // Upcoming tasks from API
-  const upcomingTasks: DashboardTask[] = tasksData?.tasks?.slice(0, 5).map((task: { id: string; title: string; dueDate?: string; priority?: string; status?: string }) => ({
+  const upcomingTasks: DashboardTask[] = useMemo(() => tasksData?.tasks?.slice(0, 5).map((task: { id: string; title: string; dueDate?: string; priority?: string; status?: string }) => ({
     id: task.id,
     title: task.title,
     due: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date',
     priority: (task.priority || 'medium').toLowerCase(),
     status: (task.status || 'pending').toLowerCase()
-  })) || []
+  })) || [], [tasksData])
 
   // Top campaigns from API
-  const topCampaigns: DashboardCampaign[] = topCampaignsData?.campaigns?.slice(0, 3).map((campaign: Campaign) => ({
+  const topCampaigns: DashboardCampaign[] = useMemo(() => topCampaignsData?.campaigns?.slice(0, 3).map((campaign: Campaign) => ({
     id: campaign.id,
     name: campaign.name,
     type: campaign.type,
@@ -293,16 +294,17 @@ function Dashboard() {
     clicks: campaign.clicked || 0,
     conversions: campaign.converted || 0,
     roi: campaign.roi ? `${formatRate(Number(String(campaign.roi).replace('%', '')))}%` : '0%'
-  })) || []
+  })) || [], [topCampaignsData])
 
   // Revenue data from API — limit to last 6 months to match subtitle
-  const revenueData = revenueTimelineData?.monthly
+  const revenueData = useMemo(() => revenueTimelineData?.monthly
     ? revenueTimelineData.monthly.slice(-6).map((m: RevenueMonth) => ({
         month: m.month,
         revenue: m.totalRevenue || 0,
         deals: m.deals || 0,
       }))
     : []
+  , [revenueTimelineData])
 
   // Quick stats from API
   const quickStats = useMemo(() => [
@@ -320,7 +322,7 @@ function Dashboard() {
   const DEFAULT_TASK_COMPLETION_TARGET = 100
 
   // Transform API data into UI format
-  const stats = dashboardData ? [
+  const stats = useMemo(() => dashboardData ? [
     {
       name: 'Total Leads',
       value: dashboardData.overview?.totalLeads?.toString() || '0',
@@ -411,6 +413,8 @@ function Dashboard() {
       link: '/tasks',
     },
   ] as StatCard[]
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  , [dashboardData])
 
   // Generate sparkline data from revenue timeline (last 7 data points)
   const sparklineData = useMemo(() => {
@@ -1106,7 +1110,7 @@ function Dashboard() {
           {(prefs.revenueChart || prefs.conversionFunnel) && (
           <div className={cn('grid gap-4', prefs.revenueChart && prefs.conversionFunnel ? 'md:grid-cols-2' : 'md:grid-cols-1')}>
             {prefs.revenueChart && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                   <CardTitle className="text-base">Revenue & Deals Trend</CardTitle>
@@ -1159,7 +1163,7 @@ function Dashboard() {
             )}
 
             {prefs.conversionFunnel && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                   <CardTitle className="text-base flex items-center gap-1.5">
@@ -1206,7 +1210,7 @@ function Dashboard() {
           {(prefs.leadSources || prefs.campaignPerformance) && (
           <div className={cn('grid gap-4', prefs.leadSources && prefs.campaignPerformance ? 'md:grid-cols-2' : 'md:grid-cols-1')}>
             {prefs.leadSources && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Lead Sources</CardTitle>
                 <p className="text-xs text-muted-foreground">Distribution by channel</p>
@@ -1264,7 +1268,7 @@ function Dashboard() {
             )}
 
             {prefs.campaignPerformance && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Campaign Performance</CardTitle>
                 <p className="text-xs text-muted-foreground">By channel</p>
@@ -1331,7 +1335,7 @@ function Dashboard() {
           {(prefs.calendar || prefs.appointments) && (
           <div className={cn('grid gap-4', prefs.calendar && prefs.appointments ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-1')}>
             {prefs.calendar && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Calendar</CardTitle>
               </CardHeader>
@@ -1362,7 +1366,7 @@ function Dashboard() {
             )}
 
             {prefs.appointments && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-base">Upcoming Appointments</CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
@@ -1442,7 +1446,7 @@ function Dashboard() {
           {(prefs.activityFeed || prefs.tasks) && (
           <div className={cn('grid gap-4', prefs.activityFeed && prefs.tasks ? 'md:grid-cols-2' : 'md:grid-cols-1')}>
             {prefs.activityFeed && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-base">Recent Activity</CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/activity')}>
@@ -1470,7 +1474,7 @@ function Dashboard() {
                 ) : (
                 <div className="space-y-1 max-h-[280px] overflow-y-auto">
                   {recentActivities.map((activity) => (
-                    <button type="button" key={activity.id} className="flex items-start gap-3 py-2.5 px-1 border-b last:border-0 cursor-pointer hover:bg-accent/50 rounded-md w-full text-left" onClick={() => activity.leadId ? navigate(`/leads/${activity.leadId}`) : undefined}>
+                    <button type="button" key={activity.id} className="flex items-start gap-3 py-2.5 px-1 border-b last:border-0 cursor-pointer hover:bg-accent/50 transition-colors rounded-md w-full text-left" onClick={() => activity.leadId ? navigate(`/leads/${activity.leadId}`) : undefined}>
                       <div className="mt-0.5 p-1.5 rounded-full bg-primary/10">
                         <activity.icon className="h-3.5 w-3.5 text-primary" />
                       </div>
@@ -1488,7 +1492,7 @@ function Dashboard() {
             )}
 
             {prefs.tasks && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-base">Upcoming Tasks</CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')}>
@@ -1562,7 +1566,7 @@ function Dashboard() {
       {/* ===== TAB: Campaigns ===== */}
       {activeTab === 'campaigns' && (
         prefs.topCampaigns ? (
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-base">Top Performing Campaigns</CardTitle>
@@ -1605,7 +1609,7 @@ function Dashboard() {
                 </thead>
                 <tbody>
                   {topCampaigns.map((campaign) => (
-                    <tr key={campaign.id} className="border-b last:border-0 hover:bg-accent/50">
+                    <tr key={campaign.id} className="border-b last:border-0 hover:bg-accent/50 transition-colors">
                       <td className="py-2.5 text-sm font-medium">{campaign.name}</td>
                       <td className="py-2.5">
                         <Badge variant="secondary">{campaign.type}</Badge>
@@ -1640,7 +1644,7 @@ function Dashboard() {
       {/* ===== TAB: Alerts ===== */}
       {activeTab === 'alerts' && (
         prefs.alerts ? (
-        <Card className="border-l-4 border-l-yellow-500" role="region" aria-label="Alerts and notifications">
+        <Card className="border-l-4 border-l-yellow-500 transition-all duration-200 hover:shadow-md" role="region" aria-label="Alerts and notifications">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-yellow-600" />

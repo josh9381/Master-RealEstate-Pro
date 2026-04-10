@@ -42,8 +42,8 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
 
   return (
     <div
-      className={`border border-gray-200 rounded-xl overflow-hidden transition-all duration-300 ${
-        open ? 'bg-white shadow-lg shadow-gray-100/50' : 'bg-white hover:shadow-md'
+      className={`border border-border rounded-xl overflow-hidden transition-all duration-300 ${
+        open ? 'bg-card shadow-lg shadow-gray-100/50' : 'bg-card hover:shadow-md'
       }`}
       style={{ transitionDelay: `${index * 50}ms` }}
     >
@@ -52,9 +52,9 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
         className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
         aria-expanded={open}
       >
-        <span className="font-semibold text-gray-900">{q}</span>
+        <span className="font-semibold text-foreground">{q}</span>
         <ChevronDown
-          className={`h-5 w-5 text-gray-400 flex-shrink-0 transition-transform duration-300 ${
+          className={`h-5 w-5 text-muted-foreground flex-shrink-0 transition-transform duration-300 ${
             open ? 'rotate-180 text-blue-600' : ''
           }`}
         />
@@ -65,7 +65,7 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
         }`}
       >
         <div className="overflow-hidden">
-          <p className="px-6 pb-5 text-gray-500 leading-relaxed">{a}</p>
+          <p className="px-6 pb-5 text-muted-foreground leading-relaxed">{a}</p>
         </div>
       </div>
     </div>
@@ -76,20 +76,20 @@ export function FAQSection() {
   const { ref, isVisible } = useScrollAnimation()
 
   return (
-    <section id="faq" className="py-24 bg-white" ref={ref}>
+    <section id="faq" className="py-24 bg-background" ref={ref}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
             FAQ
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Got questions?{' '}
             <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
               We&apos;ve got answers
             </span>
           </h2>
-          <p className="text-lg text-gray-500">
+          <p className="text-lg text-muted-foreground">
             Everything you need to know about RealEstate Pro.
           </p>
         </div>

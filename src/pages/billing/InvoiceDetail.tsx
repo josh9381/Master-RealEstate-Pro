@@ -47,7 +47,7 @@ function statusColor(status: string): string {
   if (s === 'paid') return 'bg-green-100 text-green-800';
   if (s === 'open' || s === 'draft') return 'bg-orange-100 text-orange-800';
   if (s === 'void' || s === 'uncollectible') return 'bg-red-100 text-red-800';
-  return 'bg-gray-100 text-gray-800';
+  return 'bg-muted text-foreground';
 }
 
 const InvoiceDetail = () => {
@@ -158,7 +158,7 @@ const InvoiceDetail = () => {
 
       {/* Invoice Overview */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Invoice Number</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -168,7 +168,7 @@ const InvoiceDetail = () => {
             <p className="text-xs text-muted-foreground">{formatDate(invoice.invoiceDate)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Amount</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -178,7 +178,7 @@ const InvoiceDetail = () => {
             <p className="text-xs text-muted-foreground">{tax > 0 ? 'Including tax' : 'No tax'}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Due Date</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -188,7 +188,7 @@ const InvoiceDetail = () => {
             <p className="text-xs text-muted-foreground">Billing period</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Status</CardTitle>
             {isPaid ? <CheckCircle className="h-4 w-4 text-green-600" /> : <AlertCircle className="h-4 w-4 text-orange-600" />}
@@ -242,7 +242,7 @@ const InvoiceDetail = () => {
                 </thead>
                 <tbody>
                   {invoice.lineItems.map((item, idx) => (
-                    <tr key={idx} className="border-b">
+                    <tr key={idx} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="py-4">
                         <p className="font-medium">{item.description}</p>
                         {item.period && <p className="text-sm text-muted-foreground">{item.period}</p>}

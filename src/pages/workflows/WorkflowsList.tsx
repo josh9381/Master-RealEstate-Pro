@@ -215,7 +215,7 @@ const WorkflowsList = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 bg-background shadow-sm">
+          <div className="flex rounded-lg border border-border bg-background shadow-sm">
             <Button
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="sm"
@@ -317,7 +317,7 @@ const WorkflowsList = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Workflows</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Workflows</CardTitle>
             <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">
               <WorkflowIcon className="h-5 w-5 text-white" />
             </div>
@@ -327,7 +327,7 @@ const WorkflowsList = () => {
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-semibold text-green-600 dark:text-green-400">{stats.activeWorkflows} active</span>, {stats.inactiveWorkflows} paused
             </p>
-            <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
+            <div className="mt-3 h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
               <div 
                 className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 rounded-full"
                 style={{ width: `${calcRate(stats.activeWorkflows, stats.totalWorkflows, 0)}%` }}
@@ -337,7 +337,7 @@ const WorkflowsList = () => {
         </Card>
         <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-green-500 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Executions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Executions</CardTitle>
             <div className="p-2.5 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md">
               <Play className="h-5 w-5 text-white" />
             </div>
@@ -349,7 +349,7 @@ const WorkflowsList = () => {
         </Card>
         <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50/50 to-transparent dark:from-emerald-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Success Rate</CardTitle>
             <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-md">
               <WorkflowIcon className="h-5 w-5 text-white" />
             </div>
@@ -359,7 +359,7 @@ const WorkflowsList = () => {
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-semibold">{stats.successfulExecutions}</span> / {stats.totalExecutions} successful
             </p>
-            <div className="mt-3 h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
+            <div className="mt-3 h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
               <div 
                 className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500 rounded-full"
                 style={{ width: `${stats.successRate}%` }}
@@ -369,7 +369,7 @@ const WorkflowsList = () => {
         </Card>
         <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-red-500 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Failed Executions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Failed Executions</CardTitle>
             <div className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-md">
               <WorkflowIcon className="h-5 w-5 text-white" />
             </div>
@@ -402,7 +402,7 @@ const WorkflowsList = () => {
             {/* Quick Start Options */}
             <div className="grid gap-4 md:grid-cols-2 w-full mb-8">
               <Link to="/workflows/builder" className="block">
-                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
+                <div className="p-4 bg-card rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
                   <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-3">
                     <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
@@ -412,7 +412,7 @@ const WorkflowsList = () => {
               </Link>
 
               <Link to="/workflows/builder?templates=true" className="block">
-                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
+                <div className="p-4 bg-card rounded-lg border text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full">
                   <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-3">
                     <ChevronRight className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
@@ -495,7 +495,7 @@ const WorkflowsList = () => {
                             {getActionsList(workflow.actions).map((action, idx: number) => (
                               <div key={idx} className="flex items-center gap-2">
                                 <ChevronRight className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                                <span className="text-gray-700 dark:text-gray-300 capitalize font-medium px-2.5 py-1 bg-white/40 dark:bg-gray-800/40 rounded-md shadow-sm">
+                                <span className="text-foreground capitalize font-medium px-2.5 py-1 bg-white/40 dark:bg-gray-800/40 rounded-md shadow-sm">
                                   {action.type?.replace(/_/g, ' ').toLowerCase() || 'then action'}
                                 </span>
                               </div>
@@ -536,7 +536,7 @@ const WorkflowsList = () => {
                           variant="ghost" 
                           size="sm"
                           onClick={() => viewAnalytics(workflow.id)}
-                          className="hover:bg-blue-50 dark:hover:bg-blue-950"
+                          className="hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors"
                         >
                           <BarChart3 className="h-4 w-4 mr-2" />
                           Analytics
@@ -548,7 +548,7 @@ const WorkflowsList = () => {
                           disabled={workflow.isActive}
                           title={workflow.isActive ? 'Pause workflow before deleting' : 'Delete workflow'}
                           aria-label={`Delete ${workflow.name}`}
-                          className="hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400 disabled:opacity-50"
+                          className="hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400 disabled:opacity-50 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -626,7 +626,7 @@ const WorkflowsList = () => {
                         {getActionsList(workflow.actions).map((action, idx: number) => (
                           <div key={idx} className="flex items-center gap-1.5">
                             <ChevronRight className="h-3 w-3 text-blue-400 flex-shrink-0" />
-                            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap capitalize">
+                            <span className="text-foreground whitespace-nowrap capitalize">
                               {action.type?.replace(/_/g, ' ').toLowerCase() || 'action'}
                             </span>
                           </div>
@@ -749,7 +749,7 @@ const WorkflowsList = () => {
                       {analyticsWorkflow.isActive ? (
                         <Badge className="bg-green-100 text-green-800">Active</Badge>
                       ) : (
-                        <Badge className="bg-gray-100 text-gray-800">Paused</Badge>
+                        <Badge className="bg-muted text-foreground">Paused</Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">

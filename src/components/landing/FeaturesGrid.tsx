@@ -66,20 +66,20 @@ export function FeaturesGrid() {
   const { ref, isVisible } = useScrollAnimation()
 
   return (
-    <section id="features" className="py-24 bg-white" ref={ref}>
+    <section id="features" className="py-24 bg-background" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
             Features
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Everything you need to{' '}
             <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
               dominate your market
             </span>
           </h2>
-          <p className="text-lg text-gray-500">
+          <p className="text-lg text-muted-foreground">
             One platform to manage your entire real estate business — from first contact to closing day.
           </p>
         </div>
@@ -89,7 +89,7 @@ export function FeaturesGrid() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="group relative p-8 rounded-2xl border border-gray-100 bg-white hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-300"
+              className="group relative p-8 rounded-2xl border border-border bg-card hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-300"
             >
               <div
                 className={`inline-flex items-center justify-center w-14 h-14 rounded-xl mb-6 transition-colors duration-300 ${
@@ -98,8 +98,8 @@ export function FeaturesGrid() {
               >
                 <feature.icon className="h-7 w-7" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-              <p className="text-gray-500 leading-relaxed">{feature.description}</p>
+              <h3 className="text-xl font-bold text-foreground mb-3">{feature.title}</h3>
+              <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
             </div>
           ))}
         </div>

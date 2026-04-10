@@ -1,5 +1,4 @@
 import { PLANS } from '../planConfig'
-import type { PlanDisplay } from '../planConfig'
 
 describe('planConfig', () => {
   it('exports PLANS as a non-empty array', () => {

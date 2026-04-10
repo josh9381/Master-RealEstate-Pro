@@ -11,7 +11,8 @@ import {
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
-import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { DateRangePicker, DateRange } from '@/components/shared/DateRangePicker';
+import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import { CHART_COLORS as COLORS } from '@/lib/chartColors';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 
@@ -38,9 +39,9 @@ const SourceROI = () => {
     return (
       <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+          <div className="h-8 bg-muted rounded w-1/3" />
           <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />)}
+            {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-muted rounded" />)}
           </div>
         </div>
       </div>
@@ -64,11 +65,11 @@ const SourceROI = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <DollarSign className="h-7 w-7 text-green-600" />
             Source ROI
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground mt-1">
             Revenue efficiency per lead source
           </p>
         </div>
@@ -77,27 +78,27 @@ const SourceROI = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Leads</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{totals.totalLeads || 0}</p>
+            <p className="text-sm text-muted-foreground">Total Leads</p>
+            <p className="text-2xl font-bold text-foreground">{totals.totalLeads || 0}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Won</p>
+            <p className="text-sm text-muted-foreground">Total Won</p>
             <p className="text-2xl font-bold text-green-600">{totals.totalWon || 0}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Revenue</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totals.totalRevenue || 0)}</p>
+            <p className="text-sm text-muted-foreground">Total Revenue</p>
+            <p className="text-2xl font-bold text-foreground">{formatCurrency(totals.totalRevenue || 0)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Overall Conversion</p>
+            <p className="text-sm text-muted-foreground">Overall Conversion</p>
             <p className="text-2xl font-bold text-blue-600">{formatRate(totals.overallConversionRate || 0)}%</p>
           </CardContent>
         </Card>
@@ -145,39 +146,39 @@ const SourceROI = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b dark:border-gray-700">
-                    <th scope="col" className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Source</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Leads</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Won</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Lost</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Conv. Rate</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Revenue</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Avg Deal</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Rev/Lead</th>
+                  <tr className="border-b border-border">
+                    <th scope="col" className="text-left py-3 px-4 font-medium text-muted-foreground">Source</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Leads</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Won</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Lost</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Conv. Rate</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Revenue</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Avg Deal</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Rev/Lead</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sources.map((s: { source: string; totalLeads: number; wonLeads: number; lostLeads: number; conversionRate: number; revenue: number; avgDealSize: number; revenuePerLead: number }, i: number) => (
-                    <tr key={s.source} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <tr key={s.source} className="border-b border-border hover:bg-muted transition-colors duration-200">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                          <span className="font-medium text-gray-900 dark:text-white">{s.source}</span>
+                          <span className="font-medium text-foreground">{s.source}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{s.totalLeads}</td>
+                      <td className="py-3 px-4 text-right text-muted-foreground">{s.totalLeads}</td>
                       <td className="py-3 px-4 text-right text-green-600 font-medium">{s.wonLeads}</td>
                       <td className="py-3 px-4 text-right text-red-500">{s.lostLeads}</td>
                       <td className="py-3 px-4 text-right">
                         <span className={`font-medium ${
-                          s.conversionRate > (totals.overallConversionRate || 0) ? 'text-green-600' : 'text-gray-600 dark:text-gray-300'
+                          s.conversionRate > (totals.overallConversionRate || 0) ? 'text-green-600' : 'text-muted-foreground'
                         }`}>
                           {formatRate(s.conversionRate)}%
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(s.revenue)}</td>
-                      <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{formatCurrency(s.avgDealSize)}</td>
-                      <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{formatCurrency(s.revenuePerLead)}</td>
+                      <td className="py-3 px-4 text-right text-muted-foreground">{formatCurrency(s.avgDealSize)}</td>
+                      <td className="py-3 px-4 text-right text-muted-foreground">{formatCurrency(s.revenuePerLead)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -190,9 +191,9 @@ const SourceROI = () => {
       {sources.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Source Data Yet</h3>
-            <p className="text-gray-500 dark:text-gray-400">
+            <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Source Data Yet</h3>
+            <p className="text-muted-foreground">
               Source ROI data will appear once you have leads with assigned sources.
             </p>
           </CardContent>

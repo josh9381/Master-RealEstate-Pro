@@ -59,20 +59,20 @@ export function PricingSection() {
   const { ref, isVisible } = useScrollAnimation()
 
   return (
-    <section id="pricing" className="py-24 bg-gray-50" ref={ref}>
+    <section id="pricing" className="py-24 bg-muted" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
             Pricing
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Simple pricing,{' '}
             <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
               no surprises
             </span>
           </h2>
-          <p className="text-lg text-gray-500">
+          <p className="text-lg text-muted-foreground">
             Start free. Upgrade when you&apos;re ready. Cancel anytime.
           </p>
         </div>
@@ -84,8 +84,8 @@ export function PricingSection() {
               key={plan.name}
               className={`relative rounded-2xl p-8 transition-all duration-300 ${
                 plan.highlighted
-                  ? 'bg-white border-2 border-blue-600 shadow-2xl shadow-blue-600/10 scale-[1.02] md:scale-105'
-                  : 'bg-white border border-gray-200 hover:shadow-lg'
+                  ? 'bg-card border-2 border-blue-600 shadow-2xl shadow-blue-600/10 scale-[1.02] md:scale-105'
+                  : 'bg-card border border-border hover:shadow-lg'
               }`}
             >
               {plan.highlighted && (
@@ -94,13 +94,13 @@ export function PricingSection() {
                 </div>
               )}
 
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-              <p className="text-gray-500 text-sm mb-6">{plan.description}</p>
+              <h3 className="text-xl font-bold text-foreground mb-2">{plan.name}</h3>
+              <p className="text-muted-foreground text-sm mb-6">{plan.description}</p>
 
               <div className="mb-8">
-                <span className="text-4xl font-extrabold text-gray-900">{plan.price}</span>
+                <span className="text-4xl font-extrabold text-foreground">{plan.price}</span>
                 {plan.period && (
-                  <span className="text-gray-400 font-medium">{plan.period}</span>
+                  <span className="text-muted-foreground font-medium">{plan.period}</span>
                 )}
               </div>
 
@@ -109,7 +109,7 @@ export function PricingSection() {
                 className={`block w-full text-center py-3 px-6 rounded-xl font-semibold transition-all ${
                   plan.highlighted
                     ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/25'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
                 {plan.cta}
@@ -123,7 +123,7 @@ export function PricingSection() {
                         plan.highlighted ? 'text-blue-600' : 'text-emerald-500'
                       }`}
                     />
-                    <span className="text-gray-600 text-sm">{feature}</span>
+                    <span className="text-muted-foreground text-sm">{feature}</span>
                   </li>
                 ))}
               </ul>

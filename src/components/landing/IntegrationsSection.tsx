@@ -15,19 +15,19 @@ export function IntegrationsSection() {
   const { ref, isVisible } = useScrollAnimation()
 
   return (
-    <section className="py-20 bg-white" ref={ref}>
+    <section className="py-20 bg-background" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`text-center max-w-3xl mx-auto mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
             Integrations
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Connects with the tools{' '}
             <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
               you already use
             </span>
           </h2>
-          <p className="text-lg text-gray-500">
+          <p className="text-lg text-muted-foreground">
             Seamlessly sync your email, calendar, contacts, and messaging platforms.
           </p>
         </div>
@@ -36,13 +36,13 @@ export function IntegrationsSection() {
           {integrations.map((integration, i) => (
             <div
               key={integration.name}
-              className="group relative flex flex-col items-center gap-3 p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-300"
+              className="group relative flex flex-col items-center gap-3 p-6 rounded-2xl border border-border bg-card hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-300"
               style={{ transitionDelay: `${i * 60}ms` }}
             >
               <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${integration.colors} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                 <span className="text-white font-bold text-sm">{integration.icon}</span>
               </div>
-              <span className="text-sm font-semibold text-gray-700 text-center">{integration.name}</span>
+              <span className="text-sm font-semibold text-foreground/80 text-center">{integration.name}</span>
             </div>
           ))}
         </div>

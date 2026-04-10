@@ -319,7 +319,7 @@ const DatabaseMaintenance = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Select Tables</label>
-              <select className="w-full px-3 py-2 border rounded-lg" multiple>
+              <select className="w-full px-3 py-2 border rounded-lg transition-colors" multiple>
                 <option>leads</option>
                 <option>contacts</option>
                 <option>campaigns</option>
@@ -357,7 +357,7 @@ const DatabaseMaintenance = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Backup Schedule</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg transition-colors"
                 value={backupSchedule}
                 onChange={(e) => setBackupSchedule(e.target.value)}
               >
@@ -371,7 +371,7 @@ const DatabaseMaintenance = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Retention Period</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg transition-colors"
                 value={retentionPeriod}
                 onChange={(e) => setRetentionPeriod(e.target.value)}
               >

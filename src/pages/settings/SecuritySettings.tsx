@@ -369,7 +369,7 @@ const SecuritySettings = () => {
                 Scan the QR code below with your authenticator app (Google Authenticator, Authy, etc.)
               </p>
               {setupQrCode && (
-                <div className="flex justify-center p-4 bg-white rounded-lg">
+                <div className="flex justify-center p-4 bg-card rounded-lg">
                   <img src={setupQrCode} alt="2FA QR Code" className="w-48 h-48" />
                 </div>
               )}

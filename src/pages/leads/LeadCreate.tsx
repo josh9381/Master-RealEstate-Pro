@@ -203,7 +203,7 @@ export default function LeadCreate() {
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Card 1: Contact Info (merged Personal + Company) */}
-            <Card className="p-6">
+            <Card className="p-6 transition-all duration-200 hover:shadow-md">
               <div className="flex items-center gap-2 mb-4">
                 <User className="h-5 w-5 text-primary" />
                 <h2 className="text-xl font-semibold">Contact Information</h2>
@@ -300,10 +300,10 @@ export default function LeadCreate() {
             </Card>
 
             {/* Card 2: Real Estate Details — collapsible, starts collapsed */}
-            <Card className="p-6">
+            <Card className="p-6 transition-all duration-200 hover:shadow-md">
               <button
                 type="button"
-                className="flex items-center justify-between w-full"
+                className="flex items-center justify-between w-full hover:bg-muted/50 transition-colors rounded-md p-1"
                 onClick={() => setShowRealEstate(!showRealEstate)}
               >
                 <div className="flex items-center gap-2">
@@ -322,7 +322,7 @@ export default function LeadCreate() {
                       name="propertyType"
                       value={formData.propertyType}
                       onChange={handleInputChange}
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     >
                       <option value="">Not specified</option>
                       <option value="Single Family">Single Family</option>
@@ -340,7 +340,7 @@ export default function LeadCreate() {
                       name="transactionType"
                       value={formData.transactionType}
                       onChange={handleInputChange}
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     >
                       <option value="">Not specified</option>
                       <option value="Buyer">Buyer</option>
@@ -361,7 +361,7 @@ export default function LeadCreate() {
                       onChange={handleInputChange}
                       onKeyDown={(e) => ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault()}
                       placeholder="e.g. 200000"
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     />
                     {errors.budgetMin && <p className="text-sm text-red-500 mt-1">{errors.budgetMin}</p>}
                   </div>
@@ -376,7 +376,7 @@ export default function LeadCreate() {
                       onChange={handleInputChange}
                       onKeyDown={(e) => ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault()}
                       placeholder="e.g. 500000"
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     />
                   </div>
                   <div>
@@ -386,7 +386,7 @@ export default function LeadCreate() {
                       name="preApprovalStatus"
                       value={formData.preApprovalStatus}
                       onChange={handleInputChange}
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     >
                       <option value="">Not specified</option>
                       <option value="Not Started">Not Started</option>
@@ -402,7 +402,7 @@ export default function LeadCreate() {
                       name="moveInTimeline"
                       value={formData.moveInTimeline}
                       onChange={handleInputChange}
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     >
                       <option value="">Not specified</option>
                       <option value="ASAP">ASAP</option>
@@ -421,7 +421,7 @@ export default function LeadCreate() {
                       value={formData.desiredLocation}
                       onChange={handleInputChange}
                       placeholder="City, neighborhood, or zip code"
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     />
                   </div>
                   <div>
@@ -435,7 +435,7 @@ export default function LeadCreate() {
                       onKeyDown={(e) => ['e', 'E', '-', '+', '.'].includes(e.key) && e.preventDefault()}
                       min="0"
                       placeholder="e.g. 3"
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     />
                   </div>
                   <div>
@@ -449,7 +449,7 @@ export default function LeadCreate() {
                       onKeyDown={(e) => ['e', 'E', '-', '+', '.'].includes(e.key) && e.preventDefault()}
                       min="0"
                       placeholder="e.g. 2"
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -474,10 +474,10 @@ export default function LeadCreate() {
             </Card>
 
             {/* Card 3: Address — collapsible, starts collapsed */}
-            <Card className="p-6">
+            <Card className="p-6 transition-all duration-200 hover:shadow-md">
               <button
                 type="button"
-                className="flex items-center justify-between w-full"
+                className="flex items-center justify-between w-full hover:bg-muted/50 transition-colors rounded-md p-1"
                 onClick={() => setShowAddress(!showAddress)}
               >
                 <div className="flex items-center gap-2">
@@ -558,7 +558,7 @@ export default function LeadCreate() {
             </Card>
 
             {/* Card 4: Notes */}
-            <Card className="p-6">
+            <Card className="p-6 transition-all duration-200 hover:shadow-md">
               <h2 className="text-xl font-semibold mb-4">Notes</h2>
               <label htmlFor="lead-notes" className="sr-only">Notes</label>
               <textarea
@@ -567,7 +567,7 @@ export default function LeadCreate() {
                 value={formData.notes}
                 onChange={handleInputChange}
                 placeholder="Add any additional notes about this lead..."
-                className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
               />
             </Card>
 
@@ -595,7 +595,7 @@ export default function LeadCreate() {
           {/* Sidebar — sticky */}
           <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
             {/* Lead Details */}
-            <Card className="p-6">
+            <Card className="p-6 transition-all duration-200 hover:shadow-md">
               <h3 className="font-semibold mb-4">Lead Details</h3>
               
               <div className="space-y-4">
@@ -606,7 +606,7 @@ export default function LeadCreate() {
                     name="source"
                     value={formData.source}
                     onChange={handleInputChange}
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     required
                   >
                     <optgroup label="Referral-based">
@@ -647,7 +647,7 @@ export default function LeadCreate() {
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                     required
                   >
                     <option value="new">New</option>
@@ -667,7 +667,7 @@ export default function LeadCreate() {
                     name="assignedTo"
                     value={formData.assignedTo}
                     onChange={handleInputChange}
-                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors"
                   >
                     <option value="">Unassigned</option>
                     {teamMembers.length > 0 ? (
@@ -685,7 +685,7 @@ export default function LeadCreate() {
             </Card>
 
             {/* Tags */}
-            <Card className="p-6">
+            <Card className="p-6 transition-all duration-200 hover:shadow-md">
               <div className="flex items-center gap-2 mb-4">
                 <Tag className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold">Tags</h3>

@@ -650,7 +650,7 @@ const AISettings = () => {
                       <label key={platform} className="flex items-center gap-2 text-sm">
                         <input
                           type="checkbox"
-                          className="rounded border-gray-300"
+                          className="rounded border-border"
                           checked={((form.profile.socialMediaPrefs as Record<string, unknown>)?.platforms as string[] || []).includes(platform)}
                           onChange={(e) => {
                             const prefs = (form.profile.socialMediaPrefs || { platforms: [], hashtagStyle: 'moderate', emojiUsage: 'moderate' }) as Record<string, unknown>

@@ -230,17 +230,17 @@ const FeatureFlags = () => {
             {features.map((feature) => (
               <div
                 key={feature.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
+                className="flex items-center justify-between p-4 border rounded-lg transition-all duration-200 hover:shadow-md"
               >
                 <div className="flex items-start space-x-4 flex-1">
                   <div
                     className={`p-2 rounded-lg ${
-                      feature.enabled ? 'bg-green-100' : 'bg-gray-100'
+                      feature.enabled ? 'bg-green-100' : 'bg-muted'
                     }`}
                   >
                     <Flag
                       className={`h-5 w-5 ${
-                        feature.enabled ? 'text-green-600' : 'text-gray-400'
+                        feature.enabled ? 'text-green-600' : 'text-muted-foreground'
                       }`}
                     />
                   </div>
@@ -324,7 +324,7 @@ const FeatureFlags = () => {
                   placeholder="e.g., New Dashboard"
                   value={newFeature.name}
                   onChange={(e) => setNewFeature({ ...newFeature, name: e.target.value })}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border rounded-md transition-colors"
                 />
               </div>
               <div>
@@ -334,14 +334,14 @@ const FeatureFlags = () => {
                   placeholder="e.g., new_dashboard"
                   value={newFeature.key}
                   onChange={(e) => setNewFeature({ ...newFeature, key: e.target.value })}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border rounded-md transition-colors"
                 />
               </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Description</label>
               <textarea
-                className="w-full min-h-[80px] p-2 border rounded-md"
+                className="w-full min-h-[80px] p-2 border rounded-md transition-colors"
                 placeholder="Describe what this feature does..."
                 value={newFeature.description}
                 onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
@@ -351,7 +351,7 @@ const FeatureFlags = () => {
               <div>
                 <label className="text-sm font-medium mb-2 block">Environment</label>
                 <select 
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border rounded-md transition-colors"
                   value={newFeature.environment}
                   onChange={(e) => setNewFeature({ ...newFeature, environment: e.target.value as 'development' | 'beta' | 'production' })}
                 >
@@ -368,13 +368,13 @@ const FeatureFlags = () => {
                   max="100" 
                   value={newFeature.rollout}
                   onChange={(e) => setNewFeature({ ...newFeature, rollout: parseInt(e.target.value) })}
-                  className="w-full p-2 border rounded-md" 
+                  className="w-full p-2 border rounded-md transition-colors" 
                 />
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Initial State</label>
                 <select 
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border rounded-md transition-colors"
                   value={newFeature.enabled ? 'Enabled' : 'Disabled'}
                   onChange={(e) => setNewFeature({ ...newFeature, enabled: e.target.value === 'Enabled' })}
                 >

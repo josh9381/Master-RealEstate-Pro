@@ -453,7 +453,7 @@ function LeadsPipeline() {
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, stage.id)}
             >
-              <Card className="h-full">
+              <Card className="h-full transition-all duration-200 hover:shadow-md">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -588,7 +588,7 @@ function LeadsPipeline() {
 
                         {/* Move-to dropdown */}
                         <select
-                          className="mt-2 w-full text-xs border rounded px-2 py-1 bg-background cursor-pointer"
+                          className="mt-2 w-full text-xs border rounded px-2 py-1 bg-background cursor-pointer transition-colors"
                           value=""
                           aria-label={`Move ${lead.firstName} ${lead.lastName} to another stage`}
                           onClick={(e) => e.stopPropagation()}
@@ -691,7 +691,7 @@ function LeadsPipeline() {
                 placeholder="Search leads by name..."
                 value={leadSearchQuery}
                 onChange={(e) => setLeadSearchQuery(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-3"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-3 transition-colors"
                 autoFocus
               />
               <div className="max-h-64 overflow-y-auto space-y-1">

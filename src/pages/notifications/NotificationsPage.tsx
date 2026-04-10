@@ -99,7 +99,7 @@ export function NotificationsPage() {
       case 'update':
         return <TrendingUp className="h-5 w-5 text-purple-500" />
       case 'system':
-        return <Settings className="h-5 w-5 text-gray-500" />
+        return <Settings className="h-5 w-5 text-muted-foreground" />
       case 'email':
         return <Mail className="h-5 w-5 text-cyan-500" />
       case 'sms':
@@ -109,7 +109,7 @@ export function NotificationsPage() {
       case 'meeting':
         return <Calendar className="h-5 w-5 text-yellow-500" />
       default:
-        return <Bell className="h-5 w-5 text-gray-500" />
+        return <Bell className="h-5 w-5 text-muted-foreground" />
     }
   }
 
@@ -260,7 +260,7 @@ export function NotificationsPage() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
             <Bell className="h-4 w-4 text-muted-foreground" />
@@ -271,7 +271,7 @@ export function NotificationsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unread</CardTitle>
             <Badge variant="destructive">{unreadCount}</Badge>
@@ -282,7 +282,7 @@ export function NotificationsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Mentions</CardTitle>
             <AtSign className="h-4 w-4 text-muted-foreground" />
@@ -295,7 +295,7 @@ export function NotificationsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Assignments</CardTitle>
             <UserPlus className="h-4 w-4 text-muted-foreground" />

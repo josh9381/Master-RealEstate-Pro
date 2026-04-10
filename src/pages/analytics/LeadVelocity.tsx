@@ -10,7 +10,8 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
-import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { DateRangePicker, DateRange } from '@/components/shared/DateRangePicker';
+import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 import { CHART_COLORS } from '@/lib/chartColors';
 
@@ -42,9 +43,9 @@ const LeadVelocity = () => {
     return (
       <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+          <div className="h-8 bg-muted rounded w-1/3" />
           <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />)}
+            {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-muted rounded" />)}
           </div>
         </div>
       </div>
@@ -72,11 +73,11 @@ const LeadVelocity = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Gauge className="h-7 w-7 text-orange-600" />
             Lead Velocity
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground mt-1">
             How quickly leads move through your pipeline
           </p>
         </div>
@@ -85,12 +86,12 @@ const LeadVelocity = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Avg Days to Close</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-muted-foreground">Avg Days to Close</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data?.avgDaysToClose || 0} days
                 </p>
               </div>
@@ -98,12 +99,12 @@ const LeadVelocity = () => {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Leads Tracked</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-muted-foreground">Leads Tracked</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data?.totalLeadsTracked || 0}
                 </p>
               </div>
@@ -111,12 +112,12 @@ const LeadVelocity = () => {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Pipeline Stages</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-muted-foreground">Pipeline Stages</p>
+                <p className="text-2xl font-bold text-foreground">
                   {sortedStages.length}
                 </p>
               </div>
@@ -151,7 +152,7 @@ const LeadVelocity = () => {
             </div>
             </ChartErrorBoundary>
           ) : (
-            <p className="text-gray-500 text-center py-8">No stage transition data available yet</p>
+            <p className="text-muted-foreground text-center py-8">No stage transition data available yet</p>
           )}
         </CardContent>
       </Card>
@@ -197,11 +198,11 @@ const LeadVelocity = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b dark:border-gray-700">
-                    <th scope="col" className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Stage</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Avg Days</th>
-                    <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Transitions</th>
-                    <th scope="col" className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Bar</th>
+                  <tr className="border-b border-border">
+                    <th scope="col" className="text-left py-3 px-4 font-medium text-muted-foreground">Stage</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Avg Days</th>
+                    <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Transitions</th>
+                    <th scope="col" className="text-left py-3 px-4 font-medium text-muted-foreground">Bar</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -209,12 +210,12 @@ const LeadVelocity = () => {
                     const maxDays = Math.max(...sortedStages.map((x: { avgDays: number }) => x.avgDays));
                     const pct = maxDays > 0 ? (s.avgDays / maxDays) * 100 : 0;
                     return (
-                      <tr key={s.stage} className="border-b dark:border-gray-700">
-                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">{s.stage}</td>
-                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{s.avgDays} days</td>
-                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{s.count}</td>
+                      <tr key={s.stage} className="border-b border-border hover:bg-muted/50 transition-colors">
+                        <td className="py-3 px-4 font-medium text-foreground">{s.stage}</td>
+                        <td className="py-3 px-4 text-right text-muted-foreground">{s.avgDays} days</td>
+                        <td className="py-3 px-4 text-right text-muted-foreground">{s.count}</td>
                         <td className="py-3 px-4 w-1/3">
-                          <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div className="h-3 bg-muted rounded-full overflow-hidden">
                             <div className="h-full bg-orange-500 rounded-full" style={{ width: `${pct}%` }} />
                           </div>
                         </td>

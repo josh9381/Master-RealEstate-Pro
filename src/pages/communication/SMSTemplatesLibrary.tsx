@@ -383,7 +383,7 @@ const SMSTemplatesLibrary = () => {
         <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {paginatedTemplates.map(template => (
-            <Card key={template.id} className="flex flex-col">
+            <Card key={template.id} className="flex flex-col transition-all duration-200 hover:shadow-md">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{template.name}</CardTitle>
@@ -392,7 +392,7 @@ const SMSTemplatesLibrary = () => {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-between">
                 {/* Phone preview */}
-                <div className="bg-gray-100 rounded-xl p-3 mb-3 border-2 border-gray-200">
+                <div className="bg-muted rounded-xl p-3 mb-3 border-2 border-border">
                   <div className="bg-green-500 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm ml-auto max-w-[85%]">
                     {template.body.length > 200 ? template.body.substring(0, 200) + '...' : template.body}
                   </div>
@@ -654,7 +654,7 @@ const SMSTemplatesLibrary = () => {
                       value={formBody}
                       onChange={e => setFormBody(e.target.value.slice(0, 1600))}
                       rows={6}
-                      className="w-full p-3 border rounded-lg resize-none text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-background"
+                      className="w-full p-3 border rounded-lg resize-none text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-background transition-colors"
                       placeholder="Hi {{firstName}}, thanks for your interest in..."
                     />
                     <p className="text-xs text-muted-foreground">Write your SMS message. Use variables for personalization.</p>
@@ -684,7 +684,7 @@ const SMSTemplatesLibrary = () => {
                   {formBody && (
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Preview</label>
-                      <div className="bg-gray-100 rounded-xl p-4 border-2 border-gray-200 max-w-[300px] mx-auto">
+                      <div className="bg-muted rounded-xl p-4 border-2 border-border max-w-[300px] mx-auto">
                         <div className="text-center text-xs text-muted-foreground mb-2">SMS Preview</div>
                         <div className="bg-green-500 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm">
                           {formBody}

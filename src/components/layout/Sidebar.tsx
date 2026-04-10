@@ -87,7 +87,7 @@ export function Sidebar() {
           
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden"
+            className="lg:hidden transition-colors"
             aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />

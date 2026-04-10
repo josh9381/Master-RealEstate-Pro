@@ -48,7 +48,7 @@ export function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled || mobileOpen
-          ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100'
+          ? 'bg-background/95 backdrop-blur-md shadow-sm border-b border-border'
           : 'bg-transparent'
       }`}
     >
@@ -59,7 +59,7 @@ export function Navbar() {
             <div className={`p-2 rounded-xl transition-colors ${scrolled || mobileOpen ? 'bg-blue-600' : 'bg-white/20 backdrop-blur-sm'}`}>
               <Building2 className="h-6 w-6 text-white" />
             </div>
-            <span className={`text-xl font-bold tracking-tight transition-colors ${scrolled || mobileOpen ? 'text-gray-900' : 'text-white'}`}>
+            <span className={`text-xl font-bold tracking-tight transition-colors ${scrolled || mobileOpen ? 'text-foreground' : 'text-white'}`}>
               RealEstate<span className="text-blue-400">Pro</span>
             </span>
           </Link>
@@ -72,7 +72,7 @@ export function Navbar() {
                 href={link.href}
                 onClick={(e) => handleNavClick(e, link.href)}
                 className={`text-sm font-medium transition-colors hover:text-blue-500 ${
-                  scrolled ? 'text-gray-600' : 'text-white/80'
+                  scrolled ? 'text-muted-foreground' : 'text-white/80'
                 }`}
               >
                 {link.label}
@@ -86,7 +86,7 @@ export function Navbar() {
               to="/auth/login"
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 scrolled
-                  ? 'text-gray-700 hover:text-blue-600'
+                  ? 'text-foreground/80 hover:text-blue-600'
                   : 'text-white/90 hover:text-white'
               }`}
             >
@@ -103,7 +103,7 @@ export function Navbar() {
           {/* Mobile Toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className={`lg:hidden p-2 rounded-lg transition-colors ${scrolled || mobileOpen ? 'text-gray-700' : 'text-white'}`}
+            className={`lg:hidden p-2 rounded-lg transition-colors ${scrolled || mobileOpen ? 'text-foreground/80' : 'text-white'}`}
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -117,13 +117,13 @@ export function Navbar() {
           mobileOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="bg-white border-t border-gray-100 shadow-xl px-4 py-4 space-y-1">
+        <div className="bg-background border-t border-border shadow-xl px-4 py-4 space-y-1">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
               onClick={(e) => handleNavClick(e, link.href)}
-              className="block px-4 py-3 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              className="block px-4 py-3 text-foreground/80 font-medium rounded-lg hover:bg-muted transition-colors"
             >
               {link.label}
             </a>
@@ -132,7 +132,7 @@ export function Navbar() {
           <Link
             to="/auth/login"
             onClick={() => setMobileOpen(false)}
-            className="block px-4 py-3 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            className="block px-4 py-3 text-foreground/80 font-medium rounded-lg hover:bg-muted transition-colors"
           >
             Log In
           </Link>

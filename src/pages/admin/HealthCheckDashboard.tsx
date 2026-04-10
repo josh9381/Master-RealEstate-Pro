@@ -93,10 +93,10 @@ const HealthCheckDashboard = () => {
       </div>
 
       {/* Overall Status */}
-      <Card className={`${overallStatus === 'operational' ? 'border-green-200 bg-green-50' : overallStatus === 'checking' ? 'border-gray-200 bg-gray-50' : 'border-orange-200 bg-orange-50'}`}>
+      <Card className={`${overallStatus === 'operational' ? 'border-green-200 bg-green-50' : overallStatus === 'checking' ? 'border-border bg-muted/50' : 'border-orange-200 bg-orange-50'}`}>
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4">
-            <div className={`flex items-center justify-center h-16 w-16 rounded-full ${overallStatus === 'operational' ? 'bg-green-600' : overallStatus === 'checking' ? 'bg-gray-400' : 'bg-orange-600'}`}>
+            <div className={`flex items-center justify-center h-16 w-16 rounded-full ${overallStatus === 'operational' ? 'bg-green-600' : overallStatus === 'checking' ? 'bg-muted-foreground' : 'bg-orange-600'}`}>
               {overallStatus === 'checking' ? (
                 <Loader2 className="h-8 w-8 text-white animate-spin" />
               ) : overallStatus === 'operational' ? (
@@ -180,7 +180,7 @@ const HealthCheckDashboard = () => {
                         : service.status === 'degraded'
                         ? 'bg-orange-100'
                         : service.status === 'checking'
-                        ? 'bg-gray-100'
+                        ? 'bg-muted'
                         : 'bg-red-100'
                     }`}
                   >
@@ -189,7 +189,7 @@ const HealthCheckDashboard = () => {
                     ) : service.status === 'degraded' ? (
                       <AlertTriangle className="h-5 w-5 text-orange-600" />
                     ) : service.status === 'checking' ? (
-                      <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                      <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
                     ) : (
                       <XCircle className="h-5 w-5 text-red-600" />
                     )}
@@ -251,7 +251,7 @@ const HealthCheckDashboard = () => {
                       {typeof resource.value === 'number' ? resource.value.toLocaleString() : resource.value}{resource.unit ? ` ${resource.unit}` : ''}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div
                       className={`h-2 rounded-full ${
                         calcRate(resource.value, resource.max, 0) > 80

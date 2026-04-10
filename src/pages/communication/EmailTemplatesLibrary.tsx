@@ -423,7 +423,7 @@ const EmailTemplatesLibrary = () => {
         <>
       {/* Stats — m2: memoized, m3: Clock icon for Last Updated */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Templates</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
@@ -433,7 +433,7 @@ const EmailTemplatesLibrary = () => {
             <p className="text-xs text-muted-foreground">{templates.filter(t => t.isActive !== false).length} active</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Most Used</CardTitle>
             <Layout className="h-4 w-4 text-muted-foreground" />
@@ -443,7 +443,7 @@ const EmailTemplatesLibrary = () => {
             <p className="text-xs text-muted-foreground">{mostUsedTemplate ? `${mostUsedTemplate.usageCount || 0} uses` : 'No data yet'}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Categories</CardTitle>
             <Code className="h-4 w-4 text-muted-foreground" />
@@ -453,7 +453,7 @@ const EmailTemplatesLibrary = () => {
             <p className="text-xs text-muted-foreground">Unique categories</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -509,7 +509,7 @@ const EmailTemplatesLibrary = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'usage')}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-colors"
               >
                 <option value="date">Sort: Recently Updated</option>
                 <option value="name">Sort: Name A–Z</option>
@@ -556,7 +556,7 @@ const EmailTemplatesLibrary = () => {
                   </div>
                   <p className="text-sm text-muted-foreground mb-1 truncate">{template.subject}</p>
                   <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                    <span className="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                       <Send className="h-3 w-3" />
                       {template.usageCount || 0} sends
                     </span>
@@ -599,7 +599,7 @@ const EmailTemplatesLibrary = () => {
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{template.subject}</p>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                    <span className="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                       <Send className="h-3 w-3" />
                       {template.usageCount || 0} sends
                     </span>
@@ -875,7 +875,7 @@ const EmailTemplatesLibrary = () => {
                         <div className="grid gap-4 md:grid-cols-2 pt-3">
                           <div>
                             <label className="text-sm font-medium mb-2 block">Default Font</label>
-                            <select className="w-full px-3 py-2 border rounded-lg bg-background" value={templateSettings.defaultFont} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultFont: e.target.value }))}>
+                            <select className="w-full px-3 py-2 border rounded-lg bg-background transition-colors" value={templateSettings.defaultFont} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultFont: e.target.value }))}>
                               <option>Arial</option>
                               <option>Helvetica</option>
                               <option>Georgia</option>
@@ -1007,7 +1007,7 @@ const EmailTemplatesLibrary = () => {
                   <FileText className="h-3 w-3 text-muted-foreground" />
                   <span>{previewTemplate.category || 'Uncategorized'}</span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 rounded-full px-3 py-1.5 font-medium">
+                <div className="flex items-center gap-1.5 bg-primary/10 text-primary rounded-full px-3 py-1.5 font-medium">
                   <Send className="h-3 w-3" />
                   <span>{previewTemplate.usageCount || 0} sends</span>
                 </div>
@@ -1022,7 +1022,7 @@ const EmailTemplatesLibrary = () => {
               </div>
             </div>
             <div className="p-6">
-              <div className="border rounded-lg p-6 bg-white">
+              <div className="border rounded-lg p-6 bg-card">
                 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewTemplate.body || '<p class="text-muted-foreground">No content</p>') }} />
               </div>
             </div>

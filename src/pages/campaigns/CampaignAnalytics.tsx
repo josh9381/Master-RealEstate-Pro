@@ -21,7 +21,8 @@ import { campaignsApi } from '@/lib/api';
 import { LINE_CHART_COLORS } from '@/lib/chartColors';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
-import { DateRangePicker, DateRange, DateRangePreset, computeDateRange } from '@/components/shared/DateRangePicker';
+import { DateRangePicker, DateRange, DateRangePreset } from '@/components/shared/DateRangePicker';
+import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import {
   calcOpenRate,
   calcClickRate,

@@ -1067,7 +1067,7 @@ const CommunicationInbox = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setShowDeleteConfirm(false); setContactToDelete(null) }}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmTrashContact} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={confirmTrashContact} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -10,17 +10,17 @@ const bulletPoints = [
 
 function DashboardMockup() {
   return (
-    <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-gray-300/50 border border-gray-200 bg-white">
+    <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-gray-300/50 border border-border bg-card">
       <div className="aspect-[16/10] flex flex-col">
         {/* Browser chrome */}
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-muted border-b border-border">
           <div className="flex gap-1.5">
             <div className="w-3 h-3 rounded-full bg-red-400" />
             <div className="w-3 h-3 rounded-full bg-yellow-400" />
             <div className="w-3 h-3 rounded-full bg-green-400" />
           </div>
-          <div className="flex-1 h-6 bg-white rounded-md border border-gray-200 ml-3 flex items-center px-3">
-            <span className="text-[10px] text-gray-400">app.realestatepro.com/dashboard</span>
+          <div className="flex-1 h-6 bg-background rounded-md border border-border ml-3 flex items-center px-3">
+            <span className="text-[10px] text-muted-foreground">app.realestatepro.com/dashboard</span>
           </div>
         </div>
 
@@ -35,30 +35,30 @@ function DashboardMockup() {
           </div>
 
           {/* Main area */}
-          <div className="flex-1 p-3 sm:p-4 space-y-3 bg-gray-50/50">
+          <div className="flex-1 p-3 sm:p-4 space-y-3 bg-muted/50">
             {/* KPI Cards */}
             <div className="grid grid-cols-4 gap-2">
               {[
-                { label: 'Active Leads', value: '2,847', color: 'border-l-blue-500 bg-white', change: '+12%' },
-                { label: 'Deals Won', value: '$1.2M', color: 'border-l-emerald-500 bg-white', change: '+24%' },
-                { label: 'Response Rate', value: '94%', color: 'border-l-purple-500 bg-white', change: '+8%' },
-                { label: 'Campaigns', value: '18', color: 'border-l-orange-500 bg-white', change: '+3' },
+                { label: 'Active Leads', value: '2,847', color: 'border-l-blue-500 bg-card', change: '+12%' },
+                { label: 'Deals Won', value: '$1.2M', color: 'border-l-emerald-500 bg-card', change: '+24%' },
+                { label: 'Response Rate', value: '94%', color: 'border-l-purple-500 bg-card', change: '+8%' },
+                { label: 'Campaigns', value: '18', color: 'border-l-orange-500 bg-card', change: '+3' },
               ].map((card, i) => (
                 <div key={i} className={`rounded-lg p-2 border-l-[3px] ${card.color} shadow-sm`}>
-                  <p className="text-[7px] sm:text-[9px] text-gray-400 truncate">{card.label}</p>
-                  <p className="text-[11px] sm:text-sm font-bold text-gray-800">{card.value}</p>
+                  <p className="text-[7px] sm:text-[9px] text-muted-foreground truncate">{card.label}</p>
+                  <p className="text-[11px] sm:text-sm font-bold text-foreground">{card.value}</p>
                   <span className="text-[7px] sm:text-[8px] text-emerald-500 font-semibold">{card.change}</span>
                 </div>
               ))}
             </div>
 
             {/* Chart area */}
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[9px] sm:text-[10px] font-semibold text-gray-700">Pipeline Overview</span>
+                <span className="text-[9px] sm:text-[10px] font-semibold text-foreground/80">Pipeline Overview</span>
                 <div className="flex gap-2">
                   {['1W', '1M', '3M'].map(p => (
-                    <span key={p} className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 rounded ${p === '1M' ? 'bg-blue-100 text-blue-700' : 'text-gray-400'}`}>{p}</span>
+                    <span key={p} className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 rounded ${p === '1M' ? 'bg-blue-100 text-blue-700' : 'text-muted-foreground'}`}>{p}</span>
                   ))}
                 </div>
               </div>
@@ -76,27 +76,27 @@ function DashboardMockup() {
 
             {/* Bottom row */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-100">
-                <span className="text-[8px] sm:text-[9px] font-semibold text-gray-700">Recent Leads</span>
+              <div className="bg-card rounded-lg p-2 shadow-sm border border-border">
+                <span className="text-[8px] sm:text-[9px] font-semibold text-foreground/80">Recent Leads</span>
                 <div className="space-y-1.5 mt-2">
                   {['John P.', 'Sarah M.', 'Alex K.'].map((name, i) => (
                     <div key={i} className="flex items-center gap-1.5">
                       <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
                         <span className="text-[6px] text-white font-bold">{name[0]}</span>
                       </div>
-                      <span className="text-[7px] sm:text-[8px] text-gray-600">{name}</span>
+                      <span className="text-[7px] sm:text-[8px] text-muted-foreground">{name}</span>
                       <span className="ml-auto text-[6px] sm:text-[7px] text-emerald-500 font-medium">Hot</span>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-100">
-                <span className="text-[8px] sm:text-[9px] font-semibold text-gray-700">AI Insights</span>
+              <div className="bg-card rounded-lg p-2 shadow-sm border border-border">
+                <span className="text-[8px] sm:text-[9px] font-semibold text-foreground/80">AI Insights</span>
                 <div className="space-y-1.5 mt-2">
                   {['3 leads ready to convert', 'Campaign A/B winner found', 'Follow up Sarah today'].map((text, i) => (
                     <div key={i} className="flex items-start gap-1">
                       <div className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${i === 0 ? 'bg-emerald-400' : i === 1 ? 'bg-blue-400' : 'bg-amber-400'}`} />
-                      <span className="text-[7px] sm:text-[8px] text-gray-600 leading-tight">{text}</span>
+                      <span className="text-[7px] sm:text-[8px] text-muted-foreground leading-tight">{text}</span>
                     </div>
                   ))}
                 </div>
@@ -113,7 +113,7 @@ export function ProductShowcase() {
   const { ref, isVisible } = useScrollAnimation()
 
   return (
-    <section className="py-24 bg-gray-50" ref={ref}>
+    <section className="py-24 bg-muted" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left: Product Image */}
@@ -130,12 +130,12 @@ export function ProductShowcase() {
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
               See It In Action
             </p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-6">
               Your entire business,
               <br />
               <span className="text-blue-600">one powerful dashboard</span>
             </h2>
-            <p className="text-lg text-gray-500 leading-relaxed mb-8">
+            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
               From lead capture to closing day — manage your pipeline, launch smart campaigns,
               and let AI do the heavy lifting. All in one platform.
             </p>
@@ -145,7 +145,7 @@ export function ProductShowcase() {
               {bulletPoints.map((point) => (
                 <li key={point} className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700 font-medium">{point}</span>
+                  <span className="text-foreground/80 font-medium">{point}</span>
                 </li>
               ))}
             </ul>

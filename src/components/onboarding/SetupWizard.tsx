@@ -98,8 +98,8 @@ function WelcomeStep() {
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-100 mb-6">
         <Sparkles className="h-10 w-10 text-blue-600" />
       </div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-3">Welcome to RealEstate Pro!</h2>
-      <p className="text-gray-500 max-w-md mx-auto mb-6">
+      <h2 className="text-2xl font-bold text-foreground mb-3">Welcome to RealEstate Pro!</h2>
+      <p className="text-muted-foreground max-w-md mx-auto mb-6">
         We'll walk you through setting up the key parts of your account. This only takes a few minutes
         and you can always change these settings later.
       </p>
@@ -109,11 +109,11 @@ function WelcomeStep() {
           { label: 'Email & SMS', time: '2 min' },
           { label: 'Integrations & Security', time: '1 min' },
         ].map((item) => (
-          <div key={item.label} className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 border border-gray-100">
+          <div key={item.label} className="flex items-center gap-2 p-3 rounded-lg bg-muted border border-border">
             <Check className="h-4 w-4 text-blue-600 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-gray-700">{item.label}</p>
-              <p className="text-xs text-gray-400">{item.time}</p>
+              <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
+              <p className="text-xs text-muted-foreground">{item.time}</p>
             </div>
           </div>
         ))}
@@ -181,52 +181,52 @@ function ProfileStep() {
     <div className="space-y-5 max-w-lg mx-auto">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">First Name *</label>
           <input
             type="text"
             value={form.firstName}
             onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             placeholder="John"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Last Name *</label>
           <input
             type="text"
             value={form.lastName}
             onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             placeholder="Smith"
           />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">Phone Number</label>
         <input
           type="tel"
           value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder="+1 (555) 123-4567"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">Job Title</label>
         <input
           type="text"
           value={form.jobTitle}
           onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder="Real Estate Agent"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">Timezone</label>
         <select
           value={form.timezone}
           onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
         >
           {['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'Pacific/Honolulu'].map((tz) => (
             <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
@@ -303,22 +303,22 @@ function BusinessStep() {
   return (
     <div className="space-y-5 max-w-lg mx-auto">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">Company Name *</label>
         <input
           type="text"
           value={form.companyName}
           onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder="Pinnacle Realty Group"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Industry</label>
           <select
             value={form.industry}
             onChange={(e) => setForm({ ...form, industry: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
             {['Real Estate', 'Real Estate - Residential', 'Real Estate - Commercial', 'Mortgage & Lending', 'Property Management', 'Other'].map((i) => (
               <option key={i} value={i}>{i}</option>
@@ -326,11 +326,11 @@ function BusinessStep() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Company Size</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Company Size</label>
           <select
             value={form.companySize}
             onChange={(e) => setForm({ ...form, companySize: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
             {['1-10 employees', '11-50 employees', '51-200 employees', '201-500 employees', '500+ employees'].map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -339,33 +339,33 @@ function BusinessStep() {
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">Website</label>
         <input
           type="url"
           value={form.website}
           onChange={(e) => setForm({ ...form, website: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder="https://www.yourcompany.com"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Business Email</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Business Email</label>
           <input
             type="email"
             value={form.billingEmail}
             onChange={(e) => setForm({ ...form, billingEmail: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             placeholder="info@company.com"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Business Phone</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Business Phone</label>
           <input
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             placeholder="+1 (555) 000-0000"
           />
         </div>
@@ -462,58 +462,58 @@ function EmailStep() {
         </div>
       )}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">SendGrid API Key *</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">SendGrid API Key *</label>
         <input
           type="password"
           value={form.apiKey}
           onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
           placeholder={hasExisting ? '••••••••••• (key stored)' : 'SG.xxxxxx...'}
         />
-        <p className="text-xs text-gray-400 mt-1">Get your key from <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">SendGrid Dashboard</a></p>
+        <p className="text-xs text-muted-foreground mt-1">Get your key from <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">SendGrid Dashboard</a></p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">From Name *</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">From Name *</label>
           <input
             type="text"
             value={form.fromName}
             onChange={(e) => setForm({ ...form, fromName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             placeholder="John at Pinnacle Realty"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">From Email *</label>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">From Email *</label>
           <input
             type="email"
             value={form.fromEmail}
             onChange={(e) => setForm({ ...form, fromEmail: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             placeholder="john@company.com"
           />
         </div>
       </div>
       <details className="group">
-        <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
+        <summary className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
           Advanced SMTP settings
         </summary>
         <div className="mt-3 grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SMTP Host</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">SMTP Host</label>
             <input
               type="text"
               value={form.smtpHost}
               onChange={(e) => setForm({ ...form, smtpHost: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SMTP Port</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">SMTP Port</label>
             <select
               value={form.smtpPort}
               onChange={(e) => setForm({ ...form, smtpPort: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
             >
               {['587', '465', '25', '2525'].map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -640,33 +640,33 @@ function SMSStep() {
         </div>
       )}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Account SID *</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">Account SID *</label>
         <input
           type="text"
           value={form.accountSid}
           onChange={(e) => setForm({ ...form, accountSid: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
           placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Auth Token *</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">Auth Token *</label>
         <input
           type="password"
           value={form.authToken}
           onChange={(e) => setForm({ ...form, authToken: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
           placeholder={hasExisting ? '••••••••••• (token stored)' : '32-character token'}
         />
-        <p className="text-xs text-gray-400 mt-1">Find it in your <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Twilio Console</a></p>
+        <p className="text-xs text-muted-foreground mt-1">Find it in your <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Twilio Console</a></p>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Twilio Phone Number *</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">Twilio Phone Number *</label>
         <input
           type="tel"
           value={form.phoneNumber}
           onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder="+15551234567"
         />
       </div>
@@ -678,14 +678,14 @@ function SMSStep() {
         {saving ? 'Verifying & Saving...' : 'Save Twilio Config'}
       </button>
       {configSaved && (
-        <div className="pt-2 border-t border-gray-100 space-y-3">
-          <p className="text-sm font-medium text-gray-700">Send a test SMS to verify everything works:</p>
+        <div className="pt-2 border-t border-border space-y-3">
+          <p className="text-sm font-medium text-muted-foreground">Send a test SMS to verify everything works:</p>
           <div className="flex gap-3">
             <input
               type="tel"
               value={testPhone}
               onChange={(e) => setTestPhone(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              className="flex-1 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               placeholder="+1 your phone number"
             />
             <button
@@ -724,8 +724,8 @@ function GoogleStep() {
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 mb-4">
           <Clock className="h-8 w-8 text-blue-500" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">Google Integration</h3>
-        <p className="text-gray-500 max-w-sm mx-auto mb-4">
+        <h3 className="text-lg font-bold text-foreground mb-2">Google Integration</h3>
+        <p className="text-muted-foreground max-w-sm mx-auto mb-4">
           Google OAuth integration requires setup in your organization's Google Cloud Console.
           You can configure this in <strong>Settings → Integrations</strong> once you have your OAuth credentials ready.
         </p>
@@ -741,16 +741,16 @@ function GoogleStep() {
           { name: 'Calendar', desc: 'Sync appointments' },
           { name: 'Contacts', desc: 'Import & sync contacts' },
         ].map((service) => (
-          <div key={service.name} className="p-4 rounded-xl border border-gray-200 bg-gray-50 text-center">
-            <p className="font-medium text-gray-900 text-sm">{service.name}</p>
-            <p className="text-xs text-gray-400 mt-1">{service.desc}</p>
+          <div key={service.name} className="p-4 rounded-xl border border-border bg-muted text-center">
+            <p className="font-medium text-foreground text-sm">{service.name}</p>
+            <p className="text-xs text-muted-foreground mt-1">{service.desc}</p>
           </div>
         ))}
       </div>
 
-      <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-600">
-        <p className="font-medium text-gray-700 mb-2">To set up Google integration:</p>
-        <ol className="list-decimal list-inside space-y-1 text-gray-500">
+      <div className="p-4 rounded-xl bg-muted border border-border text-sm text-muted-foreground">
+        <p className="font-medium text-foreground/80 mb-2">To set up Google integration:</p>
+        <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
           <li>Create a project in Google Cloud Console</li>
           <li>Enable Gmail, Calendar, and People APIs</li>
           <li>Create OAuth 2.0 credentials</li>
@@ -799,8 +799,8 @@ function SecurityStep() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 mb-4">
               <Shield className="h-8 w-8 text-amber-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Protect your account</h3>
-            <p className="text-gray-500 max-w-sm mx-auto">
+            <h3 className="text-lg font-bold text-foreground mb-2">Protect your account</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">
               Two-factor authentication adds an extra layer of security. We recommend setting this up
               in Settings where you can scan the QR code with your authenticator app.
             </p>
@@ -816,18 +816,18 @@ function SecurityStep() {
         </>
       )}
 
-      <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">Security Checklist</h4>
+      <div className="p-4 rounded-xl bg-muted border border-border">
+        <h4 className="text-sm font-semibold text-foreground/80 mb-3">Security Checklist</h4>
         <ul className="space-y-2">
           {[
             { label: 'Two-factor authentication', done: twoFactorEnabled },
             { label: 'Email verified', done: emailVerified },
           ].map((item) => (
             <li key={item.label} className="flex items-center gap-2 text-sm">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${item.done ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-400'}`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${item.done ? 'bg-emerald-100 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
                 <Check className="h-3 w-3" />
               </div>
-              <span className={item.done ? 'text-gray-700' : 'text-gray-400'}>{item.label}</span>
+              <span className={item.done ? 'text-foreground/80' : 'text-muted-foreground'}>{item.label}</span>
               {!item.done && (
                 <span className="ml-auto text-xs text-amber-600 font-medium">Recommended</span>
               )}
@@ -849,8 +849,8 @@ function CompleteStep({ skippedSteps }: { skippedSteps: Set<string> }) {
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 mb-6">
         <Check className="h-10 w-10 text-emerald-600" />
       </div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-3">You're all set!</h2>
-      <p className="text-gray-500 max-w-md mx-auto mb-6">
+      <h2 className="text-2xl font-bold text-foreground mb-3">You're all set!</h2>
+      <p className="text-muted-foreground max-w-md mx-auto mb-6">
         Your account is configured. You can always change any of these settings later from the Settings page.
       </p>
 
@@ -985,22 +985,23 @@ export function SetupWizard() {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="relative w-full max-w-2xl mx-4 bg-card rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-xl ${step.critical ? 'bg-amber-100' : 'bg-blue-100'}`}>
               <step.icon className={`h-5 w-5 ${step.critical ? 'text-amber-600' : 'text-blue-600'}`} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900">{step.title}</h3>
-              <p className="text-xs text-gray-400">Step {currentStep + 1} of {WIZARD_STEPS.length}</p>
+              <h3 className="font-bold text-foreground">{step.title}</h3>
+              <p className="text-xs text-muted-foreground">Step {currentStep + 1} of {WIZARD_STEPS.length}</p>
             </div>
           </div>
           <button
             onClick={handleSkipAll}
-            className="text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             title="Skip setup and configure later"
+            aria-label="Skip setup and configure later"
           >
             <X className="h-4 w-4" />
             <span className="hidden sm:inline">Set up later</span>
@@ -1008,7 +1009,7 @@ export function SetupWizard() {
         </div>
 
         {/* Progress bar */}
-        <div className="h-1 bg-gray-100">
+        <div className="h-1 bg-muted">
           <div
             className="h-full bg-blue-600 transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
@@ -1032,19 +1033,19 @@ export function SetupWizard() {
 
           {/* Step description */}
           {isConfigStep && (
-            <p className="text-gray-500 text-sm mb-6">{step.description}</p>
+            <p className="text-muted-foreground text-sm mb-6">{step.description}</p>
           )}
 
           {renderStep()}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/50">
           <div>
             {!isFirst && (
               <button
                 onClick={handleBack}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back
@@ -1055,7 +1056,7 @@ export function SetupWizard() {
             {isConfigStep && (
               <button
                 onClick={handleSkipStep}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors"
+                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 <SkipForward className="h-4 w-4" />
                 Skip

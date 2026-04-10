@@ -75,7 +75,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
       case 'update':
         return <TrendingUp className="h-4 w-4 text-purple-500" />
       case 'system':
-        return <Settings className="h-4 w-4 text-gray-500" />
+        return <Settings className="h-4 w-4 text-muted-foreground" />
       case 'email':
         return <Mail className="h-4 w-4 text-cyan-500" />
       case 'sms':
@@ -85,7 +85,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
       case 'meeting':
         return <Calendar className="h-4 w-4 text-yellow-500" />
       default:
-        return <Bell className="h-4 w-4 text-gray-500" />
+        return <Bell className="h-4 w-4 text-muted-foreground" />
     }
   }
 
@@ -232,7 +232,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
                       </p>
                       <button
                         onClick={(e) => handleDelete(notification.id, e)}
-                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        className="text-muted-foreground hover:text-destructive shrink-0 transition-colors"
                       >
                         <X className="h-3 w-3" />
                       </button>

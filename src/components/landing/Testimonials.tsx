@@ -35,20 +35,20 @@ export function Testimonials() {
   const { ref, isVisible } = useScrollAnimation()
 
   return (
-    <section id="testimonials" className="py-24 bg-white" ref={ref}>
+    <section id="testimonials" className="py-24 bg-background" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
             Testimonials
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Loved by agents{' '}
             <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
               across the country
             </span>
           </h2>
-          <p className="text-lg text-gray-500">
+          <p className="text-lg text-muted-foreground">
             See why thousands of real estate professionals made the switch.
           </p>
         </div>
@@ -58,7 +58,7 @@ export function Testimonials() {
           {testimonials.map((t) => (
             <div
               key={t.name}
-              className="relative p-8 rounded-2xl border border-gray-100 bg-white hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300"
+              className="relative p-8 rounded-2xl border border-border bg-card hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300"
             >
               {/* Stars */}
               <div className="flex gap-1 mb-6">
@@ -68,7 +68,7 @@ export function Testimonials() {
               </div>
 
               {/* Quote */}
-              <blockquote className="text-gray-600 leading-relaxed mb-8">
+              <blockquote className="text-muted-foreground leading-relaxed mb-8">
                 &ldquo;{t.quote}&rdquo;
               </blockquote>
 
@@ -83,8 +83,8 @@ export function Testimonials() {
                   {t.initials}
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900">{t.name}</p>
-                  <p className="text-sm text-gray-500">{t.role}</p>
+                  <p className="font-bold text-foreground">{t.name}</p>
+                  <p className="text-sm text-muted-foreground">{t.role}</p>
                 </div>
               </div>
             </div>

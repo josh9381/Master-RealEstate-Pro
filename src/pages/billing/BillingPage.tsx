@@ -147,7 +147,7 @@ const BillingPage = () => {
     const pct = usagePct(entry.current, entry.limit);
     const numLimit = normalizeLimit(entry.limit);
     return (
-      <div className="p-4 bg-slate-50 rounded-lg">
+      <div className="p-4 bg-muted/50 rounded-lg">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold">{label}</span>
           <span className="text-sm font-medium">
@@ -237,7 +237,7 @@ const BillingPage = () => {
         <div className="space-y-6">
           {/* Current Plan Summary */}
           <Card className="border-2">
-            <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50">
+            <CardHeader className="bg-muted/50">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl">Current Subscription</CardTitle>
@@ -249,8 +249,8 @@ const BillingPage = () => {
             <CardContent className="pt-6">
               {isLoading ? (
                 <div className="animate-pulse space-y-4">
-                  <div className="h-10 bg-gray-200 rounded w-1/3" />
-                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+                  <div className="h-10 bg-muted rounded w-1/3" />
+                  <div className="h-4 bg-muted rounded w-1/2" />
                 </div>
               ) : subscriptionData ? (
                 <div className="space-y-6">
@@ -288,7 +288,7 @@ const BillingPage = () => {
                       { label: 'Campaigns', value: subscriptionData.usage?.campaigns?.current || 0 },
                       { label: 'Workflows', value: subscriptionData.usage?.workflows?.current || 0 },
                     ].map(s => (
-                      <div key={s.label} className="text-center p-3 bg-slate-50 rounded-lg">
+                      <div key={s.label} className="text-center p-3 bg-muted/50 rounded-lg">
                         <p className="text-2xl font-bold">{s.value.toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
                       </div>
@@ -331,7 +331,7 @@ const BillingPage = () => {
               const isCurrent = plan.id === currentPlanId;
               const isEnterprise = plan.id === 'ENTERPRISE';
               return (
-                <Card key={plan.id} className={`p-6 ${isCurrent ? 'ring-2 ring-primary' : ''}`}>
+                <Card key={plan.id} className={`p-6 transition-all duration-200 hover:shadow-md ${isCurrent ? 'ring-2 ring-primary' : ''}`}>
                   {isCurrent && <Badge className="mb-4">Current Plan</Badge>}
                   <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
                   <div className="flex items-baseline gap-1 mb-4">
@@ -394,7 +394,7 @@ const BillingPage = () => {
             ) : (
               <div className="space-y-3">
                 {invoices.map((invoice: { id: string; description?: string; createdAt?: string; created?: string; amount?: number; amountDue?: number; status?: string; pdfUrl?: string }) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg transition-all duration-200 hover:shadow-md">
                     <div className="flex items-center gap-3">
                       <CreditCard className="h-5 w-5 text-muted-foreground" />
                       <div>
@@ -451,8 +451,8 @@ const BillingPage = () => {
             ) : (
               <div className="space-y-3">
                 {paymentMethods.map((pm: { id: string; brand?: string; last4?: string; expMonth?: number; expYear?: number }) => (
-                  <div key={pm.id} className="flex items-center space-x-4 p-4 bg-slate-50 border rounded-lg">
-                    <div className="p-3 bg-white rounded-lg border">
+                  <div key={pm.id} className="flex items-center space-x-4 p-4 bg-muted/50 border rounded-lg transition-all duration-200 hover:shadow-md">
+                    <div className="p-3 bg-card rounded-lg border">
                       <CreditCard className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex-1">

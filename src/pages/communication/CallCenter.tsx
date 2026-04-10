@@ -344,7 +344,7 @@ const CallCenter = () => {
 
       {/* Today Stats */}
       <div className="grid gap-4 md:grid-cols-5">
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Calls Today</CardTitle>
             <Phone className="h-4 w-4 text-muted-foreground" />
@@ -353,7 +353,7 @@ const CallCenter = () => {
             <div className="text-2xl font-bold">{todayStats?.totalCalls || 0}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Connected</CardTitle>
             <PhoneIncoming className="h-4 w-4 text-muted-foreground" />
@@ -362,7 +362,7 @@ const CallCenter = () => {
             <div className="text-2xl font-bold">{todayStats?.answered || 0}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Connection Rate</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -371,7 +371,7 @@ const CallCenter = () => {
             <div className="text-2xl font-bold">{formatRate(todayStats?.connectionRate || 0)}%</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Talk Time</CardTitle>
             <Timer className="h-4 w-4 text-muted-foreground" />
@@ -380,7 +380,7 @@ const CallCenter = () => {
             <div className="text-2xl font-bold">{formatDuration(todayStats?.totalTalkTimeSeconds || 0)}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -507,12 +507,12 @@ const CallCenter = () => {
                     <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium mt-3 ${
                       dialerStatus === 'connecting' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
                       dialerStatus === 'connected' ? 'bg-green-50 text-green-700 border border-green-200' :
-                      'bg-gray-50 text-gray-600 border border-gray-200'
+                      'bg-muted/50 text-muted-foreground border border-border'
                     }`}>
                       <span className={`inline-block h-2 w-2 rounded-full ${
                         dialerStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
                         dialerStatus === 'connected' ? 'bg-green-500 animate-pulse' :
-                        'bg-gray-400'
+                        'bg-muted-foreground'
                       }`} />
                       {dialerStatus === 'connecting' && 'Dialing...'}
                       {dialerStatus === 'connected' && `Connected — ${formatTimer(callElapsed)}`}
@@ -675,7 +675,7 @@ const CallCenter = () => {
                 </CardHeader>
                 <CardContent>
                   <textarea
-                    className="w-full px-3 py-2 border rounded-lg text-sm min-h-[80px] bg-background"
+                    className="w-full px-3 py-2 border rounded-lg text-sm min-h-[80px] bg-background transition-colors"
                     placeholder="Type notes during the call..."
                     value={callNotes}
                     onChange={(e) => setCallNotes(e.target.value)}
@@ -693,7 +693,7 @@ const CallCenter = () => {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-green-200 hover:bg-green-50 hover:border-green-400 text-green-700"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-green-200 hover:bg-green-50 hover:border-green-400 text-green-700 transition-colors"
                       onClick={() => handleDisposition('ANSWERED')}
                       disabled={logCallMutation.isPending}
                     >
@@ -702,7 +702,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-blue-200 hover:bg-blue-50 hover:border-blue-400 text-blue-700"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-blue-200 hover:bg-blue-50 hover:border-blue-400 text-blue-700 transition-colors"
                       onClick={() => {
                         if (!callbackDate || !callbackTime) {
                           setShowCallbackPicker(true)
@@ -720,7 +720,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-400 text-indigo-600"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-400 text-indigo-600 transition-colors"
                       onClick={() => handleDisposition('VOICEMAIL')}
                       disabled={logCallMutation.isPending}
                     >
@@ -729,7 +729,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-gray-200 hover:bg-gray-50 hover:border-gray-400 text-gray-600"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-border hover:bg-muted/50 hover:border-border text-muted-foreground transition-colors"
                       onClick={() => handleDisposition('NO_ANSWER')}
                       disabled={logCallMutation.isPending}
                     >
@@ -738,7 +738,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-orange-200 hover:bg-orange-50 hover:border-orange-400 text-orange-600"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-orange-200 hover:bg-orange-50 hover:border-orange-400 text-orange-600 transition-colors"
                       onClick={() => handleDisposition('NOT_INTERESTED')}
                       disabled={logCallMutation.isPending}
                     >
@@ -747,7 +747,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-red-200 hover:bg-red-50 hover:border-red-400 text-red-600"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-red-200 hover:bg-red-50 hover:border-red-400 text-red-600 transition-colors"
                       onClick={() => handleDisposition('WRONG_NUMBER')}
                       disabled={logCallMutation.isPending}
                     >
@@ -756,7 +756,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-purple-200 hover:bg-purple-50 hover:border-purple-400 text-purple-700"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-purple-200 hover:bg-purple-50 hover:border-purple-400 text-purple-700 transition-colors"
                       onClick={() => handleDisposition('LEFT_MESSAGE')}
                       disabled={logCallMutation.isPending}
                     >
@@ -765,7 +765,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-gray-200 hover:bg-gray-50 hover:border-gray-400 text-gray-500"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-border hover:bg-muted/50 hover:border-border text-muted-foreground transition-colors"
                       onClick={() => handleDisposition('BUSY')}
                       disabled={logCallMutation.isPending}
                     >
@@ -774,7 +774,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-red-300 hover:bg-red-50 hover:border-red-500 text-red-700"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-red-300 hover:bg-red-50 hover:border-red-500 text-red-700 transition-colors"
                       onClick={() => handleDisposition('DNC_REQUEST')}
                       disabled={logCallMutation.isPending}
                     >
@@ -803,7 +803,7 @@ const CallCenter = () => {
                             value={callbackDate}
                             onChange={(e) => setCallbackDate(e.target.value)}
                             min={new Date().toISOString().split('T')[0]}
-                            className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                            className="w-full px-3 py-2 border rounded-lg text-sm bg-card transition-colors"
                           />
                         </div>
                         <div>
@@ -812,7 +812,7 @@ const CallCenter = () => {
                             type="time"
                             value={callbackTime}
                             onChange={(e) => setCallbackTime(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                            className="w-full px-3 py-2 border rounded-lg text-sm bg-card transition-colors"
                           />
                         </div>
                       </div>
@@ -841,7 +841,7 @@ const CallCenter = () => {
                                 key={opt.label}
                                 type="button"
                                 onClick={() => { setCallbackDate(d.toISOString().split('T')[0]); setCallbackTime(opt.time); }}
-                                className="px-2 py-1 text-[10px] rounded border bg-white hover:bg-blue-50 text-blue-600 font-medium transition-colors"
+                                className="px-2 py-1 text-[10px] rounded border bg-card hover:bg-primary/10 text-primary font-medium transition-colors"
                               >
                                 {opt.label}
                               </button>
@@ -896,7 +896,7 @@ const CallCenter = () => {
               {recentCalls.map((call: any) => (
                 <div
                   key={call.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50"
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`p-1.5 rounded-lg ${call.direction === 'INBOUND' ? 'bg-blue-100' : 'bg-green-100'}`}>

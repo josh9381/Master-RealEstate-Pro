@@ -201,9 +201,9 @@ export function AISMSComposer({
               <div className="mx-auto mb-3 h-6 w-32 rounded-full bg-gray-800" />
               
               {/* Screen */}
-              <div className="rounded-2xl bg-gray-100 p-4 min-h-[300px] flex flex-col">
+              <div className="rounded-2xl bg-muted p-4 min-h-[300px] flex flex-col">
                 {/* Time */}
-                <div className="text-center text-xs text-gray-500 mb-4">
+                <div className="text-center text-xs text-muted-foreground mb-4">
                   {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
 
@@ -224,7 +224,7 @@ export function AISMSComposer({
                       )}
                     </div>
                     <div className="mt-1 text-right">
-                      <span className="text-xs text-gray-500">Delivered</span>
+                      <span className="text-xs text-muted-foreground">Delivered</span>
                     </div>
                   </div>
                 </div>

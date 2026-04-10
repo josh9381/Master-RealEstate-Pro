@@ -153,7 +153,7 @@ function LeadDocumentsTab({ leadId }: { leadId: string }) {
         ) : (
           <div className="space-y-2">
             {docs.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 group">
+              <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors group">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <span className="text-lg shrink-0">{getFileIcon(doc.mimeType)}</span>
                   <div className="min-w-0">
@@ -706,7 +706,7 @@ function LeadDetail() {
           {activeTab === 'overview' && (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
           {/* Contact Info Card */}
-          <Card>
+          <Card className="transition-all duration-200 hover:shadow-md">
             <CardHeader>
               <CardTitle>Contact Information</CardTitle>
             </CardHeader>
@@ -752,7 +752,7 @@ function LeadDetail() {
 
           {/* Real Estate Details */}
           {(lead.propertyType || lead.transactionType || lead.budgetMin || lead.budgetMax || lead.preApprovalStatus || lead.moveInTimeline || lead.desiredLocation || lead.bedsMin || lead.bathsMin) && (
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader>
                 <CardTitle>Real Estate Details</CardTitle>
               </CardHeader>
@@ -812,7 +812,7 @@ function LeadDetail() {
           )}
 
           {/* Activity Timeline */}
-          <Card>
+          <Card className="transition-all duration-200 hover:shadow-md">
             <CardHeader>
               <CardTitle>Activity Timeline</CardTitle>
             </CardHeader>
@@ -826,7 +826,7 @@ function LeadDetail() {
           {/* Communications Tab */}
           {activeTab === 'communications' && (
             <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <History className="h-5 w-5" />
@@ -850,7 +850,7 @@ function LeadDetail() {
           {/* Notes Tab */}
           {activeTab === 'notes' && (
           <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-          <Card>
+          <Card className="transition-all duration-200 hover:shadow-md">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Notes ({notes.length})</CardTitle>
@@ -986,7 +986,7 @@ function LeadDetail() {
           {/* Tasks Tab */}
           {activeTab === 'tasks' && (
             <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckSquare className="h-5 w-5" />
@@ -1039,7 +1039,7 @@ function LeadDetail() {
           />
 
           {/* Lead Score */}
-          <Card>
+          <Card className="transition-all duration-200 hover:shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-1.5">
                 Lead Score
@@ -1068,7 +1068,7 @@ function LeadDetail() {
           </Card>
 
           {/* Status & Details */}
-          <Card>
+          <Card className="transition-all duration-200 hover:shadow-md">
             <CardHeader>
               <CardTitle>Details</CardTitle>
             </CardHeader>

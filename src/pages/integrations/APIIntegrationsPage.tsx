@@ -102,7 +102,7 @@ export default function APIIntegrationsPage() {
                 This key will not be shown again. Store it securely.
               </p>
               <div className="flex items-center gap-2">
-                <code className="text-sm bg-white dark:bg-gray-900 px-3 py-1.5 rounded border font-mono break-all">
+                <code className="text-sm bg-card px-3 py-1.5 rounded border font-mono break-all">
                   {newlyCreatedKey}
                 </code>
                 <Button
@@ -131,7 +131,7 @@ export default function APIIntegrationsPage() {
               placeholder="Key name (e.g. Production, Staging)"
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
-              className="flex-1 px-3 py-2 border rounded-lg text-sm"
+              className="flex-1 px-3 py-2 border rounded-lg text-sm transition-colors"
               autoFocus
             />
             <Button
@@ -168,7 +168,7 @@ export default function APIIntegrationsPage() {
         ) : (
           <div className="space-y-4">
             {keys.map((apiKey) => (
-              <div key={apiKey.id} className="p-4 border rounded-lg">
+              <div key={apiKey.id} className="p-4 border rounded-lg transition-all duration-200 hover:shadow-md">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-semibold">{apiKey.name}</h3>

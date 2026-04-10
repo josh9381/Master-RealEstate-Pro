@@ -32,7 +32,7 @@ function getDateRange(preset: string): { startDate: string; endDate: string } {
 const ChangeIndicator = ({ value }: { value: number }) => {
   if (value > 0) return <span className="flex items-center gap-1 text-green-600 text-sm font-medium"><TrendingUp className="h-4 w-4" /> +{value}%</span>;
   if (value < 0) return <span className="flex items-center gap-1 text-red-600 text-sm font-medium"><TrendingDown className="h-4 w-4" /> {value}%</span>;
-  return <span className="flex items-center gap-1 text-gray-500 text-sm font-medium"><Minus className="h-4 w-4" /> 0%</span>;
+  return <span className="flex items-center gap-1 text-muted-foreground text-sm font-medium"><Minus className="h-4 w-4" /> 0%</span>;
 };
 
 const PeriodComparison = () => {
@@ -57,9 +57,9 @@ const PeriodComparison = () => {
     return (
       <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+          <div className="h-8 bg-muted rounded w-1/3" />
           <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded" />)}
+            {[1, 2, 3, 4].map((i) => <div key={i} className="h-32 bg-muted rounded" />)}
           </div>
         </div>
       </div>
@@ -109,11 +109,11 @@ const PeriodComparison = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <TrendingUp className="h-7 w-7 text-blue-600" />
             Period Comparison
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground mt-1">
             Compare current period performance with the previous period
           </p>
         </div>
@@ -135,49 +135,49 @@ const PeriodComparison = () => {
       {preset === 'custom' && (
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <input
               type="date"
               value={customStart}
               max={customEnd || undefined}
               onChange={(e) => setCustomStart(e.target.value)}
               aria-label="Start date"
-              className="px-3 py-1.5 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+              className="px-3 py-1.5 border rounded-lg text-sm dark:bg-card dark:border-border dark:text-foreground transition-colors"
             />
           </div>
-          <ArrowRight className="h-4 w-4 text-gray-400" />
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
           <input
             type="date"
             value={customEnd}
             min={customStart || undefined}
             onChange={(e) => setCustomEnd(e.target.value)}
             aria-label="End date"
-            className="px-3 py-1.5 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+            className="px-3 py-1.5 border rounded-lg text-sm dark:bg-card dark:border-border dark:text-foreground transition-colors"
           />
         </div>
       )}
 
       {/* Period labels */}
       {result?.periodLabel && (
-        <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <span className="font-medium text-blue-600">Current: {result.periodLabel.current}</span>
           <ArrowRight className="h-3 w-3" />
-          <span className="font-medium text-gray-500">Previous: {result.periodLabel.previous}</span>
+          <span className="font-medium text-muted-foreground">Previous: {result.periodLabel.previous}</span>
         </div>
       )}
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {metrics.map((m) => (
-          <Card key={m.key}>
+          <Card key={m.key} className="transition-all duration-200 hover:shadow-md">
             <CardContent className="pt-5 pb-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{m.label}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{m.label}</p>
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl font-bold text-foreground">
                     {formatVal(current[m.key], m.isCurrency)}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-muted-foreground">
                     vs {formatVal(previous[m.key], m.isCurrency)}
                   </p>
                 </div>

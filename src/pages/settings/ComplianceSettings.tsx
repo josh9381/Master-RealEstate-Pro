@@ -41,6 +41,7 @@ const ComplianceSettings = () => {
 
   useEffect(() => {
     loadSettings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSettings = async (isRefresh = false) => {
@@ -373,7 +374,7 @@ const ComplianceSettings = () => {
           <div>
             <label className="text-sm font-medium mb-2 block">DNC List Provider</label>
             <select 
-              className="w-full px-3 py-2 border rounded-lg bg-background" 
+              className="w-full px-3 py-2 border rounded-lg bg-background transition-colors" 
               value={dncListProvider}
               onChange={(e) => setDncListProvider(e.target.value)}
             >
@@ -463,7 +464,7 @@ const ComplianceSettings = () => {
               max="3650"
               value={retentionDays}
               onChange={(e) => setRetentionDays(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg transition-colors"
             />
             <p className="text-xs text-muted-foreground mt-1">
               Automatically delete inactive data after this period (1–3,650 days)
@@ -546,7 +547,7 @@ const ComplianceSettings = () => {
                       onChange={(e) => consent.onChange(e.target.checked)}
                       className="sr-only peer" 
                     />
-                    <div className="w-12 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white dark:after:bg-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-12 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-card after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
               ))}
@@ -570,7 +571,7 @@ const ComplianceSettings = () => {
                 onChange={(e) => setAuditEnabled(e.target.checked)}
                 className="sr-only peer" 
               />
-              <div className="w-12 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white dark:after:bg-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-12 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-card after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
         </CardHeader>
@@ -629,7 +630,7 @@ const ComplianceSettings = () => {
               placeholder="https://yourcompany.com/privacy"
               value={privacyPolicyUrl}
               onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg bg-background"
+              className="w-full px-3 py-2 border rounded-lg bg-background transition-colors"
             />
           </div>
           <div>
@@ -639,7 +640,7 @@ const ComplianceSettings = () => {
               placeholder="https://yourcompany.com/terms"
               value={termsUrl}
               onChange={(e) => setTermsUrl(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg bg-background"
+              className="w-full px-3 py-2 border rounded-lg bg-background transition-colors"
             />
           </div>
           <div>
@@ -649,7 +650,7 @@ const ComplianceSettings = () => {
               placeholder="https://yourcompany.com/cookies"
               value={cookiePolicyUrl}
               onChange={(e) => setCookiePolicyUrl(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg bg-background"
+              className="w-full px-3 py-2 border rounded-lg bg-background transition-colors"
             />
           </div>
           <Button onClick={handleSave}>Save Policy URLs</Button>

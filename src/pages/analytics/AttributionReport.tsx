@@ -12,7 +12,8 @@ import {
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
 import { formatRate, fmtMoney } from '@/lib/metricsCalculator';
-import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { DateRangePicker, DateRange } from '@/components/shared/DateRangePicker';
+import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import { CHART_COLORS as COLORS } from '@/lib/chartColors';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 
@@ -51,11 +52,11 @@ const AttributionReport = () => {
     return (
       <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+          <div className="h-8 bg-muted rounded w-1/3" />
           <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />)}
+            {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-muted rounded" />)}
           </div>
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-64 bg-muted rounded" />
         </div>
       </div>
     );
@@ -77,11 +78,11 @@ const AttributionReport = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <GitBranch className="h-7 w-7 text-blue-600" />
             Multi-Touch Attribution
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground mt-1">
             Understand which channels and campaigns drive conversions
           </p>
         </div>
@@ -103,14 +104,14 @@ const AttributionReport = () => {
                 className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
                   model === opt.value
                     ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-blue-300'
+                    : 'bg-card text-muted-foreground border-border hover:border-blue-300'
                 }`}
               >
                 {opt.label}
               </button>
             ))}
           </div>
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+          <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
             <Info className="h-3 w-3" />
             {MODEL_OPTIONS.find((o) => o.value === model)?.description}
           </p>
@@ -120,9 +121,9 @@ const AttributionReport = () => {
       {noData ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <GitBranch className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Conversions Yet</h3>
-            <p className="text-gray-500 dark:text-gray-400">
+            <GitBranch className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Conversions Yet</h3>
+            <p className="text-muted-foreground">
               Attribution data will appear once leads are marked as Won. Try adjusting the date range.
             </p>
           </CardContent>
@@ -139,34 +140,34 @@ const AttributionReport = () => {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Conversions</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{data.conversions}</p>
+                    <p className="text-sm text-muted-foreground">Conversions</p>
+                    <p className="text-2xl font-bold text-foreground">{data.conversions}</p>
                   </div>
                   <Users className="h-8 w-8 text-blue-500 opacity-40" />
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Revenue</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(data.totalRevenue)}</p>
+                    <p className="text-sm text-muted-foreground">Total Revenue</p>
+                    <p className="text-2xl font-bold text-foreground">{formatCurrency(data.totalRevenue)}</p>
                   </div>
                   <DollarSign className="h-8 w-8 text-green-500 opacity-40" />
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Sources</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{data.bySource?.length || 0}</p>
+                    <p className="text-sm text-muted-foreground">Sources</p>
+                    <p className="text-2xl font-bold text-foreground">{data.bySource?.length || 0}</p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-purple-500 opacity-40" />
                 </div>
@@ -201,7 +202,7 @@ const AttributionReport = () => {
                   </div>
                   </ChartErrorBoundary>
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No channel data available</p>
+                  <p className="text-muted-foreground text-center py-8">No channel data available</p>
                 )}
               </CardContent>
             </Card>
@@ -240,7 +241,7 @@ const AttributionReport = () => {
                   </div>
                   </ChartErrorBoundary>
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No source data available</p>
+                  <p className="text-muted-foreground text-center py-8">No source data available</p>
                 )}
               </CardContent>
             </Card>
@@ -259,20 +260,20 @@ const AttributionReport = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b dark:border-gray-700">
-                        <th scope="col" className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Campaign</th>
-                        <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Attributed Credit</th>
-                        <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Attributed Revenue</th>
-                        <th scope="col" className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Conversions</th>
+                      <tr className="border-b border-border">
+                        <th scope="col" className="text-left py-3 px-4 font-medium text-muted-foreground">Campaign</th>
+                        <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Attributed Credit</th>
+                        <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Attributed Revenue</th>
+                        <th scope="col" className="text-right py-3 px-4 font-medium text-muted-foreground">Conversions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.byCampaign.map((c: { campaignId: string; name: string; credit: number; revenue: number; conversions: number }) => (
-                        <tr key={c.campaignId || c.name} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">{c.name}</td>
-                          <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{formatRate(c.credit)}</td>
+                        <tr key={c.campaignId || c.name} className="border-b border-border hover:bg-muted transition-colors duration-200">
+                          <td className="py-3 px-4 font-medium text-foreground">{c.name}</td>
+                          <td className="py-3 px-4 text-right text-muted-foreground">{formatRate(c.credit)}</td>
                           <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(c.revenue)}</td>
-                          <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{formatRate(c.conversions, 1)}</td>
+                          <td className="py-3 px-4 text-right text-muted-foreground">{formatRate(c.conversions, 1)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -291,18 +292,18 @@ const AttributionReport = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 {data.leads.slice(0, 20).map((lead: { leadId: string; name: string; source: string; touchpoints: number; revenue: number; credits?: { channel: string; weight: number }[] }) => (
-                  <div key={lead.leadId} className="border dark:border-gray-700 rounded-lg">
+                  <div key={lead.leadId} className="border border-border rounded-lg">
                     <button
-                      className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-muted transition-colors"
                       onClick={() => setExpandedLead(expandedLead === lead.leadId ? null : lead.leadId)}
                     >
                       <div className="flex items-center gap-3">
-                        <Users className="h-4 w-4 text-gray-400" />
-                        <span className="font-medium text-gray-900 dark:text-white">{lead.name}</span>
-                        <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-foreground">{lead.name}</span>
+                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
                           {lead.source}
                         </span>
-                        <span className="text-xs text-gray-500">{lead.touchpoints} touchpoints</span>
+                        <span className="text-xs text-muted-foreground">{lead.touchpoints} touchpoints</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-green-600 font-medium">{formatCurrency(lead.revenue)}</span>
@@ -325,7 +326,7 @@ const AttributionReport = () => {
                               >
                                 {c.channel} ({formatRate(c.weight * 100, 0)}%)
                               </div>
-                              {i < credits.length - 1 && <ArrowRight className="h-3 w-3 text-gray-300" />}
+                              {i < credits.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground" />}
                             </div>
                           ))}
                         </div>

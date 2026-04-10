@@ -18,7 +18,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { analyticsApi } from '@/lib/api';
-import { DateRangePicker, DateRange, computeDateRange } from '@/components/shared/DateRangePicker';
+import { DateRangePicker, DateRange } from '@/components/shared/DateRangePicker';
+import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import { AnalyticsEmptyState } from '@/components/shared/AnalyticsEmptyState';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
 import { CHART_COLORS } from '@/lib/chartColors';

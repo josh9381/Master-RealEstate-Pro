@@ -553,7 +553,7 @@ const InsightsTab = () => {
                           setInsightTypes(prev => e.target.checked ? [...prev, type] : prev.filter(t => t !== type))
                           setPrefsDirty(true)
                         }}
-                        className="rounded border-gray-300"
+                        className="rounded border-border"
                       />
                       {type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                     </label>
@@ -706,7 +706,7 @@ const InsightsTab = () => {
               {filtered.map((insight: { id: string | number; title?: string; description?: string; priority?: string; category?: string; type?: string; confidence?: number; action?: string; date?: string; createdAt?: string; created?: string; impact?: string; dismissed?: boolean; actedOn?: boolean; actedOnAt?: string; actionTaken?: string }) => {
                 const displayCategory = insight.category || insight.type || 'Trend'
                 const Icon = categoryIcons[displayCategory as keyof typeof categoryIcons] || Sparkles
-                const colorClass = categoryColors[displayCategory as keyof typeof categoryColors] || 'bg-gray-100 text-gray-600'
+                const colorClass = categoryColors[displayCategory as keyof typeof categoryColors] || 'bg-muted text-muted-foreground'
 
                 return (
                   <Card key={insight.id} className="hover:shadow-md transition-shadow">

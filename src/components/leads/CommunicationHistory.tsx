@@ -110,10 +110,10 @@ function CommunicationHistory({
   // Extract call logs and normalize them into Message format
   const rawCalls = callsData?.data?.calls || []
   const callMessages: Message[] = Array.isArray(rawCalls)
-    ? rawCalls.map((call: any) => ({
+    ? rawCalls.map((call: { id: string; direction: string; status: string; outcome?: string; phoneNumber?: string; duration?: number; notes?: string; followUpDate?: string; calledBy?: { id: string; firstName: string; lastName: string }; createdAt: string }) => ({
         id: `call-${call.id}`,
         type: 'CALL' as const,
-        direction: call.direction,
+        direction: call.direction as 'INBOUND' | 'OUTBOUND',
         status: call.status,
         outcome: call.outcome,
         phoneNumber: call.phoneNumber,
@@ -172,7 +172,7 @@ function CommunicationHistory({
       case 'CALL':
         return 'text-purple-600 bg-purple-50 dark:bg-purple-950/30'
       default:
-        return 'text-gray-600 bg-gray-50 dark:bg-gray-950/30'
+        return 'text-muted-foreground bg-muted dark:bg-gray-950/30'
     }
   }
 

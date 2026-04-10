@@ -37,7 +37,7 @@ const QUICK_TIMES = [
 ]
 
 const PRIORITY_COLORS: Record<string, string> = {
-  LOW: 'bg-gray-100 text-gray-700',
+  LOW: 'bg-muted text-foreground',
   MEDIUM: 'bg-blue-100 text-blue-700',
   HIGH: 'bg-orange-100 text-orange-700',
   URGENT: 'bg-red-100 text-red-700',
@@ -84,7 +84,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
   const [channelSms, setChannelSms] = useState(false)
   const [channelPush, setChannelPush] = useState(false)
   const [isRecurring, setIsRecurring] = useState(false)
-  const [recurrencePattern, setRecurrencePattern] = useState<string>('WEEKLY')
+  const [recurrencePattern, setRecurrencePattern] = useState<'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CUSTOM'>('WEEKLY')
   const [recurrenceInterval, setRecurrenceInterval] = useState(1)
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
   const [recurrenceCount, setRecurrenceCount] = useState('')
@@ -201,7 +201,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
       channelPush,
       ...(isRecurring ? {
         isRecurring: true,
-        recurrencePattern: recurrencePattern as any,
+        recurrencePattern: recurrencePattern,
         ...(recurrencePattern === 'CUSTOM' ? { recurrenceInterval } : {}),
         ...(recurrenceEndDate ? { recurrenceEndDate: new Date(recurrenceEndDate).toISOString() } : {}),
         ...(recurrenceCount ? { recurrenceCount: parseInt(recurrenceCount) } : {}),
@@ -273,7 +273,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                   type="text"
                   value={title}
                   onChange={e => setTitle(e.target.value)}
-                  className="mt-1 w-full rounded-md border px-3 py-1.5 text-sm bg-background"
+                  className="mt-1 w-full rounded-md border px-3 py-1.5 text-sm bg-background transition-colors"
                   placeholder="Follow up about..."
                 />
               </div>
@@ -283,7 +283,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                 <textarea
                   value={note}
                   onChange={e => setNote(e.target.value)}
-                  className="mt-1 w-full rounded-md border px-3 py-1.5 text-sm bg-background resize-none"
+                  className="mt-1 w-full rounded-md border px-3 py-1.5 text-sm bg-background resize-none transition-colors"
                   rows={2}
                   placeholder="Additional context..."
                 />
@@ -296,7 +296,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                     type="datetime-local"
                     value={dueAt}
                     onChange={e => setDueAt(e.target.value)}
-                    className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm bg-background"
+                    className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm bg-background transition-colors"
                     min={new Date().toISOString().slice(0, 16)}
                   />
                 </div>
@@ -305,7 +305,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                   <select
                     value={priority}
                     onChange={e => setPriority(e.target.value as typeof priority)}
-                    className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm bg-background"
+                    className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm bg-background transition-colors"
                   >
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
@@ -377,8 +377,8 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                       <label className="text-xs text-muted-foreground">Repeat</label>
                       <select
                         value={recurrencePattern}
-                        onChange={e => setRecurrencePattern(e.target.value)}
-                        className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        onChange={e => setRecurrencePattern(e.target.value as typeof recurrencePattern)}
+                        className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-card dark:border-border dark:text-white"
                       >
                         <option value="DAILY">Daily</option>
                         <option value="WEEKLY">Weekly</option>
@@ -397,7 +397,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                           min={1}
                           value={recurrenceInterval}
                           onChange={e => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-card dark:border-border dark:text-white"
                         />
                       </div>
                     )}
@@ -408,7 +408,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                           type="date"
                           value={recurrenceEndDate}
                           onChange={e => setRecurrenceEndDate(e.target.value)}
-                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-card dark:border-border dark:text-white"
                         />
                       </div>
                       <div>
@@ -419,7 +419,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                           value={recurrenceCount}
                           onChange={e => setRecurrenceCount(e.target.value)}
                           placeholder="e.g. 10"
-                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                          className="w-full mt-0.5 px-2 py-1 text-xs border rounded dark:bg-card dark:border-border dark:text-white"
                         />
                       </div>
                     </div>
@@ -456,7 +456,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
               return (
                 <div
                   key={reminder.id}
-                  className={`rounded-lg border p-2.5 text-sm ${
+                  className={`rounded-lg border p-2.5 text-sm transition-all duration-200 hover:shadow-md ${
                     overdue ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : 'bg-card'
                   }`}
                 >
