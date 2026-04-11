@@ -112,8 +112,8 @@ export function AdminStats() {
       ring: 'ring-success',
     },
     purple: {
-      bg: 'bg-purple-100 dark:bg-purple-900/30',
-      text: 'text-purple-600 dark:text-purple-400',
+      bg: 'bg-primary/10',
+      text: 'text-primary',
       ring: 'ring-purple-600',
     },
     orange: {

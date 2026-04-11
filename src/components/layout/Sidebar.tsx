@@ -150,8 +150,8 @@ export function Sidebar() {
                           <span className={cn(
                             "ml-auto text-xs px-1.5 py-0.5 rounded font-medium",
                             tier === 'STARTER' && "bg-primary/10 text-primary",
-                            tier === 'PROFESSIONAL' && "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-                            tier === 'ELITE' && "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+                            tier === 'PROFESSIONAL' && "bg-primary/10 text-primary",
+                            tier === 'ELITE' && "bg-primary/20 text-primary",
                             tier === 'TEAM' && "bg-success/10 text-success",
                             tier === 'ENTERPRISE' && "bg-warning/10 text-warning",
                           )}>

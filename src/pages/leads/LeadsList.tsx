@@ -833,7 +833,7 @@ function LeadsList() {
             <div className="p-6 bg-primary/10 rounded-full mb-6">
               <Users className="h-16 w-16 text-primary" />
             </div>
-            <h3 className="text-2xl font-bold mb-3">No leads yet</h3>
+            <h2 className="text-2xl font-bold mb-3">No leads yet</h2>
             <p className="text-muted-foreground mb-6 text-lg">
               Import your contacts or add your first lead to get started tracking your sales pipeline.
             </p>

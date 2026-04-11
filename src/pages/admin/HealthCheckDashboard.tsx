@@ -93,10 +93,10 @@ const HealthCheckDashboard = () => {
       </div>
 
       {/* Overall Status */}
-      <Card className={`${overallStatus === 'operational' ? 'border-green-200 bg-green-50' : overallStatus === 'checking' ? 'border-border bg-muted/50' : 'border-orange-200 bg-orange-50'}`}>
+      <Card className={`${overallStatus === 'operational' ? 'border-success/30 bg-success/5' : overallStatus === 'checking' ? 'border-border bg-muted/50' : 'border-warning/30 bg-warning/5'}`}>
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4">
-            <div className={`flex items-center justify-center h-16 w-16 rounded-full ${overallStatus === 'operational' ? 'bg-green-600' : overallStatus === 'checking' ? 'bg-muted-foreground' : 'bg-orange-600'}`}>
+            <div className={`flex items-center justify-center h-16 w-16 rounded-full ${overallStatus === 'operational' ? 'bg-success' : overallStatus === 'checking' ? 'bg-muted-foreground' : 'bg-warning'}`}>
               {overallStatus === 'checking' ? (
                 <Loader2 className="h-8 w-8 text-white animate-spin" />
               ) : overallStatus === 'operational' ? (
@@ -106,9 +106,9 @@ const HealthCheckDashboard = () => {
               )}
             </div>
             <div>
-              <h3 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold">
                 {overallStatus === 'checking' ? 'Checking Services...' : overallStatus === 'operational' ? 'System Operational' : 'System Issues Detected'}
-              </h3>
+              </h2>
               <p className="mt-1 text-muted-foreground">
                 {healthyCount} healthy, {degradedCount} degraded, {downCount} down{checkingCount > 0 ? `, ${checkingCount} checking` : ''}.
                 Auto-refreshes every 30s.
@@ -176,26 +176,26 @@ const HealthCheckDashboard = () => {
                   <div
                     className={`flex items-center justify-center h-10 w-10 rounded-lg ${
                       service.status === 'healthy'
-                        ? 'bg-green-100'
+                        ? 'bg-success/10'
                         : service.status === 'degraded'
-                        ? 'bg-orange-100'
+                        ? 'bg-warning/10'
                         : service.status === 'checking'
                         ? 'bg-muted'
-                        : 'bg-red-100'
+                        : 'bg-destructive/10'
                     }`}
                   >
                     {service.status === 'healthy' ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-success" />
                     ) : service.status === 'degraded' ? (
-                      <AlertTriangle className="h-5 w-5 text-orange-600" />
+                      <AlertTriangle className="h-5 w-5 text-warning" />
                     ) : service.status === 'checking' ? (
                       <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
                     ) : (
-                      <XCircle className="h-5 w-5 text-red-600" />
+                      <XCircle className="h-5 w-5 text-destructive" />
                     )}
                   </div>
                   <div>
-                    <h4 className="font-semibold">{service.name}</h4>
+                    <h3 className="font-semibold">{service.name}</h3>
                     <p className="text-sm text-muted-foreground">
                       Latency: {service.latency} • Uptime: {service.uptime}
                     </p>
@@ -255,10 +255,10 @@ const HealthCheckDashboard = () => {
                     <div
                       className={`h-2 rounded-full ${
                         calcRate(resource.value, resource.max, 0) > 80
-                          ? 'bg-red-600'
+                          ? 'bg-destructive'
                           : calcRate(resource.value, resource.max, 0) > 60
-                          ? 'bg-orange-600'
-                          : 'bg-green-600'
+                          ? 'bg-warning'
+                          : 'bg-success'
                       }`}
                       style={{ width: `${Math.min(calcRate(resource.value, resource.max, 0), 100)}%` }}
                     />
@@ -290,7 +290,7 @@ const HealthCheckDashboard = () => {
               if (incidents.length === 0) {
                 return (
                   <div className="text-center py-6 text-muted-foreground">
-                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-success" />
                     <p>No incidents detected. All services are healthy.</p>
                   </div>
                 );
@@ -300,11 +300,11 @@ const HealthCheckDashboard = () => {
                   <div className="flex items-start space-x-3">
                     <div
                       className={`h-2 w-2 rounded-full mt-2 ${
-                        incident.severity === 'critical' ? 'bg-red-500' : 'bg-orange-500'
+                        incident.severity === 'critical' ? 'bg-destructive' : 'bg-warning'
                       }`}
                     />
                     <div>
-                      <h4 className="font-semibold text-sm">{incident.title}</h4>
+                      <h3 className="font-semibold text-sm">{incident.title}</h3>
                       <p className="text-sm text-muted-foreground mt-1">{incident.description}</p>
                       <div className="flex items-center space-x-2 mt-2">
                         <Badge variant="outline">{incident.status}</Badge>

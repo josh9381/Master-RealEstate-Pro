@@ -123,7 +123,7 @@ const AttributionReport = () => {
         <Card>
           <CardContent className="py-12 text-center">
             <GitBranch className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Conversions Yet</h3>
+            <h2 className="text-lg font-medium text-muted-foreground mb-2">No Conversions Yet</h2>
             <p className="text-muted-foreground">
               Attribution data will appear once leads are marked as Won. Try adjusting the date range.
             </p>

@@ -696,9 +696,9 @@ function CampaignsList() {
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
               <Target className="h-10 w-10 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">
+            <h2 className="text-lg font-semibold mb-2">
               {campaigns.length === 0 ? 'No campaigns yet' : 'No campaigns found'}
-            </h3>
+            </h2>
             <p className="text-muted-foreground mb-6 max-w-md">
               {campaigns.length === 0 
                 ? 'Get started by creating your first campaign to reach your audience.'
