@@ -846,7 +846,7 @@ function Dashboard() {
   const overdueTasks = dashboardData?.tasks?.overdue || 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Page Header with Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>

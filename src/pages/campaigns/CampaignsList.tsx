@@ -433,7 +433,7 @@ function CampaignsList() {
   }
 
   return (
-    <div className="flex flex-col space-y-4">
+    <div className="flex flex-col space-y-6">
 
 
 
