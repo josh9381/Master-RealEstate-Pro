@@ -174,9 +174,11 @@ const SettingsHub = () => {
   const ScoreIcon = securityScore >= 80 ? CheckCircle2 : securityScore >= 50 ? AlertTriangle : AlertCircle;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {profileError && <ErrorBanner message={profileErr?.message || 'Failed to load settings'} retry={refetchProfile} />}
 
+      {/* ── Header + Status ─────────────────────────────────── */}
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -302,7 +304,9 @@ const SettingsHub = () => {
           </Card>
         </Link>
       </div>
+      </div>
 
+      {/* ── Setup + Actions ─────────────────────────────────── */}
       {/* Setup Progress + Quick Actions */}
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
@@ -335,6 +339,8 @@ const SettingsHub = () => {
         </div>
       </div>
 
+      {/* ── Account & Organization ──────────────────────────── */}
+      <div className="space-y-6">
       {/* Account & Organization Details */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Account */}
@@ -436,6 +442,7 @@ const SettingsHub = () => {
       </div>
 
       {/* Integration Status */}
+      </div>
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Integrations & Channels</CardTitle>

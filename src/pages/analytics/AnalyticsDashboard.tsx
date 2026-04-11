@@ -127,7 +127,9 @@ const AnalyticsDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
+      {/* ── Header + KPIs ───────────────────────────────────── */}
+      <div className="space-y-6">
       <PageHeader
         title="Analytics Dashboard"
         subtitle="Comprehensive view of your business performance"
@@ -215,7 +217,10 @@ const AnalyticsDashboard = () => {
       {totalLeads === 0 && totalRevenue === 0 && (
         <AnalyticsEmptyState variant="general" />
       )}
+      </div>
 
+      {/* ── Charts & Funnel ─────────────────────────────────── */}
+      <div className="space-y-6">
       {/* Revenue & Conversion Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -321,7 +326,10 @@ const AnalyticsDashboard = () => {
           )}
         </CardContent>
       </Card>
+      </div>
 
+      {/* ── Team + Stats ────────────────────────────────────── */}
+      <div className="space-y-6">
       {/* Team Performance */}
       <Card>
         <CardHeader>
@@ -437,7 +445,9 @@ const AnalyticsDashboard = () => {
         </Card>
         </Link>
       </div>
+      </div>
 
+      {/* ── Explore Navigation ───────────────────────────────── */}
       {/* Explore More Analytics */}
       <div>
         <h2 className="text-lg font-semibold leading-tight mb-4">Explore More Analytics</h2>
