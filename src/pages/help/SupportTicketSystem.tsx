@@ -176,7 +176,7 @@ const SupportTicketSystem = () => {
             Back to Tickets
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-semibold">{detail.subject}</h1>
+            <h1 className="text-2xl font-semibold leading-tight">{detail.subject}</h1>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="secondary" className={STATUS_COLORS[detail.status] || ''}>
                 {STATUS_LABELS[detail.status] || detail.status}
@@ -257,7 +257,7 @@ const SupportTicketSystem = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Tickets
           </Button>
-          <h1 className="text-2xl font-semibold">Create New Support Ticket</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Create New Support Ticket</h1>
         </div>
 
         <Card>
@@ -350,7 +350,7 @@ const SupportTicketSystem = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Support Tickets</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Support Tickets</h1>
           <p className="text-muted-foreground mt-2">
             View and manage your support requests
           </p>

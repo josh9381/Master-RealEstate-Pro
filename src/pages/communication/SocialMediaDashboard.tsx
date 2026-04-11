@@ -69,7 +69,7 @@ const SocialMediaDashboard = () => {
 
       {/* Platform Cards */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Platforms</h2>
+        <h2 className="text-lg font-semibold leading-tight mb-4">Platforms</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {platforms.map((platform) => {
             const Icon = platform.icon
@@ -107,7 +107,7 @@ const SocialMediaDashboard = () => {
 
       {/* Planned Features */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Planned Features</h2>
+        <h2 className="text-lg font-semibold leading-tight mb-4">Planned Features</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {plannedFeatures.map((feature) => {
             const Icon = feature.icon

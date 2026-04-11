@@ -408,7 +408,7 @@ const ABTesting = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">A/B Testing</h1>
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight">A/B Testing</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Compare campaign variations and optimize performance
           </p>

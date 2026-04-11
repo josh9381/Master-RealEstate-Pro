@@ -134,7 +134,7 @@ export function DialogHeader({ children }: DialogHeaderProps) {
 
 export function DialogTitle({ children }: DialogTitleProps) {
   const labelId = React.useContext(DialogLabelContext);
-  return <h2 id={labelId} className="text-lg font-semibold text-foreground">{children}</h2>
+  return <h2 id={labelId} className="text-lg font-semibold leading-tight text-foreground">{children}</h2>
 }
 
 export function DialogDescription({ children }: DialogDescriptionProps) {

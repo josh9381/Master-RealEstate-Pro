@@ -129,7 +129,7 @@ const SystemSettings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">System Settings</h1>
+        <h1 className="text-2xl font-semibold leading-tight">System Settings</h1>
         <p className="text-muted-foreground mt-2">
           Configure system-wide preferences and options
         </p>

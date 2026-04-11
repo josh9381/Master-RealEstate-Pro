@@ -328,7 +328,7 @@ const TwilioSetup = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Twilio Configuration</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Twilio Configuration</h1>
           <p className="text-muted-foreground mt-2">
             Configure Twilio for SMS and phone call functionality
           </p>

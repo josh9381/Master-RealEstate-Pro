@@ -80,7 +80,7 @@ const LeadAnalytics = () => {
   if (leadError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Lead Analytics</h1>
+        <h1 className="text-2xl font-semibold leading-tight">Lead Analytics</h1>
         <ErrorBanner
           message={leadErrorObj instanceof Error ? leadErrorObj.message : 'Failed to load lead analytics'}
           retry={() => refetch()}
@@ -93,7 +93,7 @@ const LeadAnalytics = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Lead Analytics</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Lead Analytics</h1>
           <p className="text-muted-foreground mt-2">
             Track lead generation and conversion performance
           </p>

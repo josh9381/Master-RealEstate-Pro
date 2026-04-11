@@ -209,7 +209,7 @@ const OrgAISettings = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold">Organization AI Settings</h1>
+            <h1 className="text-2xl font-semibold leading-tight">Organization AI Settings</h1>
             <p className="text-muted-foreground mt-1">
               Configure AI model, API keys, and personalization for your team
             </p>

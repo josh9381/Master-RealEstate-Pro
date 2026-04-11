@@ -159,7 +159,7 @@ const FeatureFlags = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Feature Flags</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Feature Flags</h1>
           <p className="text-muted-foreground mt-2">
             Control feature rollouts and experiments
           </p>

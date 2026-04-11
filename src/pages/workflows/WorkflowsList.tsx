@@ -208,7 +208,7 @@ const WorkflowsList = () => {
               <WorkflowIcon className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Workflows</h1>
+              <h1 className="text-2xl font-semibold leading-tight tracking-tight">Workflows</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Automate your marketing and sales processes with powerful workflows
               </p>
@@ -399,7 +399,7 @@ const WorkflowsList = () => {
             <div className="p-6 bg-primary/10 rounded-full mb-6">
               <WorkflowIcon className="h-16 w-16 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold mb-3">No workflows yet</h2>
+            <h2 className="text-lg font-semibold leading-tight mb-3">No workflows yet</h2>
             <p className="text-muted-foreground mb-6 text-lg">
               Create your first workflow to automate repetitive tasks and scale your business
             </p>
@@ -454,7 +454,7 @@ const WorkflowsList = () => {
 
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h2 className="text-lg font-semibold">{workflow.name}</h2>
+                        <h2 className="text-lg font-semibold leading-tight">{workflow.name}</h2>
                         <Badge
                           variant={workflow.isActive ? 'success' : 'secondary'}
                         >
@@ -590,7 +590,7 @@ const WorkflowsList = () => {
                   </div>
 
                   <div>
-                    <h2 className="text-lg font-semibold mb-1">{workflow.name}</h2>
+                    <h2 className="text-lg font-semibold leading-tight mb-1">{workflow.name}</h2>
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {workflow.description || 'No description'}
                     </p>

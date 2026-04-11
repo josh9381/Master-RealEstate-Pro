@@ -85,7 +85,7 @@ const FollowUpAnalytics = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <h1 className="text-2xl font-semibold leading-tight text-foreground flex items-center gap-2">
             <Bell className="h-7 w-7 text-info" />
             Follow-Up Analytics
           </h1>

@@ -100,8 +100,8 @@ function WelcomeStep() {
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-6">
         <Sparkles className="h-10 w-10 text-primary" />
       </div>
-      <h2 className="text-lg font-semibold text-foreground mb-3">Welcome to RealEstate Pro!</h2>
-      <p className="text-muted-foreground max-w-md mx-auto mb-6">
+      <h2 className="text-lg font-semibold leading-tight text-foreground mb-3">Welcome to RealEstate Pro!</h2>
+      <p className="text-muted-foreground leading-relaxed max-w-md mx-auto mb-6">
         We'll walk you through setting up the key parts of your account. This only takes a few minutes
         and you can always change these settings later.
       </p>
@@ -852,8 +852,8 @@ function CompleteStep({ skippedSteps }: { skippedSteps: Set<string> }) {
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-success/10 mb-6">
         <Check className="h-10 w-10 text-success" />
       </div>
-      <h2 className="text-lg font-semibold text-foreground mb-3">You're all set!</h2>
-      <p className="text-muted-foreground max-w-md mx-auto mb-6">
+      <h2 className="text-lg font-semibold leading-tight text-foreground mb-3">You're all set!</h2>
+      <p className="text-muted-foreground leading-relaxed max-w-md mx-auto mb-6">
         Your account is configured. You can always change any of these settings later from the Settings page.
       </p>
 

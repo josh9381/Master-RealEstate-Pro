@@ -708,7 +708,7 @@ function LeadsList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Leads</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Leads</h1>
           <p className="mt-2 text-muted-foreground">Manage and track all your leads in one place</p>
         </div>
       </div>
@@ -833,7 +833,7 @@ function LeadsList() {
             <div className="p-6 bg-primary/10 rounded-full mb-6">
               <Users className="h-16 w-16 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold mb-3">No leads yet</h2>
+            <h2 className="text-lg font-semibold leading-tight mb-3">No leads yet</h2>
             <p className="text-muted-foreground mb-6 text-lg">
               Import your contacts or add your first lead to get started tracking your sales pipeline.
             </p>

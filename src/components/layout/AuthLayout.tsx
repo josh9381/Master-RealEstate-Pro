@@ -14,7 +14,7 @@ export function AuthLayout() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link to="/" className="inline-block">
-            <h1 className="text-2xl font-semibold">RealEstate<span className="text-primary">Pro</span></h1>
+            <h1 className="text-2xl font-semibold leading-tight">RealEstate<span className="text-primary">Pro</span></h1>
           </Link>
           <p className="mt-2 text-sm text-muted-foreground">
             CRM & Marketing Automation for Real Estate

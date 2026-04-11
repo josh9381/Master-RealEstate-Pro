@@ -83,7 +83,7 @@ const InvoiceDetail = () => {
         </div>
         <Card className="p-8 text-center">
           <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-lg font-semibold mb-2">Invoice Not Found</h2>
+          <h2 className="text-lg font-semibold leading-tight mb-2">Invoice Not Found</h2>
           <p className="text-muted-foreground mb-4">This invoice could not be loaded. It may not exist or billing is not configured.</p>
           <Button variant="outline" onClick={() => navigate('/billing?tab=invoices')}>
             Back to Invoices
@@ -110,7 +110,7 @@ const InvoiceDetail = () => {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold">Invoice {displayNumber}</h1>
+            <h1 className="text-2xl font-semibold leading-tight">Invoice {displayNumber}</h1>
             <p className="text-muted-foreground mt-1">Issued on {formatDate(invoice.invoiceDate)}</p>
           </div>
         </div>

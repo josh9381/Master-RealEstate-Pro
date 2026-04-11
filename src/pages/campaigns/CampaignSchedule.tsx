@@ -242,7 +242,7 @@ const CampaignSchedule = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Campaign Schedule</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Campaign Schedule</h1>
           <p className="text-muted-foreground mt-2">
             Manage scheduled and recurring campaigns
           </p>

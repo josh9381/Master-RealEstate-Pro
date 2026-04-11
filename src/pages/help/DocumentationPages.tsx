@@ -127,7 +127,7 @@ const DocumentationPages = () => {
         </div>
 
         <div>
-          <h1 className="text-2xl font-semibold mb-2">{article.title}</h1>
+          <h1 className="text-2xl font-semibold leading-tight mb-2">{article.title}</h1>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -143,7 +143,7 @@ const DocumentationPages = () => {
         </div>
 
         <Card>
-          <CardContent className="pt-6 prose prose-sm max-w-none">
+          <CardContent className="pt-6 prose prose-sm max-w-none leading-relaxed">
             <div className="whitespace-pre-wrap">{article.content}</div>
           </CardContent>
         </Card>
@@ -160,7 +160,7 @@ const DocumentationPages = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             All Categories
           </Button>
-          <h1 className="text-2xl font-semibold">{selectedCategory || 'Search Results'}</h1>
+          <h1 className="text-2xl font-semibold leading-tight">{selectedCategory || 'Search Results'}</h1>
         </div>
 
         {articlesLoading ? (
@@ -216,7 +216,7 @@ const DocumentationPages = () => {
       {catError && <ErrorBanner message={catErr?.message || 'Failed to load documentation'} retry={refetchCats} />}
 
       <div>
-        <h1 className="text-2xl font-semibold">Documentation</h1>
+        <h1 className="text-2xl font-semibold leading-tight">Documentation</h1>
         <p className="text-muted-foreground mt-2">
           Comprehensive guides and resources to help you succeed
         </p>
@@ -288,7 +288,7 @@ const DocumentationPages = () => {
 
       {/* Categories */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Browse by Category</h2>
+        <h2 className="text-lg font-semibold leading-tight mb-4">Browse by Category</h2>
         {catLoading ? (
           <div className="grid gap-4 md:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (

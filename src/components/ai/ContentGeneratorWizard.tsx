@@ -739,7 +739,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
               <Wand2 className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">AI Content Generator</h2>
+              <h2 className="text-lg font-semibold leading-tight">AI Content Generator</h2>
               <p className="text-sm text-white/60">Create professional content with AI</p>
             </div>
           </div>

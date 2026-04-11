@@ -350,7 +350,7 @@ function CampaignDetail() {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h2 className="text-lg font-semibold">Campaign Not Found</h2>
+          <h2 className="text-lg font-semibold leading-tight">Campaign Not Found</h2>
           <p className="mt-2 text-muted-foreground">
             The campaign you're looking for doesn't exist.
           </p>
@@ -374,7 +374,7 @@ function CampaignDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{campaign.name}</h1>
+          <h1 className="text-2xl font-semibold leading-tight">{campaign.name}</h1>
           <div className="mt-2 flex items-center space-x-2">
             <Badge variant={
               (campaign.status || '').toUpperCase() === 'ACTIVE' ? 'success'

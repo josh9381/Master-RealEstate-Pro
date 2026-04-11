@@ -249,7 +249,7 @@ export function TagsManager() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold">Tags & Segments</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Tags & Segments</h1>
           <p className="mt-2 text-muted-foreground">Organize and manage your lead tags and segment settings</p>
         </div>
         <ErrorBanner message={`Failed to load tags: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
@@ -270,7 +270,7 @@ export function TagsManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Tags & Segments</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Tags & Segments</h1>
           <p className="mt-2 text-muted-foreground">
             Organize and manage your lead tags and segment settings
           </p>

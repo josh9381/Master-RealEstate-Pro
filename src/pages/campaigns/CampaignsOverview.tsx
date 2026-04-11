@@ -94,7 +94,7 @@ export default function CampaignsOverview() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Campaigns</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Campaigns</h1>
           <p className="mt-1 text-muted-foreground">Overview of your campaign performance and activity</p>
         </div>
       </div>
@@ -157,7 +157,7 @@ export default function CampaignsOverview() {
       {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-1">Campaign Type Breakdown</h2>
+          <h2 className="text-lg font-semibold leading-tight mb-1">Campaign Type Breakdown</h2>
           <p className="text-xs text-muted-foreground mb-4">
             {stats.total > 0 ? `Based on ${stats.total} campaigns` : 'No campaign data yet'}
           </p>
@@ -179,7 +179,7 @@ export default function CampaignsOverview() {
         </Card>
 
         <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-1">Campaign Status Distribution</h2>
+          <h2 className="text-lg font-semibold leading-tight mb-1">Campaign Status Distribution</h2>
           <p className="text-xs text-muted-foreground mb-4">Current status of all campaigns</p>
           {statusData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>

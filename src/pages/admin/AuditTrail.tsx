@@ -89,7 +89,7 @@ export default function AuditTrail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <h1 className="text-2xl font-semibold leading-tight text-foreground flex items-center gap-2">
             <Shield className="w-6 h-6 text-primary" />
             Audit Trail
           </h1>

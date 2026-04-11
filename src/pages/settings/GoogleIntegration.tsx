@@ -139,7 +139,7 @@ const GoogleIntegration = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Google Workspace Integration</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Google Workspace Integration</h1>
           <p className="text-muted-foreground mt-2">
             Connect Google services for enhanced functionality
           </p>

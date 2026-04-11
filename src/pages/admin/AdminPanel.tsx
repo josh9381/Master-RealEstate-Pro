@@ -22,7 +22,7 @@ const AdminPanel = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Shield className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-lg font-semibold text-foreground mb-2">Access Denied</h2>
+          <h2 className="text-lg font-semibold leading-tight text-foreground mb-2">Access Denied</h2>
           <p className="text-muted-foreground mb-4">You don't have permission to access the admin panel.</p>
           <Button onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
         </div>

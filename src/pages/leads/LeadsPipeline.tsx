@@ -350,7 +350,7 @@ function LeadsPipeline() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold">Pipeline View</h1>
+            <h1 className="text-2xl font-semibold leading-tight">Pipeline View</h1>
             {/* Pipeline Switcher */}
             {pipelines.length > 1 && (
               <div className="relative">

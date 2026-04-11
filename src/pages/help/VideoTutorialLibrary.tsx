@@ -5,7 +5,7 @@ const VideoTutorialLibrary = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Video Tutorials</h1>
+        <h1 className="text-2xl font-semibold leading-tight">Video Tutorials</h1>
         <p className="text-muted-foreground mt-2">
           Learn the platform through step-by-step video guides
         </p>

@@ -565,7 +565,7 @@ function CampaignCreate() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Create New Campaign</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Create New Campaign</h1>
           <p className="mt-2 text-muted-foreground">
             {selectedType 
               ? `Creating ${campaignTypes.find(t => t.type === selectedType)?.title || 'campaign'}`

@@ -16,7 +16,7 @@ const Segmentation = () => {
         </Button>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold">AI Segmentation</h1>
+            <h1 className="text-2xl font-semibold leading-tight">AI Segmentation</h1>
             <Badge variant="outline">Coming Soon</Badge>
           </div>
           <p className="text-muted-foreground mt-1">
@@ -31,7 +31,7 @@ const Segmentation = () => {
           <div className="p-4 bg-info/10 rounded-full mb-6">
             <BarChart3 className="h-12 w-12 text-info" />
           </div>
-          <h2 className="text-lg font-semibold mb-2">AI Segmentation is Coming Soon</h2>
+          <h2 className="text-lg font-semibold leading-tight mb-2">AI Segmentation is Coming Soon</h2>
           <p className="text-muted-foreground max-w-lg mb-8">
             Automatically discover and create audience segments using machine learning.
             AI will analyze your leads' behavior, demographics, and engagement patterns to

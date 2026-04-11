@@ -455,7 +455,7 @@ function CampaignsList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Campaigns</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Campaigns</h1>
           <p className="mt-2 text-muted-foreground">
             Create and manage your marketing campaigns
           </p>
@@ -696,7 +696,7 @@ function CampaignsList() {
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
               <Target className="h-10 w-10 text-muted-foreground" />
             </div>
-            <h2 className="text-lg font-semibold mb-2">
+            <h2 className="text-lg font-semibold leading-tight mb-2">
               {campaigns.length === 0 ? 'No campaigns yet' : 'No campaigns found'}
             </h2>
             <p className="text-muted-foreground mb-6 max-w-md">
