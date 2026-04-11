@@ -196,7 +196,7 @@ const SupportTicketSystem = () => {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground mb-1">Original Description</p>
-            <p className="whitespace-pre-wrap">{detail.description}</p>
+            <p className="whitespace-pre-wrap max-w-prose">{detail.description}</p>
           </CardContent>
         </Card>
 
@@ -211,7 +211,7 @@ const SupportTicketSystem = () => {
                   </span>
                   <span className="text-xs text-muted-foreground">{formatDate(msg.createdAt)}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                <p className="whitespace-pre-wrap text-sm max-w-prose">{msg.content}</p>
               </CardContent>
             </Card>
           ))}

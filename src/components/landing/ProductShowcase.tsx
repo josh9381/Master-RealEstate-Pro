@@ -135,7 +135,7 @@ export function ProductShowcase() {
               <br />
               <span className="text-primary">one powerful dashboard</span>
             </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+            <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-prose">
               From lead capture to closing day — manage your pipeline, launch smart campaigns,
               and let AI do the heavy lifting. All in one platform.
             </p>

@@ -143,7 +143,7 @@ const DocumentationPages = () => {
         </div>
 
         <Card>
-          <CardContent className="pt-6 prose prose-sm max-w-none leading-relaxed">
+          <CardContent className="pt-6 prose prose-sm max-w-prose leading-relaxed">
             <div className="whitespace-pre-wrap">{article.content}</div>
           </CardContent>
         </Card>

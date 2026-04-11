@@ -792,7 +792,7 @@ function CampaignDetail() {
             <DialogTitle>Full Campaign Content</DialogTitle>
           </DialogHeader>
 
-          <div className="prose prose-sm max-w-none dark:prose-invert">
+          <div className="prose prose-sm max-w-prose dark:prose-invert">
             <div className="bg-card p-8 rounded-lg border">
               {(campaign.type || '').toUpperCase() === 'EMAIL' ? (
                 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.fullContent || campaign.body || '<p>No content available</p>') }} />
