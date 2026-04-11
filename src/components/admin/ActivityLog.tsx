@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Clock, User, Shield, Mail, Target, Workflow, Settings, AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/store/authStore'
 import { formatDistanceToNow } from 'date-fns'
 import api from '@/lib/api'
@@ -109,12 +110,13 @@ export function ActivityLog() {
           <AlertCircle className="w-5 h-5" />
           <div className="flex-1">
             <p className="font-medium">Failed to load activity log</p>
-            <button 
+            <Button 
+              variant="link"
+              size="sm"
               onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
             >
               Try again
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -196,9 +198,9 @@ export function ActivityLog() {
       {/* Footer */}
       {activities.length > 0 && (
         <div className="p-4 border-t border-border text-center">
-          <button className="text-sm text-primary hover:text-primary/80 font-medium">
+          <Button variant="link" size="sm">
             View all activity
-          </button>
+          </Button>
         </div>
       )}
     </div>

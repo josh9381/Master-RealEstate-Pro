@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Crown, Users, Mail, Target, Workflow, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/store/authStore'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { Link } from 'react-router-dom'
 import api from '@/lib/api'
 
 interface UsageEntry {
@@ -151,9 +153,9 @@ export function SubscriptionStatus() {
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-sm font-semibold text-foreground">Resource Usage</h4>
-          <button className="text-xs text-primary hover:text-primary/80 font-medium">
+          <Button variant="link" size="sm" className="text-xs h-auto p-0">
             View Details
-          </button>
+          </Button>
         </div>
         
         {usageItems.map((item) => {
@@ -203,12 +205,11 @@ export function SubscriptionStatus() {
               <TrendingUp className="w-4 h-4 text-primary" />
               <span className="text-muted-foreground">Need more resources?</span>
             </div>
-            <a 
-              href="/admin/subscription"
-              className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium transition-colors"
-            >
-              Upgrade Plan
-            </a>
+            <Link to="/admin/subscription">
+              <Button size="sm">
+                Upgrade Plan
+              </Button>
+            </Link>
           </div>
         </div>
       )}

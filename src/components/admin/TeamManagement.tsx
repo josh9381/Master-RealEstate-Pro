@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Users, Mail, Shield, UserCog, User as UserIcon, Search, Filter } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 
@@ -107,12 +109,13 @@ export function TeamManagement() {
     return (
       <div className="text-center py-12">
         <p className="text-destructive mb-2">Failed to load team members</p>
-        <button 
+        <Button 
+          variant="link"
+          size="sm"
           onClick={() => refetch()}
-          className="text-primary hover:text-primary/80 text-sm font-medium"
         >
           Try again
-        </button>
+        </Button>
       </div>
     )
   }
@@ -128,9 +131,9 @@ export function TeamManagement() {
         </div>
         
         {isAdmin() && (
-          <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+          <Button size="sm">
             + Invite Member
-          </button>
+          </Button>
         )}
       </div>
       
@@ -139,12 +142,12 @@ export function TeamManagement() {
         {/* Search */}
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
+          <Input
             type="text"
             placeholder="Search by name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="pl-10"
           />
         </div>
         
@@ -228,20 +231,22 @@ export function TeamManagement() {
           </p>
           
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1 border border-input rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
             >
               Previous
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
               disabled={page === data.totalPages}
-              className="px-3 py-1 border border-input rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       )}
