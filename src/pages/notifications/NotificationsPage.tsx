@@ -325,18 +325,21 @@ export function NotificationsPage() {
             <div className="flex gap-2">
               <Button
                 variant={activeFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => { setActiveFilter('all'); setCurrentPage(1) }}
               >
                 All
               </Button>
               <Button
                 variant={activeFilter === 'unread' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => { setActiveFilter('unread'); setCurrentPage(1) }}
               >
                 Unread {unreadCount > 0 && `(${unreadCount})`}
               </Button>
               <Button
                 variant={activeFilter === 'mention' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => { setActiveFilter('mention'); setCurrentPage(1) }}
               >
                 <AtSign className="mr-2 h-4 w-4" />
@@ -344,6 +347,7 @@ export function NotificationsPage() {
               </Button>
               <Button
                 variant={activeFilter === 'assignment' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => { setActiveFilter('assignment'); setCurrentPage(1) }}
               >
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -351,6 +355,7 @@ export function NotificationsPage() {
               </Button>
               <Button
                 variant={activeFilter === 'update' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => { setActiveFilter('update'); setCurrentPage(1) }}
               >
                 <TrendingUp className="mr-2 h-4 w-4" />

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Shield, Filter, ChevronDown, ChevronUp, Clock, User, Activity } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Card, CardContent } from '@/components/ui/Card'
 import { adminApi } from '@/lib/api'
 import { format } from 'date-fns'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
@@ -94,25 +97,27 @@ export default function AuditTrail() {
             {total} total audit log entries
           </p>
         </div>
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
           <Filter className="w-4 h-4" />
           Filters
           {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
+        </Button>
       </div>
 
       {/* Filters */}
       {showFilters && (
-        <div className="bg-card border border-border rounded-lg p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Action</label>
             <select
               value={filters.action}
               onChange={(e) => { setFilters(f => ({ ...f, action: e.target.value })); setPage(1); }}
-              className="w-full rounded-lg border-border text-sm transition-colors"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Actions</option>
               {actions.map(a => (
@@ -125,7 +130,7 @@ export default function AuditTrail() {
             <select
               value={filters.entityType}
               onChange={(e) => { setFilters(f => ({ ...f, entityType: e.target.value })); setPage(1); }}
-              className="w-full rounded-lg border-border text-sm transition-colors"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Types</option>
               {entityTypes.map(t => (
@@ -135,23 +140,22 @@ export default function AuditTrail() {
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Start Date</label>
-            <input
+            <Input
               type="date"
               value={filters.startDate}
               onChange={(e) => { setFilters(f => ({ ...f, startDate: e.target.value })); setPage(1); }}
-              className="w-full rounded-lg border-border text-sm transition-colors"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">End Date</label>
-            <input
+            <Input
               type="date"
               value={filters.endDate}
               onChange={(e) => { setFilters(f => ({ ...f, endDate: e.target.value })); setPage(1); }}
-              className="w-full rounded-lg border-border text-sm transition-colors"
             />
           </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Log Table */}
