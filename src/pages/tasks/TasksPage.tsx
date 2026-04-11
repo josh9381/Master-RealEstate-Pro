@@ -461,7 +461,7 @@ export default function TasksPage() {
       {/* Tasks List */}
       <div className="space-y-3">
         {filteredTasks.map((task) => (
-          <Card key={task.id} className={`p-4 ${task.completed ? 'opacity-60' : ''}`}>
+          <Card key={task.id} className={`p-4 hover:shadow-md transition-all duration-200 ${task.completed ? 'opacity-60' : ''}`}>
             <div className="flex items-start gap-4">
               <button className="mt-1" onClick={() => handleToggleComplete(task.id)}>
                 {task.completed ? (

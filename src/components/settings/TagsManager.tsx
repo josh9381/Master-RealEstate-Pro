@@ -505,7 +505,7 @@ export function TagsManager() {
             <div>
               <label className="text-sm font-medium">Auto-refresh interval</label>
               <p className="text-xs text-muted-foreground mb-2">How often segment member counts refresh</p>
-              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background">
+              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background disabled:opacity-50 disabled:cursor-not-allowed">
                 <option value="1h">Every 1 hour</option>
                 <option value="6h">Every 6 hours</option>
                 <option value="24h" selected>Every 24 hours</option>
@@ -515,7 +515,7 @@ export function TagsManager() {
             <div>
               <label className="text-sm font-medium">Default match type</label>
               <p className="text-xs text-muted-foreground mb-2">Whether new segments default to match ALL or ANY rules</p>
-              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background">
+              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background disabled:opacity-50 disabled:cursor-not-allowed">
                 <option value="ALL" selected>Match ALL rules (AND)</option>
                 <option value="ANY">Match ANY rule (OR)</option>
               </select>
@@ -523,7 +523,7 @@ export function TagsManager() {
             <div>
               <label className="text-sm font-medium">Max segment rules</label>
               <p className="text-xs text-muted-foreground mb-2">Limit on number of rules per segment to prevent performance issues</p>
-              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background">
+              <select className="w-full px-3 py-2 border rounded-lg text-sm bg-background disabled:opacity-50 disabled:cursor-not-allowed">
                 <option value="5">5 rules</option>
                 <option value="10" selected>10 rules</option>
                 <option value="20">20 rules</option>

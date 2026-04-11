@@ -172,7 +172,7 @@ export function Breadcrumbs() {
               )}
             </div>
           ) : item.path && i < displayItems.length - 1 ? (
-            <Link to={item.path} className="hover:text-foreground transition-colors">
+            <Link to={item.path} className="hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background rounded-sm">
               {item.label}
             </Link>
           ) : (

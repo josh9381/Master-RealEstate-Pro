@@ -226,11 +226,11 @@ export default function SubscriptionPage() {
   }
   
   const tierConfig: Record<string, { color: string; gradient: string }> = {
-    STARTER: { color: 'blue', gradient: 'from-blue-50 to-blue-100' },
-    PROFESSIONAL: { color: 'purple', gradient: 'from-purple-50 to-purple-100' },
-    ELITE: { color: 'indigo', gradient: 'from-indigo-50 to-indigo-100' },
-    TEAM: { color: 'emerald', gradient: 'from-emerald-50 to-emerald-100' },
-    ENTERPRISE: { color: 'amber', gradient: 'from-amber-50 to-amber-100' },
+    STARTER: { color: 'blue', gradient: 'from-primary/5 to-primary/10' },
+    PROFESSIONAL: { color: 'purple', gradient: 'from-info/5 to-info/10' },
+    ELITE: { color: 'indigo', gradient: 'from-primary/5 to-primary/10' },
+    TEAM: { color: 'emerald', gradient: 'from-success/5 to-success/10' },
+    ENTERPRISE: { color: 'amber', gradient: 'from-warning/5 to-warning/10' },
   }
   
   return (

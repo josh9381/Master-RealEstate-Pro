@@ -494,13 +494,13 @@ const WorkflowsList = () => {
                       {getActionsList(workflow.actions).length > 0 && (
                         <div className="py-3 px-4 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-xl border-2 border-primary/20 shadow-sm">
                           <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="font-bold text-primary capitalize px-2.5 py-1 bg-white/60 dark:bg-gray-800/60 rounded-md shadow-sm">
+                            <span className="font-bold text-primary capitalize px-2.5 py-1 bg-white/60 dark:bg-card/60 rounded-md shadow-sm">
                               When {workflow.triggerType.replace(/_/g, ' ').toLowerCase()}
                             </span>
                             {getActionsList(workflow.actions).map((action, idx: number) => (
                               <div key={idx} className="flex items-center gap-2">
                                 <ChevronRight className="h-4 w-4 text-primary/60" />
-                                <span className="text-foreground capitalize font-medium px-2.5 py-1 bg-white/40 dark:bg-gray-800/40 rounded-md shadow-sm">
+                                <span className="text-foreground capitalize font-medium px-2.5 py-1 bg-white/40 dark:bg-card/40 rounded-md shadow-sm">
                                   {action.type?.replace(/_/g, ' ').toLowerCase() || 'then action'}
                                 </span>
                               </div>

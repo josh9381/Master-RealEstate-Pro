@@ -199,7 +199,7 @@ export function SubscriptionStatus() {
       
       {/* Upgrade CTA */}
       {tier !== 'ENTERPRISE' && (
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 border-t border-border">
+        <div className="p-4 bg-gradient-to-r from-primary/5 to-info/5 dark:from-primary/10 dark:to-info/10 border-t border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
               <TrendingUp className="w-4 h-4 text-primary" />

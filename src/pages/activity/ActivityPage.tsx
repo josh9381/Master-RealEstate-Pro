@@ -113,7 +113,7 @@ export default function ActivityPage() {
       timestamp: a.createdAt ? getRelativeTime(a.createdAt) : 'Unknown',
       rawDate: a.createdAt || '',
       icon: iconMap[(a.type || 'note').toLowerCase()] || Activity,
-      color: colorMap[(a.type || 'note').toLowerCase()] || 'text-gray-500',
+      color: colorMap[(a.type || 'note').toLowerCase()] || 'text-muted-foreground',
       leadName: a.lead ? `${a.lead.firstName || ''} ${a.lead.lastName || ''}`.trim() : undefined,
     }))
   // eslint-disable-next-line react-hooks/exhaustive-deps

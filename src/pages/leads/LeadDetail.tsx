@@ -335,7 +335,7 @@ function LeadDetail() {
     if (score >= 80) return 'text-success'
     if (score >= 60) return 'text-warning'
     if (score >= 40) return 'text-primary'
-    return 'text-gray-500'
+    return 'text-muted-foreground'
   }
 
   const lead = leadResponse as Lead | undefined

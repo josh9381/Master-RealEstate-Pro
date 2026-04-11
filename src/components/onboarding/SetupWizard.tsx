@@ -228,7 +228,7 @@ function ProfileStep() {
         <select
           value={form.timezone}
           onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'Pacific/Honolulu'].map((tz) => (
             <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
@@ -320,7 +320,7 @@ function BusinessStep() {
           <select
             value={form.industry}
             onChange={(e) => setForm({ ...form, industry: e.target.value })}
-             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {['Real Estate', 'Real Estate - Residential', 'Real Estate - Commercial', 'Mortgage & Lending', 'Property Management', 'Other'].map((i) => (
               <option key={i} value={i}>{i}</option>
@@ -332,7 +332,7 @@ function BusinessStep() {
           <select
             value={form.companySize}
             onChange={(e) => setForm({ ...form, companySize: e.target.value })}
-             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {['1-10 employees', '11-50 employees', '51-200 employees', '201-500 employees', '500+ employees'].map((s) => (
               <option key={s} value={s}>{s}</option>
