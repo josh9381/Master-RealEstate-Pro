@@ -102,7 +102,7 @@ const AttributionReport = () => {
                 key={opt.value}
                 onClick={() => setModel(opt.value)}
                 aria-pressed={model === opt.value}
-                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                   model === opt.value
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-card text-muted-foreground border-border hover:border-primary/50'

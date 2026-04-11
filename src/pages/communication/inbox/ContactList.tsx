@@ -277,7 +277,7 @@ export const ContactList = ({
                       <div className="flex items-center justify-between mb-0.5">
                         <div className="flex items-center gap-1 min-w-0">
                           {hasStarred && (
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+                            <Star className="h-3 w-3 fill-warning text-warning flex-shrink-0" />
                           )}
                           <p className={`font-medium truncate text-sm ${contact.totalUnread > 0 ? 'font-semibold' : ''}`}>
                             {contact.name}
@@ -311,7 +311,7 @@ export const ContactList = ({
                         onClick={(e) => { e.stopPropagation(); onToggleStar(contact.id) }}
                         title="Star"
                       >
-                        <Star className={`h-3.5 w-3.5 ${hasStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                        <Star className={`h-3.5 w-3.5 ${hasStarred ? 'fill-warning text-warning' : ''}`} />
                       </Button>
                       <Button
                         size="sm"

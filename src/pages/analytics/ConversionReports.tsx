@@ -235,7 +235,7 @@ const ConversionReports = () => {
           )}
           <div className="space-y-4">
             {conversionFunnel.length > 0 ? conversionFunnel.map((stage, index) => (
-              <div key={stage.stage} className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" role="link" tabIndex={0} aria-label={`View ${stage.stage} leads: ${stage.count} leads, ${stage.percentage}% of total`} onClick={() => navigate(`/leads?status=${encodeURIComponent(stage.stage.toUpperCase())}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/leads?status=${encodeURIComponent(stage.stage.toUpperCase())}`); } }}>
+              <div key={stage.stage} className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" role="link" tabIndex={0} aria-label={`View ${stage.stage} leads: ${stage.count} leads, ${stage.percentage}% of total`} onClick={() => navigate(`/leads?status=${encodeURIComponent(stage.stage.toUpperCase())}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/leads?status=${encodeURIComponent(stage.stage.toUpperCase())}`); } }}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-white text-sm font-bold">

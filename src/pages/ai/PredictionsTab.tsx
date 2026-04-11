@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { fmtMoney } from '@/lib/metricsCalculator';
 import { useQuery } from '@tanstack/react-query';
 
@@ -166,7 +167,7 @@ const PredictionsTab = () => {
             <div className="flex items-center justify-center h-[350px] text-muted-foreground">
               <div className="text-center">
                 <p>No forecast data available yet.</p>
-                <p className="text-xs mt-1">Revenue forecast requires historical deal data. <a href="/leads" className="text-primary hover:underline">Add leads</a> and close deals to generate forecasts.</p>
+                <p className="text-xs mt-1">Revenue forecast requires historical deal data. <Link to="/leads" className="text-primary hover:underline">Add leads</Link> and close deals to generate forecasts.</p>
               </div>
             </div>
           )}
@@ -259,7 +260,7 @@ const PredictionsTab = () => {
               <div className="flex items-center justify-center h-[250px] text-muted-foreground">
                 <div className="text-center">
                   <p>No predictions available yet.</p>
-                  <p className="text-xs mt-1">Run model training from <a href="/ai/lead-scoring" className="text-primary hover:underline">Lead Scoring</a> to generate predictions.</p>
+                  <p className="text-xs mt-1">Run model training from <Link to="/ai/lead-scoring" className="text-primary hover:underline">Lead Scoring</Link> to generate predictions.</p>
                 </div>
               </div>
             )}

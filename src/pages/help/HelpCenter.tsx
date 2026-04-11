@@ -146,7 +146,7 @@ const HelpCenter = () => {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/docs')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/docs') } }}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" onClick={() => navigate('/help/docs')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/docs') } }}>
           <CardContent className="pt-6">
             <Book className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Documentation</h3>
@@ -159,7 +159,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer relative" onClick={() => navigate('/help/videos')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/videos') } }}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" onClick={() => navigate('/help/videos')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/videos') } }}>
           <CardContent className="pt-6">
             <Video className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Video Tutorials</h3>
@@ -173,7 +173,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help/support')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/support') } }}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" onClick={() => navigate('/help/support')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help/support') } }}>
           <CardContent className="pt-6">
             <MessageCircle className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Contact Support</h3>
@@ -186,7 +186,7 @@ const HelpCenter = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowShortcuts(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowShortcuts(true) } }}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" onClick={() => setShowShortcuts(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowShortcuts(true) } }}>
           <CardContent className="pt-6">
             <Keyboard className="h-8 w-8 mb-3 text-primary" />
             <h3 className="font-semibold mb-2">Keyboard Shortcuts</h3>

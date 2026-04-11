@@ -36,12 +36,12 @@ export function DevErrorPanel() {
       {!isOpen && errorCount > 0 && (
         <button
           onClick={() => { refresh(); setIsOpen(true) }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-colors animate-pulse"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-destructive text-destructive-foreground rounded-full shadow-lg hover:bg-destructive/90 transition-colors animate-pulse"
           title={`${errorCount} unique errors (${totalOccurrences} total)`}
         >
           <span className="text-sm">⚠</span>
           <span className="font-bold">{errorCount}</span>
-          <span className="text-red-200">errors</span>
+          <span className="text-destructive-foreground/70">errors</span>
         </button>
       )}
 
@@ -51,7 +51,7 @@ export function DevErrorPanel() {
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 bg-muted border-b border-border">
             <div className="flex items-center gap-2">
-              <span className="text-red-400 text-sm">⚠</span>
+              <span className="text-destructive text-sm">⚠</span>
               <span className="font-semibold text-sm">Dev Errors ({errorCount})</span>
               <span className="text-muted-foreground">({totalOccurrences} total)</span>
             </div>
@@ -97,11 +97,11 @@ function ErrorItem({ error }: { error: ReturnType<typeof getDevErrors>[0] }) {
   const [expanded, setExpanded] = useState(false)
 
   const typeColors: Record<string, string> = {
-    api: 'text-yellow-400 bg-yellow-900/30',
-    runtime: 'text-red-400 bg-red-900/30',
-    promise: 'text-orange-400 bg-orange-900/30',
+    api: 'text-warning bg-warning/10',
+    runtime: 'text-destructive bg-destructive/10',
+    promise: 'text-warning bg-warning/10',
     'react-query': 'text-purple-400 bg-purple-900/30',
-    network: 'text-blue-400 bg-blue-900/30',
+    network: 'text-info bg-info/10',
   }
 
   const colorClass = typeColors[error.type] || 'text-muted-foreground bg-muted'
@@ -116,7 +116,7 @@ function ErrorItem({ error }: { error: ReturnType<typeof getDevErrors>[0] }) {
           <p className="break-words leading-tight">{error.message}</p>
           <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
             <span>{new Date(error.timestamp).toLocaleTimeString()}</span>
-            {error.count > 1 && <span className="text-orange-400">×{error.count}</span>}
+            {error.count > 1 && <span className="text-warning">×{error.count}</span>}
             {error.status && <span>HTTP {error.status}</span>}
           </div>
         </div>

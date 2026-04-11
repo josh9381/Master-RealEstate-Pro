@@ -253,7 +253,7 @@ const LeadAnalytics = () => {
           <CardContent>
             <div className="space-y-4">
               {sourceBreakdown.length > 0 ? sourceBreakdown.map((source) => (
-                <div key={source.source} className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" role="link" tabIndex={0} aria-label={`View leads from ${source.source}: ${source.count} leads, ${source.percentage}%`} onClick={() => navigate(`/leads?source=${encodeURIComponent(source.source)}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/leads?source=${encodeURIComponent(source.source)}`); } }}>
+                <div key={source.source} className="cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" role="link" tabIndex={0} aria-label={`View leads from ${source.source}: ${source.count} leads, ${source.percentage}%`} onClick={() => navigate(`/leads?source=${encodeURIComponent(source.source)}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/leads?source=${encodeURIComponent(source.source)}`); } }}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">{source.source}</span>
                     <span className="text-sm text-muted-foreground">
@@ -285,7 +285,7 @@ const LeadAnalytics = () => {
           <CardContent>
             <div className="space-y-4">
               {topPerformers.length > 0 ? topPerformers.map((performer: { id?: string; name: string; leads: number; converted: number; rate: string; score?: number }) => (
-                <div key={performer.id || performer.name} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" role="link" tabIndex={0} aria-label={`View lead ${performer.name}, score ${performer.rate}`} onClick={() => performer.id && navigate(`/leads/${performer.id}`)} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && performer.id) { e.preventDefault(); navigate(`/leads/${performer.id}`); } }}>
+                <div key={performer.id || performer.name} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" role="link" tabIndex={0} aria-label={`View lead ${performer.name}, score ${performer.rate}`} onClick={() => performer.id && navigate(`/leads/${performer.id}`)} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && performer.id) { e.preventDefault(); navigate(`/leads/${performer.id}`); } }}>
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-white text-sm font-bold">
                       #{topPerformers.indexOf(performer) + 1}

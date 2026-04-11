@@ -98,13 +98,13 @@ export function LeadsTable({
               />
             </TableHead>
             <TableHead className="w-8 px-0"></TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onSort('name')}>
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" tabIndex={0} role="button" onClick={() => onSort('name')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort('name') } }}>
               <div className="flex items-center whitespace-nowrap">
                 Name
                 {getSortIcon('name')}
               </div>
             </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onSort('company')}>
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" tabIndex={0} role="button" onClick={() => onSort('company')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort('company') } }}>
               <div className="flex items-center whitespace-nowrap">
                 Company
                 {getSortIcon('company')}
@@ -112,19 +112,19 @@ export function LeadsTable({
             </TableHead>
             <TableHead>Email</TableHead>
             <TableHead className="hidden xl:table-cell whitespace-nowrap">Phone</TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onSort('score')}>
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" tabIndex={0} role="button" onClick={() => onSort('score')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort('score') } }}>
               <div className="flex items-center whitespace-nowrap">
                 Score
                 {getSortIcon('score')}
               </div>
             </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onSort('status')}>
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" tabIndex={0} role="button" onClick={() => onSort('status')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort('status') } }}>
               <div className="flex items-center whitespace-nowrap">
                 Status
                 {getSortIcon('status')}
               </div>
             </TableHead>
-            <TableHead className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onSort('source')}>
+            <TableHead className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" tabIndex={0} role="button" onClick={() => onSort('source')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort('source') } }}>
               <div className="flex items-center whitespace-nowrap">
                 Source
                 {getSortIcon('source')}
