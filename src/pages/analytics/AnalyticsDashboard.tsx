@@ -449,7 +449,7 @@ const AnalyticsDashboard = () => {
             { to: '/analytics/attribution', icon: Crosshair, bgClass: 'bg-info/10', textClass: 'text-info', title: 'Attribution Report', desc: 'Multi-touch attribution & channel performance' },
             { to: '/analytics/velocity', icon: Gauge, bgClass: 'bg-warning/10', textClass: 'text-warning', title: 'Lead Velocity', desc: 'Pipeline speed, stage durations & bottlenecks' },
             { to: '/analytics/source-roi', icon: PiggyBank, bgClass: 'bg-success/10', textClass: 'text-success', title: 'Source ROI', desc: 'Revenue efficiency per lead source' },
-            { to: '/analytics/goals', icon: Target, bgClass: 'bg-rose-500/10', textClass: 'text-rose-500', title: 'Goal Tracking', desc: 'Set, track & measure your business goals' },
+            { to: '/analytics/goals', icon: Target, bgClass: 'bg-primary/10', textClass: 'text-primary', title: 'Goal Tracking', desc: 'Set, track & measure your business goals' },
             { to: '/analytics/follow-ups', icon: PhoneForwarded, bgClass: 'bg-info/10', textClass: 'text-info', title: 'Follow-Up Analytics', desc: 'Completion rates, channels & response trends' },
             { to: '/analytics/comparison', icon: CalendarRange, bgClass: 'bg-info/10', textClass: 'text-info', title: 'Period Comparison', desc: 'Compare metrics across different time periods' },
           ].map(({ to, icon: Icon, bgClass, textClass, title, desc }) => (

@@ -200,7 +200,7 @@ export function SubscriptionStatus() {
             </div>
             <a 
               href="/admin/subscription"
-              className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium"
+              className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium transition-colors"
             >
               Upgrade Plan
             </a>

@@ -329,11 +329,11 @@ export default function CalendarPage() {
 
   const getEventColor = (type: string) => {
     switch (type) {
-      case 'MEETING': return 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
-      case 'DEMO': return 'bg-green-500/10 text-green-700 dark:text-green-400'
-      case 'CONSULTATION': return 'bg-purple-500/10 text-purple-700 dark:text-purple-400'
-      case 'FOLLOW_UP': return 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
-      case 'CALL': return 'bg-teal-500/10 text-teal-700 dark:text-teal-400'
+      case 'MEETING': return 'bg-primary/10 text-primary'
+      case 'DEMO': return 'bg-success/10 text-success'
+      case 'CONSULTATION': return 'bg-info/10 text-info'
+      case 'FOLLOW_UP': return 'bg-warning/10 text-warning'
+      case 'CALL': return 'bg-primary/10 text-primary'
       default: return 'bg-primary/10 text-primary'
     }
   }

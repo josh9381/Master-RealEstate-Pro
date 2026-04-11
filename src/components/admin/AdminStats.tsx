@@ -57,7 +57,7 @@ export function AdminStats() {
         </div>
         <button 
           onClick={() => refetch()}
-          className="px-3 py-1.5 bg-destructive/10 text-destructive rounded-md hover:bg-destructive/20 text-sm font-medium"
+          className="px-3 py-1.5 bg-destructive/10 text-destructive rounded-md hover:bg-destructive/20 text-sm font-medium transition-colors"
         >
           Retry
         </button>

@@ -52,7 +52,7 @@ export class ModalErrorBoundary extends Component<Props, State> {
           </p>
           <button
             onClick={this.handleDismiss}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors"
           >
             <X className="h-4 w-4" />
             Close

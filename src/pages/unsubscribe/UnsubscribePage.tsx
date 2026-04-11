@@ -121,8 +121,8 @@ export function UnsubscribePage() {
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-center">
-              <div className="rounded-full bg-green-100 p-3">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="rounded-full bg-success/10 p-3">
+                <CheckCircle className="h-8 w-8 text-success" />
               </div>
             </div>
             <div className="text-center space-y-2">
@@ -197,8 +197,8 @@ export function UnsubscribePage() {
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-center">
-              <div className="rounded-full bg-blue-100 p-3">
-                <AlertCircle className="h-8 w-8 text-blue-600" />
+              <div className="rounded-full bg-info/10 p-3">
+                <AlertCircle className="h-8 w-8 text-info" />
               </div>
             </div>
             <div className="text-center space-y-2">
@@ -223,8 +223,8 @@ export function UnsubscribePage() {
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-center">
-              <div className="rounded-full bg-red-100 p-3">
-                <XCircle className="h-8 w-8 text-red-600" />
+              <div className="rounded-full bg-destructive/10 p-3">
+                <XCircle className="h-8 w-8 text-destructive" />
               </div>
             </div>
             <div className="text-center space-y-2">

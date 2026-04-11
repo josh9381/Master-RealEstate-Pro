@@ -467,7 +467,7 @@ const LeadScoring = () => {
                       step={5}
                       value={configForm.emailOptOutPenalty ?? -50}
                       onChange={(e) => setConfigForm(prev => ({ ...prev, emailOptOutPenalty: Number(e.target.value) }))}
-                      className="w-full accent-red-500"
+                      className="w-full accent-destructive"
                       aria-labelledby="label-emailOptOutPenalty"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">

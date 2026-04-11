@@ -58,19 +58,19 @@ export function DevErrorPanel() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { clearDevErrors(); refresh() }}
-                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded"
+                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded transition-colors"
               >
                 Clear
               </button>
               <button
                 onClick={refresh}
-                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded"
+                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded transition-colors"
               >
                 Refresh
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded"
+                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded transition-colors"
               >
                 ✕
               </button>

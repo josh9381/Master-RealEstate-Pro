@@ -332,7 +332,7 @@ export default function SubscriptionPage() {
             <Card 
               key={plan.tier}
               className={`relative overflow-hidden ${
-                plan.isCurrent ? 'ring-2 ring-blue-500 shadow-lg' : ''
+                plan.isCurrent ? 'ring-2 ring-primary shadow-lg' : ''
               }`}
             >
               {/* Current Badge */}

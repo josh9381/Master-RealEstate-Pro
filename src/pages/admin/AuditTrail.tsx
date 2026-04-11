@@ -40,8 +40,8 @@ const ACTION_COLORS: Record<string, string> = {
   SETTINGS_CHANGED: 'bg-warning/10 text-warning',
   SUBSCRIPTION_CHANGED: 'bg-info/10 text-info',
   DATA_IMPORTED: 'bg-info/10 text-info',
-  DATA_EXPORTED: 'bg-teal-100 text-teal-800',
-  BULK_ACTION: 'bg-pink-100 text-pink-800',
+  DATA_EXPORTED: 'bg-info/10 text-info',
+  BULK_ACTION: 'bg-primary/10 text-primary',
   BACKUP_CREATED: 'bg-success/10 text-success',
 }
 

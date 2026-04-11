@@ -203,7 +203,7 @@ const WorkflowsList = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+            <div className="p-2 bg-gradient-to-br from-primary/80 to-primary rounded-xl shadow-lg">
               <WorkflowIcon className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -244,7 +244,7 @@ const WorkflowsList = () => {
           </Button>
           <FeatureGate resource="workflows">
             <Link to="/workflows/builder">
-              <Button className="shadow-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+              <Button className="shadow-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Workflow
               </Button>
@@ -317,67 +317,67 @@ const WorkflowsList = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20">
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary bg-primary/5 dark:bg-primary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Workflows</CardTitle>
-            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">
-              <WorkflowIcon className="h-5 w-5 text-white" />
+            <div className="p-2.5 bg-primary rounded-xl shadow-md">
+              <WorkflowIcon className="h-5 w-5 text-primary-foreground" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold bg-gradient-to-br from-blue-600 to-blue-800 bg-clip-text text-transparent">{stats.totalWorkflows}</div>
+            <div className="text-3xl font-bold text-primary">{stats.totalWorkflows}</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-semibold text-success">{stats.activeWorkflows} active</span>, {stats.inactiveWorkflows} paused
             </p>
             <div className="mt-3 h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
               <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 rounded-full"
+                className="h-full bg-primary transition-all duration-500 rounded-full"
                 style={{ width: `${calcRate(stats.activeWorkflows, stats.totalWorkflows, 0)}%` }}
               />
             </div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-green-500 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20">
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-success bg-success/5 dark:bg-success/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Executions</CardTitle>
-            <div className="p-2.5 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md">
+            <div className="p-2.5 bg-success rounded-xl shadow-md">
               <Play className="h-5 w-5 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold bg-gradient-to-br from-green-600 to-green-800 bg-clip-text text-transparent">{stats.totalExecutions.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-success">{stats.totalExecutions.toLocaleString()}</div>
             <p className="text-xs text-success font-semibold mt-1">All time runs</p>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50/50 to-transparent dark:from-emerald-950/20">
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-success bg-success/5 dark:bg-success/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Success Rate</CardTitle>
-            <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-md">
+            <div className="p-2.5 bg-success rounded-xl shadow-md">
               <WorkflowIcon className="h-5 w-5 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold bg-gradient-to-br from-emerald-600 to-emerald-800 bg-clip-text text-transparent">{formatRate(stats.successRate, 1)}%</div>
+            <div className="text-3xl font-bold text-success">{formatRate(stats.successRate, 1)}%</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-semibold">{stats.successfulExecutions}</span> / {stats.totalExecutions} successful
             </p>
             <div className="mt-3 h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
               <div 
-                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500 rounded-full"
+                className="h-full bg-success transition-all duration-500 rounded-full"
                 style={{ width: `${stats.successRate}%` }}
               />
             </div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-red-500 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-950/20">
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-destructive bg-destructive/5 dark:bg-destructive/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Failed Executions</CardTitle>
-            <div className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-md">
+            <div className="p-2.5 bg-destructive rounded-xl shadow-md">
               <WorkflowIcon className="h-5 w-5 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold bg-gradient-to-br from-red-600 to-red-800 bg-clip-text text-transparent">{stats.failedExecutions}</div>
+            <div className="text-3xl font-bold text-destructive">{stats.failedExecutions}</div>
             <p className="text-xs font-semibold mt-1 flex items-center gap-1">
               {stats.failedExecutions > 0 ? (
                 <span className="text-destructive">⚠️ Need attention</span>
@@ -391,7 +391,7 @@ const WorkflowsList = () => {
 
       {/* Workflows List/Grid */}
       {filteredWorkflows.length === 0 ? (
-        <Card className="p-12 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <Card className="p-12 bg-muted/50">
           <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
             <div className="p-6 bg-primary/10 rounded-full mb-6">
               <WorkflowIcon className="h-16 w-16 text-primary" />
@@ -442,8 +442,8 @@ const WorkflowsList = () => {
                     <div
                       className={`p-3 rounded-xl shadow-lg ${
                         workflow.isActive
-                          ? 'bg-gradient-to-br from-green-500 to-green-600 text-white'
-                          : 'bg-gradient-to-br from-gray-400 to-gray-500 text-white'
+                          ? 'bg-success text-white'
+                          : 'bg-muted-foreground text-white'
                       }`}
                     >
                       <WorkflowIcon className="h-6 w-6" />
@@ -572,8 +572,8 @@ const WorkflowsList = () => {
                     <div
                       className={`p-3 rounded-xl shadow-lg ${
                         workflow.isActive
-                          ? 'bg-gradient-to-br from-green-500 to-green-600 text-white'
-                          : 'bg-gradient-to-br from-gray-400 to-gray-500 text-white'
+                          ? 'bg-success text-white'
+                          : 'bg-muted-foreground text-white'
                       }`}
                     >
                       <WorkflowIcon className="h-6 w-6" />

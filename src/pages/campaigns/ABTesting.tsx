@@ -453,8 +453,8 @@ const ABTesting = () => {
                   {stats.avgImprovement > 0 ? `+${stats.avgImprovement}%` : '—'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-violet-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
