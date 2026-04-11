@@ -921,7 +921,7 @@ function Dashboard() {
             )}
           </div>
           <select
-            className="px-3 py-2 text-sm border rounded-md"
+            className="px-3 py-2 text-sm border rounded-md hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             value={dateRange}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDateRange(e.target.value)}
             aria-label="Select date range for dashboard data"
@@ -943,7 +943,7 @@ function Dashboard() {
                 <label className="text-sm font-medium mb-1 block" htmlFor="filter-source">Lead Source</label>
                 <select
                   id="filter-source"
-                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  className="w-full px-3 py-2 text-sm border rounded-md hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   value={filterSource}
                   onChange={(e) => setFilterSource(e.target.value)}
                   aria-label="Filter by lead source"
@@ -958,7 +958,7 @@ function Dashboard() {
                 <label className="text-sm font-medium mb-1 block" htmlFor="filter-status">Status</label>
                 <select
                   id="filter-status"
-                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  className="w-full px-3 py-2 text-sm border rounded-md hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   aria-label="Filter by status"
@@ -975,7 +975,7 @@ function Dashboard() {
                 <label className="text-sm font-medium mb-1 block" htmlFor="filter-priority">Priority</label>
                 <select
                   id="filter-priority"
-                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  className="w-full px-3 py-2 text-sm border rounded-md hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   value={filterPriority}
                   onChange={(e) => setFilterPriority(e.target.value)}
                   aria-label="Filter by priority"

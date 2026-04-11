@@ -53,7 +53,7 @@ export function HowItWorks() {
         {/* Steps */}
         <div className={`relative grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           {/* Connecting line (desktop) */}
-          <div className="hidden md:block absolute top-24 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-blue-200 via-purple-200 to-emerald-200" />
+          <div className="hidden md:block absolute top-24 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-primary/30 via-info/20 to-success/30" />
 
           {steps.map((step) => (
             <div key={step.number} className="relative text-center">

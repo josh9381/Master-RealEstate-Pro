@@ -15,9 +15,9 @@ function DashboardMockup() {
         {/* Browser chrome */}
         <div className="flex items-center gap-2 px-4 py-2.5 bg-muted border-b border-border">
           <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-400" />
-            <div className="w-3 h-3 rounded-full bg-yellow-400" />
-            <div className="w-3 h-3 rounded-full bg-green-400" />
+            <div className="w-3 h-3 rounded-full bg-destructive" />
+            <div className="w-3 h-3 rounded-full bg-warning" />
+            <div className="w-3 h-3 rounded-full bg-success" />
           </div>
           <div className="flex-1 h-6 bg-background rounded-md border border-border ml-3 flex items-center px-3">
             <span className="text-[10px] text-muted-foreground">app.realestatepro.com/dashboard</span>
@@ -29,7 +29,7 @@ function DashboardMockup() {
           {/* Sidebar */}
           <div className="w-[18%] bg-gray-900 p-3 space-y-2 hidden sm:block">
             <div className="h-6 bg-primary rounded-md mb-4" />
-            {['bg-gray-700', 'bg-blue-500/40 ring-1 ring-blue-500/50', 'bg-gray-700', 'bg-gray-700', 'bg-gray-700', 'bg-gray-800'].map((c, i) => (
+            {['bg-gray-700', 'bg-primary/40 ring-1 ring-primary/50', 'bg-gray-700', 'bg-gray-700', 'bg-gray-700', 'bg-gray-800'].map((c, i) => (
               <div key={i} className={`h-4 rounded-md ${c}`} />
             ))}
           </div>
@@ -39,10 +39,10 @@ function DashboardMockup() {
             {/* KPI Cards */}
             <div className="grid grid-cols-4 gap-2">
               {[
-                { label: 'Active Leads', value: '2,847', color: 'border-l-blue-500 bg-card', change: '+12%' },
-                { label: 'Deals Won', value: '$1.2M', color: 'border-l-emerald-500 bg-card', change: '+24%' },
-                { label: 'Response Rate', value: '94%', color: 'border-l-purple-500 bg-card', change: '+8%' },
-                { label: 'Campaigns', value: '18', color: 'border-l-orange-500 bg-card', change: '+3' },
+                { label: 'Active Leads', value: '2,847', color: 'border-l-primary bg-card', change: '+12%' },
+                { label: 'Deals Won', value: '$1.2M', color: 'border-l-success bg-card', change: '+24%' },
+                { label: 'Response Rate', value: '94%', color: 'border-l-info bg-card', change: '+8%' },
+                { label: 'Campaigns', value: '18', color: 'border-l-warning bg-card', change: '+3' },
               ].map((card, i) => (
                 <div key={i} className={`rounded-lg p-2 border-l-[3px] ${card.color} shadow-sm`}>
                   <p className="text-[7px] sm:text-[9px] text-muted-foreground truncate">{card.label}</p>
@@ -81,7 +81,7 @@ function DashboardMockup() {
                 <div className="space-y-1.5 mt-2">
                   {['John P.', 'Sarah M.', 'Alex K.'].map((name, i) => (
                     <div key={i} className="flex items-center gap-1.5">
-                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
                         <span className="text-[6px] text-white font-bold">{name[0]}</span>
                       </div>
                       <span className="text-[7px] sm:text-[8px] text-muted-foreground">{name}</span>

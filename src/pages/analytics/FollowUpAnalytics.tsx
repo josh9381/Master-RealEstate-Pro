@@ -263,7 +263,7 @@ const FollowUpAnalytics = () => {
             <div className="space-y-4">
               {byPriority.map((p: { priority: string; completed: number; total: number; completionRate: number }) => (
                 <div key={p.priority} className="flex items-center gap-4">
-                  <div className="w-20 text-sm font-medium" style={{ color: PRIORITY_COLORS[p.priority] || '#6b7280' }}>
+                  <div className="w-20 text-sm font-medium" style={{ color: PRIORITY_COLORS[p.priority] || semanticColors.muted }}>
                     {PRIORITY_LABELS[p.priority] || p.priority}
                   </div>
                   <div className="flex-1">
@@ -276,7 +276,7 @@ const FollowUpAnalytics = () => {
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${p.completionRate}%`,
-                          backgroundColor: PRIORITY_COLORS[p.priority] || '#6b7280',
+                          backgroundColor: PRIORITY_COLORS[p.priority] || semanticColors.muted,
                         }}
                       />
                     </div>
