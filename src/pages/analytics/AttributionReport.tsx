@@ -79,7 +79,7 @@ const AttributionReport = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <GitBranch className="h-7 w-7 text-blue-600" />
+            <GitBranch className="h-7 w-7 text-info" />
             Multi-Touch Attribution
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -132,7 +132,7 @@ const AttributionReport = () => {
         <>
           {/* Truncation notice */}
           {data.capped && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-warning/10 dark:bg-warning/10 border border-warning/30 dark:border-warning/30 text-sm text-warning-foreground dark:text-warning">
               <Info className="h-4 w-4 flex-shrink-0" />
               <span>Showing attribution for the most recent 500 conversions. Narrow your date range for complete results.</span>
             </div>
@@ -169,7 +169,7 @@ const AttributionReport = () => {
                     <p className="text-sm text-muted-foreground">Sources</p>
                     <p className="text-2xl font-bold text-foreground">{data.bySource?.length || 0}</p>
                   </div>
-                  <TrendingUp className="h-8 w-8 text-purple-500 opacity-40" />
+                  <TrendingUp className="h-8 w-8 text-primary opacity-40" />
                 </div>
               </CardContent>
             </Card>
@@ -272,7 +272,7 @@ const AttributionReport = () => {
                         <tr key={c.campaignId || c.name} className="border-b border-border hover:bg-muted transition-colors duration-200">
                           <td className="py-3 px-4 font-medium text-foreground">{c.name}</td>
                           <td className="py-3 px-4 text-right text-muted-foreground">{formatRate(c.credit)}</td>
-                          <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(c.revenue)}</td>
+                          <td className="py-3 px-4 text-right text-success font-medium">{formatCurrency(c.revenue)}</td>
                           <td className="py-3 px-4 text-right text-muted-foreground">{formatRate(c.conversions, 1)}</td>
                         </tr>
                       ))}
@@ -306,7 +306,7 @@ const AttributionReport = () => {
                         <span className="text-xs text-muted-foreground">{lead.touchpoints} touchpoints</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-green-600 font-medium">{formatCurrency(lead.revenue)}</span>
+                        <span className="text-success font-medium">{formatCurrency(lead.revenue)}</span>
                         {expandedLead === lead.leadId ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </div>
                     </button>

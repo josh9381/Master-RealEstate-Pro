@@ -258,7 +258,7 @@ const ScheduledReportsSection = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-red-500 hover:text-red-700"
+                  className="text-destructive hover:text-destructive/80"
                   onClick={async () => { if (await showConfirm({ title: 'Delete Schedule', message: 'Delete this schedule?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMut.mutate(sched.id as string); }}
                   aria-label="Delete schedule"
                 >
@@ -819,8 +819,8 @@ const CustomReports = () => {
                 {savedReports.length > 0 ? savedReports.map((report: Record<string, unknown>) => (
                   <div key={report.id as string} className="flex items-center justify-between p-4 border rounded-lg transition-all duration-200 hover:shadow-md">
                     <div className="flex items-center space-x-4">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
-                        <BarChart3 className="h-6 w-6 text-blue-600" />
+                      <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10">
+                        <BarChart3 className="h-6 w-6 text-primary" />
                       </div>
                       <div>
                         <h4 className="font-semibold">{report.name as string}</h4>

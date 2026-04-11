@@ -92,6 +92,22 @@ function isIdSegment(segment: string): boolean {
 
 export function Breadcrumbs() {
   const { pathname } = useLocation()
+  const [ellipsisOpen, setEllipsisOpen] = useState(false)
+  const ellipsisRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!ellipsisOpen) return
+    function handleClick(e: MouseEvent) {
+      if (ellipsisRef.current && !ellipsisRef.current.contains(e.target as Node)) {
+        setEllipsisOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [ellipsisOpen])
+
+  // Close on route change
+  useEffect(() => { setEllipsisOpen(false) }, [pathname])
 
   if (pathname === '/' || pathname === '/dashboard') return null
 
@@ -115,23 +131,6 @@ export function Breadcrumbs() {
   const displayItems = items.length >= 4
     ? [items[0], { label: '…', path: '' }, items[items.length - 2], items[items.length - 1]]
     : items
-
-  const [ellipsisOpen, setEllipsisOpen] = useState(false)
-  const ellipsisRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!ellipsisOpen) return
-    function handleClick(e: MouseEvent) {
-      if (ellipsisRef.current && !ellipsisRef.current.contains(e.target as Node)) {
-        setEllipsisOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [ellipsisOpen])
-
-  // Close on route change
-  useEffect(() => { setEllipsisOpen(false) }, [pathname])
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
@@ -158,12 +157,13 @@ export function Breadcrumbs() {
                 <MoreHorizontal className="h-4 w-4" />
               </button>
               {ellipsisOpen && (
-                <div className="absolute left-0 top-full mt-1 py-1 bg-popover border border-border rounded-md shadow-md z-50 min-w-[140px]">
+                <div className="absolute left-0 top-full mt-1 py-1 bg-popover border border-border rounded-md shadow-md z-50 min-w-[140px]" role="menu">
                   {collapsed.map((c) => (
                     <Link
                       key={c.path}
                       to={c.path}
                       className="block px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+                      role="menuitem"
                     >
                       {c.label}
                     </Link>

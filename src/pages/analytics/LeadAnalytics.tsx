@@ -298,7 +298,7 @@ const LeadAnalytics = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-green-600">{performer.rate}</p>
+                    <p className="font-bold text-success">{performer.rate}</p>
                     <p className="text-xs text-muted-foreground">Lead score</p>
                   </div>
                 </div>

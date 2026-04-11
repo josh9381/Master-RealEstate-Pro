@@ -170,7 +170,7 @@ const GoalTracking = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Target className="h-7 w-7 text-purple-600" />
+            <Target className="h-7 w-7 text-primary" />
             Goal Tracking
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -197,13 +197,13 @@ const GoalTracking = () => {
         <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Completed</p>
-            <p className="text-2xl font-bold text-green-600">{completedGoals.length}</p>
+            <p className="text-2xl font-bold text-success">{completedGoals.length}</p>
           </CardContent>
         </Card>
         <Card className="transition-all duration-200 hover:shadow-md">
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Avg Progress</p>
-            <p className="text-2xl font-bold text-blue-600">
+            <p className="text-2xl font-bold text-info">
               {activeGoals.length > 0
                 ? Math.round(activeGoals.reduce((s: number, g: Record<string, unknown>) => s + ((g.progress as number) || 0), 0) / activeGoals.length)
                 : 0}%
@@ -334,7 +334,7 @@ const GoalTracking = () => {
               const daysLeft = isNaN(endMs) ? 0 : Math.max(0, Math.ceil((endMs - Date.now()) / (1000 * 60 * 60 * 24)));
 
               return (
-                <Card key={goal.id as string} className={isCompleted ? 'border-green-500 dark:border-green-600' : ''}>
+                <Card key={goal.id as string} className={isCompleted ? 'border-success dark:border-success' : ''}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
@@ -350,12 +350,12 @@ const GoalTracking = () => {
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => startEdit(goal)} className="p-1 text-muted-foreground hover:text-blue-500 transition-colors duration-200" aria-label="Edit goal">
+                        <button onClick={() => startEdit(goal)} className="p-1 text-muted-foreground hover:text-primary transition-colors duration-200" aria-label="Edit goal">
                           <Edit2 className="h-4 w-4" />
                         </button>
                         <button
                           onClick={async () => { if (await showConfirm({ title: 'Delete Goal', message: 'Delete this goal?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMutation.mutate(goal.id as string); }}
-                          className="p-1 text-muted-foreground hover:text-red-500 transition-colors duration-200"
+                          className="p-1 text-muted-foreground hover:text-destructive transition-colors duration-200"
                           aria-label="Delete goal"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -416,9 +416,9 @@ const GoalTracking = () => {
             {completedGoals.map((goal: Record<string, unknown>) => {
               const metric = METRIC_TYPES.find((m) => m.value === goal.metricType) || METRIC_TYPES[METRIC_TYPES.length - 1];
               return (
-                <div key={goal.id as string} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div key={goal.id as string} className="flex items-center justify-between p-3 bg-success/10 dark:bg-success/10 rounded-lg border border-success/30 dark:border-success/30">
                   <div className="flex items-center gap-3">
-                    <Trophy className="h-5 w-5 text-green-600" />
+                    <Trophy className="h-5 w-5 text-success" />
                     <div>
                       <span className="font-medium text-foreground">{goal.name as string}</span>
                       <span className="text-sm text-muted-foreground ml-2">
@@ -428,7 +428,7 @@ const GoalTracking = () => {
                   </div>
                   <button
                     onClick={async () => { if (await showConfirm({ title: 'Delete Goal', message: 'Delete this goal?', confirmLabel: 'Delete', variant: 'destructive' })) deleteMutation.mutate(goal.id as string); }}
-                    className="p-1 text-muted-foreground hover:text-red-500 transition-colors duration-200"
+                    className="p-1 text-muted-foreground hover:text-destructive transition-colors duration-200"
                     aria-label="Delete goal"
                   >
                     <Trash2 className="h-4 w-4" />

@@ -86,7 +86,7 @@ const FollowUpAnalytics = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Bell className="h-7 w-7 text-indigo-600" />
+            <Bell className="h-7 w-7 text-info" />
             Follow-Up Analytics
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -116,7 +116,7 @@ const FollowUpAnalytics = () => {
                 <p className="text-sm text-muted-foreground">Total Follow-Ups</p>
                 <p className="text-2xl font-bold text-foreground">{summary.total || 0}</p>
               </div>
-              <BellRing className="h-8 w-8 text-indigo-500 opacity-40" />
+              <BellRing className="h-8 w-8 text-info opacity-40" />
             </div>
           </CardContent>
         </Card>
@@ -125,9 +125,9 @@ const FollowUpAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Completion Rate</p>
-                <p className="text-2xl font-bold text-green-600">{formatRate(summary.completionRate || 0)}%</p>
+                <p className="text-2xl font-bold text-success">{formatRate(summary.completionRate || 0)}%</p>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-green-500 opacity-40" />
+              <CheckCircle2 className="h-8 w-8 text-success opacity-40" />
             </div>
           </CardContent>
         </Card>
@@ -136,9 +136,9 @@ const FollowUpAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Avg Response Time</p>
-                <p className="text-2xl font-bold text-blue-600">{summary.avgResponseHours || 0}h</p>
+                <p className="text-2xl font-bold text-info">{summary.avgResponseHours || 0}h</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-500 opacity-40" />
+              <Clock className="h-8 w-8 text-info opacity-40" />
             </div>
           </CardContent>
         </Card>
@@ -147,9 +147,9 @@ const FollowUpAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">{summary.overdue || 0}</p>
+                <p className="text-2xl font-bold text-destructive">{summary.overdue || 0}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500 opacity-40" />
+              <AlertTriangle className="h-8 w-8 text-destructive opacity-40" />
             </div>
           </CardContent>
         </Card>

@@ -444,14 +444,14 @@ const AnalyticsDashboard = () => {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { to: '/analytics/conversions', icon: ArrowRightLeft, bgClass: 'bg-success/10', textClass: 'text-success', title: 'Conversion Reports', desc: 'Funnel analysis, conversion rates & drop-off points' },
-            { to: '/analytics/usage', icon: Activity, bgClass: 'bg-purple-500/10', textClass: 'text-purple-500', title: 'Usage Analytics', desc: 'Platform usage, feature adoption & user activity' },
+            { to: '/analytics/usage', icon: Activity, bgClass: 'bg-primary/10', textClass: 'text-primary', title: 'Usage Analytics', desc: 'Platform usage, feature adoption & user activity' },
             { to: '/analytics/custom-reports', icon: FileBarChart, bgClass: 'bg-warning/10', textClass: 'text-warning', title: 'Custom Reports', desc: 'Build & save custom reports tailored to your needs' },
             { to: '/analytics/attribution', icon: Crosshair, bgClass: 'bg-info/10', textClass: 'text-info', title: 'Attribution Report', desc: 'Multi-touch attribution & channel performance' },
             { to: '/analytics/velocity', icon: Gauge, bgClass: 'bg-warning/10', textClass: 'text-warning', title: 'Lead Velocity', desc: 'Pipeline speed, stage durations & bottlenecks' },
             { to: '/analytics/source-roi', icon: PiggyBank, bgClass: 'bg-success/10', textClass: 'text-success', title: 'Source ROI', desc: 'Revenue efficiency per lead source' },
             { to: '/analytics/goals', icon: Target, bgClass: 'bg-rose-500/10', textClass: 'text-rose-500', title: 'Goal Tracking', desc: 'Set, track & measure your business goals' },
-            { to: '/analytics/follow-ups', icon: PhoneForwarded, bgClass: 'bg-indigo-500/10', textClass: 'text-indigo-500', title: 'Follow-Up Analytics', desc: 'Completion rates, channels & response trends' },
-            { to: '/analytics/comparison', icon: CalendarRange, bgClass: 'bg-sky-500/10', textClass: 'text-sky-500', title: 'Period Comparison', desc: 'Compare metrics across different time periods' },
+            { to: '/analytics/follow-ups', icon: PhoneForwarded, bgClass: 'bg-info/10', textClass: 'text-info', title: 'Follow-Up Analytics', desc: 'Completion rates, channels & response trends' },
+            { to: '/analytics/comparison', icon: CalendarRange, bgClass: 'bg-info/10', textClass: 'text-info', title: 'Period Comparison', desc: 'Compare metrics across different time periods' },
           ].map(({ to, icon: Icon, bgClass, textClass, title, desc }) => (
             <Link key={to} to={to} className="block">
               <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 h-full">

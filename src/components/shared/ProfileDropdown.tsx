@@ -85,7 +85,7 @@ export function ProfileDropdown({ position = 'below', closeSidebarOnNav = false,
           {position === 'below' && (
             <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
           )}
-          <div className={`${positionClass} bg-card border rounded-lg shadow-lg z-20`}>
+          <div className={`${positionClass} bg-card border rounded-lg shadow-lg z-20`} role="menu" aria-label="User menu">
             {position === 'below' && (
               <div className="p-3 border-b">
                 <p className="font-medium">{displayName}</p>
@@ -96,6 +96,7 @@ export function ProfileDropdown({ position = 'below', closeSidebarOnNav = false,
               <button
                 onClick={() => handleNav('/settings/profile')}
                 className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                role="menuitem"
               >
                 <User className="h-4 w-4" />
                 <span>Profile Settings</span>
@@ -103,6 +104,7 @@ export function ProfileDropdown({ position = 'below', closeSidebarOnNav = false,
               <button
                 onClick={() => handleNav('/settings')}
                 className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                role="menuitem"
               >
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
@@ -111,6 +113,7 @@ export function ProfileDropdown({ position = 'below', closeSidebarOnNav = false,
               <button
                 onClick={handleLogout}
                 className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent text-destructive transition-colors"
+                role="menuitem"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Log Out</span>

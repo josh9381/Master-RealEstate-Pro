@@ -74,7 +74,7 @@ const LeadVelocity = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Gauge className="h-7 w-7 text-orange-600" />
+            <Gauge className="h-7 w-7 text-warning" />
             Lead Velocity
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -95,7 +95,7 @@ const LeadVelocity = () => {
                   {data?.avgDaysToClose || 0} days
                 </p>
               </div>
-              <Clock className="h-8 w-8 text-orange-500 opacity-40" />
+              <Clock className="h-8 w-8 text-warning opacity-40" />
             </div>
           </CardContent>
         </Card>
@@ -108,7 +108,7 @@ const LeadVelocity = () => {
                   {data?.totalLeadsTracked || 0}
                 </p>
               </div>
-              <ArrowUpDown className="h-8 w-8 text-blue-500 opacity-40" />
+              <ArrowUpDown className="h-8 w-8 text-info opacity-40" />
             </div>
           </CardContent>
         </Card>
@@ -121,7 +121,7 @@ const LeadVelocity = () => {
                   {sortedStages.length}
                 </p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500 opacity-40" />
+              <TrendingUp className="h-8 w-8 text-success opacity-40" />
             </div>
           </CardContent>
         </Card>
@@ -216,7 +216,7 @@ const LeadVelocity = () => {
                         <td className="py-3 px-4 text-right text-muted-foreground">{s.count}</td>
                         <td className="py-3 px-4 w-1/3">
                           <div className="h-3 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-orange-500 rounded-full" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
                           </div>
                         </td>
                       </tr>
