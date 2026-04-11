@@ -1,4 +1,5 @@
 import { Building2, Crown, Users, Calendar } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { format } from 'date-fns'
 
@@ -90,9 +91,9 @@ export function OrganizationHeader() {
               <div className="mt-3 p-3 bg-warning/10 border border-warning/20 rounded-lg">
                 <p className="text-sm text-warning">
                   <strong>⚠️ Your trial ends in {daysLeft} days.</strong>{' '}
-                  <a href="/admin/subscription" className="underline font-medium hover:text-warning/80">
+                  <Link to="/admin/subscription" className="underline font-medium hover:text-warning/80">
                     Upgrade now
-                  </a>{' '}
+                  </Link>{' '}
                   to continue using all features.
                 </p>
               </div>

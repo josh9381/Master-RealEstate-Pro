@@ -21,7 +21,7 @@ export function CTASection() {
           <br />
           real estate business?
         </h2>
-        <p className="text-lg sm:text-xl text-blue-100/80 max-w-2xl mx-auto mb-10">
+        <p className="text-lg sm:text-xl text-primary-foreground/80 max-w-2xl mx-auto mb-10">
           Join 2,000+ agents already using RealEstate Pro to close more deals,
           save hours every week, and scale with confidence.
         </p>
@@ -44,7 +44,7 @@ export function CTASection() {
           </button>
         </div>
 
-        <p className="text-blue-200/60 text-sm">
+        <p className="text-primary-foreground/60 text-sm">
           No credit card required &middot; Free forever plan &middot; Setup in 2 minutes
         </p>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -201,6 +201,39 @@ export function TagsManager() {
       data: { name: newTag.name.trim(), color: newTag.color }
     })
   }
+
+  // Focus trap for tag modal
+  const tagModalRef = useRef<HTMLDivElement>(null)
+  const previousTagFocusRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (showAddModal) {
+      previousTagFocusRef.current = document.activeElement as HTMLElement
+      const firstInput = tagModalRef.current?.querySelector<HTMLElement>('input, button, select, textarea')
+      firstInput?.focus()
+    } else if (previousTagFocusRef.current) {
+      previousTagFocusRef.current.focus()
+      previousTagFocusRef.current = null
+    }
+  }, [showAddModal])
+
+  const handleTagModalKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowAddModal(false)
+      setEditingTag(null)
+      setNewTag({ name: '', color: DEFAULT_COLOR })
+      return
+    }
+    if (e.key !== 'Tab') return
+    const focusable = tagModalRef.current?.querySelectorAll<HTMLElement>(
+      'input:not([disabled]), button:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+    if (!focusable?.length) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDeleteTag = async (id: string) => {
     if (await showConfirm({ title: 'Delete Tag', message: 'Are you sure you want to delete this tag?', confirmLabel: 'Delete', variant: 'destructive' })) {
@@ -513,17 +546,12 @@ export function TagsManager() {
       {/* Add/Edit Tag Modal */}
       {showAddModal && (
         <div
+          ref={tagModalRef}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
           role="dialog"
           aria-modal="true"
           aria-label={editingTag ? 'Edit Tag' : 'Add New Tag'}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setShowAddModal(false)
-              setEditingTag(null)
-              setNewTag({ name: '', color: DEFAULT_COLOR })
-            }
-          }}
+          onKeyDown={handleTagModalKeyDown}
         >
           <Card className="w-full max-w-md">
             <CardHeader>

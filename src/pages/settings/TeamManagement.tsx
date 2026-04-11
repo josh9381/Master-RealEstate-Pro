@@ -344,7 +344,7 @@ const TeamManagement = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="cursor-pointer hover:border-primary transition-all duration-200" onClick={() => setShowActivityLogs(!showActivityLogs)}>
+        <Card className="cursor-pointer hover:border-primary transition-all duration-200 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2" onClick={() => setShowActivityLogs(!showActivityLogs)} tabIndex={0} role="button" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowActivityLogs(!showActivityLogs) } }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -376,7 +376,7 @@ const TeamManagement = () => {
             <p className="text-xs text-muted-foreground">Out of 10 total</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:border-primary transition-all duration-200" onClick={() => setShowLeaderboard(!showLeaderboard)}>
+        <Card className="cursor-pointer hover:border-primary transition-all duration-200 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2" onClick={() => setShowLeaderboard(!showLeaderboard)} tabIndex={0} role="button" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowLeaderboard(!showLeaderboard) } }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Top Performer</CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />

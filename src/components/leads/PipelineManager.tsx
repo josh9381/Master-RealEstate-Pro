@@ -256,7 +256,7 @@ function PipelineManager({ pipelines, onClose }: PipelineManagerProps) {
                           )}
                           <span className="font-medium truncate">{pipeline.name}</span>
                           {pipeline.isDefault && (
-                            <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                            <Star className="h-3.5 w-3.5 text-warning fill-warning shrink-0" />
                           )}
                           <Badge variant="outline" className="text-xs shrink-0">
                             {pipeline.type}

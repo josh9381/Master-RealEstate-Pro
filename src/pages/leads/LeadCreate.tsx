@@ -693,9 +693,9 @@ export default function LeadCreate() {
               
               <div className="flex flex-wrap gap-2 mb-3">
                 {formData.tags.map((tag) => (
-                  <Badge key={tag} className="cursor-pointer hover:opacity-80 transition-colors" onClick={() => {
+                  <Badge key={tag} className="cursor-pointer hover:opacity-80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" tabIndex={0} role="button" onClick={() => {
                     setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }))
-                  }}>
+                  }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) })) } }}>
                     {tag}
                     <X className="h-3 w-3 ml-1" />
                   </Badge>

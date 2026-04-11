@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Download, FileText, Calendar, DollarSign, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -301,7 +301,7 @@ const InvoiceDetail = () => {
         <CardContent>
           <p className="text-sm text-muted-foreground">
             If you have questions about this invoice, visit the{' '}
-            <a href="/help" className="text-primary hover:underline">Help Center</a>{' '}
+                        <Link to="/help" className="text-primary hover:underline">Help Center</Link>{' '}
             or open a support ticket.
           </p>
         </CardContent>

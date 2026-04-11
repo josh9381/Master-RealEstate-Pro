@@ -28,7 +28,7 @@ function DashboardMockup() {
         <div className="flex-1 flex">
           {/* Sidebar */}
           <div className="w-[18%] bg-gray-900 p-3 space-y-2 hidden sm:block">
-            <div className="h-6 bg-blue-600 rounded-md mb-4" />
+            <div className="h-6 bg-primary rounded-md mb-4" />
             {['bg-gray-700', 'bg-blue-500/40 ring-1 ring-blue-500/50', 'bg-gray-700', 'bg-gray-700', 'bg-gray-700', 'bg-gray-800'].map((c, i) => (
               <div key={i} className={`h-4 rounded-md ${c}`} />
             ))}
@@ -58,7 +58,7 @@ function DashboardMockup() {
                 <span className="text-[9px] sm:text-[10px] font-semibold text-foreground/80">Pipeline Overview</span>
                 <div className="flex gap-2">
                   {['1W', '1M', '3M'].map(p => (
-                    <span key={p} className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 rounded ${p === '1M' ? 'bg-blue-100 text-blue-700' : 'text-muted-foreground'}`}>{p}</span>
+                    <span key={p} className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 rounded ${p === '1M' ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>{p}</span>
                   ))}
                 </div>
               </div>
@@ -67,7 +67,7 @@ function DashboardMockup() {
                 {[40, 55, 45, 70, 60, 80, 65, 90, 75, 85, 70, 95].map((h, i) => (
                   <div
                     key={i}
-                    className="flex-1 rounded-t-sm bg-gradient-to-t from-blue-500 to-blue-400 opacity-80"
+                    className="flex-1 rounded-t-sm bg-gradient-to-t from-primary to-primary/80 opacity-80"
                     style={{ height: `${h}%` }}
                   />
                 ))}

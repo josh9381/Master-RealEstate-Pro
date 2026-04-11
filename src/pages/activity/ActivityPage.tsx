@@ -255,10 +255,10 @@ export default function ActivityPage() {
         {showMoreFilters && (
           <div className="flex items-end gap-4 pt-2 border-t">
             <div className="flex-1">
-              <label htmlFor="activity-lead-filter" className="text-xs font-medium text-muted-foreground mb-1 block">Lead</label>
+              <label htmlFor="activity-lead-filter" className="text-sm font-medium text-foreground mb-1 block">Lead</label>
               <select
                 id="activity-lead-filter"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={selectedLeadId}
                 onChange={(e) => { setSelectedLeadId(e.target.value); setPage(1) }}
               >
@@ -269,7 +269,7 @@ export default function ActivityPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="activity-date-from" className="text-xs font-medium text-muted-foreground mb-1 block">From</label>
+              <label htmlFor="activity-date-from" className="text-sm font-medium text-foreground mb-1 block">From</label>
               <Input
                 id="activity-date-from"
                 type="date"
@@ -278,7 +278,7 @@ export default function ActivityPage() {
               />
             </div>
             <div>
-              <label htmlFor="activity-date-to" className="text-xs font-medium text-muted-foreground mb-1 block">To</label>
+              <label htmlFor="activity-date-to" className="text-sm font-medium text-foreground mb-1 block">To</label>
               <Input
                 id="activity-date-to"
                 type="date"

@@ -4,6 +4,8 @@ import { getUserItem, setUserItem } from '@/lib/userStorage'
 import { useToast } from '@/hooks/useToast'
 import { useQueryClient } from '@tanstack/react-query'
 import { settingsApi } from '@/lib/api'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import {
   X,
   ChevronRight,
@@ -182,42 +184,42 @@ function ProfileStep() {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-1">First Name *</label>
-          <input
+          <Input
             type="text"
             value={form.firstName}
             onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+            
             placeholder="John"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-1">Last Name *</label>
-          <input
+          <Input
             type="text"
             value={form.lastName}
             onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+            
             placeholder="Smith"
           />
         </div>
       </div>
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">Phone Number</label>
-        <input
+        <Input
           type="tel"
           value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+          
           placeholder="+1 (555) 123-4567"
         />
       </div>
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">Job Title</label>
-        <input
+        <Input
           type="text"
           value={form.jobTitle}
           onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+          
           placeholder="Real Estate Agent"
         />
       </div>
@@ -226,20 +228,20 @@ function ProfileStep() {
         <select
           value={form.timezone}
           onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'Pacific/Honolulu'].map((tz) => (
             <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
           ))}
         </select>
       </div>
-      <button
+      <Button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        className="w-full"
       >
         {saving ? 'Saving...' : 'Save Profile'}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -304,11 +306,11 @@ function BusinessStep() {
     <div className="space-y-5 max-w-lg mx-auto">
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">Company Name *</label>
-        <input
+        <Input
           type="text"
           value={form.companyName}
           onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+          
           placeholder="Pinnacle Realty Group"
         />
       </div>
@@ -318,7 +320,7 @@ function BusinessStep() {
           <select
             value={form.industry}
             onChange={(e) => setForm({ ...form, industry: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {['Real Estate', 'Real Estate - Residential', 'Real Estate - Commercial', 'Mortgage & Lending', 'Property Management', 'Other'].map((i) => (
               <option key={i} value={i}>{i}</option>
@@ -330,7 +332,7 @@ function BusinessStep() {
           <select
             value={form.companySize}
             onChange={(e) => setForm({ ...form, companySize: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {['1-10 employees', '11-50 employees', '51-200 employees', '201-500 employees', '500+ employees'].map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -340,43 +342,43 @@ function BusinessStep() {
       </div>
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">Website</label>
-        <input
+        <Input
           type="url"
           value={form.website}
           onChange={(e) => setForm({ ...form, website: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+          
           placeholder="https://www.yourcompany.com"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-1">Business Email</label>
-          <input
+          <Input
             type="email"
             value={form.billingEmail}
             onChange={(e) => setForm({ ...form, billingEmail: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+            
             placeholder="info@company.com"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-1">Business Phone</label>
-          <input
+          <Input
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+            
             placeholder="+1 (555) 000-0000"
           />
         </div>
       </div>
-      <button
+      <Button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        className="w-full"
       >
         {saving ? 'Saving...' : 'Save Business Info'}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -463,11 +465,11 @@ function EmailStep() {
       )}
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">SendGrid API Key *</label>
-        <input
+        <Input
           type="password"
           value={form.apiKey}
           onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none font-mono text-sm"
+          className="font-mono text-sm"
           placeholder={hasExisting ? '••••••••••• (key stored)' : 'SG.xxxxxx...'}
         />
         <p className="text-xs text-muted-foreground mt-1">Get your key from <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">SendGrid Dashboard</a></p>
@@ -475,21 +477,21 @@ function EmailStep() {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-1">From Name *</label>
-          <input
+          <Input
             type="text"
             value={form.fromName}
             onChange={(e) => setForm({ ...form, fromName: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+            
             placeholder="John at Pinnacle Realty"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-1">From Email *</label>
-          <input
+          <Input
             type="email"
             value={form.fromEmail}
             onChange={(e) => setForm({ ...form, fromEmail: e.target.value })}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+            
             placeholder="john@company.com"
           />
         </div>
@@ -501,11 +503,11 @@ function EmailStep() {
         <div className="mt-3 grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">SMTP Host</label>
-            <input
+            <Input
               type="text"
               value={form.smtpHost}
               onChange={(e) => setForm({ ...form, smtpHost: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm"
+              
             />
           </div>
           <div>
@@ -513,7 +515,7 @@ function EmailStep() {
             <select
               value={form.smtpPort}
               onChange={(e) => setForm({ ...form, smtpPort: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm"
+               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {['587', '465', '25', '2525'].map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -523,15 +525,15 @@ function EmailStep() {
         </div>
       </details>
       <div className="flex gap-3">
-        <button
+        <Button
           onClick={handleSave}
           disabled={saving}
-          className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="flex-1"
         >
           {saving ? 'Saving...' : 'Save Email Config'}
-        </button>
+        </Button>
         {configSaved && (
-          <button
+          <Button
             onClick={async () => {
               if (!form.fromEmail.trim()) {
                 toast.error('Save your email configuration first')
@@ -548,11 +550,11 @@ function EmailStep() {
               }
             }}
             disabled={testingEmail}
-            className="flex items-center gap-2 px-4 py-2.5 bg-success text-white font-medium rounded-lg hover:bg-success/90 disabled:opacity-50 transition-colors"
+            className="bg-success text-white hover:bg-success/90"
           >
             <Send className="h-4 w-4" />
             {testingEmail ? 'Sending...' : 'Test'}
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -641,54 +643,54 @@ function SMSStep() {
       )}
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">Account SID *</label>
-        <input
+        <Input
           type="text"
           value={form.accountSid}
           onChange={(e) => setForm({ ...form, accountSid: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none font-mono text-sm"
+          className="font-mono text-sm"
           placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         />
       </div>
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">Auth Token *</label>
-        <input
+        <Input
           type="password"
           value={form.authToken}
           onChange={(e) => setForm({ ...form, authToken: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none font-mono text-sm"
+          className="font-mono text-sm"
           placeholder={hasExisting ? '••••••••••• (token stored)' : '32-character token'}
         />
         <p className="text-xs text-muted-foreground mt-1">Find it in your <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Twilio Console</a></p>
       </div>
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-1">Twilio Phone Number *</label>
-        <input
+        <Input
           type="tel"
           value={form.phoneNumber}
           onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none"
+          
           placeholder="+15551234567"
         />
       </div>
-      <button
+      <Button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        className="w-full"
       >
         {saving ? 'Verifying & Saving...' : 'Save Twilio Config'}
-      </button>
+      </Button>
       {configSaved && (
         <div className="pt-2 border-t border-border space-y-3">
           <p className="text-sm font-medium text-muted-foreground">Send a test SMS to verify everything works:</p>
           <div className="flex gap-3">
-            <input
+            <Input
               type="tel"
               value={testPhone}
               onChange={(e) => setTestPhone(e.target.value)}
-              className="flex-1 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm"
+              className="flex-1"
               placeholder="+1 your phone number"
             />
-            <button
+            <Button
               onClick={async () => {
                 if (!testPhone.trim()) {
                   toast.error('Enter a phone number to send a test SMS')
@@ -705,11 +707,12 @@ function SMSStep() {
                 }
               }}
               disabled={testingBusy}
-              className="flex items-center gap-2 px-4 py-2 bg-success text-white font-medium rounded-lg hover:bg-success/90 disabled:opacity-50 transition-colors text-sm"
+              size="sm"
+              className="bg-success text-white hover:bg-success/90"
             >
               <Send className="h-4 w-4" />
               {testingBusy ? 'Sending...' : 'Test SMS'}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -805,14 +808,14 @@ function SecurityStep() {
               in Settings where you can scan the QR code with your authenticator app.
             </p>
           </div>
-          <button
+          <Button
             onClick={() => {
               toast.info('Head to Settings → Security to set up 2FA with your authenticator app')
             }}
-            className="w-full py-2.5 bg-warning text-white font-medium rounded-lg hover:bg-warning/90 transition-colors"
+            className="w-full bg-warning text-white hover:bg-warning/90"
           >
             Set Up 2FA in Settings
-          </button>
+          </Button>
         </>
       )}
 
@@ -997,15 +1000,16 @@ export function SetupWizard() {
               <p className="text-xs text-muted-foreground">Step {currentStep + 1} of {WIZARD_STEPS.length}</p>
             </div>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleSkipAll}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             title="Skip setup and configure later"
             aria-label="Skip setup and configure later"
           >
             <X className="h-4 w-4" />
             <span className="hidden sm:inline">Set up later</span>
-          </button>
+          </Button>
         </div>
 
         {/* Progress bar */}
@@ -1043,32 +1047,31 @@ export function SetupWizard() {
         <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/50">
           <div>
             {!isFirst && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleBack}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back
-              </button>
+              </Button>
             )}
           </div>
           <div className="flex items-center gap-3">
             {isConfigStep && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleSkipStep}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 <SkipForward className="h-4 w-4" />
                 Skip
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={handleNext}
-              className="flex items-center gap-1 px-6 py-2.5 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
             >
               {isLast ? 'Go to Dashboard' : isFirst ? 'Get Started' : 'Continue'}
               {!isLast && <ChevronRight className="h-4 w-4" />}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

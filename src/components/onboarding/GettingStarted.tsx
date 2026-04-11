@@ -91,13 +91,15 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
   return (
     <Card className="relative overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/5">
       {/* Dismiss button */}
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={handleDismiss}
-        className="absolute top-4 right-4 p-1 rounded-full hover:bg-muted transition-colors z-10"
+        className="absolute top-4 right-4 z-10"
         title="Dismiss getting started guide"
       >
         <X className="h-4 w-4 text-muted-foreground" />
-      </button>
+      </Button>
 
       <CardContent className="p-6">
         {/* Header */}
@@ -196,9 +198,9 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
         {/* Dismiss text */}
         <p className="text-xs text-muted-foreground text-center mt-4">
           Already familiar with the platform?{' '}
-          <button onClick={handleDismiss} className="underline hover:text-foreground transition-colors">
+          <Button variant="link" size="sm" onClick={handleDismiss} className="h-auto p-0 text-xs">
             Skip this guide
-          </button>
+          </Button>
         </p>
       </CardContent>
     </Card>

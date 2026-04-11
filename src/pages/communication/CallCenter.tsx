@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { formatRate } from '@/lib/metricsCalculator'
 import {
   Phone,
@@ -333,7 +333,7 @@ const CallCenter = () => {
                 <p className="text-sm text-warning mt-1">
                   The Call Hub uses your device's native phone dialer. For VoIP calling directly from the browser,
                   configure your Twilio credentials in{' '}
-                  <a href="/settings/twilio" className="underline font-medium">Settings → Twilio Setup</a>.
+                  <Link to="/settings/twilio" className="underline font-medium">Settings → Twilio Setup</Link>.
                   Call logging and disposition tracking still works without Twilio.
                 </p>
               </div>

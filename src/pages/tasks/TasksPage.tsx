@@ -416,7 +416,7 @@ export default function TasksPage() {
             <div className="flex items-center gap-2">
               <Label className="text-sm font-medium whitespace-nowrap">Priority:</Label>
               <select
-                className="text-sm border rounded-md px-2 py-1.5 bg-background"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
               >
@@ -429,7 +429,7 @@ export default function TasksPage() {
             <div className="flex items-center gap-2">
               <Label className="text-sm font-medium whitespace-nowrap">Assignee:</Label>
               <select
-                className="text-sm border rounded-md px-2 py-1.5 bg-background"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={assigneeFilter}
                 onChange={(e) => setAssigneeFilter(e.target.value)}
               >
