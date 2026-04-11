@@ -55,7 +55,7 @@ const features = [
 
 const colorMap: Record<string, string> = {
   blue: 'bg-primary/10 text-primary group-hover:bg-primary transition-colors group-hover:text-white',
-  purple: 'bg-primary/10 text-primary group-hover:bg-primary transition-colors group-hover:text-white',
+  purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 transition-colors group-hover:text-white',
   cyan: 'bg-info/10 text-info group-hover:bg-info transition-colors group-hover:text-white',
   emerald: 'bg-success/10 text-success group-hover:bg-success transition-colors group-hover:text-white',
   orange: 'bg-warning/10 text-warning group-hover:bg-warning transition-colors group-hover:text-white',
