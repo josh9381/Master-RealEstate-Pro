@@ -609,7 +609,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
               placeholder="Subject line (optional)"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg text-sm"
+              className="w-full px-3 py-2 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={initializing || generating || isStreaming}
             />
           )}
@@ -618,7 +618,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
             value={draftMessage}
             onChange={(e) => setDraftMessage(e.target.value)}
             rows={6}
-            className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+            className="w-full px-3 py-2 border rounded-lg text-sm resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={initializing || generating || isStreaming}
           />
         </div>
