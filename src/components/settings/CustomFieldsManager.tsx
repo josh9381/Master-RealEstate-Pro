@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -231,6 +231,34 @@ export function CustomFieldsManager() {
     })
   }
 
+  // Focus trap for modal
+  const modalRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (showAddModal) {
+      previousFocusRef.current = document.activeElement as HTMLElement
+      const firstInput = modalRef.current?.querySelector<HTMLElement>('input, button, select, textarea')
+      firstInput?.focus()
+    } else if (previousFocusRef.current) {
+      previousFocusRef.current.focus()
+      previousFocusRef.current = null
+    }
+  }, [showAddModal])
+
+  const handleModalKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { resetForm(); return }
+    if (e.key !== 'Tab') return
+    const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+      'input:not([disabled]), button:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+    if (!focusable?.length) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const resetForm = () => {
     setShowAddModal(false)
     setEditingField(null)
@@ -430,11 +458,12 @@ export function CustomFieldsManager() {
       {/* Add/Edit Field Modal */}
       {showAddModal && (
         <div
+          ref={modalRef}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
           aria-label={editingField ? 'Edit Custom Field' : 'Add Custom Field'}
-          onKeyDown={(e) => { if (e.key === 'Escape') resetForm() }}
+          onKeyDown={handleModalKeyDown}
         >
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <CardHeader>
