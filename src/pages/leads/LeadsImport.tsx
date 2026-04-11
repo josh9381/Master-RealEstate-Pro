@@ -683,7 +683,7 @@ function LeadsImport() {
               <div>
                 <label className="text-sm font-medium">Pipeline</label>
                 <select
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   value={importPipelineId}
                   onChange={(e) => {
                     setImportPipelineId(e.target.value)
@@ -710,7 +710,7 @@ function LeadsImport() {
                   <div>
                     <label className="text-sm font-medium">Starting Stage</label>
                     <select
-                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       value={importStageId}
                       onChange={(e) => setImportStageId(e.target.value)}
                     >
