@@ -265,8 +265,8 @@ export function LeadsTable({
                                 {activity.type === 'email' && <Mail className="h-4 w-4 text-primary" />}
                                 {activity.type === 'call' && <Phone className="h-4 w-4 text-success" />}
                                 {activity.type === 'note' && <FileText className="h-4 w-4 text-warning" />}
-                                {activity.type === 'meeting' && <Users className="h-4 w-4 text-purple-600" />}
-                                {activity.type === 'task' && <Target className="h-4 w-4 text-indigo-600" />}
+                                {activity.type === 'meeting' && <Users className="h-4 w-4 text-primary" />}
+                                {activity.type === 'task' && <Target className="h-4 w-4 text-primary" />}
                                 {activity.type === 'status_change' && <TrendingUp className="h-4 w-4 text-warning" />}
                               </div>
                               <div className="flex-1">

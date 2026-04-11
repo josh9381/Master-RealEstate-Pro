@@ -74,10 +74,10 @@ export default function ActivityPage() {
   const colorMap: Record<string, string> = {
     email: 'text-primary',
     call: 'text-success',
-    meeting: 'text-purple-500',
+    meeting: 'text-primary',
     note: 'text-warning',
     sms: 'text-warning',
-    lead: 'text-indigo-500',
+    lead: 'text-primary',
     status_change: 'text-muted-foreground',
   }
 

@@ -170,7 +170,7 @@ function CommunicationHistory({
       case 'SMS':
         return 'text-success bg-success/10'
       case 'CALL':
-        return 'text-purple-600 bg-purple-50 dark:bg-purple-950/30'
+        return 'text-primary bg-primary/5'
       default:
         return 'text-muted-foreground bg-muted dark:bg-gray-950/30'
     }
@@ -268,7 +268,7 @@ function CommunicationHistory({
         </div>
         <div className="rounded-lg border p-3 text-center">
           <div className="flex items-center justify-center gap-1">
-            <Phone className="h-3.5 w-3.5 text-purple-500" />
+            <Phone className="h-3.5 w-3.5 text-primary" />
             <p className="text-2xl font-bold">{callCount}</p>
           </div>
           <p className="text-xs text-muted-foreground">Calls</p>

@@ -126,7 +126,7 @@ export const ContactList = ({
               variant={bulkSelectMode ? 'default' : 'outline'}
               onClick={onToggleBulkSelect}
               title="Toggle bulk selection mode"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
             >
               <CheckCheck className="h-4 w-4" />
             </Button>
@@ -307,7 +307,7 @@ export const ContactList = ({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 w-7 p-0"
+                        className="h-7 w-7 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                         onClick={(e) => { e.stopPropagation(); onToggleStar(contact.id) }}
                         title="Star"
                       >
@@ -316,7 +316,7 @@ export const ContactList = ({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 w-7 p-0"
+                        className="h-7 w-7 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                         onClick={(e) => { e.stopPropagation(); onSnooze(contact.id, 60) }}
                         title="Snooze 1 hour"
                       >

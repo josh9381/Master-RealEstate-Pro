@@ -56,11 +56,11 @@ const mockActivities: Activity[] = []
 const activityConfig: Record<string, { icon: typeof Mail; color: string; bg: string }> = {
   email: { icon: Mail, color: 'text-primary', bg: 'bg-primary/10' },
   call: { icon: Phone, color: 'text-success', bg: 'bg-success/10' },
-  sms: { icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+  sms: { icon: MessageSquare, color: 'text-primary', bg: 'bg-primary/10' },
   note: { icon: FileText, color: 'text-warning', bg: 'bg-warning/10' },
   status: { icon: CheckCircle, color: 'text-slate-500', bg: 'bg-slate-500/10' },
   status_change: { icon: CheckCircle, color: 'text-slate-500', bg: 'bg-slate-500/10' },
-  meeting: { icon: Calendar, color: 'text-pink-500', bg: 'bg-pink-500/10' },
+  meeting: { icon: Calendar, color: 'text-primary', bg: 'bg-primary/10' },
   task: { icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
 }
 
@@ -316,7 +316,7 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
                               setEditingId(String(activity.id))
                               setEditForm({ title: activity.title, description: activity.description })
                             }}
-                            className="h-6 w-6 p-0"
+                            className="h-6 w-6 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                             title="Edit"
                           >
                             <Pencil className="h-3 w-3" />
@@ -329,7 +329,7 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
                                 deleteActivityMutation.mutate(String(activity.id))
                               }
                             }}
-                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            className="h-6 w-6 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 text-destructive hover:text-destructive"
                             title="Delete"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -341,7 +341,7 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
                           size="sm"
                           variant="ghost"
                           onClick={() => toggleExpanded(activity.id)}
-                          className="h-6 w-6 p-0"
+                          className="h-6 w-6 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                         >
                           {isExpanded ? (
                             <ChevronUp className="h-4 w-4" />

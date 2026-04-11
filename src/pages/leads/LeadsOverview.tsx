@@ -133,8 +133,8 @@ export default function LeadsOverview() {
               <h2 className="mt-2 text-3xl font-bold">{avgScore}</h2>
               <p className="mt-1 text-xs text-muted-foreground">Across {total} leads</p>
             </div>
-            <div className="rounded-full bg-purple-100 p-3">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <TrendingUp className="h-6 w-6 text-primary" />
             </div>
           </div>
         </Card>

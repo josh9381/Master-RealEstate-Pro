@@ -63,11 +63,11 @@ export function MiniCalendar({ eventDates = [], selectedDate, onDateSelect, clas
     <div className={cn('select-none', className)}>
       {/* Month navigation */}
       <div className="flex items-center justify-between mb-2">
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={prevMonth} aria-label="Previous month">
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0" onClick={prevMonth} aria-label="Previous month">
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium">{monthLabel}</span>
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={nextMonth} aria-label="Next month">
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0" onClick={nextMonth} aria-label="Next month">
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>

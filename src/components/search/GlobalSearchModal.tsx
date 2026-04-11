@@ -247,10 +247,10 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
 
   const getTypeBadgeColor = (type: string) => {
     switch (type) {
-      case 'lead': return 'bg-blue-100 text-blue-700'
-      case 'campaign': return 'bg-purple-100 text-purple-700'
-      case 'workflow': return 'bg-green-100 text-green-700'
-      case 'contact': return 'bg-orange-100 text-orange-700'
+      case 'lead': return 'bg-primary/10 text-primary'
+      case 'campaign': return 'bg-primary/10 text-primary'
+      case 'workflow': return 'bg-success/10 text-success'
+      case 'contact': return 'bg-warning/10 text-warning'
       case 'page': return 'bg-muted text-foreground'
       default: return 'bg-muted text-foreground'
     }
@@ -350,7 +350,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
               <p className="font-medium">No results found</p>
               <p className="text-sm mt-1">Try searching with different keywords</p>
               {hasSearchError && (
-                <p className="text-sm mt-2 text-amber-600">Some search results may be unavailable due to a connection issue.</p>
+                <p className="text-sm mt-2 text-warning">Some search results may be unavailable due to a connection issue.</p>
               )}
             </div>
           ) : (

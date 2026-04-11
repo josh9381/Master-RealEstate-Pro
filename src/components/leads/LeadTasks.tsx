@@ -280,7 +280,7 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
                     disabled={task.status === 'COMPLETED'}
                   >
                     {task.status === 'COMPLETED' ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <CheckCircle2 className="h-5 w-5 text-success" />
                     ) : (
                       <Circle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
                     )}
@@ -308,7 +308,7 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
                         <span
                           className={`text-xs flex items-center gap-1 ${
                             isOverdue(task.dueDate) && task.status !== 'COMPLETED'
-                              ? 'text-red-600 font-medium'
+                              ? 'text-destructive font-medium'
                               : 'text-muted-foreground'
                           }`}
                         >

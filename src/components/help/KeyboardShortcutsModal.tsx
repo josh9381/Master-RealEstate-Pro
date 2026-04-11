@@ -48,7 +48,7 @@ const shortcuts: Shortcut[] = [
 
 const categories = [
   { name: 'Navigation', icon: Navigation, color: 'text-primary' },
-  { name: 'Actions', icon: Zap, color: 'text-purple-500' },
+  { name: 'Actions', icon: Zap, color: 'text-primary' },
   { name: 'Dashboard', icon: Search, color: 'text-success' },
   { name: 'AI Features', icon: Keyboard, color: 'text-warning' },
   { name: 'Communication', icon: MessageSquare, color: 'text-info' },

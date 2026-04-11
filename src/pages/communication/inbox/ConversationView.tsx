@@ -464,7 +464,7 @@ export const ConversationView = ({
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-6 w-6 p-0"
+                                  className="h-6 w-6 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                                   onClick={() => {
                                     if (attachment.url) {
                                       const link = document.createElement('a')

@@ -38,9 +38,9 @@ const QUICK_TIMES = [
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: 'bg-muted text-foreground',
-  MEDIUM: 'bg-blue-100 text-blue-700',
-  HIGH: 'bg-orange-100 text-orange-700',
-  URGENT: 'bg-red-100 text-red-700',
+  MEDIUM: 'bg-info/10 text-info',
+  HIGH: 'bg-warning/10 text-warning',
+  URGENT: 'bg-destructive/10 text-destructive',
 }
 
 function getTomorrow9AM(): Date {
@@ -372,7 +372,7 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                   <RefreshCw className="h-3 w-3" /> Make recurring
                 </label>
                 {isRecurring && (
-                  <div className="space-y-2 pl-5 border-l-2 border-blue-200 dark:border-blue-800">
+                  <div className="space-y-2 pl-5 border-l-2 border-info/30">
                     <div>
                       <label className="text-xs text-muted-foreground">Repeat</label>
                       <select
@@ -457,18 +457,18 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                 <div
                   key={reminder.id}
                   className={`rounded-lg border p-2.5 text-sm transition-all duration-200 hover:shadow-md ${
-                    overdue ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : 'bg-card'
+                    overdue ? 'border-destructive/30 bg-destructive/5' : 'bg-card'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        {overdue && <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />}
+                        {overdue && <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />}
                         <span className="font-medium text-xs truncate">{reminder.title}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        <span className={overdue ? 'text-red-600 font-medium' : ''}>
+                        <span className={overdue ? 'text-destructive font-medium' : ''}>
                           {formatDueDate(reminder.dueAt)}
                         </span>
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${PRIORITY_COLORS[reminder.priority]}`}>
@@ -491,16 +491,16 @@ export function FollowUpReminders({ leadId, leadName }: Props) {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                         onClick={() => completeMutation.mutate(reminder.id)}
                         title="Mark complete"
                       >
-                        <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                        <CheckCircle className="h-3.5 w-3.5 text-success" />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                         onClick={() => deleteMutation.mutate(reminder.id)}
                         title="Cancel"
                       >

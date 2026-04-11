@@ -93,21 +93,21 @@ export function NotificationsPage() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'mention':
-        return <AtSign className="h-5 w-5 text-blue-500" />
+        return <AtSign className="h-5 w-5 text-info" />
       case 'assignment':
-        return <UserPlus className="h-5 w-5 text-green-500" />
+        return <UserPlus className="h-5 w-5 text-success" />
       case 'update':
-        return <TrendingUp className="h-5 w-5 text-purple-500" />
+        return <TrendingUp className="h-5 w-5 text-primary" />
       case 'system':
         return <Settings className="h-5 w-5 text-muted-foreground" />
       case 'email':
-        return <Mail className="h-5 w-5 text-cyan-500" />
+        return <Mail className="h-5 w-5 text-info" />
       case 'sms':
-        return <MessageSquare className="h-5 w-5 text-orange-500" />
+        return <MessageSquare className="h-5 w-5 text-warning" />
       case 'call':
-        return <Phone className="h-5 w-5 text-pink-500" />
+        return <Phone className="h-5 w-5 text-primary" />
       case 'meeting':
-        return <Calendar className="h-5 w-5 text-yellow-500" />
+        return <Calendar className="h-5 w-5 text-warning" />
       default:
         return <Bell className="h-5 w-5 text-muted-foreground" />
     }
@@ -413,7 +413,7 @@ export function NotificationsPage() {
                   key={notification.id}
                   className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${
                     !notification.read
-                      ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
+                      ? 'bg-primary/5 border-primary/20'
                       : 'hover:bg-accent/50'
                   } ${selectedIds.includes(notification.id) ? 'ring-2 ring-primary' : ''}`}
                 >

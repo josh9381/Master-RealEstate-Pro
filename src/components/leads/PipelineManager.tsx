@@ -426,7 +426,7 @@ function PipelineManager({ pipelines, onClose }: PipelineManagerProps) {
                           <>
                             <span className="text-sm flex-1">{stage.name}</span>
                             {stage.isWinStage && (
-                              <Badge variant="default" className="text-[10px] h-5 bg-green-600">Win</Badge>
+                              <Badge variant="default" className="text-[10px] h-5 bg-success">Win</Badge>
                             )}
                             {stage.isLostStage && (
                               <Badge variant="secondary" className="text-[10px] h-5">Lost</Badge>

@@ -73,8 +73,8 @@ export function LeadStatsCards({ backendStats, totalLeads, globalTotal, currentP
               Across {total} leads
             </p>
           </div>
-          <div className="rounded-full bg-purple-100 p-3">
-            <TrendingUp className="h-6 w-6 text-purple-600" />
+          <div className="rounded-full bg-primary/10 p-3">
+            <TrendingUp className="h-6 w-6 text-primary" />
           </div>
         </div>
       </Card>
