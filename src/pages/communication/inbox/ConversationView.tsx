@@ -659,7 +659,7 @@ export const ConversationView = ({
                   <CardContent className="p-3">
                     <div className="grid grid-cols-8 gap-2" role="grid">
                       {['😊', '👍', '❤️', '🎉', '😂', '🤔', '👏', '🔥', '✅', '⭐', '💯', '🚀', '💪', '🙏', '😎', '🎯'].map(emoji => (
-                        <button key={emoji} onClick={() => onInsertEmoji(emoji)} className="text-2xl hover:bg-accent rounded p-1 transition focus:outline-none focus:ring-2 focus:ring-primary" aria-label={`Insert ${emoji}`}>
+                        <button key={emoji} onClick={() => onInsertEmoji(emoji)} className="text-2xl hover:bg-accent rounded p-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={`Insert ${emoji}`}>
                           {emoji}
                         </button>
                       ))}

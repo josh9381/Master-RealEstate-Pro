@@ -1520,7 +1520,7 @@ function Dashboard() {
                 ) : (
                 <div className="space-y-2 max-h-[280px] overflow-y-auto">
                   {upcomingTasks.map((task) => (
-                    <div key={task.id} className="flex items-start gap-3 p-2.5 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
+                    <div key={task.id} className="flex items-start gap-3 p-2.5 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" role="button" tabIndex={0} onClick={() => navigate('/tasks')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/tasks') } }}>
                       <input
                         type="checkbox"
                         className="mt-1 cursor-pointer"

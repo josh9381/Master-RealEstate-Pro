@@ -107,7 +107,7 @@ function ErrorItem({ error }: { error: ReturnType<typeof getDevErrors>[0] }) {
   const colorClass = typeColors[error.type] || 'text-muted-foreground bg-muted'
 
   return (
-    <div className="px-3 py-2 hover:bg-muted/50 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+    <div className="px-3 py-2 hover:bg-muted/50 cursor-pointer rounded" role="button" tabIndex={0} onClick={() => setExpanded(!expanded)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded) } }}>
       <div className="flex items-start gap-2">
         <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${colorClass}`}>
           {error.type}

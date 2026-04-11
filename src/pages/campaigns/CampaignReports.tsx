@@ -249,7 +249,7 @@ function LeaderboardCard({ title, description, indicatorColor, items, rateCalc, 
       <CardContent>
         <div className="space-y-3">
           {items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => onItemClick(item.id)}>
+            <div key={item.id} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" role="button" tabIndex={0} onClick={() => onItemClick(item.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onItemClick(item.id) } }}>
               <div>
                 <p className="font-medium">{item.name}</p>
                 <Badge variant="secondary" className="mt-1">{item.type}</Badge>
@@ -651,7 +651,7 @@ function OverviewTab() {
                 const opened = campaign.opened ?? 0;
                 const clicked = campaign.clicked ?? 0;
                 return (
-                <div key={campaign.id} className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => navigate(`/campaigns/${campaign.id}`)}>
+                <div key={campaign.id} className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" role="button" tabIndex={0} onClick={() => navigate(`/campaigns/${campaign.id}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/campaigns/${campaign.id}`) } }}>
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium truncate">{campaign.name || 'Campaign'}</p>
                     <Badge variant="outline">{formatRate(calcOpenRate(opened, sent))}%</Badge>
