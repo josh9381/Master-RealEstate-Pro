@@ -15,6 +15,7 @@ import { DateRangePicker, DateRange } from '@/components/shared/DateRangePicker'
 import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import { CHART_COLORS as COLORS } from '@/lib/chartColors';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
+import { PageEmptyState } from '@/components/ui/PageEmptyState';
 
 const formatCurrency = fmtMoney;
 
@@ -189,15 +190,11 @@ const SourceROI = () => {
       )}
 
       {sources.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Source Data Yet</h3>
-            <p className="text-muted-foreground">
-              Source ROI data will appear once you have leads with assigned sources.
-            </p>
-          </CardContent>
-        </Card>
+        <PageEmptyState
+          icon={<DollarSign className="h-12 w-12" />}
+          title="No Source Data Yet"
+          description="Source ROI data will appear once you have leads with assigned sources."
+        />
       )}
     </div>
   );

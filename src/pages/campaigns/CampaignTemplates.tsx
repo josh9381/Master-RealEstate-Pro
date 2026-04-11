@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor';
+import { PageEmptyState } from '@/components/ui/PageEmptyState';
 
 interface CampaignTemplate {
   id: string;
@@ -427,15 +428,11 @@ const CampaignTemplates = () => {
           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : filteredTemplates.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">No templates found</h3>
-            <p className="text-muted-foreground">
-              {searchQuery ? 'Try adjusting your search' : 'Select a different category'}
-            </p>
-          </CardContent>
-        </Card>
+        <PageEmptyState
+          icon={<FileText className="h-12 w-12" />}
+          title="No templates found"
+          description={searchQuery ? 'Try adjusting your search' : 'Select a different category'}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredTemplates.map((template) => (

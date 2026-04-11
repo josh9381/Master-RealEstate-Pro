@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
+import { PageEmptyState } from '@/components/ui/PageEmptyState'
 import { useConfirm } from '@/hooks/useConfirm'
 import { tasksApi, usersApi, CreateTaskData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
@@ -515,15 +516,11 @@ export default function TasksPage() {
         ))}
 
         {filteredTasks.length === 0 && (
-          <Card className="p-12">
-            <div className="text-center text-muted-foreground">
-              <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-1">{tasks.length === 0 ? 'No tasks yet' : 'No tasks found matching your filters'}</p>
-              {tasks.length === 0 && (
-                <p className="text-sm">Create your first task to get started!</p>
-              )}
-            </div>
-          </Card>
+          <PageEmptyState
+            icon={<CheckCircle2 className="h-12 w-12" />}
+            title={tasks.length === 0 ? 'No tasks yet' : 'No tasks found matching your filters'}
+            description={tasks.length === 0 ? 'Create your first task to get started!' : undefined}
+          />
         )}
       </div>
 
