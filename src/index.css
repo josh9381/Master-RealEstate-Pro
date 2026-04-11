@@ -68,6 +68,20 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Global focus-visible indicator for native interactive elements.
+     Component library elements (Button, Input, etc.) override this
+     with their own Tailwind utility-level focus-visible classes. */
+  button:focus-visible,
+  a:focus-visible,
+  input:not([type="hidden"]):focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex="0"]:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

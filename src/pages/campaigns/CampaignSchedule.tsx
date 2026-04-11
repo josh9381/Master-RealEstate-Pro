@@ -409,8 +409,8 @@ const CampaignSchedule = () => {
                   className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-green-100">
-                      <TrendingUp className="h-6 w-6 text-green-600" />
+                    <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-success/10">
+                      <TrendingUp className="h-6 w-6 text-success" />
                     </div>
                     <div>
                       <h4 className="font-semibold">{schedule.name}</h4>
@@ -478,8 +478,8 @@ const CampaignSchedule = () => {
                   className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-primary/30 transition-all duration-200"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
-                      <Send className="h-6 w-6 text-blue-600" />
+                    <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10">
+                      <Send className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <h4 className="font-semibold">{campaign.name}</h4>

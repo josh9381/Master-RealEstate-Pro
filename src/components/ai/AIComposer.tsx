@@ -438,16 +438,16 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   
   return (
     <div className="border-t bg-gradient-to-b from-purple-50/50 to-transparent dark:from-purple-950/10 dark:to-transparent p-4 rounded-xl space-y-4">
-      <Card className="border border-purple-200/60 dark:border-purple-800/40 shadow-lg shadow-purple-500/5 w-full flex flex-col rounded-xl">
+      <Card className="border border-primary/20 shadow-lg shadow-primary/5 w-full flex flex-col rounded-xl">
         <CardContent className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Header */}
           <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/15 to-indigo-500/15">
-              <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              <Sparkles className="h-4 w-4 text-primary" />
             </div>
             <h3 className="font-semibold">AI Compose</h3>
-            <Badge variant="secondary" className="text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-0">
+            <Badge variant="secondary" className="text-[10px] font-medium bg-primary/10 text-primary border-0">
               GPT-4
             </Badge>
           </div>
@@ -463,7 +463,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         
         {/* Context Banner */}
         {context && (
-          <div className="bg-purple-50/60 dark:bg-purple-950/20 rounded-xl p-3 border border-purple-100/60 dark:border-purple-800/30">
+          <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
             <p className="text-sm text-muted-foreground">
               💡 <strong>{context.leadName}</strong> • 
               {context.lastContact ? ` Last contact ${context.daysSinceContact} days ago` : ' Never contacted'} • 

@@ -128,7 +128,7 @@ function SavedFilterViews({
                     e.stopPropagation()
                     deleteMutation.mutate(view.id)
                   }}
-                  className="rounded-full bg-destructive text-destructive-foreground p-0.5 shadow-sm"
+                  className="rounded-full bg-destructive text-destructive-foreground p-0.5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
                 >
                   <Check className="h-3 w-3" />
                 </button>
@@ -137,7 +137,7 @@ function SavedFilterViews({
                     e.stopPropagation()
                     setConfirmDeleteId(null)
                   }}
-                  className="rounded-full bg-muted text-muted-foreground p-0.5 shadow-sm"
+                  className="rounded-full bg-muted text-muted-foreground p-0.5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -148,7 +148,7 @@ function SavedFilterViews({
                   e.stopPropagation()
                   setConfirmDeleteId(view.id)
                 }}
-                className="absolute -top-1 -right-1 rounded-full bg-muted p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -top-1 -right-1 rounded-full bg-muted p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background focus-visible:opacity-100"
               >
                 <Trash2 className="h-3 w-3 text-muted-foreground" />
               </button>

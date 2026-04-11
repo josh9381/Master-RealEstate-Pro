@@ -61,7 +61,7 @@ const AdminPanel = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Shield className="w-8 h-8 text-blue-500" />
+                    <Shield className="w-8 h-8 text-primary" />
                     <div>
                       <p className="font-medium">System Health</p>
                       <p className="text-sm text-muted-foreground">Monitored via health checks</p>
@@ -72,7 +72,7 @@ const AdminPanel = () => {
                 
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Database className="w-8 h-8 text-purple-500" />
+                    <Database className="w-8 h-8 text-primary" />
                     <div>
                       <p className="font-medium">Database</p>
                       <p className="text-sm text-muted-foreground">Check backup history in Database Maintenance</p>

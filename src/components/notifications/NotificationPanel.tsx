@@ -69,21 +69,21 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'mention':
-        return <AtSign className="h-4 w-4 text-blue-500" />
+        return <AtSign className="h-4 w-4 text-info" />
       case 'assignment':
-        return <UserPlus className="h-4 w-4 text-green-500" />
+        return <UserPlus className="h-4 w-4 text-success" />
       case 'update':
-        return <TrendingUp className="h-4 w-4 text-purple-500" />
+        return <TrendingUp className="h-4 w-4 text-primary" />
       case 'system':
         return <Settings className="h-4 w-4 text-muted-foreground" />
       case 'email':
-        return <Mail className="h-4 w-4 text-cyan-500" />
+        return <Mail className="h-4 w-4 text-info" />
       case 'sms':
-        return <MessageSquare className="h-4 w-4 text-orange-500" />
+        return <MessageSquare className="h-4 w-4 text-warning" />
       case 'call':
-        return <Phone className="h-4 w-4 text-pink-500" />
+        return <Phone className="h-4 w-4 text-primary" />
       case 'meeting':
-        return <Calendar className="h-4 w-4 text-yellow-500" />
+        return <Calendar className="h-4 w-4 text-warning" />
       default:
         return <Bell className="h-4 w-4 text-muted-foreground" />
     }
@@ -200,7 +200,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
       </div>
 
       {/* Notifications List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" aria-live="polite">
         {isLoading ? (
           <div className="p-8 text-center">
             <RefreshCw className="h-8 w-8 mx-auto mb-2 animate-spin text-primary" />
@@ -217,7 +217,7 @@ export function NotificationPanel({ onClose, onMarkAllRead }: NotificationPanelP
               <div
                 key={notification.id}
                 className={`p-4 hover:bg-accent/50 cursor-pointer transition-colors ${
-                  !notification.read ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+                  !notification.read ? 'bg-primary/5' : ''
                 }`}
                 onClick={() => handleNotificationClick(notification)}
               >

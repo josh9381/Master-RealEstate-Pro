@@ -49,13 +49,13 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
     >
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
+        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
         aria-expanded={open}
       >
         <span className="font-semibold text-foreground">{q}</span>
         <ChevronDown
           className={`h-5 w-5 text-muted-foreground flex-shrink-0 transition-transform duration-300 ${
-            open ? 'rotate-180 text-blue-600' : ''
+            open ? 'rotate-180 text-primary' : ''
           }`}
         />
       </button>
@@ -80,12 +80,12 @@ export function FAQSection() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-primary uppercase tracking-wider mb-3">
             FAQ
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Got questions?{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
               We&apos;ve got answers
             </span>
           </h2>

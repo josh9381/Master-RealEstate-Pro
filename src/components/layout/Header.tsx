@@ -52,6 +52,7 @@ export function Header() {
           size="icon"
           onClick={toggleTheme}
           aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          aria-pressed={theme === 'dark'}
         >
           {theme === 'light' ? (
             <Moon className="h-5 w-5" />

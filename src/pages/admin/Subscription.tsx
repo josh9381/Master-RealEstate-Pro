@@ -250,23 +250,23 @@ export default function SubscriptionPage() {
           
           if (daysLeft > 0) {
             return (
-              <Card className={`border-2 ${isExpiringSoon ? 'border-orange-300 bg-orange-50' : 'border-blue-300 bg-blue-50'}`}>
+              <Card className={`border-2 ${isExpiringSoon ? 'border-warning/30 bg-warning/5' : 'border-info/30 bg-info/5'}`}>
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-4">
-                    <div className={`p-3 rounded-full ${isExpiringSoon ? 'bg-orange-100' : 'bg-blue-100'}`}>
-                      <Calendar className={`w-6 h-6 ${isExpiringSoon ? 'text-orange-600' : 'text-blue-600'}`} />
+                    <div className={`p-3 rounded-full ${isExpiringSoon ? 'bg-warning/10' : 'bg-info/10'}`}>
+                      <Calendar className={`w-6 h-6 ${isExpiringSoon ? 'text-warning' : 'text-info'}`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className={`text-lg font-semibold mb-1 ${isExpiringSoon ? 'text-orange-900' : 'text-blue-900'}`}>
+                      <h3 className={`text-lg font-semibold mb-1 ${isExpiringSoon ? 'text-warning' : 'text-info'}`}>
                         {isExpiringSoon ? '⚠️ Trial Ending Soon' : '🎉 Trial Active'}
                       </h3>
-                      <p className={`text-sm mb-3 ${isExpiringSoon ? 'text-orange-800' : 'text-blue-800'}`}>
+                      <p className={`text-sm mb-3 ${isExpiringSoon ? 'text-warning' : 'text-info'}`}>
                         Your PROFESSIONAL trial {isExpiringSoon ? 'ends' : 'expires'} in{' '}
                         <strong>{daysLeft} {daysLeft === 1 ? 'day' : 'days'}</strong>{' '}
                         ({formatDistanceToNow(trialEnd, { addSuffix: true })})
                       </p>
                       {isExpiringSoon && (
-                        <p className="text-sm text-orange-700 mb-3">
+                        <p className="text-sm text-warning mb-3">
                           After your trial ends, you'll be moved to the Starter plan unless you upgrade.
                         </p>
                       )}
@@ -303,7 +303,7 @@ export default function SubscriptionPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Crown className="w-6 h-6 text-amber-600" />
+                <Crown className="w-6 h-6 text-warning" />
                 <div>
                   <p className="text-sm text-muted-foreground">Current Plan</p>
                   <p className="text-xl font-bold text-foreground">
@@ -337,14 +337,14 @@ export default function SubscriptionPage() {
             >
               {/* Current Badge */}
               {plan.isCurrent && (
-                <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 text-xs font-bold">
+                <div className="absolute top-0 right-0 bg-info text-white px-3 py-1 text-xs font-bold">
                   CURRENT
                 </div>
               )}
               
               {/* Upgrade/Downgrade Badge */}
               {!plan.isCurrent && plan.isUpgrade && (
-                <div className="absolute top-0 left-0 bg-green-500 text-white px-3 py-1 text-xs font-bold flex items-center gap-1">
+                <div className="absolute top-0 left-0 bg-success text-white px-3 py-1 text-xs font-bold flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" />
                   UPGRADE
                 </div>
@@ -354,7 +354,7 @@ export default function SubscriptionPage() {
               <CardHeader className={`bg-gradient-to-br ${config.gradient} border-b`}>
                 <CardTitle className="flex items-center gap-2">
                   {(plan.tier === 'PROFESSIONAL' || plan.tier === 'ENTERPRISE') && (
-                    <Crown className="w-5 h-5 text-amber-600" />
+                    <Crown className="w-5 h-5 text-warning" />
                   )}
                   {plan.name}
                 </CardTitle>
@@ -370,7 +370,7 @@ export default function SubscriptionPage() {
                   
                   {/* Show savings for upgrades */}
                   {plan.isUpgrade && plan.price > 0 && (
-                    <p className="text-xs text-green-700 mt-2 font-medium">
+                    <p className="text-xs text-success mt-2 font-medium">
                       ✨ Unlock more features and higher limits
                     </p>
                   )}
@@ -436,7 +436,7 @@ export default function SubscriptionPage() {
                 <div className="border-t pt-4 space-y-2">
                   {(plan.features.features || []).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2 text-sm">
-                      <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <Check className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
                       <span className="text-foreground/80">{feature}</span>
                     </div>
                   ))}
@@ -531,7 +531,7 @@ export default function SubscriptionPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Plan Change Summary */}
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="p-4 bg-info/5 border border-info/20 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-sm text-muted-foreground">Current Plan</p>
@@ -540,11 +540,11 @@ export default function SubscriptionPage() {
                   <div className="text-2xl text-muted-foreground">→</div>
                   <div>
                     <p className="text-sm text-muted-foreground">New Plan</p>
-                    <p className="text-lg font-semibold text-blue-900">{selectedPlan.name}</p>
+                    <p className="text-lg font-semibold text-info">{selectedPlan.name}</p>
                   </div>
                 </div>
                 
-                <div className="pt-3 border-t border-blue-200">
+                <div className="pt-3 border-t border-info/20">
                   <p className="text-sm text-foreground/80">
                     <strong>Price:</strong> ${selectedPlan.price}/{selectedPlan.billingPeriod}
                   </p>
@@ -553,12 +553,12 @@ export default function SubscriptionPage() {
               
               {/* Warnings for Downgrades */}
               {selectedPlan.isDowngrade && (
-                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="p-4 bg-warning/5 border border-warning/20 rounded-lg">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-orange-900 mb-1">Important: Downgrade Notice</h4>
-                      <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
+                      <h4 className="font-semibold text-warning mb-1">Important: Downgrade Notice</h4>
+                      <ul className="text-sm text-warning space-y-1 list-disc list-inside">
                         <li>Some features may become unavailable</li>
                         <li>Your data will be preserved but access may be limited</li>
                         <li>You may need to reduce users, leads, or campaigns to fit the new limits</li>
@@ -573,20 +573,20 @@ export default function SubscriptionPage() {
                 <h4 className="font-semibold text-foreground mb-3">What You Get:</h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-600" />
+                    <Check className="w-4 h-4 text-success" />
                     <span>{selectedPlan.features?.maxUsers === null ? 'Unlimited users' : `Up to ${selectedPlan.features?.maxUsers || 0} users`}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-600" />
+                    <Check className="w-4 h-4 text-success" />
                     <span>{selectedPlan.features?.maxLeads === null ? 'Unlimited leads' : `Up to ${(selectedPlan.features?.maxLeads || 0).toLocaleString()} leads`}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-600" />
+                    <Check className="w-4 h-4 text-success" />
                     <span>{selectedPlan.features?.maxCampaigns === null ? 'Unlimited campaigns' : `Up to ${selectedPlan.features?.maxCampaigns || 0} campaigns`}</span>
                   </div>
                   {selectedPlan.features?.emailsPerMonth && (
                     <div className="flex items-center gap-2 text-sm">
-                      <Check className="w-4 h-4 text-green-600" />
+                      <Check className="w-4 h-4 text-success" />
                       <span>{selectedPlan.features.emailsPerMonth.toLocaleString()} emails/month</span>
                     </div>
                   )}

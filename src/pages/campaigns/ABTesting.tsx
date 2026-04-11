@@ -659,8 +659,8 @@ const ABTesting = () => {
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="p-3 rounded-lg border bg-background">
                         <div className="flex items-center gap-2 mb-1">
-                          <div className="h-5 w-5 rounded bg-blue-500/20 flex items-center justify-center">
-                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">A</span>
+                          <div className="h-5 w-5 rounded bg-primary/20 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-primary">A</span>
                           </div>
                           <span className="text-xs font-medium">Variant A</span>
                         </div>
@@ -668,8 +668,8 @@ const ABTesting = () => {
                       </div>
                       <div className="p-3 rounded-lg border bg-background">
                         <div className="flex items-center gap-2 mb-1">
-                          <div className="h-5 w-5 rounded bg-emerald-500/20 flex items-center justify-center">
-                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">B</span>
+                          <div className="h-5 w-5 rounded bg-success/20 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-success">B</span>
                           </div>
                           <span className="text-xs font-medium">Variant B</span>
                         </div>
@@ -709,13 +709,13 @@ const ABTesting = () => {
                         {results.analysis && (
                           <div className={`p-3 rounded-lg border ${
                             results.analysis.isSignificant
-                              ? 'bg-emerald-500/5 border-emerald-500/20'
-                              : 'bg-amber-500/5 border-amber-500/20'
+                              ? 'bg-success/5 border-success/20'
+                              : 'bg-warning/5 border-warning/20'
                           }`}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <BarChart3 className={`h-4 w-4 ${
-                                  results.analysis.isSignificant ? 'text-emerald-500' : 'text-amber-500'
+                                  results.analysis.isSignificant ? 'text-success' : 'text-warning'
                                 }`} />
                                 <span className="text-sm font-medium">
                                   {results.analysis.isSignificant
@@ -785,7 +785,7 @@ const ABTesting = () => {
                 value={createForm.name}
                 onChange={(e) => { setCreateForm({ ...createForm, name: e.target.value }); if (createErrors.name) setCreateErrors(prev => { const next = { ...prev }; delete next.name; return next }) }}
               />
-              {createErrors.name && <p className="text-xs text-red-500 mt-1">{createErrors.name}</p>}
+              {createErrors.name && <p className="text-xs text-destructive mt-1">{createErrors.name}</p>}
             </div>
 
             {/* Description */}
@@ -849,15 +849,15 @@ const ABTesting = () => {
                   Optionally link this test to an existing campaign for tracking.
                 </p>
               )}
-              {createErrors.campaign && <p className="text-xs text-red-500 mt-1">{createErrors.campaign}</p>}
+              {createErrors.campaign && <p className="text-xs text-destructive mt-1">{createErrors.campaign}</p>}
             </div>
 
             {/* Context-Aware Variant Inputs */}
             <div className="space-y-3">
               {/* Variant A */}
               <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-5">
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">A</span>
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-5">
+                  <span className="text-xs font-bold text-primary">A</span>
                 </div>
                 <div className="flex-1">
                   <label className="text-sm font-medium mb-1.5 block">
@@ -878,7 +878,7 @@ const ABTesting = () => {
                         onChange={(e) => { if (createForm.campaignId && canAutoPopulate(createForm.testType)) return; setCreateForm({ ...createForm, variantA: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                       />
                       {createForm.testType === 'SMS_CONTENT' && (
-                        <p className={`text-[11px] mt-0.5 text-right ${createForm.variantA.length > 150 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                        <p className={`text-[11px] mt-0.5 text-right ${createForm.variantA.length > 150 ? 'text-warning' : 'text-muted-foreground'}`}>
                           {createForm.variantA.length}/160
                         </p>
                       )}
@@ -929,8 +929,8 @@ const ABTesting = () => {
 
               {/* Variant B */}
               <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-5">
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">B</span>
+                <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-5">
+                  <span className="text-xs font-bold text-success">B</span>
                 </div>
                 <div className="flex-1">
                   <label className="text-sm font-medium mb-1.5 block">
@@ -950,7 +950,7 @@ const ABTesting = () => {
                         onChange={(e) => { setCreateForm({ ...createForm, variantB: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                       />
                       {createForm.testType === 'SMS_CONTENT' && (
-                        <p className={`text-[11px] mt-0.5 text-right ${createForm.variantB.length > 150 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                        <p className={`text-[11px] mt-0.5 text-right ${createForm.variantB.length > 150 ? 'text-warning' : 'text-muted-foreground'}`}>
                           {createForm.variantB.length}/160
                         </p>
                       )}
@@ -990,7 +990,7 @@ const ABTesting = () => {
                   )}
                 </div>
               </div>
-              {createErrors.variants && <p className="text-xs text-red-500 pl-11">{createErrors.variants}</p>}
+              {createErrors.variants && <p className="text-xs text-destructive pl-11">{createErrors.variants}</p>}
             </div>
 
             {/* Winner Metric + Duration + Confidence */}
@@ -1075,8 +1075,8 @@ const ABTesting = () => {
               {selectedResults ? (
                 <div className="space-y-4 mt-2">
                   {selectedTestData.winnerVariant && selectedTestData.winnerVariant !== 'TIE' && (
-                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
-                      <Trophy className="h-6 w-6 text-emerald-500 mx-auto mb-2" />
+                    <div className="p-4 rounded-lg bg-success/10 border border-success/20 text-center">
+                      <Trophy className="h-6 w-6 text-success mx-auto mb-2" />
                       <p className="font-semibold">Variant {selectedTestData.winnerVariant} Wins!</p>
                       <p className="text-sm text-muted-foreground mt-1">
                         With {selectedTestData.confidence?.toFixed(1)}% confidence
@@ -1094,10 +1094,10 @@ const ABTesting = () => {
                       const data = v === 'A' ? selectedResults.results.variantA : selectedResults.results.variantB;
                       const isWinner = selectedTestData.winnerVariant === v;
                       return (
-                        <div key={v} className={`p-3 rounded-lg border ${isWinner ? 'border-emerald-500/50 bg-emerald-500/5' : ''}`}>
+                        <div key={v} className={`p-3 rounded-lg border ${isWinner ? 'border-success/50 bg-success/5' : ''}`}>
                           <div className="flex items-center justify-between mb-2">
                             <Badge variant={isWinner ? 'success' : 'secondary'}>Variant {v}</Badge>
-                            {isWinner && <Trophy className="h-4 w-4 text-emerald-500" />}
+                            {isWinner && <Trophy className="h-4 w-4 text-success" />}
                           </div>
                           <p className="text-sm font-medium mb-2 truncate">{getVariantLabel(selectedTestData, v)}</p>
                           <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">

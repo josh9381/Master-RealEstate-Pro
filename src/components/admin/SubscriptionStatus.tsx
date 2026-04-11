@@ -65,8 +65,8 @@ export function SubscriptionStatus() {
   
   const tierConfig: Record<string, { headerBg: string; headerBorder: string; icon: React.ReactNode | null }> = {
     STARTER: { headerBg: 'bg-primary/10', headerBorder: 'border-primary/20', icon: null },
-    PROFESSIONAL: { headerBg: 'bg-purple-50 dark:bg-purple-950/30', headerBorder: 'border-purple-100 dark:border-purple-900', icon: <Crown className="w-4 h-4" /> },
-    ELITE: { headerBg: 'bg-indigo-50 dark:bg-indigo-950/30', headerBorder: 'border-indigo-100 dark:border-indigo-900', icon: <Crown className="w-4 h-4" /> },
+    PROFESSIONAL: { headerBg: 'bg-primary/5', headerBorder: 'border-primary/20', icon: <Crown className="w-4 h-4" /> },
+    ELITE: { headerBg: 'bg-primary/10', headerBorder: 'border-primary/30', icon: <Crown className="w-4 h-4" /> },
     TEAM: { headerBg: 'bg-success/10', headerBorder: 'border-success/20', icon: <Crown className="w-4 h-4" /> },
     ENTERPRISE: { headerBg: 'bg-warning/10', headerBorder: 'border-warning/20', icon: <Crown className="w-4 h-4" /> },
   }

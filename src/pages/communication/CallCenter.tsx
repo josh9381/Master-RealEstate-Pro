@@ -720,7 +720,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-400 text-indigo-600 transition-colors"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-primary/30 hover:bg-primary/5 hover:border-primary/50 text-primary transition-colors"
                       onClick={() => handleDisposition('VOICEMAIL')}
                       disabled={logCallMutation.isPending}
                     >
@@ -756,7 +756,7 @@ const CallCenter = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-1 border-purple-200 hover:bg-purple-50 hover:border-purple-400 text-purple-700 transition-colors"
+                      className="h-auto py-3 flex flex-col items-center gap-1 border-primary/30 hover:bg-primary/5 hover:border-primary/50 text-primary transition-colors"
                       onClick={() => handleDisposition('LEFT_MESSAGE')}
                       disabled={logCallMutation.isPending}
                     >

@@ -265,7 +265,7 @@ const AIAnalytics = () => {
                   <div className="space-y-1">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-purple-500"
+                        className="h-full bg-primary"
                         style={{ width: `${model.reliability}%` }}
                       />
                     </div>

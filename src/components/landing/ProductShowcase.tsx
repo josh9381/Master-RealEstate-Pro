@@ -121,19 +121,19 @@ export function ProductShowcase() {
             <DashboardMockup />
 
             {/* Floating accent */}
-            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-600/10 rounded-full blur-2xl" />
-            <div className="absolute -top-6 -left-6 w-24 h-24 bg-indigo-600/10 rounded-full blur-2xl" />
+            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
+            <div className="absolute -top-6 -left-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
           </div>
 
           {/* Right: Copy */}
           <div className={`transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'}`}>
-            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
+            <p className="text-sm font-semibold text-primary uppercase tracking-wider mb-3">
               See It In Action
             </p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-6">
               Your entire business,
               <br />
-              <span className="text-blue-600">one powerful dashboard</span>
+              <span className="text-primary">one powerful dashboard</span>
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed mb-8">
               From lead capture to closing day — manage your pipeline, launch smart campaigns,

@@ -37,7 +37,7 @@ function AnimatedCounter({ target, suffix }: { target: number; suffix: string })
   return (
     <div ref={ref} className="text-5xl sm:text-6xl font-extrabold text-white">
       {count.toLocaleString()}
-      <span className="text-blue-400">{suffix}</span>
+      <span className="text-primary">{suffix}</span>
     </div>
   )
 }
@@ -46,8 +46,8 @@ export function StatsSection() {
   return (
     <section className="py-20 bg-gray-900 relative overflow-hidden">
       {/* Background accents */}
-      <div className="absolute top-0 left-1/4 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-indigo-600/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">

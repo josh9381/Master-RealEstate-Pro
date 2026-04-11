@@ -22,15 +22,15 @@ export function ErrorBanner({ message, retry, className = '', dismissible = true
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300 ${className}`}
+      className={`flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive dark:border-destructive/20 dark:bg-destructive/10 dark:text-destructive ${className}`}
       role="alert"
     >
-      <AlertTriangle className="h-5 w-5 flex-shrink-0 text-red-500" />
+      <AlertTriangle className="h-5 w-5 flex-shrink-0 text-destructive" />
       <span className="flex-1">{message}</span>
       {retry && (
         <button
           onClick={retry}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 dark:text-red-300 dark:hover:bg-red-900/40"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-1 dark:text-destructive dark:hover:bg-destructive/10"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           Retry
@@ -39,7 +39,7 @@ export function ErrorBanner({ message, retry, className = '', dismissible = true
       {dismissible && (
         <button
           onClick={() => setDismissed(true)}
-          className="rounded p-0.5 text-red-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 dark:hover:text-red-200"
+          className="rounded p-0.5 text-destructive/70 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-1 dark:hover:text-destructive"
           aria-label="Dismiss"
         >
           <X className="h-4 w-4" />

@@ -166,7 +166,7 @@ export function AIEmailComposer({
           {confidenceScore !== null && (
             <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
               <div className="flex items-center space-x-2">
-                <Sparkles className="h-4 w-4 text-purple-600" />
+                <Sparkles className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">AI Confidence Score</span>
               </div>
               <Badge className="bg-success/10 text-success hover:bg-success/10">
@@ -204,7 +204,7 @@ export function AIEmailComposer({
           {/* Loading State */}
           {isGenerating && (
             <div className="flex items-center justify-center space-x-2 rounded-lg border border-dashed bg-muted/30 p-4">
-              <RefreshCw className="h-4 w-4 animate-spin text-purple-600" />
+              <RefreshCw className="h-4 w-4 animate-spin text-primary" />
               <span className="text-sm text-muted-foreground">
                 AI is crafting the perfect email...
               </span>

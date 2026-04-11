@@ -98,8 +98,8 @@ export function LogCallDialog({
       resetForm()
       onOpenChange(false)
     },
-    onError: (error: any) => {
-      toast.error('Failed to log call', error?.response?.data?.message || error.message || 'Something went wrong')
+    onError: (error: Error) => {
+      toast.error('Failed to log call', (error as Error & { response?: { data?: { message?: string } } })?.response?.data?.message || error.message || 'Something went wrong')
     },
   })
 
@@ -185,7 +185,7 @@ export function LogCallDialog({
                       ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                       : 'border-border'
                     }
-                    ${opt.value === 'DNC_REQUEST' ? 'border-red-200 hover:border-red-400' : ''}
+                    ${opt.value === 'DNC_REQUEST' ? 'border-destructive/30 hover:border-destructive/50' : ''}
                   `}
                 >
                   <span className="text-base">{opt.icon}</span>
@@ -194,7 +194,7 @@ export function LogCallDialog({
               ))}
             </div>
             {outcome === 'DNC_REQUEST' && (
-              <div className="mt-2 flex items-start gap-2 rounded-md bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-2.5 text-xs text-red-700 dark:text-red-400">
+              <div className="mt-2 flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/20 p-2.5 text-xs text-destructive">
                 <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 <span>
                   This lead will be flagged as <strong>Do Not Call</strong>. They won't appear in call lists or phone campaigns.

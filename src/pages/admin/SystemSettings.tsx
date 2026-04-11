@@ -505,13 +505,13 @@ const SystemSettings = () => {
       </Card>
 
       {/* Danger Zone */}
-      <Card className="border-red-200">
+      <Card className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="text-red-600">Danger Zone</CardTitle>
+          <CardTitle className="text-destructive">Danger Zone</CardTitle>
           <CardDescription>Irreversible actions - use with caution</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-destructive/30 rounded-lg">
             <div>
               <h4 className="font-semibold">Reset System to Factory Defaults</h4>
               <p className="text-sm text-muted-foreground mt-1">
@@ -520,7 +520,7 @@ const SystemSettings = () => {
             </div>
             <Button variant="destructive">Reset System</Button>
           </div>
-          <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-destructive/30 rounded-lg">
             <div>
               <h4 className="font-semibold">Delete All User Data</h4>
               <p className="text-sm text-muted-foreground mt-1">

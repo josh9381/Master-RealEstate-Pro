@@ -170,7 +170,7 @@ function CommunicationHistory({
       case 'SMS':
         return 'text-success bg-success/10'
       case 'CALL':
-        return 'text-purple-600 bg-purple-50 dark:bg-purple-950/30'
+        return 'text-primary bg-primary/5'
       default:
         return 'text-muted-foreground bg-muted dark:bg-gray-950/30'
     }
@@ -268,7 +268,7 @@ function CommunicationHistory({
         </div>
         <div className="rounded-lg border p-3 text-center">
           <div className="flex items-center justify-center gap-1">
-            <Phone className="h-3.5 w-3.5 text-purple-500" />
+            <Phone className="h-3.5 w-3.5 text-primary" />
             <p className="text-2xl font-bold">{callCount}</p>
           </div>
           <p className="text-xs text-muted-foreground">Calls</p>
@@ -356,10 +356,13 @@ function CommunicationHistory({
             return (
               <Card
                 key={msg.id}
-                className={`cursor-pointer transition-colors hover:bg-muted/30 ${
+                tabIndex={0}
+                role="button"
+                className={`cursor-pointer transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
                   !msg.read && msg.direction === 'INBOUND' ? 'border-l-2 border-l-primary' : ''
                 }`}
                 onClick={() => setExpandedId(isExpanded ? null : msg.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedId(isExpanded ? null : msg.id) } }}
               >
                 <CardContent className="p-3">
                   <div className="flex items-start gap-3">

@@ -222,6 +222,7 @@ const WorkflowsList = () => {
               className="rounded-r-none border-0"
               onClick={() => setViewMode('list')}
               title="List View"
+              aria-pressed={viewMode === 'list'}
             >
               <LayoutList className="h-4 w-4" />
             </Button>
@@ -231,6 +232,7 @@ const WorkflowsList = () => {
               className="rounded-l-none border-0"
               onClick={() => setViewMode('grid')}
               title="Grid View"
+              aria-pressed={viewMode === 'grid'}
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -289,7 +291,7 @@ const WorkflowsList = () => {
                 <WorkflowIcon className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-2">Welcome to Workflows! 🚀</h3>
+                <h2 className="font-semibold text-lg mb-2">Welcome to Workflows! 🚀</h2>
                 <p className="text-sm text-muted-foreground mb-4">
                   Workflows help you automate repetitive tasks and scale your business. Here are some ideas to get started:
                 </p>
@@ -394,7 +396,7 @@ const WorkflowsList = () => {
             <div className="p-6 bg-primary/10 rounded-full mb-6">
               <WorkflowIcon className="h-16 w-16 text-primary" />
             </div>
-            <h3 className="text-2xl font-bold mb-3">No workflows yet</h3>
+            <h2 className="text-2xl font-bold mb-3">No workflows yet</h2>
             <p className="text-muted-foreground mb-6 text-lg">
               Create your first workflow to automate repetitive tasks and scale your business
             </p>
@@ -406,7 +408,7 @@ const WorkflowsList = () => {
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
                     <Plus className="h-5 w-5 text-primary" />
                   </div>
-                  <h4 className="font-semibold mb-1">Start from Scratch</h4>
+                  <h3 className="font-semibold mb-1">Start from Scratch</h3>
                   <p className="text-xs text-muted-foreground">Build a custom workflow tailored to your needs</p>
                 </div>
               </Link>
@@ -416,7 +418,7 @@ const WorkflowsList = () => {
                   <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center mb-3">
                     <ChevronRight className="h-5 w-5 text-success" />
                   </div>
-                  <h4 className="font-semibold mb-1">Start from a Template</h4>
+                  <h3 className="font-semibold mb-1">Start from a Template</h3>
                   <p className="text-xs text-muted-foreground">Choose from pre-built workflow templates</p>
                 </div>
               </Link>
@@ -449,7 +451,7 @@ const WorkflowsList = () => {
 
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="text-lg font-semibold">{workflow.name}</h3>
+                        <h2 className="text-lg font-semibold">{workflow.name}</h2>
                         <Badge
                           variant={workflow.isActive ? 'success' : 'secondary'}
                         >
@@ -585,7 +587,7 @@ const WorkflowsList = () => {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-1">{workflow.name}</h3>
+                    <h2 className="text-lg font-semibold mb-1">{workflow.name}</h2>
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {workflow.description || 'No description'}
                     </p>

@@ -104,7 +104,7 @@ export default function LeadsOverview() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Leads</p>
-              <h3 className="mt-2 text-3xl font-bold">{total}</h3>
+              <h2 className="mt-2 text-3xl font-bold">{total}</h2>
               <p className="mt-1 text-xs text-muted-foreground">All-time leads</p>
             </div>
             <div className="rounded-full bg-primary/10 p-3">
@@ -117,7 +117,7 @@ export default function LeadsOverview() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Qualified Rate</p>
-              <h3 className="mt-2 text-3xl font-bold">{qualifiedRate}%</h3>
+              <h2 className="mt-2 text-3xl font-bold">{qualifiedRate}%</h2>
               <p className="mt-1 text-xs text-muted-foreground">{qualified} of {total} leads qualified</p>
             </div>
             <div className="rounded-full bg-success/10 p-3">
@@ -130,11 +130,11 @@ export default function LeadsOverview() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Avg Lead Score</p>
-              <h3 className="mt-2 text-3xl font-bold">{avgScore}</h3>
+              <h2 className="mt-2 text-3xl font-bold">{avgScore}</h2>
               <p className="mt-1 text-xs text-muted-foreground">Across {total} leads</p>
             </div>
-            <div className="rounded-full bg-purple-100 p-3">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <TrendingUp className="h-6 w-6 text-primary" />
             </div>
           </div>
         </Card>
@@ -143,7 +143,7 @@ export default function LeadsOverview() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Conversion Rate</p>
-              <h3 className="mt-2 text-3xl font-bold">{conversionRate}%</h3>
+              <h2 className="mt-2 text-3xl font-bold">{conversionRate}%</h2>
               <p className="mt-1 text-xs text-muted-foreground">{won} won of {closedTotal} closed</p>
             </div>
             <div className="rounded-full bg-warning/10 p-3">
@@ -156,7 +156,7 @@ export default function LeadsOverview() {
       {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-1">Lead Source Breakdown</h3>
+          <h2 className="text-lg font-semibold mb-1">Lead Source Breakdown</h2>
           <p className="text-xs text-muted-foreground mb-4">
             {total > 0 ? `Based on all ${total} leads` : 'No lead data yet'}
           </p>
@@ -178,7 +178,7 @@ export default function LeadsOverview() {
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-1">Lead Score Distribution</h3>
+          <h2 className="text-lg font-semibold mb-1">Lead Score Distribution</h2>
           <p className="text-xs text-muted-foreground mb-4">Score ranges across all leads</p>
           {scoreData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>

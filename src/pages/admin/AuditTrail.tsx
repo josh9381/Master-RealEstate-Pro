@@ -35,10 +35,10 @@ const ACTION_COLORS: Record<string, string> = {
   LOGIN_FAILED: 'bg-destructive/10 text-destructive',
   PASSWORD_CHANGED: 'bg-warning/10 text-warning',
   CREATED: 'bg-primary/10 text-primary',
-  UPDATED: 'bg-purple-100 text-purple-800',
+  UPDATED: 'bg-primary/10 text-primary',
   DELETED: 'bg-destructive/10 text-destructive',
   SETTINGS_CHANGED: 'bg-warning/10 text-warning',
-  SUBSCRIPTION_CHANGED: 'bg-indigo-100 text-indigo-800',
+  SUBSCRIPTION_CHANGED: 'bg-info/10 text-info',
   DATA_IMPORTED: 'bg-info/10 text-info',
   DATA_EXPORTED: 'bg-teal-100 text-teal-800',
   BULK_ACTION: 'bg-pink-100 text-pink-800',
@@ -210,7 +210,7 @@ export default function AuditTrail() {
                     {log.beforeData && (
                       <div>
                         <span className="text-xs font-medium text-muted-foreground">Before:</span>
-                        <pre className="mt-1 text-xs bg-red-50 p-2 rounded overflow-x-auto max-h-32">
+                        <pre className="mt-1 text-xs bg-destructive/10 p-2 rounded overflow-x-auto max-h-32">
                           {JSON.stringify(log.beforeData, null, 2)}
                         </pre>
                       </div>
@@ -218,7 +218,7 @@ export default function AuditTrail() {
                     {log.afterData && (
                       <div>
                         <span className="text-xs font-medium text-muted-foreground">After:</span>
-                        <pre className="mt-1 text-xs bg-green-50 p-2 rounded overflow-x-auto max-h-32">
+                        <pre className="mt-1 text-xs bg-success/10 p-2 rounded overflow-x-auto max-h-32">
                           {JSON.stringify(log.afterData, null, 2)}
                         </pre>
                       </div>

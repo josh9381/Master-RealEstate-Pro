@@ -470,7 +470,7 @@ function LeadsPipeline() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                         onClick={() => { setAddToStageId(stage.id); setShowAddLeadModal(true) }}
                         title="Add lead to this stage"
                       >

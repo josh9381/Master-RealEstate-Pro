@@ -473,9 +473,9 @@ export default function TasksPage() {
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className={`font-semibold ${task.completed ? 'line-through' : ''}`}>
+                    <h2 className={`font-semibold ${task.completed ? 'line-through' : ''}`}>
                       {task.title}
-                    </h3>
+                    </h2>
                     {task.description && (
                       <p className="text-sm text-muted-foreground">{task.description}</p>
                     )}

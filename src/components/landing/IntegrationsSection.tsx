@@ -18,12 +18,12 @@ export function IntegrationsSection() {
     <section className="py-20 bg-background" ref={ref}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`text-center max-w-3xl mx-auto mb-14 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-primary uppercase tracking-wider mb-3">
             Integrations
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Connects with the tools{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
               you already use
             </span>
           </h2>

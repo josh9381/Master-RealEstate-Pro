@@ -770,10 +770,10 @@ function LeadsList() {
               </Button>
             </Link>
             <div className="flex rounded-lg border">
-              <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="sm" className="rounded-r-none border-r-0" title="Table View" onClick={() => { setViewMode('table'); localStorage.setItem('leadsViewMode', 'table') }}>
+              <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="sm" className="rounded-r-none border-r-0" title="Table View" aria-pressed={viewMode === 'table'} onClick={() => { setViewMode('table'); localStorage.setItem('leadsViewMode', 'table') }}>
                 <LayoutList className="h-4 w-4" />
               </Button>
-              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" className="rounded-none border-r-0" title="Grid View" onClick={() => { setViewMode('grid'); localStorage.setItem('leadsViewMode', 'grid') }}>
+              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" className="rounded-none border-r-0" title="Grid View" aria-pressed={viewMode === 'grid'} onClick={() => { setViewMode('grid'); localStorage.setItem('leadsViewMode', 'grid') }}>
                 <LayoutGrid className="h-4 w-4" />
               </Button>
               <Link to="/leads/pipeline">
@@ -833,7 +833,7 @@ function LeadsList() {
             <div className="p-6 bg-primary/10 rounded-full mb-6">
               <Users className="h-16 w-16 text-primary" />
             </div>
-            <h3 className="text-2xl font-bold mb-3">No leads yet</h3>
+            <h2 className="text-2xl font-bold mb-3">No leads yet</h2>
             <p className="text-muted-foreground mb-6 text-lg">
               Import your contacts or add your first lead to get started tracking your sales pipeline.
             </p>
@@ -907,7 +907,7 @@ function LeadsList() {
                 <option value={50}>50</option>
                 <option value={100}>100</option>
               </select>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground" aria-live="polite">
                 per page • Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalLeads)} of {totalLeads} results
               </span>
             </div>

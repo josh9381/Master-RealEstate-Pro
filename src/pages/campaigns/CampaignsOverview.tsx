@@ -102,7 +102,7 @@ export default function CampaignsOverview() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Active Campaigns</p>
-              <h3 className="mt-2 text-3xl font-bold">{stats.active}</h3>
+              <h2 className="mt-2 text-3xl font-bold">{stats.active}</h2>
               <p className="mt-1 text-xs text-muted-foreground">{stats.total} total campaigns</p>
             </div>
             <div className="rounded-full bg-primary/10 p-3">
@@ -115,7 +115,7 @@ export default function CampaignsOverview() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Messages Sent</p>
-              <h3 className="mt-2 text-3xl font-bold">{stats.totalSent.toLocaleString()}</h3>
+              <h2 className="mt-2 text-3xl font-bold">{stats.totalSent.toLocaleString()}</h2>
               <p className="mt-1 text-xs text-muted-foreground">Across all campaigns</p>
             </div>
             <div className="rounded-full bg-success/10 p-3">
@@ -128,11 +128,11 @@ export default function CampaignsOverview() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-              <h3 className="mt-2 text-3xl font-bold">{fmtMoney(stats.totalRevenue)}</h3>
+              <h2 className="mt-2 text-3xl font-bold">{fmtMoney(stats.totalRevenue)}</h2>
               <p className="mt-1 text-xs text-muted-foreground">Campaign-generated revenue</p>
             </div>
-            <div className="rounded-full bg-purple-100 p-3">
-              <DollarSign className="h-6 w-6 text-purple-600" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <DollarSign className="h-6 w-6 text-primary" />
             </div>
           </div>
         </Card>
@@ -141,11 +141,11 @@ export default function CampaignsOverview() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Average ROI</p>
-              <h3 className="mt-2 text-3xl font-bold">{stats.avgROI}%</h3>
+              <h2 className="mt-2 text-3xl font-bold">{stats.avgROI}%</h2>
               <p className="mt-1 text-xs text-muted-foreground">Return on investment</p>
             </div>
-            <div className="rounded-full bg-orange-100 p-3">
-              <TrendingUp className="h-6 w-6 text-orange-600" />
+            <div className="rounded-full bg-warning/10 p-3">
+              <TrendingUp className="h-6 w-6 text-warning" />
             </div>
           </div>
         </Card>
@@ -154,7 +154,7 @@ export default function CampaignsOverview() {
       {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-1">Campaign Type Breakdown</h3>
+          <h2 className="text-lg font-semibold mb-1">Campaign Type Breakdown</h2>
           <p className="text-xs text-muted-foreground mb-4">
             {stats.total > 0 ? `Based on ${stats.total} campaigns` : 'No campaign data yet'}
           </p>
@@ -176,7 +176,7 @@ export default function CampaignsOverview() {
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-1">Campaign Status Distribution</h3>
+          <h2 className="text-lg font-semibold mb-1">Campaign Status Distribution</h2>
           <p className="text-xs text-muted-foreground mb-4">Current status of all campaigns</p>
           {statusData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>

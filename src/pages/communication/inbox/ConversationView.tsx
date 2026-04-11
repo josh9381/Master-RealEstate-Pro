@@ -96,7 +96,7 @@ const getChannelColor = (type: string) => {
   switch (type) {
     case 'email': return 'text-primary'
     case 'sms': return 'text-success'
-    case 'call': return 'text-purple-500'
+    case 'call': return 'text-primary'
     default: return 'text-muted-foreground'
   }
 }
@@ -105,7 +105,7 @@ const getChannelBubbleColor = (type: string) => {
   switch (type) {
     case 'email': return 'bg-primary text-white rounded-br-md'
     case 'sms': return 'bg-success text-white rounded-br-md'
-    case 'call': return 'bg-purple-500 text-white rounded-br-md'
+    case 'call': return 'bg-primary text-white rounded-br-md'
     default: return 'bg-primary text-white rounded-br-md'
   }
 }
@@ -242,7 +242,7 @@ export const ConversationView = ({
           </div>
         </div>
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={() => onToggleStar(selectedContact.id)} title="Star" aria-label="Star conversation">
+          <Button size="sm" variant="ghost" onClick={() => onToggleStar(selectedContact.id)} title="Star" aria-label="Star conversation" aria-pressed={hasStarred}>
             <Star className={`h-4 w-4 ${hasStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
           </Button>
           <Button size="sm" variant="ghost" onClick={() => onArchive(selectedContact.id)} title="Archive" aria-label="Archive conversation">
@@ -384,7 +384,7 @@ export const ConversationView = ({
                     {showChannelBadge && (
                       <Badge variant="outline" className={`text-[10px] h-4 px-1 gap-0.5 ${
                         message.type === 'sms' ? 'border-success/20 text-success bg-success/10' :
-                        message.type === 'call' ? 'border-purple-300 text-purple-700 bg-purple-50' :
+                        message.type === 'call' ? 'border-primary/30 text-primary bg-primary/5' :
                         'border-primary/20 text-primary bg-primary/10'
                       }`}>
                         {message.type === 'sms' ? 'SMS' : message.type === 'call' ? 'Call' : 'Email'}
@@ -464,7 +464,7 @@ export const ConversationView = ({
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-6 w-6 p-0"
+                                  className="h-6 w-6 p-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                                   onClick={() => {
                                     if (attachment.url) {
                                       const link = document.createElement('a')
@@ -659,7 +659,7 @@ export const ConversationView = ({
                   <CardContent className="p-3">
                     <div className="grid grid-cols-8 gap-2" role="grid">
                       {['😊', '👍', '❤️', '🎉', '😂', '🤔', '👏', '🔥', '✅', '⭐', '💯', '🚀', '💪', '🙏', '😎', '🎯'].map(emoji => (
-                        <button key={emoji} onClick={() => onInsertEmoji(emoji)} className="text-2xl hover:bg-accent rounded p-1 transition focus:outline-none focus:ring-2 focus:ring-primary" aria-label={`Insert ${emoji}`}>
+                        <button key={emoji} onClick={() => onInsertEmoji(emoji)} className="text-2xl hover:bg-accent rounded p-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={`Insert ${emoji}`}>
                           {emoji}
                         </button>
                       ))}

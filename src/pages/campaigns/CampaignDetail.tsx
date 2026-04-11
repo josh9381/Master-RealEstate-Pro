@@ -203,11 +203,11 @@ function CampaignDetail() {
 
   const realDeviceData = useMemo(() => {
     if (!deviceBreakdownData?.devices || deviceBreakdownData.devices.length === 0) return deviceData
-    const colorMap: Record<string, string> = { Desktop: '#3b82f6', Mobile: '#10b981', Tablet: '#f59e0b', Unknown: '#94a3b8' }
+    const colorMap: Record<string, string> = { Desktop: COLORS[0], Mobile: COLORS[2], Tablet: COLORS[1], Unknown: COLORS[6] }
     return deviceBreakdownData.devices.map((d: DeviceBreakdownEntry) => ({
       name: d.name,
       value: d.count,
-      color: colorMap[d.name] || '#8b5cf6',
+      color: colorMap[d.name] || COLORS[7],
     }))
   }, [deviceBreakdownData, deviceData])
 
@@ -543,9 +543,9 @@ function CampaignDetail() {
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
-                <Line type="monotone" dataKey="sent" stroke="#3b82f6" name="Sent" />
-                <Line type="monotone" dataKey="opened" stroke="#10b981" name="Opened" />
-                <Line type="monotone" dataKey="clicked" stroke="#f59e0b" name="Clicked" />
+                <Line type="monotone" dataKey="sent" stroke={COLORS[0]} name="Sent" />
+                <Line type="monotone" dataKey="opened" stroke={COLORS[2]} name="Opened" />
+                <Line type="monotone" dataKey="clicked" stroke={COLORS[1]} name="Clicked" />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -611,7 +611,7 @@ function CampaignDetail() {
                   labelLine={false}
                   label={({ name, percent }) => `${name}: ${formatRate(percent * 100, 0)}%`}
                   outerRadius={80}
-                  fill="#8884d8"
+                  fill={COLORS[0]}
                   dataKey="value"
                 >
                   {realDeviceData.map((entry: { name: string; value: number; color: string }, index: number) => (
@@ -658,8 +658,8 @@ function CampaignDetail() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="opens" fill="#10b981" name="Opens" />
-                <Bar dataKey="clicks" fill="#3b82f6" name="Clicks" />
+                <Bar dataKey="opens" fill={COLORS[2]} name="Opens" />
+                <Bar dataKey="clicks" fill={COLORS[0]} name="Clicks" />
               </BarChart>
             </ResponsiveContainer>
             ) : (
@@ -1013,10 +1013,10 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   SENT: { label: 'Sent', className: 'bg-primary/10 text-primary' },
   DELIVERED: { label: 'Delivered', className: 'bg-success/10 text-success' },
   OPENED: { label: 'Opened', className: 'bg-success/10 text-success' },
-  CLICKED: { label: 'Clicked', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
+  CLICKED: { label: 'Clicked', className: 'bg-primary/10 text-primary' },
   BOUNCED: { label: 'Bounced', className: 'bg-destructive/10 text-destructive' },
   UNSUBSCRIBED: { label: 'Unsubscribed', className: 'bg-warning/10 text-warning' },
-  CONVERTED: { label: 'Converted', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' },
+  CONVERTED: { label: 'Converted', className: 'bg-info/10 text-info' },
 }
 
 /**
@@ -1063,13 +1063,13 @@ function ABTestResultsSection({ campaignId }: { campaignId: string }) {
   const renderVariantCard = (variant: 'A' | 'B', stats: typeof variantA, subjectLabel: string) => {
     const isWinner = winner === variant
     return (
-      <div className={`p-4 border rounded-lg relative ${isWinner && isCompleted ? 'border-green-500 bg-green-50 dark:bg-green-950/30' : ''}`}>
+      <div className={`p-4 border rounded-lg relative ${isWinner && isCompleted ? 'border-success bg-success/10 dark:bg-success/10' : ''}`}>
         <div className="flex items-center gap-2 mb-2">
           <Badge variant={isWinner && isCompleted ? 'default' : 'secondary'}>
             Variant {variant}
           </Badge>
           {isWinner && isCompleted && (
-            <Badge className="bg-green-600 text-white">Winner</Badge>
+            <Badge className="bg-success text-success-foreground">Winner</Badge>
           )}
         </div>
         <h4 className="font-medium mb-3">{subjectLabel}</h4>
@@ -1084,13 +1084,13 @@ function ABTestResultsSection({ campaignId }: { campaignId: string }) {
           </div>
           <div>
             <div className="text-muted-foreground">Open Rate</div>
-            <div className={`font-semibold text-lg ${isWinner && winnerMetric === 'open_rate' ? 'text-green-600' : ''}`}>
+            <div className={`font-semibold text-lg ${isWinner && winnerMetric === 'open_rate' ? 'text-success' : ''}`}>
               {formatRate(stats.openRate, 1)}%
             </div>
           </div>
           <div>
             <div className="text-muted-foreground">Click Rate</div>
-            <div className={`font-semibold text-lg ${isWinner && winnerMetric === 'click_rate' ? 'text-green-600' : ''}`}>
+            <div className={`font-semibold text-lg ${isWinner && winnerMetric === 'click_rate' ? 'text-success' : ''}`}>
               {formatRate(stats.clickRate, 1)}%
             </div>
           </div>
@@ -1133,7 +1133,7 @@ function ABTestResultsSection({ campaignId }: { campaignId: string }) {
           </div>
           <div>
             <span className="font-medium">Confidence:</span>{' '}
-            <span className={confidence >= 0.95 ? 'text-green-600 font-semibold' : confidence >= 0.8 ? 'text-yellow-600' : 'text-muted-foreground'}>
+            <span className={confidence >= 0.95 ? 'text-success font-semibold' : confidence >= 0.8 ? 'text-warning' : 'text-muted-foreground'}>
               {formatRate(confidence * 100)}%
             </span>
           </div>

@@ -198,7 +198,7 @@ const InsightsTab = () => {
     Opportunity: 'bg-success/10 text-success',
     Risk: 'bg-destructive/10 text-destructive',
     Optimization: 'bg-primary/10 text-primary',
-    Trend: 'bg-purple-100 text-purple-600',
+    Trend: 'bg-primary/10 text-primary',
   };
 
   return (

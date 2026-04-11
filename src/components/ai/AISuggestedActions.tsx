@@ -151,7 +151,7 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
       <Card className={className}>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center text-base">
-            <Sparkles className="mr-2 h-5 w-5 text-purple-600 animate-pulse" />
+            <Sparkles className="mr-2 h-5 w-5 text-primary animate-pulse" />
             Loading AI Recommendations...
           </CardTitle>
         </CardHeader>
@@ -186,7 +186,7 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center text-base">
-            <Sparkles className="mr-2 h-5 w-5 text-purple-600" />
+            <Sparkles className="mr-2 h-5 w-5 text-primary" />
             AI Recommendations
           </CardTitle>
           <Badge variant="secondary" className="text-xs">

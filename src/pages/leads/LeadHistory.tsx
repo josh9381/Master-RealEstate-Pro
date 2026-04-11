@@ -339,7 +339,7 @@ const LeadHistory = () => {
                           : event.color === 'green'
                           ? 'bg-success'
                           : event.color === 'purple'
-                          ? 'bg-purple-500'
+                          ? 'bg-primary'
                           : event.color === 'orange'
                           ? 'bg-warning'
                           : event.color === 'teal'

@@ -183,7 +183,7 @@ const AIHub = () => {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
         <div className="absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-white/5 blur-2xl" />
-        <div className="absolute -top-8 -left-8 h-28 w-28 rounded-full bg-blue-400/10 blur-2xl" />
+        <div className="absolute -top-8 -left-8 h-28 w-28 rounded-full bg-primary/10 blur-2xl" />
         <div className="relative">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
@@ -202,7 +202,7 @@ const AIHub = () => {
         <CardContent className="py-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-purple-500/10 to-indigo-500/10">
-              <Brain className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+              <Brain className="h-3.5 w-3.5 text-primary" />
             </div>
             <span className="text-sm font-semibold">AI is active across your CRM</span>
           </div>
@@ -218,7 +218,7 @@ const AIHub = () => {
                   key={feature.name}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40 text-sm hover:bg-muted/80 transition-colors"
                 >
-                  <feature.icon className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                  <feature.icon className="h-3.5 w-3.5 text-primary" />
                   <span className="font-medium text-foreground/90">{feature.name}</span>
                   <span className="text-muted-foreground text-xs">
                     {apiFeature?.leadsScored ? `${apiFeature.leadsScored} scored` : feature.description}

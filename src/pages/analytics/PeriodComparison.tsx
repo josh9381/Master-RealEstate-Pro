@@ -30,8 +30,8 @@ function getDateRange(preset: string): { startDate: string; endDate: string } {
 }
 
 const ChangeIndicator = ({ value }: { value: number }) => {
-  if (value > 0) return <span className="flex items-center gap-1 text-green-600 text-sm font-medium"><TrendingUp className="h-4 w-4" /> +{value}%</span>;
-  if (value < 0) return <span className="flex items-center gap-1 text-red-600 text-sm font-medium"><TrendingDown className="h-4 w-4" /> {value}%</span>;
+  if (value > 0) return <span className="flex items-center gap-1 text-success text-sm font-medium"><TrendingUp className="h-4 w-4" /> +{value}%</span>;
+  if (value < 0) return <span className="flex items-center gap-1 text-destructive text-sm font-medium"><TrendingDown className="h-4 w-4" /> {value}%</span>;
   return <span className="flex items-center gap-1 text-muted-foreground text-sm font-medium"><Minus className="h-4 w-4" /> 0%</span>;
 };
 
@@ -110,7 +110,7 @@ const PeriodComparison = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-7 w-7 text-blue-600" />
+            <TrendingUp className="h-7 w-7 text-info" />
             Period Comparison
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -160,7 +160,7 @@ const PeriodComparison = () => {
       {/* Period labels */}
       {result?.periodLabel && (
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <span className="font-medium text-blue-600">Current: {result.periodLabel.current}</span>
+          <span className="font-medium text-primary">Current: {result.periodLabel.current}</span>
           <ArrowRight className="h-3 w-3" />
           <span className="font-medium text-muted-foreground">Previous: {result.periodLabel.previous}</span>
         </div>

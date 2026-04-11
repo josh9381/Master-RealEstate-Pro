@@ -19,8 +19,8 @@ export function OrganizationHeader() {
   
   const tierColors: Record<string, string> = {
     STARTER: 'bg-primary/10 text-primary',
-    PROFESSIONAL: 'bg-purple-100 text-purple-800',
-    ELITE: 'bg-indigo-100 text-indigo-800',
+    PROFESSIONAL: 'bg-primary/10 text-primary',
+    ELITE: 'bg-primary/20 text-primary',
     TEAM: 'bg-success/10 text-success',
     ENTERPRISE: 'bg-warning/10 text-warning',
   }
