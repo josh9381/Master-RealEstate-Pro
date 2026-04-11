@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { KeyboardShortcutsModal } from '@/components/help/KeyboardShortcutsModal';
 import { docsApi } from '@/lib/api';
 
@@ -15,7 +16,7 @@ const HelpCenter = () => {
   const [searchQuery, setSearchQuery] = useState('')
 
   // Fetch real category data from docs API
-  const { data: catData, isLoading: catLoading } = useQuery({
+  const { data: catData, isLoading: catLoading, isError: catError, error: catErr, refetch: refetchCats } = useQuery({
     queryKey: ['help-center-doc-categories'],
     queryFn: () => docsApi.getCategories(),
   })
@@ -109,6 +110,8 @@ const HelpCenter = () => {
 
   return (
     <div className="space-y-6">
+      {catError && <ErrorBanner message={catErr?.message || 'Failed to load help center data'} retry={refetchCats} />}
+
       <PageHeader
         title="Help Center"
         subtitle="Find answers, tutorials, and documentation"

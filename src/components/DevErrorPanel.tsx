@@ -58,19 +58,19 @@ export function DevErrorPanel() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { clearDevErrors(); refresh() }}
-                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded"
+                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded transition-colors"
               >
                 Clear
               </button>
               <button
                 onClick={refresh}
-                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded"
+                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded transition-colors"
               >
                 Refresh
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded"
+                className="px-2 py-0.5 text-xs bg-muted hover:bg-accent rounded transition-colors"
               >
                 ✕
               </button>
@@ -107,7 +107,7 @@ function ErrorItem({ error }: { error: ReturnType<typeof getDevErrors>[0] }) {
   const colorClass = typeColors[error.type] || 'text-muted-foreground bg-muted'
 
   return (
-    <div className="px-3 py-2 hover:bg-muted/50 cursor-pointer rounded" role="button" tabIndex={0} onClick={() => setExpanded(!expanded)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded) } }}>
+    <div className="px-3 py-2 hover:bg-muted/50 transition-colors cursor-pointer rounded" role="button" tabIndex={0} onClick={() => setExpanded(!expanded)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded) } }}>
       <div className="flex items-start gap-2">
         <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${colorClass}`}>
           {error.type}

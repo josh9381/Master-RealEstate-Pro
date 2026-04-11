@@ -146,7 +146,7 @@ export function TagsModal({
   const [newTag, setNewTag] = useState('')
 
   // Fetch tags from API instead of using hardcoded list
-  const { data: tagsResponse, isLoading: tagsLoading } = useQuery({
+  const { data: tagsResponse, isLoading: tagsLoading, isError: tagsError, refetch: refetchTags } = useQuery({
     queryKey: ['tags'],
     queryFn: () => tagsApi.getTags(),
   })
@@ -181,6 +181,11 @@ export function TagsModal({
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Loading tags...
+                </div>
+              ) : tagsError ? (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <span>Failed to load tags.</span>
+                  <button onClick={() => refetchTags()} className="underline hover:opacity-80">Retry</button>
                 </div>
               ) : availableTags.length > 0 ? (
                 availableTags.map(tag => (

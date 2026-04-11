@@ -693,7 +693,7 @@ export default function LeadCreate() {
               
               <div className="flex flex-wrap gap-2 mb-3">
                 {formData.tags.map((tag) => (
-                  <Badge key={tag} className="cursor-pointer" onClick={() => {
+                  <Badge key={tag} className="cursor-pointer hover:opacity-80 transition-colors" onClick={() => {
                     setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }))
                   }}>
                     {tag}

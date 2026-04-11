@@ -828,7 +828,7 @@ function LeadsList() {
 
       {/* Leads Content */}
       {filteredAndSortedLeads.length === 0 ? (
-        <Card className="p-12 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <Card className="p-12 bg-muted/50">
           <div className="flex flex-col items-center justify-center text-center max-w-lg mx-auto">
             <div className="p-6 bg-primary/10 rounded-full mb-6">
               <Users className="h-16 w-16 text-primary" />

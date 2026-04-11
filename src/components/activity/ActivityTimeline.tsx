@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { activitiesApi } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 
 interface Activity {
   id: number | string
@@ -106,7 +107,7 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
   const [editForm, setEditForm] = useState({ title: '', description: '' })
 
   // Fetch real activities from API when leadId is provided
-  const { data: apiActivities, isLoading } = useQuery({
+  const { data: apiActivities, isLoading, isError, refetch } = useQuery({
     queryKey: ['lead-activities', leadId],
     queryFn: () => activitiesApi.getLeadActivities(leadId!),
     enabled: !!leadId,
@@ -160,6 +161,12 @@ export function ActivityTimeline({ leadName = 'this lead', leadId }: ActivityTim
 
   const hasDetails = (activity: Activity) => {
     return activity.details && Object.keys(activity.details).length > 0
+  }
+
+  if (isError && leadId) {
+    return (
+      <ErrorBanner message="Failed to load activities" retry={refetch} />
+    )
   }
 
   if (isLoading && leadId) {

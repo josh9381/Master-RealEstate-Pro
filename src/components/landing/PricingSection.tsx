@@ -108,8 +108,8 @@ export function PricingSection() {
                 to="/auth/register"
                 className={`block w-full text-center py-3 px-6 rounded-xl font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
                   plan.highlighted
-                    ? 'bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/25'
-                    : 'bg-muted text-foreground hover:bg-muted/80'
+                    ? 'bg-primary text-white hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25'
+                    : 'bg-muted text-foreground hover:bg-muted/80 transition-colors'
                 }`}
               >
                 {plan.cta}

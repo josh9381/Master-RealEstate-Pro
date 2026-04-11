@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { calcProgress, formatRate, fmtMoney } from '@/lib/metricsCalculator'
 import {
   TrendingUp,
@@ -831,6 +832,15 @@ function Dashboard() {
     return <LoadingSkeleton rows={5} showChart />
   }
 
+  // Show critical error if main stats query failed
+  if (statsError) {
+    return (
+      <div className="space-y-4 p-4">
+        <ErrorBanner message="Failed to load dashboard data" retry={refetchStats} />
+      </div>
+    )
+  }
+
   // Determine context-aware quick actions
   const hasLeads = (dashboardData?.overview?.totalLeads || 0) > 0
   const overdueTasks = dashboardData?.tasks?.overdue || 0
@@ -862,7 +872,7 @@ function Dashboard() {
             {showExportMenu && (
               <div className="absolute right-0 mt-1 w-40 bg-card border rounded-md shadow-lg z-10" role="menu" aria-label="Export options" onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Escape') { setShowExportMenu(false) } }}>
                 <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-t-md focus:bg-accent focus:outline-none"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors rounded-t-md focus:bg-accent focus:outline-none"
                   onClick={handleExportCSV}
                   role="menuitem"
                   tabIndex={0}
@@ -872,7 +882,7 @@ function Dashboard() {
                   Export CSV
                 </button>
                 <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-b-md focus:bg-accent focus:outline-none"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors rounded-b-md focus:bg-accent focus:outline-none"
                   onClick={handleExportPDF}
                   role="menuitem"
                   tabIndex={0}
@@ -1008,7 +1018,7 @@ function Dashboard() {
           Schedule Meeting
         </Button>
         {overdueTasks > 0 && (
-          <Button onClick={() => navigate('/tasks')} variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 dark:hover:bg-destructive/10">
+          <Button onClick={() => navigate('/tasks')} variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 transition-colors dark:hover:bg-destructive/10">
             <AlertTriangle className="h-3.5 w-3.5" />
             {overdueTasks} Overdue Task{overdueTasks > 1 ? 's' : ''}
           </Button>
@@ -1024,14 +1034,6 @@ function Dashboard() {
       )}
 
       {/* Main Stats Cards with Progress + Sparklines */}
-      {statsError ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-destructive mb-2">Failed to load dashboard stats</p>
-            <Button variant="outline" size="sm" onClick={() => refetchStats()}>Retry</Button>
-          </CardContent>
-        </Card>
-      ) : (
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card
@@ -1083,7 +1085,6 @@ function Dashboard() {
           </Card>
         ))}
       </div>
-      )}
 
       {/* Pipeline Value — compact strip */}
       {pipelineValue && pipelineValue.value > 0 && (

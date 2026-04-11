@@ -6,6 +6,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { activitiesApi } from '@/lib/api';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import type { ActivityRecord } from '@/types';
 
 // Map backend ActivityType enum values to UI categories
@@ -136,7 +137,7 @@ const LeadHistory = () => {
     },
   });
 
-  const { data: activitiesData, isLoading, refetch: loadActivities } = useQuery({
+  const { data: activitiesData, isLoading, isError, error, refetch: loadActivities } = useQuery({
     queryKey: ['lead-activity-history', selectedLeadId, page, activeFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = { limit: PAGE_SIZE, page };
@@ -236,49 +237,49 @@ const LeadHistory = () => {
           <div className="flex flex-wrap gap-2">
             <Badge 
               variant={activeFilter === 'all' ? 'default' : 'outline'} 
-              className="cursor-pointer"
+              className="cursor-pointer transition-colors hover:opacity-80"
               onClick={() => handleFilterChange('all')}
             >
               All Activities ({stats.total})
             </Badge>
             <Badge 
               variant={activeFilter === 'status' ? 'default' : 'outline'} 
-              className="cursor-pointer"
+              className="cursor-pointer transition-colors hover:opacity-80"
               onClick={() => handleFilterChange('status')}
             >
               Status Changes ({stats.statusChanges})
             </Badge>
             <Badge 
               variant={activeFilter === 'email' ? 'default' : 'outline'} 
-              className="cursor-pointer"
+              className="cursor-pointer transition-colors hover:opacity-80"
               onClick={() => handleFilterChange('email')}
             >
               Emails ({stats.emails})
             </Badge>
             <Badge 
               variant={activeFilter === 'sms' ? 'default' : 'outline'} 
-              className="cursor-pointer"
+              className="cursor-pointer transition-colors hover:opacity-80"
               onClick={() => handleFilterChange('sms')}
             >
               SMS ({stats.sms})
             </Badge>
             <Badge 
               variant={activeFilter === 'note' ? 'default' : 'outline'} 
-              className="cursor-pointer"
+              className="cursor-pointer transition-colors hover:opacity-80"
               onClick={() => handleFilterChange('note')}
             >
               Notes ({stats.notes})
             </Badge>
             <Badge 
               variant={activeFilter === 'task' ? 'default' : 'outline'} 
-              className="cursor-pointer"
+              className="cursor-pointer transition-colors hover:opacity-80"
               onClick={() => handleFilterChange('task')}
             >
               Tasks ({stats.tasks})
             </Badge>
             <Badge 
               variant={activeFilter === 'call' ? 'default' : 'outline'} 
-              className="cursor-pointer"
+              className="cursor-pointer transition-colors hover:opacity-80"
               onClick={() => handleFilterChange('call')}
             >
               Calls ({stats.calls})
@@ -298,7 +299,9 @@ const LeadHistory = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isError ? (
+            <ErrorBanner message={`Failed to load activity history: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={loadActivities} />
+          ) : isLoading ? (
             <div className="space-y-6">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex gap-4 animate-pulse">
@@ -337,14 +340,14 @@ const LeadHistory = () => {
                         event.color === 'blue'
                           ? 'bg-primary'
                           : event.color === 'green'
-                          ? 'bg-success'
+                          ? 'bg-info'
                           : event.color === 'purple'
                           ? 'bg-primary'
                           : event.color === 'orange'
                           ? 'bg-warning'
                           : event.color === 'teal'
-                          ? 'bg-teal-500'
-                          : 'bg-gray-500'
+                          ? 'bg-info'
+                          : 'bg-muted-foreground'
                       }`}
                     >
                       <IconComponent className="h-6 w-6 text-white" />

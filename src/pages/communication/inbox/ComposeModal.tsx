@@ -322,10 +322,10 @@ export const ComposeModal = ({
                         </div>
                       </div>
                       <div className="flex gap-1 flex-wrap">
-                        <button type="button" onClick={() => applyQuickSchedule(0, '17:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent text-muted-foreground">Today 5pm</button>
-                        <button type="button" onClick={() => applyQuickSchedule(1, '09:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent text-muted-foreground">Tomorrow 9am</button>
-                        <button type="button" onClick={() => applyQuickSchedule(1, '14:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent text-muted-foreground">Tomorrow 2pm</button>
-                        <button type="button" onClick={() => { const d = new Date(); const daysUntilMon = (8 - d.getDay()) % 7 || 7; applyQuickSchedule(daysUntilMon, '09:00') }} className="px-2 py-1 text-[11px] rounded border hover:bg-accent text-muted-foreground">Next Monday</button>
+                        <button type="button" onClick={() => applyQuickSchedule(0, '17:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent transition-colors text-muted-foreground">Today 5pm</button>
+                        <button type="button" onClick={() => applyQuickSchedule(1, '09:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent transition-colors text-muted-foreground">Tomorrow 9am</button>
+                        <button type="button" onClick={() => applyQuickSchedule(1, '14:00')} className="px-2 py-1 text-[11px] rounded border hover:bg-accent transition-colors text-muted-foreground">Tomorrow 2pm</button>
+                        <button type="button" onClick={() => { const d = new Date(); const daysUntilMon = (8 - d.getDay()) % 7 || 7; applyQuickSchedule(daysUntilMon, '09:00') }} className="px-2 py-1 text-[11px] rounded border hover:bg-accent transition-colors text-muted-foreground">Next Monday</button>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => { handleScheduleSend(); setShowScheduler(false) }} disabled={!scheduleDate || !scheduleTime}>

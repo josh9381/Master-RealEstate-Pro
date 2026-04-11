@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Shield, Activity, Settings, Loader2 } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -31,7 +32,7 @@ const SystemSettings = () => {
   const [lockoutDuration, setLockoutDuration] = useState(30);
 
   // Fetch settings via useQuery
-  const { data: settingsData, isLoading: loading } = useQuery({
+  const { data: settingsData, isLoading: loading, isError, refetch } = useQuery({
     queryKey: ['admin', 'system-settings'],
     queryFn: async () => {
       const response = await adminApi.getSystemSettings();
@@ -115,6 +116,14 @@ const SystemSettings = () => {
 
   if (loading) {
     return <LoadingSkeleton rows={4} />;
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <ErrorBanner message="Failed to load system settings" retry={refetch} />
+      </div>
+    );
   }
 
   return (

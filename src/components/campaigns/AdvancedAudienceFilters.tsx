@@ -367,7 +367,7 @@ export function AdvancedAudienceFilters({
               <Badge
                 key={segment.id}
                 variant="outline"
-                className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                className="cursor-pointer hover:bg-primary transition-colors hover:text-primary-foreground"
                 onClick={() => onLoadSegment?.(segment)}
               >
                 {segment.name} ({segment.leadCount})

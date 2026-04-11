@@ -364,7 +364,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
         <div className="py-1">
           <button
             role="menuitem"
-            className="w-full px-4 py-2 text-sm text-left hover:bg-accent flex items-center gap-2"
+            className="w-full px-4 py-2 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
             onClick={onEdit}
           >
             <FileText className="h-4 w-4" />
@@ -372,7 +372,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
           </button>
           <button
             role="menuitem"
-            className="w-full px-4 py-2 text-sm text-left hover:bg-accent flex items-center gap-2"
+            className="w-full px-4 py-2 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
             onClick={onDuplicate}
           >
             <FileText className="h-4 w-4" />
@@ -380,7 +380,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
           </button>
           <button
             role="menuitem"
-            className="w-full px-4 py-2 text-sm text-left hover:bg-accent flex items-center gap-2"
+            className="w-full px-4 py-2 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
             onClick={onEmail}
           >
             <Mail className="h-4 w-4" />
@@ -390,7 +390,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
             <a
               role="menuitem"
               href={`tel:${lead.phone}`}
-              className="w-full px-4 py-2 text-sm text-left hover:bg-accent flex items-center gap-2"
+              className="w-full px-4 py-2 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
               onClick={onClose}
             >
               <Phone className="h-4 w-4" />
@@ -399,7 +399,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
           ) : (
             <button
               role="menuitem"
-              className="w-full px-4 py-2 text-sm text-left text-muted-foreground cursor-not-allowed flex items-center gap-2 hover:bg-accent"
+              className="w-full px-4 py-2 text-sm text-left text-muted-foreground cursor-not-allowed flex items-center gap-2 hover:bg-accent transition-colors"
               disabled
               aria-disabled="true"
             >
@@ -410,7 +410,7 @@ export const RowMenu = React.forwardRef<HTMLDivElement, RowMenuProps>(
           <div className="border-t my-1"></div>
           <button
             role="menuitem"
-            className="w-full px-4 py-2 text-sm text-left hover:bg-destructive/10 text-destructive flex items-center gap-2"
+            className="w-full px-4 py-2 text-sm text-left hover:bg-destructive/10 transition-colors text-destructive flex items-center gap-2"
             onClick={onDelete}
           >
             <X className="h-4 w-4" />

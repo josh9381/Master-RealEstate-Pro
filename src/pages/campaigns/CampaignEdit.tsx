@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -38,7 +39,7 @@ function CampaignEdit() {
   })
 
   // Fetch campaign from API
-  const { data: campaignResponse, isLoading } = useQuery({
+  const { data: campaignResponse, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['campaign', id],
     queryFn: async () => {
       const response = await campaignsApi.getCampaign(id!)
@@ -120,6 +121,14 @@ function CampaignEdit() {
       maxOccurrences: editForm.maxOccurrences || undefined,
       sendTimeOptimization: editForm.sendTimeOptimization !== 'none' ? editForm.sendTimeOptimization : undefined,
     } as Partial<CreateCampaignData>)
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6 p-4">
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load campaign'} retry={refetch} />
+      </div>
+    )
   }
 
   if (isLoading) {

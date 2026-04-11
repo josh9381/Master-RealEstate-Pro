@@ -20,6 +20,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { campaignsApi, CampaignsQuery } from '@/lib/api';
 import { calcROI, formatRate, fmtMoney } from '@/lib/metricsCalculator';
 import { CHART_COLORS } from '@/lib/chartColors';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Campaign } from '@/types';
 
 const quickLinks = [
@@ -34,7 +35,7 @@ const quickLinks = [
 ];
 
 export default function CampaignsOverview() {
-  const { data: statsResponse } = useQuery({
+  const { data: statsResponse, isError, error, refetch } = useQuery({
     queryKey: ['campaigns-overview-stats'],
     queryFn: async () => {
       const params: CampaignsQuery = { page: 1, limit: 200 };
@@ -88,6 +89,8 @@ export default function CampaignsOverview() {
 
   return (
     <div className="space-y-6">
+      {isError && <ErrorBanner message={error?.message || 'Failed to load campaign data'} retry={refetch} />}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

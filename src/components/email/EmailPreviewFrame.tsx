@@ -67,7 +67,7 @@ export function EmailPreviewFrame({
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                     device === d.id
                       ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent text-muted-foreground'
+                      : 'hover:bg-accent transition-colors text-muted-foreground'
                   }`}
                   title={d.description}
                 >
@@ -83,12 +83,12 @@ export function EmailPreviewFrame({
               <>
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="p-1.5 rounded hover:bg-accent text-muted-foreground"
+                  className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground"
                   title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                 >
                   {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 </button>
-                <button onClick={onClose} className="p-1.5 rounded hover:bg-accent text-muted-foreground" title="Close">
+                <button onClick={onClose} className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground" title="Close">
                   <X className="h-4 w-4" />
                 </button>
               </>

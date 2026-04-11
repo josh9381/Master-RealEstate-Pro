@@ -4,6 +4,7 @@ import { Book, Search, ChevronRight, Clock, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { docsApi } from '@/lib/api';
 
 interface DocArticle {
@@ -41,7 +42,7 @@ const DocumentationPages = () => {
   const [page, setPage] = useState(1);
 
   // Fetch categories
-  const { data: catData, isLoading: catLoading } = useQuery({
+  const { data: catData, isLoading: catLoading, isError: catError, error: catErr, refetch: refetchCats } = useQuery({
     queryKey: ['doc-categories'],
     queryFn: () => docsApi.getCategories(),
   });
@@ -212,6 +213,8 @@ const DocumentationPages = () => {
   // ── Home view ────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {catError && <ErrorBanner message={catErr?.message || 'Failed to load documentation'} retry={refetchCats} />}
+
       <div>
         <h1 className="text-3xl font-bold">Documentation</h1>
         <p className="text-muted-foreground mt-2">

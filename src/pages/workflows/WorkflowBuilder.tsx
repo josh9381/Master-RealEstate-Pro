@@ -22,6 +22,7 @@ import { WorkflowNodeData } from '@/components/workflows/WorkflowNode';
 import { WorkflowComponentLibrary, WorkflowComponent } from '@/components/workflows/WorkflowComponentLibrary';
 import { NodeConfigPanel } from '@/components/workflows/NodeConfigPanel';
 import { ModalErrorBoundary } from '@/components/ModalErrorBoundary';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import type { WorkflowAction, WorkflowExecution } from '@/types';
 
 interface ExecutionStep {
@@ -260,7 +261,7 @@ const WorkflowBuilder = () => {
   }, []);
 
   // Load workflow data via useQuery when ID is present
-  useQuery({
+  const { isError: loadError, refetch: reloadWorkflow } = useQuery({
     queryKey: ['workflow', workflowId],
     queryFn: async () => {
       const response = await workflowsApi.getWorkflow(workflowId!);
@@ -771,6 +772,9 @@ const WorkflowBuilder = () => {
 
   return (
     <div className="relative flex flex-col h-[calc(100vh-10rem)]">
+      {loadError && (
+        <ErrorBanner message="Failed to load workflow" retry={reloadWorkflow} className="mx-4 mt-2" />
+      )}
       {/* Import Template Confirmation Dialog */}
       <Dialog open={showImportConfirm} onOpenChange={setShowImportConfirm}>
         <DialogContent>

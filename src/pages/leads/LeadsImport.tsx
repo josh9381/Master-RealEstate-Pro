@@ -367,7 +367,7 @@ function LeadsImport() {
                     <span className="text-lg font-medium">{selectedFile.name}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleReset() }}
-                      className="p-1 rounded-full hover:bg-muted"
+                      className="p-1 rounded-full hover:bg-muted transition-colors"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -452,7 +452,7 @@ function LeadsImport() {
                       .map(row => row[mapping.source])
                       .filter(Boolean)
                     return (
-                      <tr key={mapping.source} className="hover:bg-muted/30">
+                      <tr key={mapping.source} className="hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 font-medium">{mapping.source}</td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {sampleValues.length > 0 ? sampleValues.join(', ') : <span className="italic">empty</span>}
@@ -508,7 +508,7 @@ function LeadsImport() {
                   </thead>
                   <tbody className="divide-y">
                     {preview.previewRows.slice(0, 5).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-muted/30">
+                      <tr key={idx} className="hover:bg-muted/30 transition-colors">
                         <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
                         {preview.headers.map(h => (
                           <td key={h} className="px-3 py-2 max-w-[200px] truncate">{row[h] || ''}</td>
@@ -631,7 +631,7 @@ function LeadsImport() {
                     </thead>
                     <tbody className="divide-y">
                       {duplicateCheck!.duplicates.slice(0, 10).map((d, i) => (
-                        <tr key={i} className="hover:bg-muted/30">
+                        <tr key={i} className="hover:bg-muted/30 transition-colors">
                           <td className="px-3 py-2">{d.rowIndex + 2}</td>
                           <td className="px-3 py-2">{d.matchReason}</td>
                           <td className="px-3 py-2">{d.existingLeadName} ({d.existingLeadEmail})</td>

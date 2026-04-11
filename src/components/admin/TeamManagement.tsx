@@ -231,14 +231,14 @@ export function TeamManagement() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1 border border-input rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+              className="px-3 py-1 border border-input rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
             >
               Previous
             </button>
             <button
               onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
               disabled={page === data.totalPages}
-              className="px-3 py-1 border border-input rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+              className="px-3 py-1 border border-input rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
             >
               Next
             </button>

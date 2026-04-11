@@ -482,8 +482,8 @@ const EmailTemplatesLibrary = () => {
                 type="button"
                 className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
                   category === activeCategory
-                    ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80'
-                    : 'border-border text-foreground hover:bg-accent'
+                    ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80 transition-colors'
+                    : 'border-border text-foreground hover:bg-accent transition-colors'
                 }`}
                 onClick={() => setActiveCategory(category)}
               >
@@ -823,7 +823,7 @@ const EmailTemplatesLibrary = () => {
                           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
                             formCategory === cat
                               ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary/20'
-                              : 'border-border hover:border-primary/30 hover:bg-accent text-muted-foreground hover:text-foreground'
+                              : 'border-border hover:border-primary/30 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground'
                           }`}
                         >
                           <span>{CATEGORY_ICONS[cat] || '📁'}</span>

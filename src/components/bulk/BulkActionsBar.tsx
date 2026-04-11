@@ -63,7 +63,7 @@ export function BulkActionsBar({
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowStatusMenu(!showStatusMenu)}
-                  className="text-primary-foreground hover:bg-primary-foreground/10"
+                  className="text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
                 >
                   <Tag className="mr-2 h-4 w-4" />
                   Change Status
@@ -100,7 +100,7 @@ export function BulkActionsBar({
                 variant="ghost"
                 size="sm"
                 onClick={onAddTags}
-                className="text-primary-foreground hover:bg-primary-foreground/10"
+                className="text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
               >
                 <Tag className="mr-2 h-4 w-4" />
                 Add Tags
@@ -113,7 +113,7 @@ export function BulkActionsBar({
                 variant="ghost"
                 size="sm"
                 onClick={() => onAssignTo('')}
-                className="text-primary-foreground hover:bg-primary-foreground/10"
+                className="text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
               >
                 <UserPlus className="mr-2 h-4 w-4" />
                 Assign To
@@ -126,7 +126,7 @@ export function BulkActionsBar({
                 variant="ghost"
                 size="sm"
                 onClick={onBulkEmail}
-                className="text-primary-foreground hover:bg-primary-foreground/10"
+                className="text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
               >
                 <Mail className="mr-2 h-4 w-4" />
                 Send Email
@@ -139,7 +139,7 @@ export function BulkActionsBar({
                 variant="ghost"
                 size="sm"
                 onClick={onAddToPipeline}
-                className="text-primary-foreground hover:bg-primary-foreground/10"
+                className="text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
               >
                 <GitBranchPlus className="mr-2 h-4 w-4" />
                 Add to Pipeline
@@ -152,7 +152,7 @@ export function BulkActionsBar({
                 variant="ghost"
                 size="sm"
                 onClick={onExport}
-                className="text-primary-foreground hover:bg-primary-foreground/10"
+                className="text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export
@@ -165,7 +165,7 @@ export function BulkActionsBar({
                 variant="ghost"
                 size="sm"
                 onClick={onDelete}
-                className="text-primary-foreground hover:bg-destructive/90 hover:text-destructive-foreground"
+                className="text-primary-foreground hover:bg-destructive/90 transition-colors hover:text-destructive-foreground"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete

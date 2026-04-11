@@ -331,7 +331,7 @@ export function EmailBlockEditor({
                   <button
                     key={v.value}
                     onClick={() => insertVariable(v.value)}
-                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent"
+                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors"
                   >
                     <span className="font-medium">{v.label}</span>
                     <span className="ml-2 text-muted-foreground font-mono">{v.value}</span>
@@ -376,25 +376,25 @@ export function EmailBlockEditor({
             } ${dragOverIndex === idx ? 'border-dashed border-primary/50 bg-primary/5' : ''}`}
           >
             {/* Block header bar */}
-            <div className="flex items-center gap-1 px-2 py-1 border-b border-transparent group-hover:border-border">
+            <div className="flex items-center gap-1 px-2 py-1 border-b border-transparent group-hover:border-border transition-colors">
               <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 cursor-grab" />
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">{block.type}</Badge>
               <div className="flex-1" />
               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={(e) => { e.stopPropagation(); moveBlock(block.id, -1) }} disabled={idx === 0}
-                  className="p-0.5 rounded hover:bg-accent disabled:opacity-30" title="Move up">
+                  className="p-0.5 rounded hover:bg-accent transition-colors disabled:opacity-30" title="Move up">
                   <ChevronUp className="h-3.5 w-3.5" />
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); moveBlock(block.id, 1) }} disabled={idx === blocks.length - 1}
-                  className="p-0.5 rounded hover:bg-accent disabled:opacity-30" title="Move down">
+                  className="p-0.5 rounded hover:bg-accent transition-colors disabled:opacity-30" title="Move down">
                   <ChevronDown className="h-3.5 w-3.5" />
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block.id) }}
-                  className="p-0.5 rounded hover:bg-accent" title="Duplicate">
+                  className="p-0.5 rounded hover:bg-accent transition-colors" title="Duplicate">
                   <Copy className="h-3.5 w-3.5" />
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); removeBlock(block.id) }}
-                  className="p-0.5 rounded hover:bg-accent text-destructive" title="Delete">
+                  className="p-0.5 rounded hover:bg-accent transition-colors text-destructive" title="Delete">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -653,7 +653,7 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
                 {SOCIAL_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <Input className="h-7 text-xs flex-1" placeholder="https://..." value={n.href} onChange={(e) => updateNetwork(idx, 'href', e.target.value)} />
-              <button onClick={() => removeNetwork(idx)} className="text-destructive p-0.5 hover:bg-destructive/10 rounded">
+              <button onClick={() => removeNetwork(idx)} className="text-destructive p-0.5 hover:bg-destructive/10 transition-colors rounded">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -767,7 +767,7 @@ function AlignButtons({ align, onChange }: { align: string; onChange: (v: 'left'
         <button
           key={a}
           onClick={() => onChange(a)}
-          className={`px-1.5 py-0.5 text-[10px] ${align === a ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+          className={`px-1.5 py-0.5 text-[10px] ${align === a ? 'bg-primary text-primary-foreground' : 'hover:bg-accent transition-colors'}`}
         >
           {a === 'left' ? '◀' : a === 'center' ? '◆' : '▶'}
         </button>

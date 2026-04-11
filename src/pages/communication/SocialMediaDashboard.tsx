@@ -17,9 +17,9 @@ const platforms = [
   {
     name: 'Twitter / X',
     icon: Twitter,
-    color: 'text-sky-500',
-    bgColor: 'bg-sky-50',
-    borderColor: 'border-sky-200',
+    color: 'text-info',
+    bgColor: 'bg-info/5',
+    borderColor: 'border-info/20',
     description: 'Tweets, threads, and engagement',
     features: ['Tweet scheduling', 'Thread composer', 'Hashtag analytics', 'Follower tracking'],
   },

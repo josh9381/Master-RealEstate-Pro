@@ -398,7 +398,7 @@ const EmailConfiguration = () => {
                   <button
                     type="button"
                     onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted transition-colors rounded"
                     title={showApiKey ? "Hide API Key" : "Show API Key"}
                   >
                     {showApiKey ? (

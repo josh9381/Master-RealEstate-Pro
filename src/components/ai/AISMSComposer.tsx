@@ -241,7 +241,7 @@ export function AISMSComposer({
               <Badge 
                 variant={charCount > 160 ? "destructive" : "secondary"}
                 className={cn(
-                  charCount > 160 && charCount <= 320 && "bg-warning/10 text-warning hover:bg-warning/10"
+                  charCount > 160 && charCount <= 320 && "bg-warning/10 text-warning hover:bg-warning/10 transition-colors"
                 )}
               >
                 {charCount} chars

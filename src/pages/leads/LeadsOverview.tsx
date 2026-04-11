@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { leadsApi } from '@/lib/api';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { calcRate } from '@/lib/metricsCalculator';
 
 const SOCIAL_MEDIA_SOURCES = ['linkedin', 'instagram', 'facebook ads', 'google ads', 'youtube', 'social media', 'social'];
@@ -36,7 +37,7 @@ const quickLinks = [
 
 export default function LeadsOverview() {
   // Fetch global stats
-  const { data: stats } = useQuery({
+  const { data: stats, isError, refetch } = useQuery({
     queryKey: ['leads-global-stats'],
     queryFn: async () => {
       try {
@@ -90,6 +91,7 @@ export default function LeadsOverview() {
 
   return (
     <div className="space-y-6">
+      {isError && <ErrorBanner message="Failed to load lead statistics" retry={refetch} />}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

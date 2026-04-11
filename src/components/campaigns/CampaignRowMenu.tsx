@@ -32,14 +32,14 @@ export function CampaignRowMenu({ campaign, actions }: CampaignRowMenuProps) {
   return (
     <div className="absolute right-0 top-10 z-10 w-48 rounded-md border bg-background shadow-lg">
       <Link to={`/campaigns/${campaign.id}`}>
-        <button className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted">
+        <button className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted transition-colors">
           <Edit className="mr-2 h-4 w-4" />
           View Details
         </button>
       </Link>
       <button
         onClick={() => actions.onDuplicate(id)}
-        className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
+        className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted transition-colors"
       >
         <Copy className="mr-2 h-4 w-4" />
         Duplicate
@@ -48,7 +48,7 @@ export function CampaignRowMenu({ campaign, actions }: CampaignRowMenuProps) {
         <button
           onClick={() => actions.onPause(id)}
           disabled={actions.isPausePending}
-          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
+          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
         >
           <Pause className="mr-2 h-4 w-4" />
           {actions.isPausePending ? 'Pausing…' : 'Pause'}
@@ -58,7 +58,7 @@ export function CampaignRowMenu({ campaign, actions }: CampaignRowMenuProps) {
         <button
           onClick={() => actions.onResume(id)}
           disabled={actions.isResumePending}
-          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
+          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
         >
           <PlayCircle className="mr-2 h-4 w-4" />
           {actions.isResumePending ? 'Resuming…' : 'Resume'}
@@ -68,7 +68,7 @@ export function CampaignRowMenu({ campaign, actions }: CampaignRowMenuProps) {
         <button
           onClick={() => actions.onSend(id)}
           disabled={actions.isSendPending}
-          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
+          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
         >
           <Mail className="mr-2 h-4 w-4" />
           {actions.isSendPending ? 'Sending…' : 'Send Now'}
@@ -78,7 +78,7 @@ export function CampaignRowMenu({ campaign, actions }: CampaignRowMenuProps) {
         <button
           onClick={() => actions.onUnarchive(id)}
           disabled={actions.isUnarchivePending}
-          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
+          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
         >
           <ArchiveRestore className="mr-2 h-4 w-4" />
           {actions.isUnarchivePending ? 'Unarchiving…' : 'Unarchive'}
@@ -87,7 +87,7 @@ export function CampaignRowMenu({ campaign, actions }: CampaignRowMenuProps) {
         <button
           onClick={() => actions.onArchive(id)}
           disabled={actions.isArchivePending}
-          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
+          className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
         >
           <Archive className="mr-2 h-4 w-4" />
           {actions.isArchivePending ? 'Archiving…' : 'Archive'}
@@ -95,14 +95,14 @@ export function CampaignRowMenu({ campaign, actions }: CampaignRowMenuProps) {
       )}
       <button
         onClick={() => actions.onChangeStatus(id)}
-        className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted"
+        className="flex w-full items-center px-4 py-2 text-sm hover:bg-muted transition-colors"
       >
         <PlayCircle className="mr-2 h-4 w-4" />
         Change Status
       </button>
       <button
         onClick={() => actions.onDelete(id)}
-        className="flex w-full items-center px-4 py-2 text-sm text-destructive hover:bg-destructive/5"
+        className="flex w-full items-center px-4 py-2 text-sm text-destructive hover:bg-destructive/5 transition-colors"
       >
         <Trash2 className="mr-2 h-4 w-4" />
         Delete
