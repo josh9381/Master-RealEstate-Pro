@@ -23,6 +23,7 @@ import { Link } from 'react-router-dom';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { useQuery } from '@tanstack/react-query';
 import { settingsApi } from '@/lib/api';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { useAuthStore } from '@/store/authStore';
 
 // ── Setup progress tracker ──────────────────────────────────────
@@ -104,7 +105,7 @@ const SettingsHub = () => {
   const user = useAuthStore((s) => s.user);
 
   // Fetch live status from APIs
-  const { data: profileData } = useQuery({
+  const { data: profileData, isError: profileError, error: profileErr, refetch: refetchProfile } = useQuery({
     queryKey: ['settings', 'profile'],
     queryFn: async () => {
       const response = await settingsApi.getProfile();
@@ -174,6 +175,8 @@ const SettingsHub = () => {
 
   return (
     <div className="space-y-6">
+      {profileError && <ErrorBanner message={profileErr?.message || 'Failed to load settings'} retry={refetchProfile} />}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

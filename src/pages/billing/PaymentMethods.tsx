@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useQuery } from '@tanstack/react-query';
 import { billingApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface PaymentMethod {
   id: string;
@@ -29,7 +30,7 @@ const PaymentMethods = () => {
   const { toast } = useToast();
 
   // Fetch payment methods from API
-  const { data: paymentMethodsRes, isLoading } = useQuery({
+  const { data: paymentMethodsRes, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['billing-payment-methods'],
     queryFn: () => billingApi.getPaymentMethods(),
   });
@@ -44,6 +45,10 @@ const PaymentMethods = () => {
   const handleAddPaymentMethod = () => {
     toast.info('Stripe payment method setup requires STRIPE_SECRET_KEY to be configured.');
   };
+
+  if (isError) {
+    return <ErrorBanner message={error?.message || 'Failed to load payment methods'} retry={refetch} />;
+  }
 
   if (isLoading) {
     return <LoadingSkeleton rows={3} />;

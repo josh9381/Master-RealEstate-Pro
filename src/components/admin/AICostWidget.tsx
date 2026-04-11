@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Brain, TrendingUp, DollarSign, Zap } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { aiApi } from '@/lib/api'
 
 interface UsageLimitsData {
@@ -32,7 +33,7 @@ interface UsageLimitsData {
  * Shows AI spend this month, token usage, and breakdown by feature.
  */
 export function AICostWidget() {
-  const { data, isLoading } = useQuery<UsageLimitsData>({
+  const { data, isLoading, isError, error, refetch } = useQuery<UsageLimitsData>({
     queryKey: ['admin', 'ai-cost'],
     queryFn: async () => {
       const response = await aiApi.getUsageLimits()
@@ -40,6 +41,10 @@ export function AICostWidget() {
     },
     refetchInterval: 60_000,
   })
+
+  if (isError) {
+    return <ErrorBanner message={error?.message || 'Failed to load AI cost data'} retry={refetch} />
+  }
 
   if (isLoading) {
     return (

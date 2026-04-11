@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Crown, Users, Mail, Target, Workflow, TrendingUp, AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import api from '@/lib/api'
 
 interface UsageEntry {
@@ -37,7 +38,7 @@ interface SubscriptionData {
 export function SubscriptionStatus() {
   const { getSubscriptionTier, isTrialActive } = useAuthStore()
   
-  const { data, isLoading } = useQuery<SubscriptionData>({
+  const { data, isLoading, isError, error, refetch } = useQuery<SubscriptionData>({
     queryKey: ['subscription-status'],
     queryFn: async () => {
       const response = await api.get('/subscriptions/current')
@@ -48,7 +49,11 @@ export function SubscriptionStatus() {
   
   const tier = getSubscriptionTier()
   const isTrial = isTrialActive()
-  
+
+  if (isError) {
+    return <ErrorBanner message={error?.message || 'Failed to load subscription status'} retry={refetch} />
+  }
+
   if (isLoading) {
     return (
       <div className="bg-card rounded-lg border border-border p-6 animate-pulse">

@@ -1,6 +1,7 @@
 import { logger } from '@/lib/logger'
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Workflow as WorkflowIcon, Plus, Play, Pause, Edit, Trash2, BarChart3, RefreshCw, LayoutGrid, LayoutList, ChevronRight, Search, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
@@ -51,7 +52,7 @@ const WorkflowsList = () => {
   const [analyticsWorkflow, setAnalyticsWorkflow] = useState<Workflow | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data, isLoading: loading, refetch } = useQuery({
+  const { data, isLoading: loading, isError, refetch } = useQuery({
     queryKey: ['workflows'],
     queryFn: async () => {
       const [workflowsResponse, statsResponse] = await Promise.all([
@@ -255,6 +256,8 @@ const WorkflowsList = () => {
 
       {loading ? (
         <LoadingSkeleton rows={4} />
+      ) : isError ? (
+        <ErrorBanner message="Failed to load workflows" retry={refetch} />
       ) : (
         <>
       {/* Search Bar */}

@@ -1,6 +1,7 @@
 import { logger } from '@/lib/logger'
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import {
   TestTube2, TrendingUp, Users, Mail, RefreshCw, Play, Pause, Trash2,
   ChevronDown, ChevronUp, Plus, Copy, Clock, BarChart3, Trophy,
@@ -181,7 +182,7 @@ const ABTesting = () => {
     if (createErrors.campaign) setCreateErrors(prev => { const next = { ...prev }; delete next.campaign; return next; });
   };
 
-  const { data: abData, isFetching: isLoading, refetch: loadABTests } = useQuery({
+  const { data: abData, isFetching: isLoading, isError, refetch: loadABTests } = useQuery({
     queryKey: ['abTests'],
     queryFn: async () => {
       const allTests = await abtestService.getABTests();
@@ -375,6 +376,14 @@ const ABTesting = () => {
     const v = variants[status] ?? { variant: 'secondary' as const, label: status };
     return <Badge variant={v.variant} className="text-[10px]">{v.label}</Badge>;
   };
+
+  if (isError && tests.length === 0) {
+    return (
+      <div className="space-y-6">
+        <ErrorBanner message="Failed to load A/B tests" retry={loadABTests} />
+      </div>
+    );
+  }
 
   if (isLoading && tests.length === 0) {
     return (

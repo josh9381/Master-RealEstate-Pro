@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { calcProgress, formatRate, fmtMoney } from '@/lib/metricsCalculator'
 import {
   TrendingUp,
@@ -829,6 +830,15 @@ function Dashboard() {
   // Show loading state while fetching data
   if (isLoading) {
     return <LoadingSkeleton rows={5} showChart />
+  }
+
+  // Show critical error if main stats query failed
+  if (statsError) {
+    return (
+      <div className="space-y-4 p-4">
+        <ErrorBanner message="Failed to load dashboard data" retry={refetchStats} />
+      </div>
+    )
   }
 
   // Determine context-aware quick actions
