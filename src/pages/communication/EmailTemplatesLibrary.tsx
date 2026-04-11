@@ -515,11 +515,11 @@ const EmailTemplatesLibrary = () => {
                 <option value="name">Sort: Name A–Z</option>
                 <option value="usage">Sort: Most Used</option>
               </select>
-              <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('grid')}>
+              <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="sm" aria-pressed={viewMode === 'grid'} onClick={() => setViewMode('grid')}>
                 <Layout className="h-4 w-4 mr-2" />
                 Grid
               </Button>
-              <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('list')}>
+              <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="sm" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')}>
                 <Type className="h-4 w-4 mr-2" />
                 List
               </Button>

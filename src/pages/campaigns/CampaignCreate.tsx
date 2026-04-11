@@ -758,7 +758,7 @@ function CampaignCreate() {
                   value={formData.subject}
                   onChange={(e) => { updateFormData({ subject: e.target.value }); if (campaignErrors.subject) setCampaignErrors(prev => { const next = {...prev}; delete next.subject; return next }) }}
                 />
-                {campaignErrors.subject && <p className="text-sm text-red-500 mt-1" role="alert">⚠ {campaignErrors.subject}</p>}
+                {campaignErrors.subject && <p className="text-sm text-destructive mt-1" role="alert">⚠ {campaignErrors.subject}</p>}
               </div>
             )}
 
@@ -830,8 +830,8 @@ function CampaignCreate() {
                       aria-required="true"
                     />
                     <div className="flex items-center justify-between">
-                      {campaignErrors.subject && <p className="text-sm text-red-500" role="alert">⚠ {campaignErrors.subject}</p>}
-                      <p className={`text-xs ml-auto ${formData.subject.length > 60 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                      {campaignErrors.subject && <p className="text-sm text-destructive" role="alert">⚠ {campaignErrors.subject}</p>}
+                      <p className={`text-xs ml-auto ${formData.subject.length > 60 ? 'text-warning' : 'text-muted-foreground'}`}>
                         {formData.subject.length}/60 chars {formData.subject.length > 60 && '— shorter subjects get higher open rates'}
                       </p>
                     </div>
@@ -902,7 +902,7 @@ function CampaignCreate() {
                       minHeight="350px"
                       showTemplates={true}
                     />
-                    {campaignErrors.content && <p className="text-sm text-red-500" role="alert">⚠ {campaignErrors.content}</p>}
+                    {campaignErrors.content && <p className="text-sm text-destructive" role="alert">⚠ {campaignErrors.content}</p>}
                   </div>
                   {/* Attachments */}
                   <div className="space-y-2">
@@ -915,7 +915,7 @@ function CampaignCreate() {
                           <button
                             type="button"
                             onClick={() => updateFormData({ attachments: formData.attachments.filter((_, i) => i !== idx) })}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-destructive hover:text-destructive/80"
                           >×</button>
                         </div>
                       ))}
@@ -1013,11 +1013,11 @@ function CampaignCreate() {
                         value={formData.content}
                         onChange={(e) => { updateFormData({ content: e.target.value }); if (campaignErrors.content) setCampaignErrors(prev => { const next = {...prev}; delete next.content; return next }) }}
                       />
-                      {campaignErrors.content && <p className="text-sm text-red-500" role="alert">⚠ {campaignErrors.content}</p>}
+                      {campaignErrors.content && <p className="text-sm text-destructive" role="alert">⚠ {campaignErrors.content}</p>}
                       
                       {/* Character count + segment info */}
                       <div className="flex justify-between text-xs" aria-live="polite">
-                        <span className={`${formData.content.length > 250 ? 'text-amber-500 font-medium' : 'text-muted-foreground'}`}>
+                        <span className={`${formData.content.length > 250 ? 'text-warning font-medium' : 'text-muted-foreground'}`}>
                           {formData.content.length}/294 characters (26 reserved for TCPA footer)
                         </span>
                         <span className="text-muted-foreground">
@@ -1124,7 +1124,7 @@ function CampaignCreate() {
                   </div>
 
                   {/* TCPA Compliance */}
-                  <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-200">
+                  <div className="rounded-md bg-warning/10 dark:bg-warning/10 border border-warning/30 dark:border-warning/30 p-3 text-xs text-foreground dark:text-foreground">
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                       <div>
@@ -1426,7 +1426,7 @@ function CampaignCreate() {
                         onChange={(e) => { updateFormData({ scheduleDate: e.target.value }); if (campaignErrors.scheduleDate) setCampaignErrors(prev => { const next = {...prev}; delete next.scheduleDate; return next }) }}
                         min={new Date().toISOString().split('T')[0]}
                       />
-                      {campaignErrors.scheduleDate && <p className="text-sm text-red-500 mt-1" role="alert">⚠ {campaignErrors.scheduleDate}</p>}
+                      {campaignErrors.scheduleDate && <p className="text-sm text-destructive mt-1" role="alert">⚠ {campaignErrors.scheduleDate}</p>}
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Time</label>
@@ -1640,7 +1640,7 @@ function CampaignCreate() {
                   value={formData.budget}
                   onChange={(e) => { updateFormData({ budget: e.target.value }); if (campaignErrors.budget) setCampaignErrors(prev => { const next = {...prev}; delete next.budget; return next }) }}
                 />
-                {campaignErrors.budget && <p className="text-sm text-red-500 mt-1" role="alert">⚠ {campaignErrors.budget}</p>}
+                {campaignErrors.budget && <p className="text-sm text-destructive mt-1" role="alert">⚠ {campaignErrors.budget}</p>}
                 <p className="text-xs text-muted-foreground">
                   Set a budget limit for this campaign
                 </p>
@@ -1694,8 +1694,8 @@ function CampaignCreate() {
                   <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Content</div>
                   <div className="text-sm">
                     {formData.content 
-                      ? <span className="text-green-600 dark:text-green-400 flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Content ready ({selectedType === 'sms' ? `${formData.content.length} chars` : 'email body set'})</span>
-                      : <span className="text-amber-500 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> No content added</span>
+                      ? <span className="text-success dark:text-success flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Content ready ({selectedType === 'sms' ? `${formData.content.length} chars` : 'email body set'})</span>
+                      : <span className="text-warning flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> No content added</span>
                     }
                   </div>
                 </div>

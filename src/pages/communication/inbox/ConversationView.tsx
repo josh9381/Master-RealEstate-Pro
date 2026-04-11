@@ -242,7 +242,7 @@ export const ConversationView = ({
           </div>
         </div>
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={() => onToggleStar(selectedContact.id)} title="Star" aria-label="Star conversation">
+          <Button size="sm" variant="ghost" onClick={() => onToggleStar(selectedContact.id)} title="Star" aria-label="Star conversation" aria-pressed={hasStarred}>
             <Star className={`h-4 w-4 ${hasStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
           </Button>
           <Button size="sm" variant="ghost" onClick={() => onArchive(selectedContact.id)} title="Archive" aria-label="Archive conversation">

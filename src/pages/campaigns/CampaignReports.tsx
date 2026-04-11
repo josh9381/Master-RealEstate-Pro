@@ -306,7 +306,7 @@ function CampaignDetailCard({ campaign, onNavigate }: { campaign: EnrichedCampai
         <StatCell label="Sent" value={campaign.sent ?? 0} />
         <StatCell label="Delivered" value={campaign.delivered ?? 0} rate={`${formatRate(calcDeliveryRate(campaign.delivered ?? 0, campaign.sent))}%`} rateColor="text-success" />
         <StatCell label="Opened" value={campaign.opened ?? 0} rate={`${formatRate(calcOpenRate(campaign.opened ?? 0, campaign.sent))}%`} rateColor="text-primary" />
-        <StatCell label="Clicked" value={campaign.clicked ?? 0} rate={`${formatRate(calcClickRate(campaign.clicked ?? 0, campaign.sent))}%`} rateColor="text-purple-600" />
+        <StatCell label="Clicked" value={campaign.clicked ?? 0} rate={`${formatRate(calcClickRate(campaign.clicked ?? 0, campaign.sent))}%`} rateColor="text-primary" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
         <StatCell label="Bounced" value={campaign.bounced ?? 0} rate={`${formatRate(calcBounceRate(campaign.bounced ?? 0, campaign.sent))}%`} rateColor="text-destructive" large={false} />
@@ -923,9 +923,9 @@ function DetailedReportsTab() {
               const stages: FunnelStageData[] = [
                 { stage: 'Sent', count: totals.sent, percentage: 100, color: 'bg-primary' },
                 { stage: 'Delivered', count: totals.delivered, percentage: calcDeliveryRate(totals.delivered, totals.sent), color: 'bg-success' },
-                { stage: 'Opened', count: totals.opened, percentage: calcOpenRate(totals.opened, totals.sent), color: 'bg-orange-500' },
-                { stage: 'Clicked', count: totals.clicked, percentage: calcClickRate(totals.clicked, totals.sent), color: 'bg-purple-500' },
-                { stage: 'Converted', count: totals.converted, percentage: calcConversionRate(totals.converted, totals.sent), color: 'bg-pink-500' },
+                { stage: 'Opened', count: totals.opened, percentage: calcOpenRate(totals.opened, totals.sent), color: 'bg-warning' },
+                { stage: 'Clicked', count: totals.clicked, percentage: calcClickRate(totals.clicked, totals.sent), color: 'bg-primary' },
+                { stage: 'Converted', count: totals.converted, percentage: calcConversionRate(totals.converted, totals.sent), color: 'bg-info' },
               ];
               return stages.map((s) => <FunnelBar key={s.stage} {...s} />);
             })()}
@@ -947,10 +947,10 @@ function DetailedReportsTab() {
         <LeaderboardCard
           title="Best Click Rate"
           description="Campaigns driving most clicks"
-          indicatorColor="bg-purple-600"
+          indicatorColor="bg-primary"
           items={topByClickRate}
           rateCalc={(item) => calcClickRate(item.clicked, item.sent)}
-          valueColor="text-purple-600"
+          valueColor="text-primary"
           onItemClick={(id) => navigate(`/campaigns/${id}`)}
         />
       </div>

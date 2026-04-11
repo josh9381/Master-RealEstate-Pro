@@ -770,10 +770,10 @@ function LeadsList() {
               </Button>
             </Link>
             <div className="flex rounded-lg border">
-              <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="sm" className="rounded-r-none border-r-0" title="Table View" onClick={() => { setViewMode('table'); localStorage.setItem('leadsViewMode', 'table') }}>
+              <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="sm" className="rounded-r-none border-r-0" title="Table View" aria-pressed={viewMode === 'table'} onClick={() => { setViewMode('table'); localStorage.setItem('leadsViewMode', 'table') }}>
                 <LayoutList className="h-4 w-4" />
               </Button>
-              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" className="rounded-none border-r-0" title="Grid View" onClick={() => { setViewMode('grid'); localStorage.setItem('leadsViewMode', 'grid') }}>
+              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" className="rounded-none border-r-0" title="Grid View" aria-pressed={viewMode === 'grid'} onClick={() => { setViewMode('grid'); localStorage.setItem('leadsViewMode', 'grid') }}>
                 <LayoutGrid className="h-4 w-4" />
               </Button>
               <Link to="/leads/pipeline">

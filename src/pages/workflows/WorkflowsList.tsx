@@ -222,6 +222,7 @@ const WorkflowsList = () => {
               className="rounded-r-none border-0"
               onClick={() => setViewMode('list')}
               title="List View"
+              aria-pressed={viewMode === 'list'}
             >
               <LayoutList className="h-4 w-4" />
             </Button>
@@ -231,6 +232,7 @@ const WorkflowsList = () => {
               className="rounded-l-none border-0"
               onClick={() => setViewMode('grid')}
               title="Grid View"
+              aria-pressed={viewMode === 'grid'}
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>

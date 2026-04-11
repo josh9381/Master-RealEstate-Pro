@@ -439,11 +439,11 @@ function CampaignsList() {
 
       {/* Phone Coming Soon Banner */}
       {typeFilter === 'PHONE' && (
-        <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-8 text-center">
-          <span className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium mb-2">
+        <div className="bg-warning/5 border border-warning/30 rounded-lg p-8 text-center">
+          <span className="inline-flex items-center gap-2 px-3 py-1 bg-warning/10 text-warning rounded-full text-sm font-medium mb-2">
             Coming Soon
           </span>
-          <p className="text-sm text-amber-700">
+          <p className="text-sm text-muted-foreground">
             Voice telephony integration is on the roadmap. Use Email or SMS campaigns in the meantime.
           </p>
         </div>
@@ -491,8 +491,8 @@ function CampaignsList() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
             <CardTitle className="text-xs font-medium">Active Campaigns</CardTitle>
-            <div className="rounded-full bg-blue-100 p-1.5">
-              <Target className="h-3.5 w-3.5 text-blue-600" />
+            <div className="rounded-full bg-primary/10 p-1.5">
+              <Target className="h-3.5 w-3.5 text-primary" />
             </div>
           </CardHeader>
           <CardContent className="pb-3 px-4">
@@ -504,8 +504,8 @@ function CampaignsList() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
             <CardTitle className="text-xs font-medium">Messages Sent</CardTitle>
-            <div className="rounded-full bg-green-100 p-1.5">
-              <Users className="h-3.5 w-3.5 text-green-600" />
+            <div className="rounded-full bg-success/10 p-1.5">
+              <Users className="h-3.5 w-3.5 text-success" />
             </div>
           </CardHeader>
           <CardContent className="pb-3 px-4">
@@ -517,8 +517,8 @@ function CampaignsList() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
             <CardTitle className="text-xs font-medium">Total Revenue</CardTitle>
-            <div className="rounded-full bg-purple-100 p-1.5">
-              <DollarSign className="h-3.5 w-3.5 text-purple-600" />
+            <div className="rounded-full bg-primary/10 p-1.5">
+              <DollarSign className="h-3.5 w-3.5 text-primary" />
             </div>
           </CardHeader>
           <CardContent className="pb-3 px-4">
@@ -530,8 +530,8 @@ function CampaignsList() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
             <CardTitle className="text-xs font-medium">Average ROI</CardTitle>
-            <div className="rounded-full bg-orange-100 p-1.5">
-              <TrendingUp className="h-3.5 w-3.5 text-orange-600" />
+            <div className="rounded-full bg-warning/10 p-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-warning" />
             </div>
           </CardHeader>
           <CardContent className="pb-3 px-4">
@@ -543,8 +543,8 @@ function CampaignsList() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
             <CardTitle className="text-xs font-medium">Budget</CardTitle>
-            <div className="rounded-full bg-indigo-100 p-1.5">
-              <DollarSign className="h-3.5 w-3.5 text-indigo-600" />
+            <div className="rounded-full bg-info/10 p-1.5">
+              <DollarSign className="h-3.5 w-3.5 text-info" />
             </div>
           </CardHeader>
           <CardContent className="pb-3 px-4">
@@ -552,7 +552,7 @@ function CampaignsList() {
             <p className="text-[11px] text-muted-foreground">of {fmtMoney(stats.totalBudget)} budget</p>
             <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                className="h-full bg-gradient-to-r from-primary to-info"
                 style={{ width: `${calcProgress(stats.totalSpent, stats.totalBudget)}%` }}
               />
             </div>
@@ -586,6 +586,7 @@ function CampaignsList() {
                 onClick={() => setViewMode('list')}
                 title="List view"
                 aria-label="List view"
+                aria-pressed={viewMode === 'list'}
               >
                 <LayoutList className="h-4 w-4" />
               </Button>
@@ -595,6 +596,7 @@ function CampaignsList() {
                 onClick={() => setViewMode('grid')}
                 title="Grid view"
                 aria-label="Grid view"
+                aria-pressed={viewMode === 'grid'}
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -604,6 +606,7 @@ function CampaignsList() {
                 onClick={() => setViewMode('calendar')}
                 title="Calendar view"
                 aria-label="Calendar view"
+                aria-pressed={viewMode === 'calendar'}
               >
                 <CalendarIcon className="h-4 w-4" />
               </Button>
@@ -616,8 +619,8 @@ function CampaignsList() {
           <p className="text-sm font-medium mb-2">Quick Start Templates</p>
           <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
             <Link to="/campaigns/create?type=EMAIL&template=newsletter" className="flex items-center gap-2 rounded-lg border p-2.5 transition-all hover:bg-muted hover:border-primary/30">
-              <div className="rounded-full bg-blue-100 p-1.5 flex-shrink-0">
-                <Mail className="h-3.5 w-3.5 text-blue-600" />
+              <div className="rounded-full bg-primary/10 p-1.5 flex-shrink-0">
+                <Mail className="h-3.5 w-3.5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium leading-tight">Newsletter</p>
@@ -625,8 +628,8 @@ function CampaignsList() {
               </div>
             </Link>
             <Link to="/campaigns/create?type=EMAIL&template=promotional" className="flex items-center gap-2 rounded-lg border p-2.5 transition-all hover:bg-muted hover:border-primary/30">
-              <div className="rounded-full bg-green-100 p-1.5 flex-shrink-0">
-                <Tag className="h-3.5 w-3.5 text-green-600" />
+              <div className="rounded-full bg-success/10 p-1.5 flex-shrink-0">
+                <Tag className="h-3.5 w-3.5 text-success" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium leading-tight">Promotional</p>
@@ -634,8 +637,8 @@ function CampaignsList() {
               </div>
             </Link>
             <Link to="/campaigns/create?type=SMS&template=open-house" className="flex items-center gap-2 rounded-lg border p-2.5 transition-all hover:bg-muted hover:border-primary/30">
-              <div className="rounded-full bg-purple-100 p-1.5 flex-shrink-0">
-                <CalendarIcon className="h-3.5 w-3.5 text-purple-600" />
+              <div className="rounded-full bg-primary/10 p-1.5 flex-shrink-0">
+                <CalendarIcon className="h-3.5 w-3.5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium leading-tight">Open House</p>
@@ -643,8 +646,8 @@ function CampaignsList() {
               </div>
             </Link>
             <Link to="/campaigns/create?type=EMAIL&template=survey" className="flex items-center gap-2 rounded-lg border p-2.5 transition-all hover:bg-muted hover:border-primary/30">
-              <div className="rounded-full bg-orange-100 p-1.5 flex-shrink-0">
-                <ClipboardList className="h-3.5 w-3.5 text-orange-600" />
+              <div className="rounded-full bg-warning/10 p-1.5 flex-shrink-0">
+                <ClipboardList className="h-3.5 w-3.5 text-warning" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium leading-tight">Survey</p>
@@ -893,7 +896,7 @@ function CampaignsList() {
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        className="h-full bg-gradient-to-r from-primary to-info"
                         style={{ width: `${calcProgress(campaign.spent ?? 0, campaign.budget)}%` }}
                       />
                     </div>
@@ -983,7 +986,7 @@ function CampaignsList() {
                   </div>
                   <div className="pt-1.5 border-t flex justify-between items-center">
                     <span className="text-xs text-muted-foreground">ROI</span>
-                    <span className="font-bold text-sm text-green-600">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</span>
+                    <span className="font-bold text-sm text-success">{campaign.sent ? `${formatRate(calcROI(campaign.revenue ?? 0, campaign.spent ?? 0))}%` : 'N/A'}</span>
                   </div>
                   {campaign.budget && (
                     <div className="pt-1">
@@ -993,7 +996,7 @@ function CampaignsList() {
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                          className="h-full bg-gradient-to-r from-primary to-info"
                           style={{ width: `${calcProgress(campaign.spent ?? 0, campaign.budget)}%` }}
                         />
                       </div>
@@ -1136,11 +1139,9 @@ function CampaignsList() {
                       {(campaignsByDay[day] || []).slice(0, 3).map(c => (
                         <Link key={c.id} to={`/campaigns/${c.id}`}>
                           <div
-                            className="text-[10px] leading-tight truncate rounded px-1 py-0.5 cursor-pointer hover:opacity-80"
-                            style={{
-                              backgroundColor: c.status === 'ACTIVE' ? '#dcfce7' : c.status === 'SCHEDULED' ? '#fef3c7' : c.status === 'PAUSED' ? '#e5e7eb' : '#dbeafe',
-                              color: c.status === 'ACTIVE' ? '#166534' : c.status === 'SCHEDULED' ? '#92400e' : c.status === 'PAUSED' ? '#374151' : '#1e40af',
-                            }}
+                            className={`text-[10px] leading-tight truncate rounded px-1 py-0.5 cursor-pointer hover:opacity-80 ${
+                              c.status === 'ACTIVE' ? 'bg-success/10 text-success' : c.status === 'SCHEDULED' ? 'bg-warning/10 text-warning' : c.status === 'PAUSED' ? 'bg-muted text-muted-foreground' : 'bg-info/10 text-info'
+                            }`}
                             title={`${c.name} (${c.status})`}
                           >
                             {c.name}
@@ -1220,7 +1221,7 @@ function CampaignsList() {
       <Dialog open={showDeleteModal} onOpenChange={(open) => { setShowDeleteModal(open); if (!open) setCampaignToDelete(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle><span className="text-red-600">Delete Campaign</span></DialogTitle>
+            <DialogTitle><span className="text-destructive">Delete Campaign</span></DialogTitle>
             <DialogDescription>
               {campaignToDelete
                 ? `Are you sure you want to delete "${campaigns.find(c => c.id === campaignToDelete)?.name}"? This action cannot be undone.`

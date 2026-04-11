@@ -131,8 +131,8 @@ export default function CampaignsOverview() {
               <h3 className="mt-2 text-3xl font-bold">{fmtMoney(stats.totalRevenue)}</h3>
               <p className="mt-1 text-xs text-muted-foreground">Campaign-generated revenue</p>
             </div>
-            <div className="rounded-full bg-purple-100 p-3">
-              <DollarSign className="h-6 w-6 text-purple-600" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <DollarSign className="h-6 w-6 text-primary" />
             </div>
           </div>
         </Card>
@@ -144,8 +144,8 @@ export default function CampaignsOverview() {
               <h3 className="mt-2 text-3xl font-bold">{stats.avgROI}%</h3>
               <p className="mt-1 text-xs text-muted-foreground">Return on investment</p>
             </div>
-            <div className="rounded-full bg-orange-100 p-3">
-              <TrendingUp className="h-6 w-6 text-orange-600" />
+            <div className="rounded-full bg-warning/10 p-3">
+              <TrendingUp className="h-6 w-6 text-warning" />
             </div>
           </div>
         </Card>

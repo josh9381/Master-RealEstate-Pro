@@ -57,9 +57,9 @@ const CampaignTemplates = () => {
   const CAMPAIGN_CATEGORIES = ['Newsletter', 'Alert', 'Event', 'Follow-up'];
   const CAMPAIGN_CATEGORY_ICONS: Record<string, string> = { Newsletter: '📰', Alert: '🔔', Event: '📅', 'Follow-up': '🔄' };
   const CAMPAIGN_TYPE_ICONS: Record<string, { icon: typeof Mail, color: string }> = {
-    EMAIL: { icon: Mail, color: 'text-blue-500' },
-    SMS: { icon: MessageSquare, color: 'text-green-500' },
-    PHONE: { icon: Phone, color: 'text-orange-500' },
+    EMAIL: { icon: Mail, color: 'text-primary' },
+    SMS: { icon: MessageSquare, color: 'text-success' },
+    PHONE: { icon: Phone, color: 'text-warning' },
   };
 
   const resetForm = () => {
@@ -352,7 +352,7 @@ const CampaignTemplates = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Email</CardTitle>
-            <Mail className="h-4 w-4 text-blue-500" />
+            <Mail className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.email}</div>
@@ -363,7 +363,7 @@ const CampaignTemplates = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">SMS</CardTitle>
-            <MessageSquare className="h-4 w-4 text-green-500" />
+            <MessageSquare className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.sms}</div>
@@ -375,7 +375,7 @@ const CampaignTemplates = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Phone</CardTitle>
-            <Phone className="h-4 w-4 text-orange-500" />
+            <Phone className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.phone}</div>
@@ -386,7 +386,7 @@ const CampaignTemplates = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recurring</CardTitle>
-            <RefreshCw className="h-4 w-4 text-purple-500" />
+            <RefreshCw className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.recurring}</div>
@@ -561,7 +561,7 @@ const CampaignTemplates = () => {
                     <FileText className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Details</span>
                     {formName.trim() && (formType !== 'EMAIL' || formSubject.trim()) && (
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                     )}
                   </button>
                   <button
@@ -576,7 +576,7 @@ const CampaignTemplates = () => {
                     <Zap className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Content</span>
                     {formBody.trim() && (
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                     )}
                   </button>
                 </div>
@@ -594,8 +594,8 @@ const CampaignTemplates = () => {
                   {/* Campaign Name */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="campaign-name" className="text-sm font-medium">Campaign Name <span className="text-red-500">*</span></label>
-                      <span className={`text-xs ${formName.length > 80 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                      <label htmlFor="campaign-name" className="text-sm font-medium">Campaign Name <span className="text-destructive">*</span></label>
+                      <span className={`text-xs ${formName.length > 80 ? 'text-destructive' : 'text-muted-foreground'}`}>
                         {formName.length}/100
                       </span>
                     </div>
@@ -612,7 +612,7 @@ const CampaignTemplates = () => {
 
                   {/* Type Selection */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Campaign Type <span className="text-red-500">*</span></label>
+                    <label className="text-sm font-medium">Campaign Type <span className="text-destructive">*</span></label>
                     <div className="grid grid-cols-3 gap-3">
                       {(['EMAIL', 'SMS', 'PHONE'] as const).map(type => {
                         const TypeIcon = CAMPAIGN_TYPE_ICONS[type].icon;
@@ -664,8 +664,8 @@ const CampaignTemplates = () => {
                   {formType === 'EMAIL' && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label htmlFor="campaign-subject" className="text-sm font-medium">Subject Line <span className="text-red-500">*</span></label>
-                        <span className={`text-xs ${formSubject.length > 120 ? 'text-red-500' : formSubject.length > 60 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                        <label htmlFor="campaign-subject" className="text-sm font-medium">Subject Line <span className="text-destructive">*</span></label>
+                        <span className={`text-xs ${formSubject.length > 120 ? 'text-destructive' : formSubject.length > 60 ? 'text-warning' : 'text-muted-foreground'}`}>
                           {formSubject.length}/150 {formSubject.length > 60 && formSubject.length <= 120 ? '— may be truncated on mobile' : ''}
                         </span>
                       </div>
@@ -759,10 +759,10 @@ const CampaignTemplates = () => {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label htmlFor="campaign-body" className="text-sm font-medium">
-                            {formType === 'SMS' ? 'SMS Message' : 'Phone Script'} <span className="text-red-500">*</span>
+                            {formType === 'SMS' ? 'SMS Message' : 'Phone Script'} <span className="text-destructive">*</span>
                           </label>
                           {formType === 'SMS' && (
-                            <span className={`text-xs ${formBody.length > 480 ? 'text-red-500' : formBody.length > 320 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                            <span className={`text-xs ${formBody.length > 480 ? 'text-destructive' : formBody.length > 320 ? 'text-warning' : 'text-muted-foreground'}`}>
                               {formBody.length} chars &bull; {Math.max(1, Math.ceil(formBody.length / 160))} segment{Math.max(1, Math.ceil(formBody.length / 160)) !== 1 ? 's' : ''}
                             </span>
                           )}
