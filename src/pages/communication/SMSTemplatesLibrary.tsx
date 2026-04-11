@@ -303,7 +303,7 @@ const SMSTemplatesLibrary = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">SMS Templates</h1>
+          <h1 className="text-2xl font-semibold leading-tight">SMS Templates</h1>
           <p className="text-muted-foreground mt-2">Manage reusable SMS templates for outreach</p>
         </div>
         <Button onClick={openCreate}>
@@ -494,7 +494,7 @@ const SMSTemplatesLibrary = () => {
                   <MessageSquare className="h-5 w-5 text-success" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">{editingTemplate ? 'Edit SMS Template' : 'Create SMS Template'}</h2>
+                  <h2 className="text-lg font-semibold leading-tight">{editingTemplate ? 'Edit SMS Template' : 'Create SMS Template'}</h2>
                   <p className="text-xs text-muted-foreground">
                     {editingTemplate ? `Editing "${editingTemplate.name}"` : 'Design your SMS template with variable support'}
                   </p>

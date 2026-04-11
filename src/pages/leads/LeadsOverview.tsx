@@ -95,7 +95,7 @@ export default function LeadsOverview() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Leads</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Leads</h1>
           <p className="mt-1 text-muted-foreground">Overview of your lead pipeline and performance</p>
         </div>
       </div>
@@ -158,7 +158,7 @@ export default function LeadsOverview() {
       {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-1">Lead Source Breakdown</h2>
+          <h2 className="text-lg font-semibold leading-tight mb-1">Lead Source Breakdown</h2>
           <p className="text-xs text-muted-foreground mb-4">
             {total > 0 ? `Based on all ${total} leads` : 'No lead data yet'}
           </p>
@@ -180,7 +180,7 @@ export default function LeadsOverview() {
         </Card>
 
         <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-1">Lead Score Distribution</h2>
+          <h2 className="text-lg font-semibold leading-tight mb-1">Lead Score Distribution</h2>
           <p className="text-xs text-muted-foreground mb-4">Score ranges across all leads</p>
           {scoreData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>

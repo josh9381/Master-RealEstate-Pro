@@ -198,7 +198,7 @@ const LeadHistory = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Lead Activity History</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Lead Activity History</h1>
           <p className="text-muted-foreground mt-2">
             Complete timeline of all lead interactions and changes
           </p>

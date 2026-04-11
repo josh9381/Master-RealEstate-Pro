@@ -70,7 +70,7 @@ export function AnalyticsEmptyState({ variant, title, description }: AnalyticsEm
           <div className="p-4 bg-primary/10 rounded-full mb-5">
             <Icon className="h-10 w-10 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">{title || config.title}</h3>
+          <h3 className="text-base font-medium mb-2">{title || config.title}</h3>
           <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
             {description || config.description}
           </p>

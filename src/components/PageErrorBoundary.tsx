@@ -66,7 +66,7 @@ export class PageErrorBoundary extends Component<Props, State> {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
                 <RefreshCw className="h-8 w-8 text-primary" />
               </div>
-              <h2 className="text-xl font-bold text-foreground mb-2">
+              <h2 className="text-lg font-semibold leading-tight text-foreground mb-2">
                 Update Available
               </h2>
               <p className="text-muted-foreground mb-6">
@@ -92,7 +92,7 @@ export class PageErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="h-8 w-8 text-warning" />
               </div>
               
-              <h2 className="text-2xl font-bold text-foreground mb-2">
+              <h2 className="text-lg font-semibold leading-tight text-foreground mb-2">
                 Page Not Available
               </h2>
               

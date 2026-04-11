@@ -180,7 +180,7 @@ const SettingsHub = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight">Overview</h1>
           <p className="text-muted-foreground mt-1">
             Your workspace at a glance
           </p>

@@ -320,7 +320,7 @@ const CampaignTemplates = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Campaign Templates</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Campaign Templates</h1>
           <p className="text-muted-foreground mt-2">
             Pre-built real estate campaign templates to speed up your marketing
           </p>
@@ -540,7 +540,7 @@ const CampaignTemplates = () => {
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">Create Custom Campaign Template</h2>
+                  <h2 className="text-lg font-semibold leading-tight">Create Custom Campaign Template</h2>
                   <p className="text-xs text-muted-foreground">
                     Design a new campaign template for your marketing automation
                   </p>

@@ -53,7 +53,7 @@ export function MassEmailModal({
     <Dialog open={true} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="mass-email-title" className="text-2xl font-bold">Send Mass Email</h2>
+          <h2 id="mass-email-title" className="text-lg font-semibold leading-tight">Send Mass Email</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
@@ -167,7 +167,7 @@ export function TagsModal({
     <Dialog open={true} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="max-w-md">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="tags-title" className="text-xl font-bold">Add Tags</h2>
+          <h2 id="tags-title" className="text-lg font-semibold leading-tight">Add Tags</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
@@ -246,7 +246,7 @@ export function StatusModal({ onClose, onApply }: StatusModalProps) {
     <Dialog open={true} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="max-w-md">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="status-title" className="text-xl font-bold">Change Status</h2>
+          <h2 id="status-title" className="text-lg font-semibold leading-tight">Change Status</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
@@ -299,7 +299,7 @@ export function AssignModal({ teamMembers, onClose, onApply }: AssignModalProps)
     <Dialog open={true} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="max-w-md">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="assign-title" className="text-xl font-bold">Assign Leads</h2>
+          <h2 id="assign-title" className="text-lg font-semibold leading-tight">Assign Leads</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
@@ -353,7 +353,7 @@ export function BulkDeleteModal({ selectedCount, onClose, onDelete }: BulkDelete
     <Dialog open={true} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="max-w-md">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="delete-title" className="text-xl font-bold text-destructive">Delete Leads</h2>
+          <h2 id="delete-title" className="text-lg font-semibold leading-tight text-destructive">Delete Leads</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
@@ -414,7 +414,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
     <Dialog open={true} onOpenChange={(open) => { if (!open) handleClose() }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="edit-lead-title" className="text-2xl font-bold">Edit Lead</h2>
+          <h2 id="edit-lead-title" className="text-lg font-semibold leading-tight">Edit Lead</h2>
           <Button variant="ghost" size="icon" onClick={handleClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>

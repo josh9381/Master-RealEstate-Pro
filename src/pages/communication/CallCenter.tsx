@@ -305,7 +305,7 @@ const CallCenter = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Cold Call Hub</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Cold Call Hub</h1>
           <p className="text-muted-foreground mt-1">Smart queue + lead context + quick disposition</p>
         </div>
         <div className="flex gap-2">

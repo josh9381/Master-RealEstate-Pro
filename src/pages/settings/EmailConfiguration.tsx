@@ -245,7 +245,7 @@ const EmailConfiguration = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Email Configuration</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Email Configuration</h1>
           <p className="text-muted-foreground mt-2">
             Configure SMTP settings and email delivery
           </p>

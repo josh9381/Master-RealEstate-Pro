@@ -192,7 +192,7 @@ export default function LeadCreate() {
             Back to Leads
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Create New Lead</h1>
+            <h1 className="text-2xl font-semibold leading-tight">Create New Lead</h1>
             <p className="text-muted-foreground">Add a new lead to your pipeline</p>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function LeadCreate() {
             <Card className="p-6 transition-all duration-200 hover:shadow-md">
               <div className="flex items-center gap-2 mb-4">
                 <User className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Contact Information</h2>
+                <h2 className="text-lg font-semibold leading-tight">Contact Information</h2>
               </div>
               
               <div className="grid gap-4 sm:grid-cols-2">
@@ -308,7 +308,7 @@ export default function LeadCreate() {
               >
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-semibold">Real Estate Details</h2>
+                  <h2 className="text-lg font-semibold leading-tight">Real Estate Details</h2>
                 </div>
                 <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showRealEstate ? 'rotate-180' : ''}`} />
               </button>
@@ -482,7 +482,7 @@ export default function LeadCreate() {
               >
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-semibold">Address</h2>
+                  <h2 className="text-lg font-semibold leading-tight">Address</h2>
                 </div>
                 <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showAddress ? 'rotate-180' : ''}`} />
               </button>
@@ -559,7 +559,7 @@ export default function LeadCreate() {
 
             {/* Card 4: Notes */}
             <Card className="p-6 transition-all duration-200 hover:shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Notes</h2>
+              <h2 className="text-lg font-semibold leading-tight mb-4">Notes</h2>
               <label htmlFor="lead-notes" className="sr-only">Notes</label>
               <textarea
                 id="lead-notes"

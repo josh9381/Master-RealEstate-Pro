@@ -235,7 +235,7 @@ function CampaignAnalytics() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Campaign Analytics</h1>
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight">Campaign Analytics</h1>
           <p className="text-muted-foreground">
             Real-time performance overview across all campaign channels
           </p>
@@ -426,7 +426,7 @@ function CampaignAnalytics() {
 
       {/* Channel Summary Cards */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Channel Summary</h2>
+        <h2 className="text-lg font-semibold leading-tight mb-4">Channel Summary</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {(['EMAIL', 'SMS', 'PHONE', 'SOCIAL'] as const).map((type) => {
             const Icon = CHANNEL_ICONS[type];

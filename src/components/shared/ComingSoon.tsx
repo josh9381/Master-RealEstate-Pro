@@ -66,7 +66,7 @@ export function ComingSoon({
             </Badge>
           )}
 
-          <h2 className="text-2xl font-bold mb-2">{title}</h2>
+          <h2 className="text-lg font-semibold leading-tight mb-2">{title}</h2>
           <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
             {description}
           </p>

@@ -333,7 +333,7 @@ const BillingPage = () => {
               return (
                 <Card key={plan.id} className={`p-6 transition-all duration-200 hover:shadow-md ${isCurrent ? 'ring-2 ring-primary' : ''}`}>
                   {isCurrent && <Badge className="mb-4">Current Plan</Badge>}
-                  <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
+                  <h3 className="text-base font-medium mb-1">{plan.name}</h3>
                   <div className="flex items-baseline gap-1 mb-4">
                     {isEnterprise ? (
                       <span className="text-2xl font-bold">Contact Us</span>

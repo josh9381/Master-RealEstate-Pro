@@ -70,7 +70,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">
+                <h1 className="text-2xl font-semibold leading-tight text-foreground">
                   Something went wrong
                 </h1>
                 <p className="text-muted-foreground mt-1">

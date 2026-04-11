@@ -73,7 +73,7 @@ const LeadVelocity = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-2xl font-semibold leading-tight text-foreground flex items-center gap-2">
             <Gauge className="h-7 w-7 text-warning" />
             Lead Velocity
           </h1>

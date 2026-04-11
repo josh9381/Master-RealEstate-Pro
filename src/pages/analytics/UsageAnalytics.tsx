@@ -67,7 +67,7 @@ const UsageAnalytics = () => {
       )}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Usage Analytics</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Usage Analytics</h1>
           <p className="text-muted-foreground mt-2">
             Track system usage, user activity, and resource consumption
           </p>

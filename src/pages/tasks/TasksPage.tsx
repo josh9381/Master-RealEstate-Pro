@@ -305,7 +305,7 @@ export default function TasksPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Tasks</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Tasks</h1>
           <p className="text-muted-foreground">Manage your to-do list and assignments</p>
         </div>
         <LoadingSkeleton rows={5} />
@@ -317,7 +317,7 @@ export default function TasksPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Tasks</h1>
+          <h1 className="text-2xl font-semibold leading-tight">Tasks</h1>
           <p className="text-muted-foreground">Manage your to-do list and assignments</p>
         </div>
         <ErrorBanner message={`Failed to load tasks: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />

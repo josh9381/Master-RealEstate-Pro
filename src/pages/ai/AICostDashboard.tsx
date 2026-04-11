@@ -106,7 +106,7 @@ const AICostDashboard = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">AI Cost Dashboard</h1>
+            <h1 className="text-2xl font-semibold leading-tight">AI Cost Dashboard</h1>
             <p className="text-muted-foreground mt-1">Monitor AI spending and usage across your organization</p>
           </div>
         </div>

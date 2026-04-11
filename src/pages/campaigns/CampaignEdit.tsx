@@ -147,7 +147,7 @@ function CampaignEdit() {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Campaign Not Found</h2>
+          <h2 className="text-lg font-semibold leading-tight">Campaign Not Found</h2>
           <p className="mt-2 text-muted-foreground">
             The campaign you're looking for doesn't exist.
           </p>
@@ -169,7 +169,7 @@ function CampaignEdit() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Edit Campaign</h1>
+            <h1 className="text-2xl font-semibold leading-tight">Edit Campaign</h1>
             <p className="mt-1 text-muted-foreground">
               Modify your campaign settings and content
             </p>

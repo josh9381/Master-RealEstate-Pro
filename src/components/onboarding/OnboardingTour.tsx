@@ -272,7 +272,7 @@ export function OnboardingTour({ forceShow, onComplete }: OnboardingTourProps) {
             <StepIcon className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h3 className="font-bold text-lg leading-tight">{step.title}</h3>
+            <h3 className="text-base font-medium leading-tight">{step.title}</h3>
           </div>
         </div>
 

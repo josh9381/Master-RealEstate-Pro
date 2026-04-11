@@ -117,7 +117,7 @@ const AnalyticsDashboard = () => {
   if (analyticsError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+        <h1 className="text-2xl font-semibold leading-tight">Analytics Dashboard</h1>
         <ErrorBanner
           message={analyticsErrorObj instanceof Error ? analyticsErrorObj.message : 'Failed to load analytics data'}
           retry={() => refetch()}
@@ -440,7 +440,7 @@ const AnalyticsDashboard = () => {
 
       {/* Explore More Analytics */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Explore More Analytics</h2>
+        <h2 className="text-lg font-semibold leading-tight mb-4">Explore More Analytics</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { to: '/analytics/conversions', icon: ArrowRightLeft, bgClass: 'bg-success/10', textClass: 'text-success', title: 'Conversion Reports', desc: 'Funnel analysis, conversion rates & drop-off points' },

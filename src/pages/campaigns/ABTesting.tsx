@@ -408,7 +408,7 @@ const ABTesting = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">A/B Testing</h1>
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight">A/B Testing</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Compare campaign variations and optimize performance
           </p>
@@ -790,7 +790,7 @@ const ABTesting = () => {
               <input
                 type="text"
                 placeholder="e.g., Subject Line Test - Spring Campaign"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={createForm.name}
                 onChange={(e) => { setCreateForm({ ...createForm, name: e.target.value }); if (createErrors.name) setCreateErrors(prev => { const next = { ...prev }; delete next.name; return next }) }}
               />
@@ -803,7 +803,7 @@ const ABTesting = () => {
               <input
                 type="text"
                 placeholder="What's the goal of this test?"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={createForm.description}
                 onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
               />
@@ -813,7 +813,7 @@ const ABTesting = () => {
             <div>
               <label className="text-sm font-medium mb-1.5 block">What to Test</label>
               <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={createForm.testType}
                 onChange={(e) => setCreateForm({ ...createForm, testType: e.target.value as typeof createForm.testType, campaignId: '', variantA: '', variantB: '' })}
               >
@@ -838,7 +838,7 @@ const ABTesting = () => {
                 Link to Campaign {canAutoPopulate(createForm.testType) ? '*' : <span className="text-muted-foreground font-normal">(optional)</span>}
               </label>
               <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={createForm.campaignId}
                 onChange={(e) => handleCampaignSelect(e.target.value)}
               >
@@ -882,7 +882,7 @@ const ABTesting = () => {
                         rows={createForm.testType === 'SMS_CONTENT' ? 3 : 4}
                         maxLength={createForm.testType === 'SMS_CONTENT' ? 160 : undefined}
                         readOnly={!!(createForm.campaignId && canAutoPopulate(createForm.testType))}
-                        className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none ${createForm.campaignId && canAutoPopulate(createForm.testType) ? 'bg-muted cursor-not-allowed' : ''}`}
+                        className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none ${createForm.campaignId && canAutoPopulate(createForm.testType) ? 'bg-muted cursor-not-allowed' : ''}`}
                         value={createForm.variantA}
                         onChange={(e) => { if (createForm.campaignId && canAutoPopulate(createForm.testType)) return; setCreateForm({ ...createForm, variantA: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                       />
@@ -894,7 +894,7 @@ const ABTesting = () => {
                     </div>
                   ) : createForm.testType === 'EMAIL_TIMING' ? (
                     <select
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={createForm.variantA}
                       onChange={(e) => { setCreateForm({ ...createForm, variantA: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                     >
@@ -912,7 +912,7 @@ const ABTesting = () => {
                     <input
                       type="url"
                       placeholder="https://example.com/page-a"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={createForm.variantA}
                       onChange={(e) => { setCreateForm({ ...createForm, variantA: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                     />
@@ -921,7 +921,7 @@ const ABTesting = () => {
                       type="text"
                       placeholder={createForm.campaignId ? 'Auto-filled from campaign subject line' : 'Your original subject line...'}
                       readOnly={!!(createForm.campaignId && canAutoPopulate(createForm.testType))}
-                      className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${createForm.campaignId && canAutoPopulate(createForm.testType) ? 'bg-muted cursor-not-allowed' : ''}`}
+                      className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${createForm.campaignId && canAutoPopulate(createForm.testType) ? 'bg-muted cursor-not-allowed' : ''}`}
                       value={createForm.variantA}
                       onChange={(e) => { if (createForm.campaignId && canAutoPopulate(createForm.testType)) return; setCreateForm({ ...createForm, variantA: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                     />
@@ -954,7 +954,7 @@ const ABTesting = () => {
                           : 'Your alternative email body content...'}
                         rows={createForm.testType === 'SMS_CONTENT' ? 3 : 4}
                         maxLength={createForm.testType === 'SMS_CONTENT' ? 160 : undefined}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                         value={createForm.variantB}
                         onChange={(e) => { setCreateForm({ ...createForm, variantB: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                       />
@@ -966,7 +966,7 @@ const ABTesting = () => {
                     </div>
                   ) : createForm.testType === 'EMAIL_TIMING' ? (
                     <select
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={createForm.variantB}
                       onChange={(e) => { setCreateForm({ ...createForm, variantB: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                     >
@@ -984,7 +984,7 @@ const ABTesting = () => {
                     <input
                       type="url"
                       placeholder="https://example.com/page-b"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={createForm.variantB}
                       onChange={(e) => { setCreateForm({ ...createForm, variantB: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                     />
@@ -992,7 +992,7 @@ const ABTesting = () => {
                     <input
                       type="text"
                       placeholder="Your alternative subject line..."
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={createForm.variantB}
                       onChange={(e) => { setCreateForm({ ...createForm, variantB: e.target.value }); if (createErrors.variants) setCreateErrors(prev => { const next = { ...prev }; delete next.variants; return next }) }}
                     />
@@ -1006,7 +1006,7 @@ const ABTesting = () => {
             <div>
               <label className="text-sm font-medium mb-1.5 block">Optimize For</label>
               <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={createForm.winnerMetric}
                 onChange={(e) => setCreateForm({ ...createForm, winnerMetric: e.target.value as typeof createForm.winnerMetric })}
               >
@@ -1020,7 +1020,7 @@ const ABTesting = () => {
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Duration</label>
                 <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={createForm.duration}
                   onChange={(e) => setCreateForm({ ...createForm, duration: e.target.value })}
                 >
@@ -1034,7 +1034,7 @@ const ABTesting = () => {
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Confidence Level</label>
                 <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={createForm.confidence}
                   onChange={(e) => setCreateForm({ ...createForm, confidence: e.target.value })}
                 >

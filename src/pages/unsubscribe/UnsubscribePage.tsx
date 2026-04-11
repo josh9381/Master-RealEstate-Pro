@@ -126,7 +126,7 @@ export function UnsubscribePage() {
               </div>
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-lg font-semibold leading-tight">
                 {leadInfo?.emailOptIn ? 'Welcome Back!' : 'Successfully Unsubscribed'}
               </h2>
               <p className="text-muted-foreground">{message}</p>
@@ -202,7 +202,7 @@ export function UnsubscribePage() {
               </div>
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">Already Unsubscribed</h2>
+              <h2 className="text-lg font-semibold leading-tight">Already Unsubscribed</h2>
               <p className="text-muted-foreground">
                 This email address is already unsubscribed from our mailing list.
               </p>
@@ -228,7 +228,7 @@ export function UnsubscribePage() {
               </div>
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">Something Went Wrong</h2>
+              <h2 className="text-lg font-semibold leading-tight">Something Went Wrong</h2>
               <p className="text-muted-foreground">{message}</p>
             </div>
             <Button onClick={handleUnsubscribe} variant="outline" className="w-full">

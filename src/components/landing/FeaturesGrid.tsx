@@ -98,7 +98,7 @@ export function FeaturesGrid() {
               >
                 <feature.icon className="h-7 w-7" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-3">{feature.title}</h3>
+              <h3 className="text-base font-medium text-foreground mb-3">{feature.title}</h3>
               <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
             </div>
           ))}

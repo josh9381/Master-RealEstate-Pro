@@ -189,7 +189,7 @@ const AIHub = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
               <Brain className="h-5 w-5" />
             </div>
-            <h1 className="text-3xl font-bold">AI Hub</h1>
+            <h1 className="text-2xl font-semibold leading-tight">AI Hub</h1>
           </div>
           <p className="text-white/70 ml-[52px]">
             Your AI control center — monitor, configure, and understand your AI across the platform
