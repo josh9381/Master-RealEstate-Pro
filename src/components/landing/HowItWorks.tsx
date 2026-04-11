@@ -64,7 +64,7 @@ export function HowItWorks() {
                     step.color === 'blue'
                       ? 'bg-primary shadow-primary/25'
                       : step.color === 'purple'
-                      ? 'bg-purple-600 shadow-purple-600/25'
+                      ? 'bg-primary shadow-primary/25'
                       : 'bg-success shadow-success/25'
                   }`}
                 >
@@ -75,7 +75,7 @@ export function HowItWorks() {
                     step.color === 'blue'
                       ? 'bg-primary'
                       : step.color === 'purple'
-                      ? 'bg-purple-500'
+                      ? 'bg-primary'
                       : 'bg-success'
                   }`}
                 >

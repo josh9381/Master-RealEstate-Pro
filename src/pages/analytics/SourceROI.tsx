@@ -15,6 +15,7 @@ import { DateRangePicker, DateRange } from '@/components/shared/DateRangePicker'
 import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import { CHART_COLORS as COLORS } from '@/lib/chartColors';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
+import { PageEmptyState } from '@/components/ui/PageEmptyState';
 
 const formatCurrency = fmtMoney;
 
@@ -40,7 +41,7 @@ const SourceROI = () => {
       <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-muted rounded" />)}
           </div>
         </div>
@@ -189,15 +190,11 @@ const SourceROI = () => {
       )}
 
       {sources.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Source Data Yet</h3>
-            <p className="text-muted-foreground">
-              Source ROI data will appear once you have leads with assigned sources.
-            </p>
-          </CardContent>
-        </Card>
+        <PageEmptyState
+          icon={<DollarSign className="h-12 w-12" />}
+          title="No Source Data Yet"
+          description="Source ROI data will appear once you have leads with assigned sources."
+        />
       )}
     </div>
   );

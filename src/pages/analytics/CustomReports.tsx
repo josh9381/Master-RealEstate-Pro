@@ -934,7 +934,7 @@ const CustomReports = () => {
                 <input
                   type="text"
                   placeholder="Enter report name"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   value={reportConfig.name}
                   onChange={(e) => setReportConfig((prev) => ({ ...prev, name: e.target.value }))}
                 />
@@ -942,7 +942,7 @@ const CustomReports = () => {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Report Type</label>
-                  <select className="w-full px-3 py-2 border rounded-lg" value={reportConfig.type} onChange={(e) => setReportConfig((prev) => ({ ...prev, type: e.target.value }))}>
+                  <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" value={reportConfig.type} onChange={(e) => setReportConfig((prev) => ({ ...prev, type: e.target.value }))}>
                     <option value="sales">Sales Report</option>
                     <option value="marketing">Marketing Report</option>
                     <option value="analytics">Analytics Report</option>
@@ -952,7 +952,7 @@ const CustomReports = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Date Range</label>
-                  <select className="w-full px-3 py-2 border rounded-lg" value={reportConfig.dateRange} onChange={(e) => setReportConfig((prev) => ({ ...prev, dateRange: e.target.value }))}>
+                  <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" value={reportConfig.dateRange} onChange={(e) => setReportConfig((prev) => ({ ...prev, dateRange: e.target.value }))}>
                     <option value="7d">Last 7 days</option>
                     <option value="30d">Last 30 days</option>
                     <option value="90d">Last 90 days</option>
@@ -989,7 +989,7 @@ const CustomReports = () => {
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Group By</label>
-                <select className="w-full px-3 py-2 border rounded-lg" value={reportConfig.groupBy} onChange={(e) => setReportConfig((prev) => ({ ...prev, groupBy: e.target.value }))}>
+                <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" value={reportConfig.groupBy} onChange={(e) => setReportConfig((prev) => ({ ...prev, groupBy: e.target.value }))}>
                   <option value="none">No grouping</option>
                   <option value="day">By Day</option>
                   <option value="week">By Week</option>
@@ -1245,12 +1245,12 @@ const CustomReports = () => {
                     type="text"
                     value={reportName}
                     onChange={(e) => setReportName(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Report Category</label>
-                  <select className="w-full px-3 py-2 border rounded-lg" value={reportCategory} onChange={(e) => setReportCategory(e.target.value)}>
+                  <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" value={reportCategory} onChange={(e) => setReportCategory(e.target.value)}>
                     <option>Sales</option>
                     <option>Marketing</option>
                     <option>Analytics</option>

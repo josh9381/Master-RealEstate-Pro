@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog';
 import { campaignsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { PageEmptyState } from '@/components/ui/PageEmptyState';
 import { formatRate, calcRate } from '@/lib/metricsCalculator';
 
 interface CampaignRecord {
@@ -305,19 +306,13 @@ const CampaignSchedule = () => {
 
       {/* Global empty state when nothing exists */}
       {!isLoading && scheduledCampaigns.length === 0 && recurringCampaigns.length === 0 && sentCampaigns.length === 0 && (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-base font-medium mb-2">No Campaigns Scheduled</h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              You don't have any scheduled, recurring, or recently sent campaigns yet. Create your first campaign to get started.
-            </p>
-            <Button onClick={() => navigate('/campaigns/create')}>
-              <Calendar className="h-4 w-4 mr-2" />
-              Create & Schedule Campaign
-            </Button>
-          </CardContent>
-        </Card>
+        <PageEmptyState
+          icon={<Calendar className="h-12 w-12" />}
+          title="No Campaigns Scheduled"
+          description="You don't have any scheduled, recurring, or recently sent campaigns yet. Create your first campaign to get started."
+          actionLabel="Create & Schedule Campaign"
+          onAction={() => navigate('/campaigns/create')}
+        />
       )}
 
       {/* Scheduled Campaigns */}

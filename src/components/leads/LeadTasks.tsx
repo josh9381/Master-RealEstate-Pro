@@ -134,7 +134,7 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
   return (
     <div className="space-y-4">
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-lg border p-3 text-center">
           <p className="text-2xl font-bold">{activeTasks.length}</p>
           <p className="text-xs text-muted-foreground">Active</p>

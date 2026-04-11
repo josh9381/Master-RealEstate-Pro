@@ -352,7 +352,7 @@ const LeadsMerge = () => {
                     Click on a value to select which one to keep for each field. The selected value (highlighted) will be used in the merged lead.
                   </p>
 
-                  <div className="rounded-lg border overflow-hidden">
+                  <div className="rounded-lg border overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-muted/50">

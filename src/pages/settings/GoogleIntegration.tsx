@@ -331,7 +331,7 @@ const GoogleIntegration = () => {
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Default Calendar</label>
-            <select className="w-full px-3 py-2 border rounded-lg">
+            <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
               <option>Primary Calendar</option>
               <option>CRM Events</option>
               <option>Sales Meetings</option>
@@ -408,7 +408,7 @@ const GoogleIntegration = () => {
             <select 
               value={syncDirection}
               onChange={(e) => setSyncDirection(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="crm-to-google">CRM to Google only</option>
               <option value="google-to-crm">Google to CRM only</option>

@@ -875,7 +875,7 @@ const EmailTemplatesLibrary = () => {
                         <div className="grid gap-4 md:grid-cols-2 pt-3">
                           <div>
                             <label className="text-sm font-medium mb-2 block">Default Font</label>
-                            <select className="w-full px-3 py-2 border rounded-lg bg-background transition-colors" value={templateSettings.defaultFont} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultFont: e.target.value }))}>
+                            <select className="w-full px-3 py-2 border rounded-lg bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed" value={templateSettings.defaultFont} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultFont: e.target.value }))}>
                               <option>Arial</option>
                               <option>Helvetica</option>
                               <option>Georgia</option>
@@ -885,7 +885,7 @@ const EmailTemplatesLibrary = () => {
                           </div>
                           <div>
                             <label className="text-sm font-medium mb-2 block">Primary Color</label>
-                            <input type="color" value={templateSettings.primaryColor} onChange={(e) => setTemplateSettings(s => ({ ...s, primaryColor: e.target.value }))} className="w-full h-10 border rounded-lg" />
+                            <input type="color" value={templateSettings.primaryColor} onChange={(e) => setTemplateSettings(s => ({ ...s, primaryColor: e.target.value }))} className="w-full h-10 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" />
                           </div>
                         </div>
                         <div>
@@ -895,7 +895,7 @@ const EmailTemplatesLibrary = () => {
                             placeholder="https://example.com/logo.png"
                             value={templateSettings.logoUrl}
                             onChange={(e) => setTemplateSettings(s => ({ ...s, logoUrl: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded-lg bg-background"
+                            className="w-full px-3 py-2 border rounded-lg bg-background disabled:opacity-50 disabled:cursor-not-allowed"
                           />
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">

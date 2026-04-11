@@ -508,7 +508,7 @@ const Segmentation = () => {
                 <p>No members match this segment&apos;s rules.</p>
               </div>
             ) : (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-muted">
                     <tr>

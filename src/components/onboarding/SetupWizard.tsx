@@ -738,7 +738,7 @@ function GoogleStep() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { name: 'Gmail', desc: 'Sync emails & track opens' },
           { name: 'Calendar', desc: 'Sync appointments' },

@@ -837,7 +837,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Input id="task-title" placeholder="e.g., Call lead back" value={config.title as string || config.taskTitle as string || ''} onChange={(e) => updateConfig('title', e.target.value)} />
           </FieldGroup>
           <FieldGroup label="Description (optional)" htmlFor="task-description">
-            <textarea id="task-description" className="w-full p-2 border rounded-md bg-background text-foreground dark:border-border text-sm" placeholder="Add context or instructions..." rows={2} value={config.description as string || config.taskDescription as string || ''} onChange={(e) => updateConfig('description', e.target.value)} />
+            <textarea id="task-description" className="w-full p-2 border rounded-md bg-background text-foreground dark:border-border text-sm disabled:opacity-50 disabled:cursor-not-allowed" placeholder="Add context or instructions..." rows={2} value={config.description as string || config.taskDescription as string || ''} onChange={(e) => updateConfig('description', e.target.value)} />
           </FieldGroup>
           <div className="grid grid-cols-2 gap-3">
             <FieldGroup label="Priority" htmlFor="task-priority">
@@ -909,7 +909,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <Input id="notification-title" placeholder="e.g., Hot Lead Alert!" value={config.title as string || ''} onChange={(e) => updateConfig('title', e.target.value)} />
           </FieldGroup>
           <FieldGroup label="Message" htmlFor="notification-message">
-            <textarea id="notification-message" className="w-full p-2 border rounded-md min-h-[60px] bg-background text-foreground dark:border-border text-sm" placeholder="e.g., A lead just scored above 80 — reach out ASAP!" value={config.message as string || ''} onChange={(e) => updateConfig('message', e.target.value)} />
+            <textarea id="notification-message" className="w-full p-2 border rounded-md min-h-[60px] bg-background text-foreground dark:border-border text-sm disabled:opacity-50 disabled:cursor-not-allowed" placeholder="e.g., A lead just scored above 80 — reach out ASAP!" value={config.message as string || ''} onChange={(e) => updateConfig('message', e.target.value)} />
           </FieldGroup>
           <FieldGroup label="Delivery Channel" htmlFor="notification-channel">
             <StyledSelect id="notification-channel" value={config.channel as string || 'in_app'} onChange={(e) => updateConfig('channel', e.target.value)}>

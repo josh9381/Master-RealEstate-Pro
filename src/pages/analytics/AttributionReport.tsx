@@ -16,6 +16,7 @@ import { DateRangePicker, DateRange } from '@/components/shared/DateRangePicker'
 import { computeDateRange } from '@/components/shared/dateRangeUtils';
 import { CHART_COLORS as COLORS } from '@/lib/chartColors';
 import { ChartErrorBoundary } from '@/components/shared/ChartErrorBoundary';
+import { PageEmptyState } from '@/components/ui/PageEmptyState';
 
 type AttributionModel = 'first-touch' | 'last-touch' | 'linear' | 'time-decay' | 'u-shaped';
 
@@ -53,7 +54,7 @@ const AttributionReport = () => {
       <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-muted rounded" />)}
           </div>
           <div className="h-64 bg-muted rounded" />
@@ -120,15 +121,11 @@ const AttributionReport = () => {
       </Card>
 
       {noData ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <GitBranch className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-lg font-medium text-muted-foreground mb-2">No Conversions Yet</h2>
-            <p className="text-muted-foreground">
-              Attribution data will appear once leads are marked as Won. Try adjusting the date range.
-            </p>
-          </CardContent>
-        </Card>
+        <PageEmptyState
+          icon={<GitBranch className="h-12 w-12" />}
+          title="No Conversions Yet"
+          description="Attribution data will appear once leads are marked as Won. Try adjusting the date range."
+        />
       ) : (
         <>
           {/* Truncation notice */}

@@ -214,7 +214,7 @@ const ServiceConfiguration = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Cache Provider</label>
-            <select className="w-full px-3 py-2 border rounded-lg bg-muted" defaultValue="redis" disabled>
+            <select className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed" defaultValue="redis" disabled>
               <option value="memory">In-Memory</option>
               <option value="redis">Redis</option>
               <option value="memcached">Memcached</option>
@@ -228,7 +228,7 @@ const ServiceConfiguration = () => {
                 placeholder="localhost"
                 defaultValue="redis.yourcrm.com"
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-muted"
+                className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             <div>
@@ -238,7 +238,7 @@ const ServiceConfiguration = () => {
                 placeholder="6379"
                 defaultValue="6379"
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-muted"
+                className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -258,7 +258,7 @@ const ServiceConfiguration = () => {
               placeholder="3600"
               defaultValue="3600"
               disabled
-              className="w-full px-3 py-2 border rounded-lg bg-muted"
+              className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <p className="text-xs text-muted-foreground italic">Cache configuration will be available in a future update.</p>
@@ -279,7 +279,7 @@ const ServiceConfiguration = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Queue Provider</label>
-            <select className="w-full px-3 py-2 border rounded-lg bg-muted" defaultValue="redis" disabled>
+            <select className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed" defaultValue="redis" disabled>
               <option value="database">Database</option>
               <option value="redis">Redis</option>
               <option value="sqs">Amazon SQS</option>
@@ -293,7 +293,7 @@ const ServiceConfiguration = () => {
               placeholder="default"
               defaultValue="default"
               disabled
-              className="w-full px-3 py-2 border rounded-lg bg-muted"
+              className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -304,7 +304,7 @@ const ServiceConfiguration = () => {
                 placeholder="3"
                 defaultValue="3"
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-muted"
+                className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             <div>
@@ -314,7 +314,7 @@ const ServiceConfiguration = () => {
                 placeholder="60"
                 defaultValue="60"
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-muted"
+                className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -336,7 +336,7 @@ const ServiceConfiguration = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-not-allowed mb-4">
-              <input type="checkbox" defaultChecked disabled className="rounded" />
+              <input type="checkbox" defaultChecked disabled className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm font-medium text-muted-foreground">Enable Elasticsearch</span>
             </label>
           </div>
@@ -347,7 +347,7 @@ const ServiceConfiguration = () => {
               placeholder="http://localhost:9200"
               defaultValue="https://search.yourcrm.com:9200"
               disabled
-              className="w-full px-3 py-2 border rounded-lg bg-muted"
+              className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -358,7 +358,7 @@ const ServiceConfiguration = () => {
                 placeholder="elastic"
                 defaultValue="elastic"
                 disabled
-                className="w-full px-3 py-2 border rounded-lg bg-muted"
+                className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             <div>
@@ -378,7 +378,7 @@ const ServiceConfiguration = () => {
               placeholder="crm_"
               defaultValue="crm_"
               disabled
-              className="w-full px-3 py-2 border rounded-lg bg-muted"
+              className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <p className="text-xs text-muted-foreground italic">Search configuration will be available in a future update.</p>
@@ -399,7 +399,7 @@ const ServiceConfiguration = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-not-allowed mb-4">
-              <input type="checkbox" defaultChecked disabled className="rounded" />
+              <input type="checkbox" defaultChecked disabled className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm font-medium text-muted-foreground">Enable Analytics Tracking</span>
             </label>
           </div>
@@ -423,19 +423,19 @@ const ServiceConfiguration = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-not-allowed">
-              <input type="checkbox" defaultChecked disabled className="rounded" />
+              <input type="checkbox" defaultChecked disabled className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm text-muted-foreground">Track page views</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-not-allowed">
-              <input type="checkbox" defaultChecked disabled className="rounded" />
+              <input type="checkbox" defaultChecked disabled className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm text-muted-foreground">Track user events</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-not-allowed">
-              <input type="checkbox" disabled className="rounded" />
+              <input type="checkbox" disabled className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm text-muted-foreground">Anonymize IP addresses</span>
             </label>
           </div>
@@ -457,7 +457,7 @@ const ServiceConfiguration = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-not-allowed mb-4">
-              <input type="checkbox" defaultChecked disabled className="rounded" />
+              <input type="checkbox" defaultChecked disabled className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm font-medium text-muted-foreground">Enable Error Tracking</span>
             </label>
           </div>
@@ -472,7 +472,7 @@ const ServiceConfiguration = () => {
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Environment</label>
-            <select className="w-full px-3 py-2 border rounded-lg bg-muted" defaultValue="production" disabled>
+            <select className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed" defaultValue="production" disabled>
               <option value="development">Development</option>
               <option value="staging">Staging</option>
               <option value="production">Production</option>
@@ -487,7 +487,7 @@ const ServiceConfiguration = () => {
               placeholder="100"
               defaultValue="100"
               disabled
-              className="w-full px-3 py-2 border rounded-lg bg-muted"
+              className="w-full px-3 py-2 border rounded-lg bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <p className="text-xs text-muted-foreground italic">Monitoring configuration will be available in a future update.</p>

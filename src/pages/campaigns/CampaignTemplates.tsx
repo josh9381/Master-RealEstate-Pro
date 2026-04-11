@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor';
+import { PageEmptyState } from '@/components/ui/PageEmptyState';
 
 interface CampaignTemplate {
   id: string;
@@ -427,15 +428,11 @@ const CampaignTemplates = () => {
           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : filteredTemplates.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">No templates found</h3>
-            <p className="text-muted-foreground">
-              {searchQuery ? 'Try adjusting your search' : 'Select a different category'}
-            </p>
-          </CardContent>
-        </Card>
+        <PageEmptyState
+          icon={<FileText className="h-12 w-12" />}
+          title="No templates found"
+          description={searchQuery ? 'Try adjusting your search' : 'Select a different category'}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredTemplates.map((template) => (
@@ -697,7 +694,7 @@ const CampaignTemplates = () => {
                         <div className="grid gap-4 md:grid-cols-2 pt-3">
                           <div>
                             <label className="text-sm font-medium mb-2 block">Default Font</label>
-                            <select className="w-full px-3 py-2 border rounded-lg bg-background" value={templateSettings.defaultFont} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultFont: e.target.value }))}>
+                            <select className="w-full px-3 py-2 border rounded-lg bg-background disabled:opacity-50 disabled:cursor-not-allowed" value={templateSettings.defaultFont} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultFont: e.target.value }))}>
                               <option>Arial</option>
                               <option>Helvetica</option>
                               <option>Georgia</option>
@@ -707,7 +704,7 @@ const CampaignTemplates = () => {
                           </div>
                           <div>
                             <label className="text-sm font-medium mb-2 block">Primary Color</label>
-                            <input type="color" value={templateSettings.primaryColor} onChange={(e) => setTemplateSettings(s => ({ ...s, primaryColor: e.target.value }))} className="w-full h-10 border rounded-lg" />
+                            <input type="color" value={templateSettings.primaryColor} onChange={(e) => setTemplateSettings(s => ({ ...s, primaryColor: e.target.value }))} className="w-full h-10 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" />
                           </div>
                         </div>
                         <div>
@@ -717,7 +714,7 @@ const CampaignTemplates = () => {
                             placeholder="https://example.com/logo.png"
                             value={templateSettings.logoUrl}
                             onChange={(e) => setTemplateSettings(s => ({ ...s, logoUrl: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded-lg bg-background"
+                            className="w-full px-3 py-2 border rounded-lg bg-background disabled:opacity-50 disabled:cursor-not-allowed"
                           />
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">

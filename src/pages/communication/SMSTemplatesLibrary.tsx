@@ -606,11 +606,11 @@ const SMSTemplatesLibrary = () => {
                         <div className="grid gap-4 md:grid-cols-2 pt-3">
                           <div>
                             <label className="text-sm font-medium mb-2 block">Default Opt-Out Text</label>
-                            <input type="text" className="w-full px-3 py-2 border rounded-lg bg-background" value={templateSettings.defaultOptOutText} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultOptOutText: e.target.value }))} placeholder="Reply STOP to unsubscribe" />
+                            <input type="text" className="w-full px-3 py-2 border rounded-lg bg-background disabled:opacity-50 disabled:cursor-not-allowed" value={templateSettings.defaultOptOutText} onChange={(e) => setTemplateSettings(s => ({ ...s, defaultOptOutText: e.target.value }))} placeholder="Reply STOP to unsubscribe" />
                           </div>
                           <div>
                             <label className="text-sm font-medium mb-2 block">Character Warning Threshold</label>
-                            <input type="number" min={80} max={1600} className="w-full px-3 py-2 border rounded-lg bg-background" value={templateSettings.characterWarningThreshold} onChange={(e) => setTemplateSettings(s => ({ ...s, characterWarningThreshold: Number(e.target.value) }))} />
+                            <input type="number" min={80} max={1600} className="w-full px-3 py-2 border rounded-lg bg-background disabled:opacity-50 disabled:cursor-not-allowed" value={templateSettings.characterWarningThreshold} onChange={(e) => setTemplateSettings(s => ({ ...s, characterWarningThreshold: Number(e.target.value) }))} />
                           </div>
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
@@ -654,7 +654,7 @@ const SMSTemplatesLibrary = () => {
                       value={formBody}
                       onChange={e => setFormBody(e.target.value.slice(0, 1600))}
                       rows={6}
-                      className="w-full p-3 border rounded-lg resize-none text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-background transition-colors"
+                      className="w-full p-3 border rounded-lg resize-none text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       placeholder="Hi {{firstName}}, thanks for your interest in..."
                     />
                     <p className="text-xs text-muted-foreground">Write your SMS message. Use variables for personalization.</p>
