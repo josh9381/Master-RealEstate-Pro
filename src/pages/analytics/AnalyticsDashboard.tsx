@@ -1,7 +1,7 @@
-import { useRef, useMemo } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { BarChart3, TrendingUp, Users, DollarSign, Mail, ClipboardCheck, Target, ArrowRightLeft, Activity, FileBarChart, ChevronRight, Gauge, Crosshair, PiggyBank, PhoneForwarded, CalendarRange } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, DollarSign, Mail, ClipboardCheck, Target, ArrowRightLeft, Activity, FileBarChart, ChevronRight, ChevronDown, Gauge, Crosshair, PiggyBank, PhoneForwarded, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { calcRate, formatRate } from '@/lib/metricsCalculator';
 import { Button } from '@/components/ui/Button';
@@ -33,6 +33,7 @@ import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const AnalyticsDashboard = () => {
   const dateRangeRef = useRef<DateRange>(computeDateRange('30d'));
+  const [showExplore, setShowExplore] = useState(false);
 
   const { data: analyticsResult, isLoading: loading, isError: analyticsError, error: analyticsErrorObj, refetch } = useQuery({
     queryKey: ['analytics-dashboard'],
@@ -450,8 +451,15 @@ const AnalyticsDashboard = () => {
       {/* ── Explore Navigation ───────────────────────────────── */}
       {/* Explore More Analytics */}
       <div>
-        <h2 className="text-lg font-semibold leading-tight mb-4">Explore More Analytics</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <button
+          onClick={() => setShowExplore(v => !v)}
+          className="flex items-center gap-2 text-lg font-semibold leading-tight mb-4 hover:text-primary transition-colors"
+        >
+          <ChevronDown className={`h-5 w-5 transition-transform ${showExplore ? '' : '-rotate-90'}`} />
+          Explore More Analytics
+          <span className="text-sm font-normal text-muted-foreground">(9 reports)</span>
+        </button>
+        {showExplore && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { to: '/analytics/conversions', icon: ArrowRightLeft, bgClass: 'bg-success/10', textClass: 'text-success', title: 'Conversion Reports', desc: 'Funnel analysis, conversion rates & drop-off points' },
             { to: '/analytics/usage', icon: Activity, bgClass: 'bg-primary/10', textClass: 'text-primary', title: 'Usage Analytics', desc: 'Platform usage, feature adoption & user activity' },
@@ -478,7 +486,7 @@ const AnalyticsDashboard = () => {
               </Card>
             </Link>
           ))}
-        </div>
+        </div>}
       </div>
     </div>
   );
