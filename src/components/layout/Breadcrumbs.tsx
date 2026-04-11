@@ -162,7 +162,7 @@ export function Breadcrumbs() {
                     <Link
                       key={c.path}
                       to={c.path}
-                      className="block px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+                      className="block px-3 py-1.5 text-sm hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
                       role="menuitem"
                     >
                       {c.label}

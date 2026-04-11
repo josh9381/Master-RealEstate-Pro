@@ -9,7 +9,7 @@ const testimonials = [
       'RealEstate Pro completely transformed my business. I went from spending hours on follow-ups to having AI handle it all. My conversion rate tripled in 3 months.',
     rating: 5,
     initials: 'SM',
-    gradient: 'from-blue-500 to-cyan-500',
+    gradient: 'from-primary to-info',
   },
   {
     name: 'David Chen',
@@ -18,7 +18,7 @@ const testimonials = [
       'The pipeline view alone is worth it. But add in the campaign automation and AI scoring? My team of 8 agents has never been more productive.',
     rating: 5,
     initials: 'DC',
-    gradient: 'from-purple-500 to-pink-500',
+    gradient: 'from-primary/80 to-destructive/60',
   },
   {
     name: 'Maria Rodriguez',
@@ -27,7 +27,7 @@ const testimonials = [
       'I was skeptical of another CRM, but the AI intelligence hub is something else. It predicted which leads would convert — and it was right 85% of the time.',
     rating: 5,
     initials: 'MR',
-    gradient: 'from-emerald-500 to-teal-500',
+    gradient: 'from-success to-info/70',
   },
 ]
 
@@ -44,7 +44,7 @@ export function Testimonials() {
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Loved by agents{' '}
-            <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-info bg-clip-text text-transparent">
               across the country
             </span>
           </h2>

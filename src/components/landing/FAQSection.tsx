@@ -85,7 +85,7 @@ export function FAQSection() {
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Got questions?{' '}
-            <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-info bg-clip-text text-transparent">
               We&apos;ve got answers
             </span>
           </h2>

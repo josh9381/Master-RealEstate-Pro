@@ -865,7 +865,7 @@ const CampaignTemplates = () => {
               )}
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Body</p>
-                <pre className="p-4 bg-muted rounded-md text-sm whitespace-pre-wrap font-sans leading-relaxed max-h-[40vh] overflow-y-auto">
+                <pre className="p-4 bg-muted rounded-md text-sm whitespace-pre-wrap font-sans leading-relaxed max-w-prose max-h-[40vh] overflow-y-auto">
                   {previewTemplate.body}
                 </pre>
               </div>

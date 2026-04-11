@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { PageEmptyState } from '@/components/ui/PageEmptyState';
 import {
   Brain,
   Target,
@@ -240,10 +241,11 @@ export const AIHubLayout = ({ children }: AIHubLayoutProps) => {
             ))}
 
             {search && filteredNav.length === 0 && (
-              <div className="px-3 py-8 text-center">
-                <Search className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">No items found for "{search}"</p>
-              </div>
+              <PageEmptyState
+                icon={<Search className="h-8 w-8" />}
+                title={`No items found for "${search}"`}
+                className="px-3 py-8"
+              />
             )}
           </nav>
         </div>

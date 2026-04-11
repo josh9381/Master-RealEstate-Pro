@@ -95,7 +95,7 @@ export function ProfileDropdown({ position = 'below', closeSidebarOnNav = false,
             <div className="p-2">
               <button
                 onClick={() => handleNav('/settings/profile')}
-                className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 role="menuitem"
               >
                 <User className="h-4 w-4" />
@@ -103,7 +103,7 @@ export function ProfileDropdown({ position = 'below', closeSidebarOnNav = false,
               </button>
               <button
                 onClick={() => handleNav('/settings')}
-                className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 role="menuitem"
               >
                 <Settings className="h-4 w-4" />
@@ -112,7 +112,7 @@ export function ProfileDropdown({ position = 'below', closeSidebarOnNav = false,
               <div className="border-t my-2" />
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent text-destructive transition-colors"
+                className="flex items-center space-x-2 w-full px-3 py-2 text-sm rounded-md hover:bg-accent text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 role="menuitem"
               >
                 <LogOut className="h-4 w-4" />

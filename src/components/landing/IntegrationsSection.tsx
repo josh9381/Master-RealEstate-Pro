@@ -1,14 +1,14 @@
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 
 const integrations = [
-  { name: 'Gmail', icon: 'M', colors: 'from-red-500 to-red-600' },
-  { name: 'Google Calendar', icon: 'GC', colors: 'from-blue-500 to-blue-600' },
-  { name: 'Google Contacts', icon: 'GCo', colors: 'from-blue-400 to-cyan-500' },
-  { name: 'SendGrid', icon: 'SG', colors: 'from-blue-600 to-indigo-600' },
-  { name: 'Twilio', icon: 'Tw', colors: 'from-red-500 to-pink-600' },
-  { name: 'Zapier', icon: 'Z', colors: 'from-orange-500 to-orange-600' },
-  { name: 'Slack', icon: 'Sl', colors: 'from-purple-600 to-fuchsia-600' },
-  { name: 'Zillow', icon: 'Zi', colors: 'from-blue-700 to-blue-800' },
+  { name: 'Gmail', icon: 'M', colors: 'from-destructive to-destructive/80' },
+  { name: 'Google Calendar', icon: 'GC', colors: 'from-primary to-primary/80' },
+  { name: 'Google Contacts', icon: 'GCo', colors: 'from-info to-info/70' },
+  { name: 'SendGrid', icon: 'SG', colors: 'from-primary/80 to-info' },
+  { name: 'Twilio', icon: 'Tw', colors: 'from-destructive to-destructive/70' },
+  { name: 'Zapier', icon: 'Z', colors: 'from-warning to-warning/80' },
+  { name: 'Slack', icon: 'Sl', colors: 'from-primary to-info/80' },
+  { name: 'Zillow', icon: 'Zi', colors: 'from-primary/80 to-primary/60' },
 ]
 
 export function IntegrationsSection() {
@@ -23,7 +23,7 @@ export function IntegrationsSection() {
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Connects with the tools{' '}
-            <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-info bg-clip-text text-transparent">
               you already use
             </span>
           </h2>

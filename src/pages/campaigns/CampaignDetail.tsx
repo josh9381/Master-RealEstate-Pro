@@ -797,7 +797,7 @@ function CampaignDetail() {
               {(campaign.type || '').toUpperCase() === 'EMAIL' ? (
                 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.fullContent || campaign.body || '<p>No content available</p>') }} />
               ) : (
-                <div className="whitespace-pre-wrap">{campaign.fullContent || campaign.body || 'No content available'}</div>
+                <div className="whitespace-pre-wrap max-w-prose">{campaign.fullContent || campaign.body || 'No content available'}</div>
               )}
             </div>
           </div>

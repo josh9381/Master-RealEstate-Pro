@@ -872,7 +872,7 @@ function Dashboard() {
             {showExportMenu && (
               <div className="absolute right-0 mt-1 w-40 bg-card border rounded-md shadow-lg z-10" role="menu" aria-label="Export options" onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Escape') { setShowExportMenu(false) } }}>
                 <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors rounded-t-md focus:bg-accent focus:outline-none"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors rounded-t-md focus-visible:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={handleExportCSV}
                   role="menuitem"
                   tabIndex={0}
@@ -882,7 +882,7 @@ function Dashboard() {
                   Export CSV
                 </button>
                 <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors rounded-b-md focus:bg-accent focus:outline-none"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors rounded-b-md focus-visible:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={handleExportPDF}
                   role="menuitem"
                   tabIndex={0}

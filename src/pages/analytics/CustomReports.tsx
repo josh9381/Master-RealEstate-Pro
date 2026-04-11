@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Select } from '@/components/ui/Select';
 import { analyticsApi, savedReportsApi, reportSchedulesApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -142,29 +143,29 @@ const ScheduledReportsSection = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Report Type</label>
-                <select
+                <Select
                   value={scheduleForm.reportType}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, reportType: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
+                  className="text-sm"
                 >
                   <option value="leads">Leads Report</option>
                   <option value="campaigns">Campaigns Report</option>
                   <option value="pipeline">Pipeline Report</option>
                   <option value="team">Team Report</option>
                   <option value="revenue">Revenue Report</option>
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Frequency</label>
-                <select
+                <Select
                   value={scheduleForm.frequency}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
+                  className="text-sm"
                 >
                   {FREQUENCIES.map((f) => (
                     <option key={f.value} value={f.value}>{f.label}</option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Time of Day</label>
@@ -180,15 +181,15 @@ const ScheduledReportsSection = () => {
               {(scheduleForm.frequency === 'WEEKLY' || scheduleForm.frequency === 'BIWEEKLY') && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Day of Week</label>
-                  <select
+                  <Select
                     value={scheduleForm.dayOfWeek}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, dayOfWeek: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground text-sm transition-colors"
+                    className="text-sm"
                   >
                     {DAY_OPTIONS.map((d) => (
                       <option key={d.value} value={d.value}>{d.label}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
               {(scheduleForm.frequency === 'MONTHLY' || scheduleForm.frequency === 'QUARTERLY' || scheduleForm.frequency === 'YEARLY') && (
@@ -942,23 +943,23 @@ const CustomReports = () => {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Report Type</label>
-                  <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" value={reportConfig.type} onChange={(e) => setReportConfig((prev) => ({ ...prev, type: e.target.value }))}>
+                  <Select value={reportConfig.type} onChange={(e) => setReportConfig((prev) => ({ ...prev, type: e.target.value }))}>
                     <option value="sales">Sales Report</option>
                     <option value="marketing">Marketing Report</option>
                     <option value="analytics">Analytics Report</option>
                     <option value="financial">Financial Report</option>
                     <option value="activity">Activity Report</option>
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Date Range</label>
-                  <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" value={reportConfig.dateRange} onChange={(e) => setReportConfig((prev) => ({ ...prev, dateRange: e.target.value }))}>
+                  <Select value={reportConfig.dateRange} onChange={(e) => setReportConfig((prev) => ({ ...prev, dateRange: e.target.value }))}>
                     <option value="7d">Last 7 days</option>
                     <option value="30d">Last 30 days</option>
                     <option value="90d">Last 90 days</option>
                     <option value="1y">This year</option>
                     <option value="custom">Custom range</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
               <div>
@@ -989,14 +990,14 @@ const CustomReports = () => {
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Group By</label>
-                <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" value={reportConfig.groupBy} onChange={(e) => setReportConfig((prev) => ({ ...prev, groupBy: e.target.value }))}>
+                <Select value={reportConfig.groupBy} onChange={(e) => setReportConfig((prev) => ({ ...prev, groupBy: e.target.value }))}>
                   <option value="none">No grouping</option>
                   <option value="day">By Day</option>
                   <option value="week">By Week</option>
                   <option value="month">By Month</option>
                   <option value="user">By User</option>
                   <option value="status">By Status</option>
-                </select>
+                </Select>
               </div>
               <div className="flex space-x-2">
                 <Button onClick={() => {
@@ -1250,13 +1251,13 @@ const CustomReports = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Report Category</label>
-                  <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" value={reportCategory} onChange={(e) => setReportCategory(e.target.value)}>
+                  <Select value={reportCategory} onChange={(e) => setReportCategory(e.target.value)}>
                     <option>Sales</option>
                     <option>Marketing</option>
                     <option>Analytics</option>
                     <option>Financial</option>
                     <option>Custom</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
             </CardContent>

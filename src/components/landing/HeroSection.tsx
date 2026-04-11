@@ -14,7 +14,7 @@ export function HeroSection() {
         {/* IMAGE PLACEHOLDER: Replace this gradient with your Nano Banana Pro hero image
             <img src="/landing/hero-bg.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
         */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-blue-950 to-indigo-950" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-primary/30 to-primary/20" />
 
         {/* Animated gradient orbs for visual interest */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
@@ -46,7 +46,7 @@ export function HeroSection() {
         <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.1] tracking-tight mb-6">
           Close More Deals.
           <br />
-          <span className="bg-gradient-to-r from-primary via-cyan-400 to-primary/70 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-primary via-info to-primary/70 bg-clip-text text-transparent">
             Automate Everything.
           </span>
         </h1>

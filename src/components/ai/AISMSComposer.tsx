@@ -216,7 +216,7 @@ export function AISMSComposer({
                           value={customMessage}
                           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomMessage(e.target.value)}
                           placeholder="Type your message..."
-                          className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-primary-foreground/60"
+                          className="w-full resize-none bg-transparent text-sm outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded placeholder:text-primary-foreground/60"
                           rows={6}
                         />
                       ) : (

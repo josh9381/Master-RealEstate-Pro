@@ -42,7 +42,7 @@ export function HelpTooltip({ text, size = 'sm', position = 'bottom' }: HelpTool
     <div className="relative inline-flex" ref={tooltipRef}>
       <button
         type="button"
-        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         onClick={() => setIsVisible(!isVisible)}

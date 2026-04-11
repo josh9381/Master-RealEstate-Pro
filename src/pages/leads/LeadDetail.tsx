@@ -941,7 +941,7 @@ function LeadDetail() {
                         </>
                       ) : (
                         <>
-                          <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                          <p className="text-sm whitespace-pre-wrap max-w-prose">{note.content}</p>
                           <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                             <span>{note.user?.firstName
                               ? `${note.user.firstName}${note.user.lastName ? ' ' + note.user.lastName : ''}`
