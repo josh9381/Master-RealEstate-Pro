@@ -4,6 +4,7 @@ import { Book, Search, ChevronRight, Clock, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { docsApi } from '@/lib/api';
 
@@ -227,10 +228,10 @@ const DocumentationPages = () => {
         <CardContent className="pt-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="Search documentation..."
-              className="w-full pl-10 pr-4 py-3 border rounded-lg text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full pl-10 pr-4 py-3 text-lg"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {

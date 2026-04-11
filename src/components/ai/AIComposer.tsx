@@ -104,6 +104,10 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   const [templateCategory, setTemplateCategory] = useState('follow-up')
   const streamAbortRef = useRef<AbortController | null>(null)
   
+  // Revision history
+  const [revisionHistory, setRevisionHistory] = useState<Array<{ message: string; subject: string; timestamp: Date }>>([])
+  const [showRevisions, setShowRevisions] = useState(false)
+  
   // Load preferences and templates on mount
   useEffect(() => {
     const initComposer = async () => {
@@ -195,6 +199,10 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       })
       
       if (response.data.success) {
+        // Save current message to revision history before overwriting
+        if (message) {
+          setRevisionHistory(prev => [{ message, subject, timestamp: new Date() }, ...prev].slice(0, 5))
+        }
         setMessage(response.data?.data?.message?.body || '')
         if (response.data?.data?.message?.subject) {
           setSubject(response.data.data.message.subject)
@@ -307,8 +315,16 @@ export const AIComposer: React.FC<AIComposerProps> = ({
       } else if (error.message?.includes('401')) {
         toast.error('Session expired. Please refresh the page.')
       } else {
-        toast.error('Streaming failed. Please try again or disable streaming in settings.')
-        setUseStreaming(false)
+        // Keep partial content if any was received, and offer retry
+        if (streamedMessage) {
+          setMessage(streamedMessage)
+          toast.warning('Stream interrupted — partial message saved. Click Generate to complete.')
+        } else {
+          toast.error('Streaming failed. Falling back to standard generation.')
+          setUseStreaming(false)
+          // Auto-retry without streaming
+          generateMessage()
+        }
       }
     } finally {
       setIsStreaming(false)
@@ -682,6 +698,44 @@ export const AIComposer: React.FC<AIComposerProps> = ({
               onSelect={handleVariationSelect}
               selectedId={selectedVariationId}
             />
+          </div>
+        )}
+        
+        {/* Revision History */}
+        {revisionHistory.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowRevisions(!showRevisions)}
+              className="text-xs text-primary hover:text-primary/80 font-medium"
+            >
+              {showRevisions ? 'Hide' : 'Show'} previous versions ({revisionHistory.length})
+            </button>
+            {showRevisions && (
+              <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                {revisionHistory.map((rev, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2 bg-muted/50 rounded-lg border border-border/40 cursor-pointer hover:border-primary/40 transition-all"
+                    onClick={() => {
+                      setMessage(rev.message)
+                      if (rev.subject) setSubject(rev.subject)
+                      toast.success('Restored previous version')
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { setMessage(rev.message); if (rev.subject) setSubject(rev.subject) } }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {rev.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <span className="text-xs text-primary">Restore</span>
+                    </div>
+                    <p className="text-xs text-foreground line-clamp-2">{rev.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         

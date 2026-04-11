@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw, Brain, Target, Zap, Search, Filter, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle, RefreshCw, Brain, Target, Zap, Search, Filter, ArrowUpDown, SlidersHorizontal, Clock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -200,6 +200,21 @@ const InsightsTab = () => {
     Optimization: 'bg-primary/10 text-primary',
     Trend: 'bg-primary/10 text-primary',
   };
+
+  const getUrgencyLabel = (insight: { priority?: string; createdAt?: string }) => {
+    const ageHours = insight.createdAt
+      ? (Date.now() - new Date(insight.createdAt).getTime()) / (1000 * 60 * 60)
+      : 0
+    if (insight.priority === 'critical' || insight.priority === 'high') {
+      if (ageHours > 48) return { label: 'Overdue', variant: 'destructive' as const }
+      if (ageHours > 24) return { label: 'Urgent', variant: 'warning' as const }
+      return { label: 'Act Now', variant: 'destructive' as const }
+    }
+    if (insight.priority === 'medium' && ageHours > 72) {
+      return { label: 'Stale', variant: 'warning' as const }
+    }
+    return null
+  }
 
   return (
     <div className="space-y-6">
@@ -736,6 +751,16 @@ const InsightsTab = () => {
                                 {insight.actedOn && (
                                   <Badge variant="success">Acted On</Badge>
                                 )}
+                                {!insight.actedOn && !insight.dismissed && (() => {
+                                  const urgency = getUrgencyLabel(insight)
+                                  if (!urgency) return null
+                                  return (
+                                    <Badge variant={urgency.variant} className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {urgency.label}
+                                    </Badge>
+                                  )
+                                })()}
                                 <span className="text-xs text-muted-foreground">
                                   {insight.createdAt ? new Date(insight.createdAt).toLocaleDateString() : insight.created}
                                 </span>

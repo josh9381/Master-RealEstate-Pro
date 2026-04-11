@@ -27,9 +27,9 @@ function DashboardMockup() {
         {/* Dashboard content */}
         <div className="flex-1 flex">
           {/* Sidebar */}
-          <div className="w-[18%] bg-gray-900 p-3 space-y-2 hidden sm:block">
+          <div className="w-[18%] bg-card dark:bg-[hsl(222,47%,8%)] p-3 space-y-2 hidden sm:block">
             <div className="h-6 bg-primary rounded-md mb-4" />
-            {['bg-gray-700', 'bg-primary/40 ring-1 ring-primary/50', 'bg-gray-700', 'bg-gray-700', 'bg-gray-700', 'bg-gray-800'].map((c, i) => (
+            {['bg-muted', 'bg-primary/40 ring-1 ring-primary/50', 'bg-muted', 'bg-muted', 'bg-muted', 'bg-muted/70'].map((c, i) => (
               <div key={i} className={`h-4 rounded-md ${c}`} />
             ))}
           </div>

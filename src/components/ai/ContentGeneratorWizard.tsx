@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import React, { useState } from 'react';
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability';
 import { useToast } from '@/hooks/useToast';
-import { useAuthStore } from '@/store/authStore';
+import api from '@/lib/api';
 import {
   Wand2,
   Mail,
@@ -51,6 +51,8 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [copied, setCopied] = useState(false);
+  const [contentHistory, setContentHistory] = useState<Array<{ type: ContentType; content: any; timestamp: Date }>>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [showHistory, setShowHistory] = useState(false);
 
   // Form fields
   const [leadName, setLeadName] = useState('');
@@ -99,7 +101,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
     setIsGenerating(true);
     try {
       let endpoint = '';
-      let body: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
+      let body: Record<string, unknown> = {};
 
       switch (contentType) {
         case 'email-sequence':
@@ -138,19 +140,13 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
           break;
       }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${useAuthStore.getState().accessToken}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      const result = await response.json();
+      const response = await api.post(endpoint.replace('/api', ''), body);
+      const result = response.data;
       
       if (result.success) {
         setGeneratedContent(result.data);
+        // Save to content history
+        setContentHistory(prev => [{ type: contentType, content: result.data, timestamp: new Date() }, ...prev].slice(0, 10));
         setStep('result');
       } else {
         toast.error(result.message || 'Generation failed');
@@ -179,7 +175,44 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
     if (step === 'type') {
       return (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Choose Content Type</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">Choose Content Type</h3>
+            {contentHistory.length > 0 && (
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="text-sm text-primary hover:text-primary/80 font-medium"
+              >
+                {showHistory ? 'Hide History' : `History (${contentHistory.length})`}
+              </button>
+            )}
+          </div>
+
+          {/* Content History */}
+          {showHistory && contentHistory.length > 0 && (
+            <div className="space-y-2 p-3 bg-muted/50 rounded-xl border border-border/60">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Generations</p>
+              {contentHistory.map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setContentType(item.type);
+                    setGeneratedContent(item.content);
+                    setStep('result');
+                    setShowHistory(false);
+                  }}
+                  className="w-full text-left p-2 rounded-lg border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{contentTypes.find(t => t.value === item.type)?.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             {contentTypes.map((type) => {
               const Icon = type.icon;
@@ -192,7 +225,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   }}
                   className="p-4 border-2 border-border/60 rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all text-left group hover:shadow-md hover:shadow-primary/5"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/10 to-indigo-500/10 group-hover:from-purple-500/20 group-hover:to-indigo-500/20 transition-colors mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-info/10 group-hover:from-primary/20 group-hover:to-info/20 transition-colors mb-3">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
                   <div className="font-medium text-foreground">{type.label}</div>

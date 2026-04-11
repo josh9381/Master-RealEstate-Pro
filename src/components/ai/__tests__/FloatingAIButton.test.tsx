@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 
 // Must be set before any component import
 window.HTMLElement.prototype.scrollIntoView = vi.fn()
@@ -26,7 +27,7 @@ import { FloatingAIButton } from '../FloatingAIButton'
 
 describe('FloatingAIButton', () => {
   it('renders without crashing', () => {
-    render(<FloatingAIButton />)
+    render(<MemoryRouter><FloatingAIButton /></MemoryRouter>)
     expect(document.body.innerHTML.length).toBeGreaterThan(0)
   })
 })

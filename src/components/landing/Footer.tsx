@@ -69,7 +69,7 @@ const socialIcons = [
 
 export function Footer() {
   return (
-    <footer className="bg-gray-900 text-muted-foreground">
+    <footer className="bg-[hsl(var(--card))] dark:bg-[hsl(222,47%,8%)] text-muted-foreground">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8">
           {/* Brand */}
@@ -92,7 +92,7 @@ export function Footer() {
                   key={s.label}
                   href={s.href}
                   aria-label={s.label}
-                  className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-primary flex items-center justify-center text-muted-foreground hover:text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="w-9 h-9 rounded-lg bg-muted hover:bg-primary flex items-center justify-center text-muted-foreground hover:text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {s.svg}
                 </a>

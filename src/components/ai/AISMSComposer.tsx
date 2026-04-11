@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
-import { useState } from 'react'
-import { X, Sparkles, Send, RefreshCw, Smartphone } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { X, Sparkles, Send, RefreshCw, Smartphone, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
@@ -51,12 +51,21 @@ export function AISMSComposer({
   const [isSending, setIsSending] = useState(false)
   const { toast } = useToast()
 
-  if (!isOpen) return null
-
   const currentMessage = isCustom ? customMessage : selectedTemplate.message.replace('{{name}}', leadName)
   const charCount = currentMessage.length
   const segmentCount = Math.ceil(charCount / 160)
 
+  // SMS compliance check — detect missing opt-out language
+  const complianceWarning = useMemo(() => {
+    const lower = currentMessage.toLowerCase()
+    const hasOptOut = lower.includes('stop') || lower.includes('opt out') || lower.includes('unsubscribe') || lower.includes('reply stop')
+    if (!hasOptOut && currentMessage.length > 0) {
+      return 'Marketing SMS should include opt-out language (e.g., "Reply STOP to unsubscribe") for TCPA compliance.'
+    }
+    return null
+  }, [currentMessage])
+
+  if (!isOpen) return null
   const handleRegenerate = async () => {
     setIsGenerating(true)
     try {
@@ -232,25 +241,63 @@ export function AISMSComposer({
             </div>
           </div>
 
-          {/* Character Count */}
+          {/* Character Count with Cost Warning */}
           <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
             <div className="flex items-center space-x-2">
               <span className="text-sm font-medium">Character Count</span>
             </div>
             <div className="flex items-center space-x-3">
               <Badge 
-                variant={charCount > 160 ? "destructive" : "secondary"}
+                variant={charCount > 320 ? "destructive" : charCount > 160 ? "secondary" : "secondary"}
                 className={cn(
+                  charCount > 320 && "bg-destructive/10 text-destructive hover:bg-destructive/10 transition-colors",
                   charCount > 160 && charCount <= 320 && "bg-warning/10 text-warning hover:bg-warning/10 transition-colors"
                 )}
               >
-                {charCount} chars
+                {charCount} / {segmentCount > 1 ? '320' : '160'} chars
               </Badge>
               <Badge variant="outline">
-                {segmentCount} {segmentCount === 1 ? 'message' : 'messages'}
+                {segmentCount} {segmentCount === 1 ? 'segment' : 'segments'}
               </Badge>
             </div>
           </div>
+          {charCount > 160 && charCount <= 320 && (
+            <p className="text-xs text-warning flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Multi-segment SMS costs more. Consider shortening to under 160 characters.
+            </p>
+          )}
+          {charCount > 320 && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Message exceeds 2 segments ({segmentCount} segments). This significantly increases delivery cost.
+            </p>
+          )}
+
+          {/* SMS Compliance Warning */}
+          {complianceWarning && (
+            <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-medium text-warning">Compliance Notice</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{complianceWarning}</p>
+                <button
+                  onClick={() => {
+                    const optOutText = '\nReply STOP to unsubscribe.'
+                    if (isCustom) {
+                      setCustomMessage(prev => prev + optOutText)
+                    } else {
+                      setIsCustom(true)
+                      setCustomMessage(currentMessage + optOutText)
+                    }
+                  }}
+                  className="text-xs text-primary hover:text-primary/80 font-medium mt-1"
+                >
+                  + Add opt-out text
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

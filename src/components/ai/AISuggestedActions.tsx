@@ -74,6 +74,7 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isUnavailable, setIsUnavailable] = useState(false)
+  const [dismissFeedbackId, setDismissFeedbackId] = useState<string | null>(null)
 
   const wireClickHandler = useCallback((action: string): (() => void) => {
     const lower = action.toLowerCase()
@@ -128,7 +129,14 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
 
   const handleDismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    setDismissFeedbackId(id)
+  }
+
+  const handleDismissWithReason = (id: string, reason: string) => {
     setDismissedActions([...dismissedActions, id])
+    setDismissFeedbackId(null)
+    // Log feedback for AI improvement
+    aiApi.submitChatFeedback(id, { feedback: 'negative', note: reason }).catch(() => {})
   }
 
   const getPriorityColor = (priority: string) => {
@@ -217,6 +225,32 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
                 <X className="h-3 w-3 text-muted-foreground" />
               </button>
 
+              {/* Dismiss Feedback Options */}
+              {dismissFeedbackId === suggestion.id && (
+                <div className="absolute right-0 top-0 left-0 bottom-0 bg-background/95 backdrop-blur-sm rounded-lg z-10 flex flex-col items-center justify-center p-3 gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Why dismiss?</p>
+                  {[
+                    { reason: 'irrelevant', label: 'Not relevant' },
+                    { reason: 'already_done', label: 'Already done' },
+                    { reason: 'bad_timing', label: 'Bad timing' },
+                  ].map(({ reason, label }) => (
+                    <button
+                      key={reason}
+                      onClick={() => handleDismissWithReason(suggestion.id, reason)}
+                      className="text-xs px-3 py-1 rounded-full border border-border hover:border-primary/40 hover:bg-primary/5 transition-all w-full text-center"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setDismissFeedbackId(null)}
+                    className="text-xs text-muted-foreground hover:text-foreground mt-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
               <div className="flex items-start space-x-3 pr-6">
                 {/* Icon */}
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background">
@@ -232,7 +266,7 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
                     {suggestion.reason}
                   </p>
 
-                  {/* Confidence Bar */}
+                  {/* Confidence Bar + Action Button */}
                   <div className="mt-2 flex items-center space-x-2">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                       <div
@@ -251,6 +285,14 @@ export function AISuggestedActions({ className, leadId, onComposeEmail, onSchedu
                     >
                       {formatRate(suggestion.confidence)}%
                     </Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-xs text-primary hover:text-primary/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); suggestion.onClick(); }}
+                    >
+                      Do it →
+                    </Button>
                   </div>
                 </div>
               </div>

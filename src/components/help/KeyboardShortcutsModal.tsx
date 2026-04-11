@@ -189,7 +189,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                   <div key={categoryName}>
                     <div className="flex items-center gap-2 mb-4">
                       <Icon className={`h-5 w-5 ${category?.color}`} />
-                      <h3 className="font-semibold text-lg">{categoryName}</h3>
+                      <h3 className="font-semibold text-base">{categoryName}</h3>
                       <Badge variant="secondary">{categoryShortcuts.length}</Badge>
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">

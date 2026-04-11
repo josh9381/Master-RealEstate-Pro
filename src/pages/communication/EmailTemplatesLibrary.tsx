@@ -546,7 +546,7 @@ const EmailTemplatesLibrary = () => {
             {paginatedTemplates.map((template) => (
               viewMode === 'grid' ? (
               <div key={template.id} className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-center h-48 bg-gradient-to-br from-blue-50 to-purple-50">
+                <div className="flex items-center justify-center h-48 bg-gradient-to-br from-primary/5 to-info/5">
                   <div className="text-6xl">📧</div>
                 </div>
                 <div className="p-4">
@@ -589,7 +589,7 @@ const EmailTemplatesLibrary = () => {
               </div>
               ) : (
               <div key={template.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-4">
-                <div className="flex items-center justify-center h-12 w-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 bg-gradient-to-br from-primary/5 to-info/5 rounded-lg flex-shrink-0">
                   <span className="text-2xl">📧</span>
                 </div>
                 <div className="flex-1 min-w-0">

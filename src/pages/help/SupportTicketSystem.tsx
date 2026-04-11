@@ -4,6 +4,7 @@ import { Ticket, MessageSquare, AlertCircle, CheckCircle, Clock, Search, Send, A
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Textarea } from '@/components/ui/Textarea';
 import { supportApi } from '@/lib/api';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
@@ -221,12 +222,12 @@ const SupportTicketSystem = () => {
         {detail.status !== 'CLOSED' && (
           <Card>
             <CardContent className="pt-6">
-              <textarea
+              <Textarea
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Type your reply..."
                 rows={4}
-                className="w-full px-3 py-2 border rounded-lg mb-3 transition-colors"
+                className="mb-3"
               />
               <div className="flex justify-end">
                 <Button

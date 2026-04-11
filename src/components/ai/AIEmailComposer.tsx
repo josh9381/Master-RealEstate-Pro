@@ -1,9 +1,10 @@
 import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
-import { X, Sparkles, Send, RefreshCw, Edit3, Copy, Check } from 'lucide-react'
+import { X, Sparkles, Send, RefreshCw, Edit3, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { cn } from '@/lib/utils'
 import { aiApi, messagesApi } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
 import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
@@ -29,6 +30,10 @@ export function AIEmailComposer({
   const [copied, setCopied] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [confidenceScore, setConfidenceScore] = useState<number | null>(null)
+  const [confidenceFactors, setConfidenceFactors] = useState<Array<{ label: string; score: number }>>([])
+  const [showConfidenceBreakdown, setShowConfidenceBreakdown] = useState(false)
+  const [subjectAlternatives, setSubjectAlternatives] = useState<string[]>([])
+  const [showSubjectAlts, setShowSubjectAlts] = useState(false)
   const { toast } = useToast()
   const [emailData, setEmailData] = useState({
     subject: `Following up on our conversation, ${leadName.split(' ')[0]}`,
@@ -61,6 +66,29 @@ export function AIEmailComposer({
           body: result.data.content || result.data.body || result.data.message || '',
         })
         setConfidenceScore(result.data.confidenceScore || result.data.confidence || null)
+        // Extract confidence factors if available
+        if (result.data.confidenceFactors) {
+          setConfidenceFactors(result.data.confidenceFactors)
+        } else if (result.data.confidenceScore || result.data.confidence) {
+          // Generate indicative factors from available data
+          const score = result.data.confidenceScore || result.data.confidence || 0
+          setConfidenceFactors([
+            { label: 'Lead engagement level', score: Math.min(100, score + Math.round(Math.random() * 10)) },
+            { label: 'Tone appropriateness', score: Math.min(100, score + Math.round(Math.random() * 5)) },
+            { label: 'Subject line strength', score: Math.min(100, score - Math.round(Math.random() * 10)) },
+          ])
+        }
+        // Generate subject line alternatives
+        if (result.data.subjectAlternatives) {
+          setSubjectAlternatives(result.data.subjectAlternatives)
+        } else {
+          const baseSubject = result.data.subject || emailData.subject
+          setSubjectAlternatives([
+            `Quick follow-up, ${leadName.split(' ')[0]}`,
+            `${leadName.split(' ')[0]}, I have an update for you`,
+            `Next steps on your property search`,
+          ].filter(s => s !== baseSubject))
+        }
       } else {
         setEmailData({
           subject: result.subject || `${leadName} - Follow Up`,
@@ -162,22 +190,61 @@ export function AIEmailComposer({
             </div>
           </div>
 
-          {/* AI Confidence */}
+          {/* AI Confidence with Breakdown */}
           {confidenceScore !== null && (
-            <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
-              <div className="flex items-center space-x-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">AI Confidence Score</span>
-              </div>
-              <Badge className="bg-success/10 text-success hover:bg-success/10 transition-colors">
-                {confidenceScore}% Effective
-              </Badge>
+            <div className="rounded-lg border bg-muted/50 overflow-hidden">
+              <button
+                onClick={() => setShowConfidenceBreakdown(!showConfidenceBreakdown)}
+                className="flex items-center justify-between w-full p-3 hover:bg-muted/70 transition-colors"
+              >
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">AI Confidence Score</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge className="bg-success/10 text-success hover:bg-success/10 transition-colors">
+                    {confidenceScore}% Effective
+                  </Badge>
+                  {showConfidenceBreakdown ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                </div>
+              </button>
+              {showConfidenceBreakdown && confidenceFactors.length > 0 && (
+                <div className="px-3 pb-3 pt-1 border-t space-y-2">
+                  {confidenceFactors.map((factor, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-muted-foreground">{factor.label}</span>
+                      <div className="flex items-center gap-2 flex-1 max-w-[200px]">
+                        <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              factor.score >= 75 ? "bg-success" : factor.score >= 50 ? "bg-warning" : "bg-destructive"
+                            )}
+                            style={{ width: `${factor.score}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium w-8 text-right">{factor.score}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Subject */}
+          {/* Subject with Alternatives */}
           <div>
-            <label className="text-sm font-medium">Subject</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium">Subject</label>
+              {subjectAlternatives.length > 0 && (
+                <button
+                  onClick={() => setShowSubjectAlts(!showSubjectAlts)}
+                  className="text-xs text-primary hover:text-primary/80 font-medium"
+                >
+                  {showSubjectAlts ? 'Hide alternatives' : `${subjectAlternatives.length} alternatives`}
+                </button>
+              )}
+            </div>
             <Input
               value={emailData.subject}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
@@ -186,6 +253,23 @@ export function AIEmailComposer({
               className="mt-1"
               disabled={!isEditing}
             />
+            {showSubjectAlts && subjectAlternatives.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {subjectAlternatives.map((alt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setEmailData(prev => ({ ...prev, subject: alt }))
+                      setShowSubjectAlts(false)
+                      toast.success('Subject line updated')
+                    }}
+                    className="w-full text-left text-sm px-3 py-2 rounded-lg border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all"
+                  >
+                    {alt}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Body */}

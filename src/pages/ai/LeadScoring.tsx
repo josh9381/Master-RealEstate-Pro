@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Target, TrendingUp, AlertCircle, Settings, RefreshCw, Save, RotateCcw, X, Upload, Activity, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Settings, RefreshCw, Save, RotateCcw, X, Upload, Activity, CheckCircle, ArrowLeft, Zap, Shield, Scale } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -218,6 +218,48 @@ const LeadScoring = () => {
     return 'F'
   }
 
+  const SCORING_PRESETS = {
+    aggressive: {
+      label: 'Aggressive',
+      description: 'Prioritizes engagement signals — ideal for fast-moving markets',
+      icon: Zap,
+      values: {
+        emailOpenWeight: 10, emailClickWeight: 20, emailReplyWeight: 25,
+        formSubmissionWeight: 30, propertyInquiryWeight: 35, scheduledApptWeight: 40,
+        completedApptWeight: 50, emailOptOutPenalty: -30, recencyBonusMax: 30, frequencyBonusMax: 25,
+      },
+    },
+    conservative: {
+      label: 'Conservative',
+      description: 'Heavy penalties for disengagement — fewer but higher-quality leads',
+      icon: Shield,
+      values: {
+        emailOpenWeight: 3, emailClickWeight: 5, emailReplyWeight: 10,
+        formSubmissionWeight: 15, propertyInquiryWeight: 20, scheduledApptWeight: 25,
+        completedApptWeight: 35, emailOptOutPenalty: -100, recencyBonusMax: 10, frequencyBonusMax: 8,
+      },
+    },
+    balanced: {
+      label: 'Balanced',
+      description: 'Equal weight to engagement and quality signals — recommended for most teams',
+      icon: Scale,
+      values: {
+        emailOpenWeight: 5, emailClickWeight: 10, emailReplyWeight: 15,
+        formSubmissionWeight: 20, propertyInquiryWeight: 25, scheduledApptWeight: 30,
+        completedApptWeight: 40, emailOptOutPenalty: -50, recencyBonusMax: 20, frequencyBonusMax: 15,
+      },
+    },
+  } as const
+
+  const FACTOR_DESCRIPTIONS: Record<string, string> = {
+    'Email Engagement': 'How often leads open, click, and reply to your emails',
+    'Company Size': 'Larger companies often indicate higher deal value potential',
+    'Budget Indicated': 'Leads who have shared budget info are further in the funnel',
+    'Website Visits': 'Frequent site visits show active interest in your listings',
+    'Industry Match': 'Leads in your target industries convert at higher rates',
+    'Job Title': 'Decision-maker titles correlate with faster deal closures',
+  }
+
   const defaultScoreFactors = [
     { factor: 'Email Engagement', weight: 25, impact: 'High' },
     { factor: 'Company Size', weight: 20, impact: 'High' },
@@ -417,6 +459,29 @@ const LeadScoring = () => {
               </div>
             ) : (
               <>
+                {/* Preset Profiles */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Quick Presets</label>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {Object.entries(SCORING_PRESETS).map(([key, preset]) => {
+                      const Icon = preset.icon
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setConfigForm({ ...preset.values })}
+                          className="flex items-start gap-3 p-3 rounded-lg border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                        >
+                          <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                          <div>
+                            <span className="text-sm font-medium">{preset.label}</span>
+                            <p className="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {[
                     { key: 'emailOpenWeight', label: 'Email Opens', defaultVal: 5, max: 50 },
@@ -569,7 +634,9 @@ const LeadScoring = () => {
                       style={{ width: `${factor.weight * 4}%` }}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">Impact: {factor.impact}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {FACTOR_DESCRIPTIONS[factor.factor] || `Impact: ${factor.impact}`}
+                  </p>
                 </div>
               ))}
             </div>
@@ -688,6 +755,19 @@ const LeadScoring = () => {
                       <div className="text-sm font-medium">{factorBreakdown.data.recencyLabel}</div>
                     </div>
                   )}
+                </div>
+
+                {/* Plain-English Summary */}
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-sm">
+                    {factorBreakdown.data.finalScore >= 80
+                      ? '🔥 This is a high-priority lead. Strong engagement signals suggest they\'re ready to move forward — prioritize outreach.'
+                      : factorBreakdown.data.finalScore >= 60
+                      ? '👀 This lead shows moderate interest. They\'ve engaged with some content but need more nurturing before they\'re sales-ready.'
+                      : factorBreakdown.data.finalScore >= 40
+                      ? '📋 Early-stage lead with limited engagement. Consider adding them to an automated nurture campaign.'
+                      : '❄️ Low engagement — this lead hasn\'t shown buying signals yet. Focus efforts on higher-scoring leads first.'}
+                  </p>
                 </div>
 
                 {/* Component bars */}

@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 
 // Must be set before any component import
 window.HTMLElement.prototype.scrollIntoView = vi.fn()
@@ -29,7 +30,7 @@ import { AIAssistant } from '../AIAssistant'
 
 describe('AIAssistant', () => {
   it('renders without crashing', () => {
-    render(<AIAssistant isOpen={true} onClose={vi.fn()} />)
+    render(<MemoryRouter><AIAssistant isOpen={true} onClose={vi.fn()} /></MemoryRouter>)
     expect(document.body.innerHTML.length).toBeGreaterThan(0)
   })
 })

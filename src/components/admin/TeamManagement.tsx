@@ -180,7 +180,7 @@ export function TeamManagement() {
               <div className="flex items-center justify-between">
                 {/* Member Info */}
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-white font-semibold">
                     {member.firstName?.[0] || member.email[0].toUpperCase()}
                   </div>
                   

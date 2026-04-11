@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { X, Send, Sparkles, TrendingUp, MessageSquare, ThumbsUp, ThumbsDown, AlertTriangle, Check, Trash2, Copy, MoreVertical } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { X, Send, Sparkles, TrendingUp, MessageSquare, ThumbsUp, ThumbsDown, AlertTriangle, Check, Trash2, Copy, MoreVertical, HelpCircle, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -10,6 +10,7 @@ import { getAIUnavailableMessage } from '@/hooks/useAIAvailability'
 import { MessagePreview } from './MessagePreview'
 import { aiApi } from '@/lib/api'
 import { formatRate } from '@/lib/metricsCalculator'
+import { useLocation } from 'react-router-dom'
 
 interface Message {
   id: string
@@ -57,6 +58,114 @@ function sanitizeMessageContent(content: string): string {
   return doc.body.textContent || ''
 }
 
+// Generate context-aware suggestions based on the current page
+function getContextSuggestions(pathname: string): Array<{ label: string; question: string }> {
+  if (pathname.includes('/leads/') && !pathname.endsWith('/leads')) {
+    return [
+      { label: '📊 Score This Lead', question: 'What is this lead\'s conversion probability?' },
+      { label: '💡 Next Action', question: 'What should I do next with this lead?' },
+      { label: '✉️ Draft Email', question: 'Draft a follow-up email for this lead' },
+      { label: '📈 Engagement', question: 'Analyze this lead\'s engagement history' },
+    ]
+  }
+  if (pathname.includes('/leads')) {
+    return [
+      { label: '🔥 Hot Leads', question: 'Show me my hot leads with score above 80' },
+      { label: '⚠️ At Risk', question: 'Which leads are at risk of going cold?' },
+      { label: '📊 Lead Stats', question: 'Give me a summary of my leads by status' },
+      { label: '🏆 Top Performers', question: 'Show my leads most likely to convert' },
+    ]
+  }
+  if (pathname.includes('/campaigns')) {
+    return [
+      { label: '📈 Campaign Perf', question: 'How are my campaigns performing?' },
+      { label: '✉️ Email Sequence', question: 'Help me create an email nurture sequence' },
+      { label: '📊 Open Rates', question: 'Which campaigns have the best open rates?' },
+      { label: '💡 Suggestions', question: 'How can I improve my campaign performance?' },
+    ]
+  }
+  if (pathname.includes('/dashboard')) {
+    return [
+      { label: '📊 Daily Summary', question: 'Give me a summary of today\'s activity' },
+      { label: '🔥 Hot Leads', question: 'Show me my hot leads above 80' },
+      { label: '⚠️ At Risk', question: 'Which leads need immediate attention?' },
+      { label: '📅 Upcoming', question: 'What tasks and appointments do I have coming up?' },
+    ]
+  }
+  if (pathname.includes('/analytics')) {
+    return [
+      { label: '📈 Trends', question: 'Show me my conversion trends this month' },
+      { label: '💰 Revenue', question: 'What is my projected revenue this quarter?' },
+      { label: '📊 Performance', question: 'How am I performing compared to last month?' },
+      { label: '💡 Insights', question: 'What are my top AI-generated insights?' },
+    ]
+  }
+  // Default suggestions
+  return [
+    { label: '📊 Lead Stats', question: 'Give me a summary of my leads' },
+    { label: '🔥 Hot Leads', question: 'Show me my hot leads above 80' },
+    { label: '⚠️ At Risk', question: 'Which leads are at risk?' },
+    { label: '📅 Recent Activity', question: 'Show me my recent activities' },
+    { label: '✉️ Draft Email', question: 'Help me write a follow-up email' },
+  ]
+}
+
+// Generate follow-up suggestion chips based on the last AI response
+function getFollowUpSuggestions(lastMessage: string): string[] {
+  const lower = lastMessage.toLowerCase()
+  if (lower.includes('lead') && lower.includes('score')) {
+    return ['What factors drove this score?', 'How can I improve it?', 'Show similar leads']
+  }
+  if (lower.includes('email') && (lower.includes('draft') || lower.includes('composed') || lower.includes('subject'))) {
+    return ['Make it more urgent', 'Shorten this email', 'Try a different tone']
+  }
+  if (lower.includes('at-risk') || lower.includes('at risk') || lower.includes('churn')) {
+    return ['Draft re-engagement emails', 'Create a task to follow up', 'Which are most urgent?']
+  }
+  if (lower.includes('conversion') || lower.includes('prediction') || lower.includes('probability')) {
+    return ['What can I do to improve conversion?', 'Show risk factors', 'Compare to similar leads']
+  }
+  if (lower.includes('activity') || lower.includes('activities')) {
+    return ['Show only high-priority items', 'Create a new task', 'Any overdue tasks?']
+  }
+  if (lower.includes('campaign') || lower.includes('open rate')) {
+    return ['Which subject lines work best?', 'Suggest improvements', 'Compare templates']
+  }
+  return []
+}
+
+// Help command content
+const HELP_MESSAGE = `🤖 **Here's what I can help you with:**
+
+**📊 Leads & Scoring**
+• Search, create, update, or delete leads
+• Check lead scores and conversion predictions
+• Identify at-risk leads needing attention
+• Analyze engagement history and trends
+
+**✉️ Communication**
+• Draft emails, SMS messages, and call scripts
+• Enhance message tone and quality
+• Suggest optimal contact times
+
+**📅 Tasks & Scheduling**
+• Create tasks and set reminders
+• Schedule appointments and demos
+• View upcoming activities
+
+**📈 Analytics & Insights**
+• Get pipeline summaries and forecasts
+• View campaign performance metrics
+• Get AI-powered recommendations
+
+**⚡ Quick Commands**
+• "Show my hot leads" — leads with score > 80
+• "Draft a follow-up email for [name]"
+• "What should I do next with [lead]?"
+• "How are my campaigns performing?"
+
+💡 *Tip: I work best when you're specific — mention lead names, dates, or exact actions you want to take.*`
+
 export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -71,6 +180,8 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
   const [isTyping, setIsTyping] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null)
+  const [followUpChips, setFollowUpChips] = useState<string[]>([])
+  const location = useLocation()
   const [messagePreview, setMessagePreview] = useState<{
     type: 'email' | 'sms' | 'script'
     content: {
@@ -203,15 +314,16 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
       description: 'What are my recent activities?',
       action: () => handleQuickQuestion('Show me my recent activities'),
     },
+    {
+      id: 'help',
+      icon: HelpCircle,
+      title: 'What Can You Do?',
+      description: 'See all AI capabilities and commands',
+      action: () => handleHelpCommand(),
+    },
   ]
 
-  const quickActions = [
-    { label: '📊 Lead Stats', question: 'Give me a summary of my leads' },
-    { label: '🔥 Hot Leads', question: 'Show me my hot leads above 80' },
-    { label: '⚠️ At Risk', question: 'Which leads are at risk?' },
-    { label: '📅 Recent Activity', question: 'Show me my recent activities' },
-    { label: '✉️ Draft Email', question: 'Help me write a follow-up email' },
-  ]
+  const quickActions = useMemo(() => getContextSuggestions(location.pathname), [location.pathname])
 
   useEffect(() => {
     // Only auto-scroll if user is near the bottom (within 100px)
@@ -232,9 +344,35 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
     handleSendMessage(question)
   }
 
+  const handleHelpCommand = () => {
+    setFollowUpChips([])
+    const helpMsg: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: HELP_MESSAGE,
+      timestamp: new Date(),
+    }
+    setMessages((prev) => [...prev, helpMsg])
+    setFollowUpChips(['Show my hot leads', 'Draft a follow-up email', 'What tasks are overdue?'])
+  }
+
   const handleSendMessage = async (overrideInput?: string) => {
     const messageText = overrideInput || input
     if (!messageText.trim() || isTyping) return
+
+    // Handle /help command locally
+    if (messageText.trim().toLowerCase() === '/help' || messageText.trim().toLowerCase() === 'help' || messageText.trim().toLowerCase() === 'what can you do') {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: messageText,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, userMessage])
+      setInput('')
+      handleHelpCommand()
+      return
+    }
 
     if (messageText.trim().length > 5000) {
       toast.error('Message too long', 'Maximum 5000 characters allowed')
@@ -252,6 +390,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
     setMessages((prev) => [...prev, userMessage])
     setInput('')
     setIsTyping(true)
+    setFollowUpChips([])
     
     try {
       // Build conversation history for context
@@ -506,6 +645,8 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
         }
 
         setMessages((prev) => [...prev, assistantMessage])
+        // Generate follow-up chips based on the AI response
+        setFollowUpChips(getFollowUpSuggestions(assistantMessage.content))
       } else {
         throw new Error('Failed to get AI response')
       }
@@ -786,6 +927,25 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
             </div>
           ))}
 
+          {/* Follow-up Suggestion Chips */}
+          {followUpChips.length > 0 && !isTyping && (
+            <div className="flex flex-wrap gap-1.5 px-1">
+              <div className="w-full flex items-center gap-1.5 mb-1">
+                <Lightbulb className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Follow up</span>
+              </div>
+              {followUpChips.map((chip, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleQuickQuestion(chip)}
+                  className="text-xs px-3 py-1.5 rounded-full bg-primary/5 text-primary hover:bg-primary/15 transition-all border border-primary/20 hover:shadow-sm font-medium"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Destructive Action Confirmation Banner */}
           {pendingConfirmation && (
             <div className="mx-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
@@ -878,10 +1038,17 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
           </select>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions — context-aware based on current page */}
         {messages.length <= 3 && (
           <div className="px-4 py-2.5 border-t bg-muted/10">
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">Quick Actions</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">
+              {location.pathname.includes('/leads/') ? '💡 Lead Actions' :
+               location.pathname.includes('/leads') ? '💡 Lead Overview' :
+               location.pathname.includes('/campaigns') ? '💡 Campaign Actions' :
+               location.pathname.includes('/dashboard') ? '💡 Dashboard Actions' :
+               location.pathname.includes('/analytics') ? '💡 Analytics' :
+               '💡 Quick Actions'}
+            </label>
             <div className="flex flex-wrap gap-1.5">
               {quickActions.map((action, idx) => (
                 <button

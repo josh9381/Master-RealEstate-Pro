@@ -4,7 +4,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 // Validate required environment variables at startup
-const REQUIRED_ENV_VARS = ['DATABASE_URL', 'JWT_SECRET', 'MASTER_ENCRYPTION_KEY']
+const REQUIRED_ENV_VARS = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'MASTER_ENCRYPTION_KEY']
 const missingEnvVars = REQUIRED_ENV_VARS.filter((v) => !process.env[v])
 if (missingEnvVars.length > 0) {
   console.error(`[STARTUP ERROR] Missing required environment variables: ${missingEnvVars.join(', ')}`)
