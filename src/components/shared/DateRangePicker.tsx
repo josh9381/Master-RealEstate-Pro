@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { computeDateRange } from './dateRangeUtils'
 import type { DateRangePreset, DateRange } from './dateRangeUtils'
 
@@ -67,18 +68,18 @@ export function DateRangePicker({
 
       {showCustom && showCustomDates && (
         <div className="flex items-center gap-2">
-          <input
+          <Input
             type="date"
             aria-label="Start date"
-            className="px-2 py-1 text-sm border border-input rounded-md bg-background text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="w-auto px-2 py-1 text-sm"
             value={customStart}
             onChange={(e) => setCustomStart(e.target.value)}
           />
           <span className="text-sm text-muted-foreground">to</span>
-          <input
+          <Input
             type="date"
             aria-label="End date"
-            className="px-2 py-1 text-sm border border-input rounded-md bg-background text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="w-auto px-2 py-1 text-sm"
             value={customEnd}
             onChange={(e) => setCustomEnd(e.target.value)}
           />

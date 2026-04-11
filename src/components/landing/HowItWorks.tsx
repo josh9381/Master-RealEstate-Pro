@@ -62,10 +62,10 @@ export function HowItWorks() {
                 <div
                   className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg ${
                     step.color === 'blue'
-                      ? 'bg-blue-600 shadow-blue-600/25'
+                      ? 'bg-primary shadow-primary/25'
                       : step.color === 'purple'
                       ? 'bg-purple-600 shadow-purple-600/25'
-                      : 'bg-emerald-600 shadow-emerald-600/25'
+                      : 'bg-success shadow-success/25'
                   }`}
                 >
                   <step.icon className="h-9 w-9 text-white" />
@@ -73,10 +73,10 @@ export function HowItWorks() {
                 <span
                   className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
                     step.color === 'blue'
-                      ? 'bg-blue-500'
+                      ? 'bg-primary'
                       : step.color === 'purple'
                       ? 'bg-purple-500'
-                      : 'bg-emerald-500'
+                      : 'bg-success'
                   }`}
                 >
                   {step.number}
