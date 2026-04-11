@@ -47,7 +47,7 @@ function DashboardMockup() {
                 <div key={i} className={`rounded-lg p-2 border-l-[3px] ${card.color} shadow-sm`}>
                   <p className="text-[7px] sm:text-[9px] text-muted-foreground truncate">{card.label}</p>
                   <p className="text-[11px] sm:text-sm font-bold text-foreground">{card.value}</p>
-                  <span className="text-[7px] sm:text-[8px] text-emerald-500 font-semibold">{card.change}</span>
+                  <span className="text-[7px] sm:text-[8px] text-success font-semibold">{card.change}</span>
                 </div>
               ))}
             </div>
@@ -85,7 +85,7 @@ function DashboardMockup() {
                         <span className="text-[6px] text-white font-bold">{name[0]}</span>
                       </div>
                       <span className="text-[7px] sm:text-[8px] text-muted-foreground">{name}</span>
-                      <span className="ml-auto text-[6px] sm:text-[7px] text-emerald-500 font-medium">Hot</span>
+                      <span className="ml-auto text-[6px] sm:text-[7px] text-success font-medium">Hot</span>
                     </div>
                   ))}
                 </div>
@@ -95,7 +95,7 @@ function DashboardMockup() {
                 <div className="space-y-1.5 mt-2">
                   {['3 leads ready to convert', 'Campaign A/B winner found', 'Follow up Sarah today'].map((text, i) => (
                     <div key={i} className="flex items-start gap-1">
-                      <div className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${i === 0 ? 'bg-emerald-400' : i === 1 ? 'bg-blue-400' : 'bg-amber-400'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${i === 0 ? 'bg-success' : i === 1 ? 'bg-primary' : 'bg-warning'}`} />
                       <span className="text-[7px] sm:text-[8px] text-muted-foreground leading-tight">{text}</span>
                     </div>
                   ))}
@@ -144,7 +144,7 @@ export function ProductShowcase() {
             <ul className="space-y-4 mb-10">
               {bulletPoints.map((point) => (
                 <li key={point} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-6 w-6 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-6 w-6 text-success flex-shrink-0 mt-0.5" />
                   <span className="text-foreground/80 font-medium">{point}</span>
                 </li>
               ))}

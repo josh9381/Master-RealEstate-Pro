@@ -63,7 +63,7 @@ export function MassEmailModal({
           <div>
             <label className="text-sm font-medium">Template (Optional)</label>
             <select
-              className="w-full mt-1 p-2 border rounded-md"
+              className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               value={selectedTemplate}
               onChange={(e) => handleTemplateSelect(e.target.value)}
             >
@@ -256,7 +256,7 @@ export function StatusModal({ onClose, onApply }: StatusModalProps) {
           <div>
             <label className="text-sm font-medium">New Status</label>
             <select
-              className="w-full mt-1 p-2 border rounded-md"
+              className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value)}
             >
@@ -309,7 +309,7 @@ export function AssignModal({ teamMembers, onClose, onApply }: AssignModalProps)
           <div>
             <label className="text-sm font-medium">Assign To</label>
             <select
-              className="w-full mt-1 p-2 border rounded-md"
+              className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               value={assignToUser}
               onChange={(e) => setAssignToUser(e.target.value)}
             >
@@ -484,7 +484,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">Status</label>
-                    <select className="w-full mt-1 p-2 border rounded-md" value={editingLead.status} onChange={(e) => onLeadChange({...editingLead, status: e.target.value as Lead['status']})}>
+                    <select className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed" value={editingLead.status} onChange={(e) => onLeadChange({...editingLead, status: e.target.value as Lead['status']})}>
                       <option value="new">New</option>
                       <option value="contacted">Contacted</option>
                       <option value="qualified">Qualified</option>
@@ -496,7 +496,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
                   </div>
                   <div>
                     <label className="text-sm font-medium">Source</label>
-                    <select className="w-full mt-1 p-2 border rounded-md capitalize" value={editingLead.source} onChange={(e) => onLeadChange({...editingLead, source: e.target.value})}>
+                    <select className="w-full mt-1 p-2 border rounded-md capitalize disabled:opacity-50 disabled:cursor-not-allowed" value={editingLead.source} onChange={(e) => onLeadChange({...editingLead, source: e.target.value})}>
                       <option value="website">Website</option>
                       <option value="referral">Referral</option>
                       <option value="social">Social Media</option>
@@ -514,7 +514,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
                   <div>
                     <label className="text-sm font-medium">Assigned To</label>
                     <select
-                      className="w-full mt-1 p-2 border rounded-md"
+                      className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                       value={typeof editingLead.assignedTo === 'object' && editingLead.assignedTo !== null ? (editingLead.assignedTo as AssignedUser).id || (editingLead.assignedTo as AssignedUser)._id || '' : editingLead.assignedTo || ''}
                       onChange={(e) => onLeadChange({...editingLead, assignedTo: e.target.value || null})}
                     >
@@ -534,7 +534,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
               <div>
                 <h3 className="text-lg font-semibold mb-3">Notes</h3>
                 <textarea
-                  className="w-full mt-1 p-2 border rounded-md min-h-[100px]"
+                  className="w-full mt-1 p-2 border rounded-md min-h-[100px] disabled:opacity-50 disabled:cursor-not-allowed"
                   value={typeof editingLead.notes === 'string' ? editingLead.notes : ''}
                   onChange={(e) => onLeadChange({...editingLead, notes: e.target.value})}
                   placeholder="Add any additional notes about this lead..."
@@ -550,7 +550,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Property Type</label>
-                  <select className="w-full mt-1 p-2 border rounded-md" value={editingLead.propertyType || ''} onChange={(e) => onLeadChange({...editingLead, propertyType: e.target.value})}>
+                  <select className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed" value={editingLead.propertyType || ''} onChange={(e) => onLeadChange({...editingLead, propertyType: e.target.value})}>
                     <option value="">Not specified</option>
                     <option value="Single Family">Single Family</option>
                     <option value="Condo">Condo</option>
@@ -562,7 +562,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
                 </div>
                 <div>
                   <label className="text-sm font-medium">Transaction Type</label>
-                  <select className="w-full mt-1 p-2 border rounded-md" value={editingLead.transactionType || ''} onChange={(e) => onLeadChange({...editingLead, transactionType: e.target.value})}>
+                  <select className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed" value={editingLead.transactionType || ''} onChange={(e) => onLeadChange({...editingLead, transactionType: e.target.value})}>
                     <option value="">Not specified</option>
                     <option value="Buyer">Buyer</option>
                     <option value="Seller">Seller</option>
@@ -581,7 +581,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
                 </div>
                 <div>
                   <label className="text-sm font-medium">Pre-Approval Status</label>
-                  <select className="w-full mt-1 p-2 border rounded-md" value={editingLead.preApprovalStatus || ''} onChange={(e) => onLeadChange({...editingLead, preApprovalStatus: e.target.value})}>
+                  <select className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed" value={editingLead.preApprovalStatus || ''} onChange={(e) => onLeadChange({...editingLead, preApprovalStatus: e.target.value})}>
                     <option value="">Not specified</option>
                     <option value="Not Started">Not Started</option>
                     <option value="In-Process">In-Process</option>
@@ -591,7 +591,7 @@ export function EditLeadModal({ editingLead, editErrors, teamMembers, onClose, o
                 </div>
                 <div>
                   <label className="text-sm font-medium">Move-In Timeline</label>
-                  <select className="w-full mt-1 p-2 border rounded-md" value={editingLead.moveInTimeline || ''} onChange={(e) => onLeadChange({...editingLead, moveInTimeline: e.target.value})}>
+                  <select className="w-full mt-1 p-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed" value={editingLead.moveInTimeline || ''} onChange={(e) => onLeadChange({...editingLead, moveInTimeline: e.target.value})}>
                     <option value="">Not specified</option>
                     <option value="ASAP">ASAP</option>
                     <option value="1-3 Months">1-3 Months</option>

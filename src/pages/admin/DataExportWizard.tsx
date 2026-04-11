@@ -223,7 +223,7 @@ const DataExportWizard = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Date Range</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
+              <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                 <option>All Time</option>
                 <option>Last 7 days</option>
                 <option>Last 30 days</option>
@@ -234,7 +234,7 @@ const DataExportWizard = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Status</label>
-              <select className="w-full px-3 py-2 border rounded-lg" multiple>
+              <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" multiple>
                 <option>New</option>
                 <option>Contacted</option>
                 <option>Qualified</option>
@@ -246,7 +246,7 @@ const DataExportWizard = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Assigned To</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
+              <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                 <option>All Users</option>
                 {teamMembers.map((member: { id: string; name?: string; firstName?: string; lastName?: string }) => (
                   <option key={member.id} value={member.id}>
@@ -258,7 +258,7 @@ const DataExportWizard = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Source</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
+              <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                 <option>All Sources</option>
                 <option>Website</option>
                 <option>Referral</option>
@@ -378,12 +378,12 @@ const DataExportWizard = () => {
             <input
               type="text"
               placeholder="export-leads-2024-01-15"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Character Encoding</label>
-            <select className="w-full px-3 py-2 border rounded-lg">
+            <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
               <option>UTF-8</option>
               <option>UTF-16</option>
               <option>ASCII</option>

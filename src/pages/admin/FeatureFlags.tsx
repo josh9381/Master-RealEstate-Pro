@@ -350,7 +350,7 @@ const FeatureFlags = () => {
                 onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Environment</label>
                 <select 

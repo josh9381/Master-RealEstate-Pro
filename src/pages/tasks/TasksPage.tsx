@@ -530,7 +530,7 @@ export default function TasksPage() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Showing {startItem} to {endItem} of {totalTasks} tasks</span>
             <select
-              className="border rounded-md px-2 py-1 text-sm bg-background"
+              className="border rounded-md px-2 py-1 text-sm bg-background hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               value={pageSize}
               onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
             >

@@ -436,7 +436,7 @@ function LeadsImport() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Mapping Table */}
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
@@ -548,7 +548,7 @@ function LeadsImport() {
               <CardDescription>Review before importing</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                 <div className="p-4 rounded-lg bg-muted/50">
                   <div className="text-2xl font-bold">{preview.totalRows}</div>
                   <div className="text-sm text-muted-foreground">Total Rows</div>
@@ -598,7 +598,7 @@ function LeadsImport() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Action selector */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {([
                     { value: 'skip' as const, label: 'Skip Duplicates', desc: 'Don\'t import rows that match existing leads' },
                     { value: 'overwrite' as const, label: 'Update Existing', desc: 'Overwrite existing lead data with import data' },
@@ -620,7 +620,7 @@ function LeadsImport() {
                 </div>
 
                 {/* Show first few duplicates */}
-                <div className="rounded-lg border overflow-hidden">
+                <div className="rounded-lg border overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-muted/50">

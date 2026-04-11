@@ -324,7 +324,7 @@ const DatabaseMaintenance = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Select Tables</label>
-              <select className="w-full px-3 py-2 border rounded-lg transition-colors" multiple>
+              <select className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" multiple>
                 <option>leads</option>
                 <option>contacts</option>
                 <option>campaigns</option>

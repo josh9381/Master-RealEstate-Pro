@@ -450,7 +450,7 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
           />
           <div className="flex items-center gap-2 pt-1">
             <select
-              className="text-xs border rounded px-1.5 py-0.5"
+              className="text-xs border rounded px-1.5 py-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               value={d.level}
               onChange={(e) => onUpdate({ level: Number(e.target.value) as 1 | 2 | 3 })}
             >
@@ -459,7 +459,7 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
               <option value={3}>H3 — Small</option>
             </select>
             <AlignButtons align={d.align} onChange={(align) => onUpdate({ align })} />
-            <input type="color" className="h-5 w-5 cursor-pointer rounded border" value={d.color} onChange={(e) => onUpdate({ color: e.target.value })} title="Text color" />
+            <input type="color" className="h-5 w-5 cursor-pointer rounded border disabled:opacity-50 disabled:cursor-not-allowed" value={d.color} onChange={(e) => onUpdate({ color: e.target.value })} title="Text color" />
           </div>
         </div>
       )
@@ -479,9 +479,9 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
           />
           <div className="flex items-center gap-2">
             <AlignButtons align={d.align} onChange={(align) => onUpdate({ align })} />
-            <input type="color" className="h-5 w-5 cursor-pointer rounded border" value={d.color} onChange={(e) => onUpdate({ color: e.target.value })} title="Text color" />
+            <input type="color" className="h-5 w-5 cursor-pointer rounded border disabled:opacity-50 disabled:cursor-not-allowed" value={d.color} onChange={(e) => onUpdate({ color: e.target.value })} title="Text color" />
             <select
-              className="text-xs border rounded px-1.5 py-0.5"
+              className="text-xs border rounded px-1.5 py-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               value={d.fontSize}
               onChange={(e) => onUpdate({ fontSize: Number(e.target.value) })}
             >
@@ -521,7 +521,7 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground block mb-0.5">Width</label>
-              <select className="w-full h-7 text-xs border rounded px-1.5" value={d.width} onChange={(e) => onUpdate({ width: e.target.value })}>
+              <select className="w-full h-7 text-xs border rounded px-1.5 disabled:opacity-50 disabled:cursor-not-allowed" value={d.width} onChange={(e) => onUpdate({ width: e.target.value })}>
                 <option value="100%">Full width</option>
                 <option value="75%">75%</option>
                 <option value="50%">50%</option>
@@ -563,11 +563,11 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
             <div className="flex items-center gap-2">
               <div>
                 <label className="text-[10px] text-muted-foreground block mb-0.5">BG Color</label>
-                <input type="color" className="h-7 w-7 cursor-pointer rounded border" value={d.backgroundColor} onChange={(e) => onUpdate({ backgroundColor: e.target.value })} />
+                <input type="color" className="h-7 w-7 cursor-pointer rounded border disabled:opacity-50 disabled:cursor-not-allowed" value={d.backgroundColor} onChange={(e) => onUpdate({ backgroundColor: e.target.value })} />
               </div>
               <div>
                 <label className="text-[10px] text-muted-foreground block mb-0.5">Text Color</label>
-                <input type="color" className="h-7 w-7 cursor-pointer rounded border" value={d.color} onChange={(e) => onUpdate({ color: e.target.value })} />
+                <input type="color" className="h-7 w-7 cursor-pointer rounded border disabled:opacity-50 disabled:cursor-not-allowed" value={d.color} onChange={(e) => onUpdate({ color: e.target.value })} />
               </div>
               <div className="flex-1">
                 <label className="text-[10px] text-muted-foreground block mb-0.5">Radius</label>
@@ -589,13 +589,13 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
         <div className="space-y-2">
           <hr style={{ borderColor: d.color, borderStyle: d.borderStyle, width: d.width }} />
           <div className="flex items-center gap-2">
-            <input type="color" className="h-5 w-5 cursor-pointer rounded border" value={d.color} onChange={(e) => onUpdate({ color: e.target.value })} />
-            <select className="text-xs border rounded px-1.5 py-0.5" value={d.borderStyle} onChange={(e) => onUpdate({ borderStyle: e.target.value as 'solid' | 'dashed' | 'dotted' })}>
+            <input type="color" className="h-5 w-5 cursor-pointer rounded border disabled:opacity-50 disabled:cursor-not-allowed" value={d.color} onChange={(e) => onUpdate({ color: e.target.value })} />
+            <select className="text-xs border rounded px-1.5 py-0.5 disabled:opacity-50 disabled:cursor-not-allowed" value={d.borderStyle} onChange={(e) => onUpdate({ borderStyle: e.target.value as 'solid' | 'dashed' | 'dotted' })}>
               <option value="solid">Solid</option>
               <option value="dashed">Dashed</option>
               <option value="dotted">Dotted</option>
             </select>
-            <select className="text-xs border rounded px-1.5 py-0.5" value={d.width} onChange={(e) => onUpdate({ width: e.target.value })}>
+            <select className="text-xs border rounded px-1.5 py-0.5 disabled:opacity-50 disabled:cursor-not-allowed" value={d.width} onChange={(e) => onUpdate({ width: e.target.value })}>
               <option value="100%">100%</option>
               <option value="75%">75%</option>
               <option value="50%">50%</option>
@@ -649,7 +649,7 @@ function BlockEditor({ block, onUpdate, textareaRef }: {
         <div className="space-y-2">
           {d.networks.map((n, idx) => (
             <div key={idx} className="flex items-center gap-2">
-              <select className="text-xs border rounded px-1.5 py-1 w-28" value={n.name} onChange={(e) => updateNetwork(idx, 'name', e.target.value)}>
+              <select className="text-xs border rounded px-1.5 py-1 w-28 disabled:opacity-50 disabled:cursor-not-allowed" value={n.name} onChange={(e) => updateNetwork(idx, 'name', e.target.value)}>
                 {SOCIAL_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <Input className="h-7 text-xs flex-1" placeholder="https://..." value={n.href} onChange={(e) => updateNetwork(idx, 'href', e.target.value)} />

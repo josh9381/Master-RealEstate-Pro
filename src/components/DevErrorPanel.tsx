@@ -47,7 +47,7 @@ export function DevErrorPanel() {
 
       {/* Panel */}
       {isOpen && (
-        <div className="w-[480px] max-h-[70vh] bg-popover text-popover-foreground rounded-lg shadow-2xl border border-border flex flex-col overflow-hidden">
+        <div className="w-full max-w-[480px] max-h-[70vh] bg-popover text-popover-foreground rounded-lg shadow-2xl border border-border flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 bg-muted border-b border-border">
             <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ function ErrorItem({ error }: { error: ReturnType<typeof getDevErrors>[0] }) {
     api: 'text-warning bg-warning/10',
     runtime: 'text-destructive bg-destructive/10',
     promise: 'text-warning bg-warning/10',
-    'react-query': 'text-purple-400 bg-purple-900/30',
+    'react-query': 'text-info bg-info/10',
     network: 'text-info bg-info/10',
   }
 
