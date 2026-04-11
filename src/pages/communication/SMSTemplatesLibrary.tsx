@@ -393,7 +393,7 @@ const SMSTemplatesLibrary = () => {
               <CardContent className="flex-1 flex flex-col justify-between">
                 {/* Phone preview */}
                 <div className="bg-muted rounded-xl p-3 mb-3 border-2 border-border">
-                  <div className="bg-green-500 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm ml-auto max-w-[85%]">
+                  <div className="bg-success text-white rounded-2xl rounded-br-md px-3 py-2 text-sm ml-auto max-w-[85%]">
                     {template.body.length > 200 ? template.body.substring(0, 200) + '...' : template.body}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2 text-right">
@@ -686,7 +686,7 @@ const SMSTemplatesLibrary = () => {
                       <label className="text-sm font-medium">Preview</label>
                       <div className="bg-muted rounded-xl p-4 border-2 border-border max-w-[300px] mx-auto">
                         <div className="text-center text-xs text-muted-foreground mb-2">SMS Preview</div>
-                        <div className="bg-green-500 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm">
+                        <div className="bg-success text-white rounded-2xl rounded-br-md px-3 py-2 text-sm">
                           {formBody}
                         </div>
                         <p className="text-xs text-muted-foreground mt-2 text-right">

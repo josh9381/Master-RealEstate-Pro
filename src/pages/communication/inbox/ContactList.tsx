@@ -55,7 +55,7 @@ const channelIcon = (ch: string) => {
   switch (ch) {
     case 'email': return <Mail className="h-3.5 w-3.5 text-primary" />
     case 'sms': return <MessageSquare className="h-3.5 w-3.5 text-success" />
-    case 'call': return <Phone className="h-3.5 w-3.5 text-purple-500" />
+    case 'call': return <Phone className="h-3.5 w-3.5 text-primary" />
     default: return null
   }
 }

@@ -96,7 +96,7 @@ const getChannelColor = (type: string) => {
   switch (type) {
     case 'email': return 'text-primary'
     case 'sms': return 'text-success'
-    case 'call': return 'text-purple-500'
+    case 'call': return 'text-primary'
     default: return 'text-muted-foreground'
   }
 }
@@ -105,7 +105,7 @@ const getChannelBubbleColor = (type: string) => {
   switch (type) {
     case 'email': return 'bg-primary text-white rounded-br-md'
     case 'sms': return 'bg-success text-white rounded-br-md'
-    case 'call': return 'bg-purple-500 text-white rounded-br-md'
+    case 'call': return 'bg-primary text-white rounded-br-md'
     default: return 'bg-primary text-white rounded-br-md'
   }
 }
@@ -384,7 +384,7 @@ export const ConversationView = ({
                     {showChannelBadge && (
                       <Badge variant="outline" className={`text-[10px] h-4 px-1 gap-0.5 ${
                         message.type === 'sms' ? 'border-success/20 text-success bg-success/10' :
-                        message.type === 'call' ? 'border-purple-300 text-purple-700 bg-purple-50' :
+                        message.type === 'call' ? 'border-primary/30 text-primary bg-primary/5' :
                         'border-primary/20 text-primary bg-primary/10'
                       }`}>
                         {message.type === 'sms' ? 'SMS' : message.type === 'call' ? 'Call' : 'Email'}
