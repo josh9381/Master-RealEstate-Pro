@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Shield, Filter, ChevronDown, ChevronUp, Clock, User, Activity } from 'lucide-react'
 import { adminApi } from '@/lib/api'
 import { format } from 'date-fns'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 
 interface AuditLogEntry {
   id: string
@@ -61,7 +62,7 @@ export default function AuditTrail() {
     queryFn: () => adminApi.getAuditActions(),
   })
 
-  const { data: logsData, isLoading } = useQuery<AuditLogsResponse>({
+  const { data: logsData, isLoading, isError, error, refetch } = useQuery<AuditLogsResponse>({
     queryKey: ['audit-logs', page, filters],
     queryFn: () => adminApi.getAuditLogs({
       page,
@@ -155,7 +156,11 @@ export default function AuditTrail() {
 
       {/* Log Table */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
-        {isLoading ? (
+        {isError ? (
+          <div className="p-4">
+            <ErrorBanner message={`Failed to load audit logs: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={refetch} />
+          </div>
+        ) : isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Loading audit logs...</div>
         ) : logs.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">No audit logs found</div>

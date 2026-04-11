@@ -6,6 +6,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { activitiesApi } from '@/lib/api';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import type { ActivityRecord } from '@/types';
 
 // Map backend ActivityType enum values to UI categories
@@ -136,7 +137,7 @@ const LeadHistory = () => {
     },
   });
 
-  const { data: activitiesData, isLoading, refetch: loadActivities } = useQuery({
+  const { data: activitiesData, isLoading, isError, error, refetch: loadActivities } = useQuery({
     queryKey: ['lead-activity-history', selectedLeadId, page, activeFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = { limit: PAGE_SIZE, page };
@@ -298,7 +299,9 @@ const LeadHistory = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isError ? (
+            <ErrorBanner message={`Failed to load activity history: ${error instanceof Error ? error.message : 'Unknown error'}`} retry={loadActivities} />
+          ) : isLoading ? (
             <div className="space-y-6">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex gap-4 animate-pulse">
