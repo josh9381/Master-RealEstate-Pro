@@ -223,7 +223,8 @@ export const ContactList = ({
               )}
             </div>
           ) : (
-            contacts.map((contact) => {
+            <div role="listbox" aria-label="Contacts">
+            {contacts.map((contact, index) => {
               const isSelected = selectedContact?.id === contact.id
               const allMessages = Object.values(contact.threads).flatMap(t => t.messages)
               const hasStarred = allMessages.some(m => m.starred)
@@ -231,12 +232,29 @@ export const ContactList = ({
               return (
                 <div
                   key={contact.id}
+                  role="option"
+                  aria-selected={isSelected}
+                  tabIndex={isSelected || (index === 0 && !selectedContact) ? 0 : -1}
                   className={`p-3 border-b cursor-pointer transition-colors hover:bg-accent ${
                     isSelected ? 'bg-accent' : ''
                   } ${contact.totalUnread > 0 ? 'bg-primary/10' : ''} ${
                     selectedContactIds.has(contact.id) ? 'bg-primary/10' : ''
                   }`}
                   onClick={() => bulkSelectMode ? onToggleContactSelect(contact.id) : onSelectContact(contact)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      bulkSelectMode ? onToggleContactSelect(contact.id) : onSelectContact(contact)
+                    } else if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      const next = e.currentTarget.nextElementSibling as HTMLElement | null
+                      next?.focus()
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      const prev = e.currentTarget.previousElementSibling as HTMLElement | null
+                      prev?.focus()
+                    }
+                  }}
                 >
                   <div className="flex items-start gap-3">
                     {bulkSelectMode && (
@@ -308,7 +326,8 @@ export const ContactList = ({
                   </div>
                 </div>
               )
-            })
+            })}
+            </div>
           )}
 
           {/* Pagination */}

@@ -75,11 +75,11 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-              <div className="p-2 rounded-xl bg-blue-600">
+              <div className="p-2 rounded-xl bg-primary">
                 <Building2 className="h-5 w-5 text-white" />
               </div>
               <span className="text-lg font-bold text-white">
-                RealEstate<span className="text-blue-400">Pro</span>
+                RealEstate<span className="text-primary">Pro</span>
               </span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mb-6">
@@ -92,7 +92,7 @@ export function Footer() {
                   key={s.label}
                   href={s.href}
                   aria-label={s.label}
-                  className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-blue-600 flex items-center justify-center text-muted-foreground hover:text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-primary flex items-center justify-center text-muted-foreground hover:text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   {s.svg}
                 </a>

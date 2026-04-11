@@ -30,8 +30,8 @@ export function TrustedBy() {
               key={`${c.name}-${i}`}
               className="flex-shrink-0 mx-8 sm:mx-12 flex items-center gap-3 group"
             >
-              <div className="w-11 h-11 rounded-xl bg-muted group-hover:bg-blue-100 flex items-center justify-center transition-colors duration-300">
-                <span className="text-xs font-extrabold text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">
+              <div className="w-11 h-11 rounded-xl bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors duration-300">
+                <span className="text-xs font-extrabold text-muted-foreground group-hover:text-primary transition-colors duration-300">
                   {c.abbr}
                 </span>
               </div>

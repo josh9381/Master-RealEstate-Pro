@@ -63,12 +63,12 @@ export function PricingSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-primary uppercase tracking-wider mb-3">
             Pricing
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Simple pricing,{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
               no surprises
             </span>
           </h2>
@@ -84,12 +84,12 @@ export function PricingSection() {
               key={plan.name}
               className={`relative rounded-2xl p-8 transition-all duration-300 ${
                 plan.highlighted
-                  ? 'bg-card border-2 border-blue-600 shadow-2xl shadow-blue-600/10 scale-[1.02] md:scale-105'
+                  ? 'bg-card border-2 border-primary shadow-2xl shadow-primary/10 scale-[1.02] md:scale-105'
                   : 'bg-card border border-border hover:shadow-lg'
               }`}
             >
               {plan.highlighted && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 text-white text-xs font-bold uppercase tracking-wider rounded-full">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-full">
                   Most Popular
                 </div>
               )}
@@ -108,7 +108,7 @@ export function PricingSection() {
                 to="/auth/register"
                 className={`block w-full text-center py-3 px-6 rounded-xl font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
                   plan.highlighted
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/25'
+                    ? 'bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/25'
                     : 'bg-muted text-foreground hover:bg-muted/80'
                 }`}
               >
@@ -120,7 +120,7 @@ export function PricingSection() {
                   <li key={feature} className="flex items-start gap-3">
                     <Check
                       className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-                        plan.highlighted ? 'text-blue-600' : 'text-emerald-500'
+                        plan.highlighted ? 'text-primary' : 'text-success'
                       }`}
                     />
                     <span className="text-muted-foreground text-sm">{feature}</span>

@@ -56,11 +56,11 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
-            <div className={`p-2 rounded-xl transition-colors ${scrolled || mobileOpen ? 'bg-blue-600' : 'bg-white/20 backdrop-blur-sm'}`}>
+            <div className={`p-2 rounded-xl transition-colors ${scrolled || mobileOpen ? 'bg-primary' : 'bg-white/20 backdrop-blur-sm'}`}>
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <span className={`text-xl font-bold tracking-tight transition-colors ${scrolled || mobileOpen ? 'text-foreground' : 'text-white'}`}>
-              RealEstate<span className="text-blue-400">Pro</span>
+              RealEstate<span className="text-primary">Pro</span>
             </span>
           </Link>
 
@@ -71,7 +71,7 @@ export function Navbar() {
                 key={link.label}
                 href={link.href}
                 onClick={(e) => handleNavClick(e, link.href)}
-                className={`text-sm font-medium transition-colors hover:text-blue-500 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
+                className={`text-sm font-medium transition-colors hover:text-primary rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
                   scrolled ? 'text-muted-foreground' : 'text-white/80'
                 }`}
               >
@@ -86,7 +86,7 @@ export function Navbar() {
               to="/auth/login"
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${
                 scrolled
-                  ? 'text-foreground/80 hover:text-blue-600'
+                  ? 'text-foreground/80 hover:text-primary'
                   : 'text-white/90 hover:text-white'
               }`}
             >
@@ -94,7 +94,7 @@ export function Navbar() {
             </Link>
             <Link
               to="/auth/register"
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
             >
               Get Started Free
             </Link>
@@ -139,7 +139,7 @@ export function Navbar() {
           <Link
             to="/auth/register"
             onClick={() => setMobileOpen(false)}
-            className="block px-4 py-3 text-center text-white font-semibold bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+            className="block px-4 py-3 text-center text-white font-semibold bg-primary rounded-lg hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
           >
             Get Started Free
           </Link>

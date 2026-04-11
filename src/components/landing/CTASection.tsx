@@ -13,7 +13,7 @@ export function CTASection() {
 
       {/* Glow effects */}
       <div className="absolute top-0 left-1/3 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-1/3 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/3 w-80 h-80 bg-primary/20 rounded-full blur-3xl" />
 
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6 leading-tight">
@@ -29,7 +29,7 @@ export function CTASection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <Link
             to="/auth/register"
-            className="group flex items-center gap-2 px-8 py-4 text-lg font-semibold text-blue-700 bg-white rounded-xl hover:bg-blue-50 transition-all shadow-2xl shadow-black/10 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ring-offset-transparent"
+            className="group flex items-center gap-2 px-8 py-4 text-lg font-semibold text-primary bg-white rounded-xl hover:bg-primary/5 transition-all shadow-2xl shadow-black/10 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ring-offset-transparent"
           >
             Start Free Today
             <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
