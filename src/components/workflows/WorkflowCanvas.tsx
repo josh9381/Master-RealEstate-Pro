@@ -322,7 +322,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
             ) : (
               <>
                 <div className="text-center mb-8">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/80 to-primary mb-4">
                     <Workflow className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold mb-2">Start Building Your Workflow</h3>
@@ -359,12 +359,12 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                     
                     <button
                       onClick={() => onTemplateSelect?.('Follow-up Automation')}
-                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group"
+                      className="p-4 text-left border-2 border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
                     >
-                      <Calendar className="h-6 w-6 text-purple-600 mb-2" />
+                      <Calendar className="h-6 w-6 text-primary mb-2" />
                       <h5 className="font-semibold text-sm mb-1">Auto Follow-up</h5>
                       <p className="text-xs text-muted-foreground">5 nodes • Time-based</p>
-                      <div className="mt-2 text-xs text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity">Click to start →</div>
+                      <div className="mt-2 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Click to start →</div>
                     </button>
                   </div>
                 </div>
@@ -639,7 +639,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                         node.type === 'trigger' ? 'bg-primary' :
                         node.type === 'condition' ? 'bg-warning' :
                         node.type === 'action' ? 'bg-success' :
-                        'bg-purple-500'
+                        'bg-primary'
                       } ${node.id === selectedNodeId ? 'ring-2 ring-offset-1 ring-primary' : ''}`}
                       style={{
                         left: `${miniX}px`,

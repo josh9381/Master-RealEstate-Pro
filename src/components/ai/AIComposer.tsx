@@ -437,7 +437,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
   }
   
   return (
-    <div className="border-t bg-gradient-to-b from-purple-50/50 to-transparent dark:from-purple-950/10 dark:to-transparent p-4 rounded-xl space-y-4">
+    <div className="border-t bg-gradient-to-b from-primary/5 to-transparent dark:from-primary/5 dark:to-transparent p-4 rounded-xl space-y-4">
       <Card className="border border-primary/20 shadow-lg shadow-primary/5 w-full flex flex-col rounded-xl">
         <CardContent className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Header */}
@@ -658,7 +658,7 @@ export const AIComposer: React.FC<AIComposerProps> = ({
         {isStreaming && streamedMessage && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-primary">✨ Generating...</label>
-            <div className="bg-gradient-to-br from-primary/10 to-purple-50 dark:from-primary/10 dark:to-purple-950 rounded-lg p-4 border-2 border-primary/20">
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/10 dark:to-primary/5 rounded-lg p-4 border-2 border-primary/20">
               <p className="text-sm whitespace-pre-wrap">{streamedMessage}</p>
               <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1"></span>
             </div>

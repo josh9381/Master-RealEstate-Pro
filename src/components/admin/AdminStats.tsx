@@ -114,7 +114,7 @@ export function AdminStats() {
     purple: {
       bg: 'bg-primary/10',
       text: 'text-primary',
-      ring: 'ring-purple-600',
+      ring: 'ring-primary',
     },
     orange: {
       bg: 'bg-warning/10',

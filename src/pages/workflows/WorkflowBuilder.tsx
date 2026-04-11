@@ -806,7 +806,7 @@ const WorkflowBuilder = () => {
               workflowStatus === 'running' ? 'bg-success animate-pulse' :
               workflowStatus === 'active' ? 'bg-primary' :
               workflowStatus === 'paused' ? 'bg-warning' :
-              'bg-gray-400'
+              'bg-muted-foreground'
             }`} />
             <span className="text-xs font-semibold uppercase tracking-wide">
               {workflowStatus === 'running' ? `Running (${activeExecutions})` :
@@ -1046,7 +1046,7 @@ const WorkflowBuilder = () => {
       <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-3">
         {/* Visual Workflow Canvas */}
         <Card className="lg:col-span-2 flex flex-col overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex-shrink-0 py-2 px-4">
+          <CardHeader className="bg-muted/50 flex-shrink-0 py-2 px-4">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Workflow className="h-4 w-4" />
@@ -1080,7 +1080,7 @@ const WorkflowBuilder = () => {
                     size="sm"
                     onClick={autoArrangeNodes}
                     title="Auto-arrange nodes in a clean layout"
-                    className="border-purple-300 text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950 transition-colors"
+                    className="border-primary/30 text-primary hover:bg-primary/5 dark:hover:bg-primary/5 transition-colors"
                   >
                     <Activity className="h-4 w-4 mr-2" />
                     Auto-Arrange
@@ -1371,8 +1371,8 @@ const WorkflowBuilder = () => {
           <div className="absolute top-12 right-4 z-40 w-96 max-h-[60vh] bg-card rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 flex flex-col animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between px-3 py-2.5 border-b bg-muted/30 rounded-t-xl flex-shrink-0">
             <div className="flex items-center gap-2">
-              <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded">
-                <Activity className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+              <div className="p-1 bg-primary/10 dark:bg-primary/10 rounded">
+                <Activity className="h-3.5 w-3.5 text-primary dark:text-primary" />
               </div>
               <h3 className="text-sm font-semibold">Execution Logs</h3>
               {executionLogs.length > 0 && (

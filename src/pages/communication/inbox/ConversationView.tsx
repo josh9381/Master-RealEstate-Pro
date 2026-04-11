@@ -500,7 +500,7 @@ export const ConversationView = ({
         <div className="space-y-3">
           {/* Before/After Comparison Panel */}
           {showBeforeAfter && (
-            <div className="border-t bg-gradient-to-b from-green-50 to-white p-4 space-y-3 rounded-lg">
+            <div className="border-t bg-gradient-to-b from-success/5 to-background p-4 space-y-3 rounded-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h4 className="font-semibold flex items-center gap-2">

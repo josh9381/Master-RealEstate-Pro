@@ -291,21 +291,21 @@ const categoryFilters: { key: ComponentCategory; label: string; color: string; a
   { key: 'triggers', label: 'Triggers', color: 'bg-primary/10 text-primary', activeColor: 'bg-primary text-white', count: triggers.length },
   { key: 'conditions', label: 'Conditions', color: 'bg-warning/10 text-warning', activeColor: 'bg-warning text-white', count: conditions.length },
   { key: 'actions', label: 'Actions', color: 'bg-success/10 text-success', activeColor: 'bg-success text-white', count: actions.length },
-  { key: 'utilities', label: 'Utilities', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300', activeColor: 'bg-purple-600 text-white', count: utilities.length },
+  { key: 'utilities', label: 'Utilities', color: 'bg-primary/5 text-primary dark:bg-primary/10 dark:text-primary', activeColor: 'bg-primary text-primary-foreground', count: utilities.length },
 ];
 
 const categoryBorderColor: Record<string, string> = {
-  triggers: 'border-l-blue-500',
-  conditions: 'border-l-yellow-500',
-  actions: 'border-l-green-500',
-  utilities: 'border-l-purple-500',
+  triggers: 'border-l-info',
+  conditions: 'border-l-warning',
+  actions: 'border-l-success',
+  utilities: 'border-l-primary',
 };
 
 const categoryIconBg: Record<string, string> = {
   triggers: 'bg-primary/10 text-primary',
   conditions: 'bg-warning/10 text-warning',
   actions: 'bg-success/10 text-success',
-  utilities: 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
+  utilities: 'bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary',
 };
 
 export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> = ({
@@ -421,7 +421,7 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
         {filteredComponents.map((component) => {
           const Icon = component.icon;
           const isAdded = justAdded === component.id;
-          const borderColor = categoryBorderColor[component.category] || 'border-l-gray-400';
+          const borderColor = categoryBorderColor[component.category] || 'border-l-muted-foreground';
           const iconBg = categoryIconBg[component.category] || 'bg-muted text-muted-foreground';
 
           return (

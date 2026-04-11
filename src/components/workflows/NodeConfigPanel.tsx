@@ -53,7 +53,7 @@ const nodeTypeConfig: Record<string, { label: string; color: string; bg: string;
   trigger:   { label: 'Trigger',       color: 'text-primary',   bg: 'bg-primary/10',     icon: Zap },
   condition: { label: 'Condition',     color: 'text-warning', bg: 'bg-warning/10',   icon: GitBranch },
   action:    { label: 'Action',        color: 'text-success', bg: 'bg-success/10',   icon: Play },
-  delay:     { label: 'Delay / Wait',  color: 'text-purple-700 dark:text-purple-300', bg: 'bg-purple-100 dark:bg-purple-900/40', icon: Clock },
+  delay:     { label: 'Delay / Wait',  color: 'text-primary dark:text-primary', bg: 'bg-primary/10 dark:bg-primary/10', icon: Clock },
 };
 
 // ── Micro-components ───────────────────────────────────────────────────────────

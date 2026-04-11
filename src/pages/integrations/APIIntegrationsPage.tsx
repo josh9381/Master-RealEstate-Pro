@@ -91,14 +91,14 @@ export default function APIIntegrationsPage() {
 
       {/* Newly Created Key Banner */}
       {newlyCreatedKey && (
-        <Card className="p-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+        <Card className="p-4 border-warning bg-warning/5 dark:bg-warning/10">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
+            <AlertCircle className="h-5 w-5 text-warning mt-0.5 shrink-0" />
             <div className="flex-1">
-              <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">
+              <h3 className="font-semibold text-warning dark:text-warning">
                 Copy your API key now
               </h3>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">
+              <p className="text-sm text-warning/80 dark:text-warning/80 mb-2">
                 This key will not be shown again. Store it securely.
               </p>
               <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export default function APIIntegrationsPage() {
                   size="sm"
                   onClick={() => handleCopy(newlyCreatedKey)}
                 >
-                  {copiedKey ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  {copiedKey ? <CheckCircle className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>

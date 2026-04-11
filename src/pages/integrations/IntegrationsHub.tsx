@@ -148,10 +148,10 @@ const IntegrationsHub = () => {
 
       {/* Required Integrations — real API status */}
       {(!emailConfigured || !smsConfigured) && (
-        <Card className="border-yellow-500/50 bg-yellow-500/5">
+        <Card className="border-warning/50 bg-warning/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <AlertCircle className="h-5 w-5 text-warning" />
               Required Integrations
             </CardTitle>
             <CardDescription>These integrations are required for core functionality</CardDescription>
@@ -159,9 +159,9 @@ const IntegrationsHub = () => {
           <CardContent>
             <div className="grid gap-3 md:grid-cols-2">
               <Link to="/settings/email">
-                <div className={`p-4 border rounded-lg hover:bg-accent transition-colors flex items-center justify-between ${emailConfigured ? 'border-green-500/50' : 'border-yellow-500/50'}`}>
+                <div className={`p-4 border rounded-lg hover:bg-accent transition-colors flex items-center justify-between ${emailConfigured ? 'border-success/50' : 'border-warning/50'}`}>
                   <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-blue-500" />
+                    <Mail className="h-5 w-5 text-info" />
                     <div>
                       <p className="font-medium">Email (SendGrid)</p>
                       <p className="text-xs text-muted-foreground">Email sending & templates</p>
@@ -173,9 +173,9 @@ const IntegrationsHub = () => {
                 </div>
               </Link>
               <Link to="/settings/twilio">
-                <div className={`p-4 border rounded-lg hover:bg-accent transition-colors flex items-center justify-between ${smsConfigured ? 'border-green-500/50' : 'border-yellow-500/50'}`}>
+                <div className={`p-4 border rounded-lg hover:bg-accent transition-colors flex items-center justify-between ${smsConfigured ? 'border-success/50' : 'border-warning/50'}`}>
                   <div className="flex items-center gap-3">
-                    <MessageSquare className="h-5 w-5 text-red-500" />
+                    <MessageSquare className="h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Twilio (SMS & Calls)</p>
                       <p className="text-xs text-muted-foreground">SMS campaigns & calls</p>
@@ -202,7 +202,7 @@ const IntegrationsHub = () => {
             <Link to="/settings/email">
               <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Mail className="h-5 w-5 text-blue-500" />
+                  <Mail className="h-5 w-5 text-info" />
                   <div>
                     <p className="font-medium">Email Configuration</p>
                     <p className="text-xs text-muted-foreground">SendGrid API keys & templates</p>
@@ -226,7 +226,7 @@ const IntegrationsHub = () => {
             <Link to="/settings/twilio">
               <div className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <MessageSquare className="h-5 w-5 text-red-500" />
+                  <MessageSquare className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium">Twilio Setup</p>
                     <p className="text-xs text-muted-foreground">SMS & calling configuration</p>

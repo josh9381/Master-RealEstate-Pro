@@ -303,8 +303,8 @@ const NotificationSettings = () => {
             </div>
             <div className="p-4 border rounded-lg">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <MessageSquare className="h-5 w-5 text-purple-600" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <MessageSquare className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <h4 className="font-semibold">SMS</h4>

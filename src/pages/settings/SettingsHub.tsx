@@ -161,10 +161,10 @@ const SettingsHub = () => {
   const quickActions = [
     { label: 'Change Password', icon: Lock, path: '/settings/security', color: 'text-primary bg-primary/10' },
     { label: 'Enable 2FA', icon: Key, path: '/settings/security', color: 'text-success bg-success/10' },
-    { label: 'Update Profile', icon: User, path: '/settings/profile', color: 'text-purple-600 bg-purple-100 dark:bg-purple-950 dark:text-purple-400' },
+    { label: 'Update Profile', icon: User, path: '/settings/profile', color: 'text-primary bg-primary/10 dark:bg-primary/10 dark:text-primary' },
     { label: 'Configure Email', icon: Mail, path: '/settings/email', color: 'text-warning bg-warning/10' },
-    { label: 'Set Up SMS', icon: Phone, path: '/settings/twilio', color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' },
-    { label: 'Manage Tags', icon: Tag, path: '/settings/tags', color: 'text-pink-600 bg-pink-100 dark:bg-pink-950 dark:text-pink-400' },
+    { label: 'Set Up SMS', icon: Phone, path: '/settings/twilio', color: 'text-info bg-info/10 dark:bg-info/10 dark:text-info' },
+    { label: 'Manage Tags', icon: Tag, path: '/settings/tags', color: 'text-primary bg-primary/10 dark:bg-primary/10 dark:text-primary' },
   ];
 
   // Security score styling
@@ -195,8 +195,8 @@ const SettingsHub = () => {
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-purple-100 dark:bg-purple-950/40">
-                  <User className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <div className="p-2.5 rounded-lg bg-primary/10 dark:bg-primary/10">
+                  <User className="h-5 w-5 text-primary dark:text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground">Account</p>

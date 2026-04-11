@@ -212,7 +212,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             <h3 className="text-lg font-semibold text-foreground">Content Details</h3>
             <button
               onClick={() => setStep('type')}
-              className="text-sm text-primary hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+              className="text-sm text-primary hover:text-primary/80 dark:hover:text-primary/80 font-medium"
             >
               Change Type
             </button>
@@ -476,7 +476,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                             setPlatforms(platforms.filter((p) => p !== platform.value));
                           }
                         }}
-                        className="h-4 w-4 text-purple-600 focus-visible:ring-ring border-border rounded"
+                        className="h-4 w-4 text-primary focus-visible:ring-ring border-border rounded"
                       />
                       <span className="ml-2 text-sm text-foreground">{platform.label}</span>
                     </label>
@@ -589,7 +589,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             <h3 className="text-lg font-semibold text-foreground">Generated Content</h3>
             <button
               onClick={() => setStep('details')}
-              className="text-sm text-primary hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+              className="text-sm text-primary hover:text-primary/80 dark:hover:text-primary/80 font-medium"
             >
               Generate Again
             </button>

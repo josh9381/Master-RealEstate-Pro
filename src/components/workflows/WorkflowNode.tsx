@@ -76,9 +76,9 @@ const getNodeColor = (type: NodeType) => {
     case 'action':
       return 'border-l-4 border-l-success bg-success/5';
     case 'delay':
-      return 'border-l-4 border-l-purple-500 bg-purple-50 dark:bg-purple-950/20';
+      return 'border-l-4 border-l-primary bg-primary/5 dark:bg-primary/5';
     default:
-      return 'border-l-4 border-l-gray-500';
+      return 'border-l-4 border-l-muted-foreground';
   }
 };
 
@@ -91,7 +91,7 @@ const getTypeBadgeColor = (type: NodeType) => {
     case 'action':
       return 'bg-success/10 text-success';
     case 'delay':
-      return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+      return 'bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary';
     default:
       return 'bg-muted text-muted-foreground';
   }
@@ -227,7 +227,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900 dark:hover:text-indigo-300"
+                className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/15 dark:hover:text-primary"
                 onClick={(e) => { e.stopPropagation(); onMoveUp(node.id); }}
                 title="Move up"
               >
@@ -239,7 +239,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900 dark:hover:text-indigo-300"
+                className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/15 dark:hover:text-primary"
                 onClick={(e) => { e.stopPropagation(); onMoveDown(node.id); }}
                 title="Move down"
               >
