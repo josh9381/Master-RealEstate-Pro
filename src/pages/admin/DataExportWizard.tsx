@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { exportApi, leadsApi, usersApi } from '@/lib/api';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const DataExportWizard = () => {
   const { toast } = useToast();
@@ -20,7 +21,7 @@ const DataExportWizard = () => {
   const [exporting, setExporting] = useState(false);
 
   // Fetch real record count
-  const { data: totalLeads = 0 } = useQuery({
+  const { data: totalLeads = 0, isError: leadsError, refetch: refetchLeads } = useQuery({
     queryKey: ['export-lead-count'],
     queryFn: async () => {
       const response = await leadsApi.getLeads({ limit: 1 });
@@ -81,6 +82,10 @@ const DataExportWizard = () => {
           </p>
         </div>
       </div>
+
+      {leadsError && (
+        <ErrorBanner message="Failed to load export data" retry={refetchLeads} />
+      )}
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">

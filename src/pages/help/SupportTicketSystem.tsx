@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { supportApi } from '@/lib/api';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface TicketMessage {
   id: string;
@@ -81,7 +82,7 @@ const SupportTicketSystem = () => {
   const [replyContent, setReplyContent] = useState('');
 
   // ── Queries ──────────────────────────────────────────────────────────────
-  const { data: ticketData, isLoading } = useQuery({
+  const { data: ticketData, isLoading, isError, refetch } = useQuery({
     queryKey: ['support-tickets', filters, page],
     queryFn: () => supportApi.list({
       ...(filters.status && { status: filters.status }),
@@ -442,7 +443,9 @@ const SupportTicketSystem = () => {
       </div>
 
       {/* Tickets List */}
-      {isLoading ? (
+      {isError ? (
+        <ErrorBanner message="Failed to load support tickets" retry={refetch} />
+      ) : isLoading ? (
         <div className="space-y-4 animate-pulse">
           {[1, 2, 3].map(i => (
             <Card key={i}>

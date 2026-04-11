@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { tasksApi, type CreateTaskData } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 
 interface Task {
   id: string
@@ -45,7 +46,7 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all')
 
   // Fetch tasks for this lead
-  const { data: tasksData, isLoading } = useQuery({
+  const { data: tasksData, isLoading, isError, refetch } = useQuery({
     queryKey: ['lead-tasks', leadId],
     queryFn: async () => {
       const response = await tasksApi.getLeadTasks(leadId)
@@ -239,7 +240,9 @@ function LeadTasks({ leadId, leadName }: LeadTasksProps) {
       )}
 
       {/* Task List */}
-      {isLoading ? (
+      {isError ? (
+        <ErrorBanner message="Failed to load tasks" retry={refetch} />
+      ) : isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />

@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 interface FeatureFlag {
   id: string;
@@ -23,7 +24,7 @@ const FeatureFlags = () => {
   const showConfirm = useConfirm();
   const queryClient = useQueryClient();
 
-  const { data: features = [], isLoading } = useQuery({
+  const { data: features = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'feature-flags'],
     queryFn: async () => {
       const res = await api.get('/api/admin/feature-flags');
@@ -173,6 +174,8 @@ const FeatureFlags = () => {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      ) : isError ? (
+        <ErrorBanner message="Failed to load feature flags" retry={refetch} />
       ) : (
       <>
       {/* Stats */}

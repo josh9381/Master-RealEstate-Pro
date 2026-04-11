@@ -1,4 +1,3 @@
-import { logger } from '@/lib/logger'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Crown, Check, TrendingUp, Users, Mail, Target, Workflow, MessageSquare, Phone, X, AlertTriangle, Calendar } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -7,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/hooks/useToast'
 import api from '@/lib/api'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -51,7 +51,7 @@ export default function SubscriptionPage() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   
   // Fetch available plans
-  const { data: plansData, isLoading, error } = useQuery<PlansResponse>({
+  const { data: plansData, isLoading, error, refetch } = useQuery<PlansResponse>({
     queryKey: ['available-plans'],
     queryFn: async () => {
       const response = await api.get('/subscriptions/plans')
@@ -59,11 +59,6 @@ export default function SubscriptionPage() {
     },
     retry: 2,
   })
-  
-  // Show error if API fails
-  if (error) {
-    logger.error('Failed to load subscription plans:', error)
-  }
   
   // Fallback plans if API fails
   const fallbackPlans: Plan[] = [
@@ -198,6 +193,14 @@ export default function SubscriptionPage() {
     )
   }
   
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load subscription plans'} retry={refetch} />
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">

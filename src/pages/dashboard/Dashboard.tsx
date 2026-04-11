@@ -1034,14 +1034,6 @@ function Dashboard() {
       )}
 
       {/* Main Stats Cards with Progress + Sparklines */}
-      {statsError ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-destructive mb-2">Failed to load dashboard stats</p>
-            <Button variant="outline" size="sm" onClick={() => refetchStats()}>Retry</Button>
-          </CardContent>
-        </Card>
-      ) : (
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card
@@ -1093,7 +1085,6 @@ function Dashboard() {
           </Card>
         ))}
       </div>
-      )}
 
       {/* Pipeline Value — compact strip */}
       {pipelineValue && pipelineValue.value > 0 && (

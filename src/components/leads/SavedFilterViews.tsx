@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { savedFiltersApi, type SavedFilterView } from '@/lib/api'
 import { useToast } from '@/hooks/useToast'
+import { ErrorBanner } from '@/components/ui/ErrorBanner'
 
 interface FilterConfig {
   status: string[]
@@ -49,7 +50,7 @@ function SavedFilterViews({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   // Fetch saved views
-  const { data: viewsResponse, isLoading } = useQuery({
+  const { data: viewsResponse, isLoading, isError, refetch } = useQuery({
     queryKey: ['saved-filter-views'],
     queryFn: () => savedFiltersApi.list(),
   })
@@ -107,6 +108,8 @@ function SavedFilterViews({
       {/* Saved views as clickable pills */}
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      ) : isError ? (
+        <ErrorBanner message="Failed to load saved views" retry={refetch} className="text-xs" />
       ) : (
         views.map((view) => (
           <div key={view.id} className="group relative">

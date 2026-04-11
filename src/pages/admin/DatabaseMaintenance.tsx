@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { adminApi } from '@/lib/api';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const DatabaseMaintenance = () => {
   const { toast } = useToast();
@@ -21,7 +22,7 @@ const DatabaseMaintenance = () => {
   const [showBackupHistory, setShowBackupHistory] = useState(false);
 
   // Fetch real DB stats
-  const { data: dbStatsData } = useQuery({
+  const { data: dbStatsData, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['db-stats'],
     queryFn: () => adminApi.getDbStats(),
     staleTime: 60_000,
@@ -121,6 +122,10 @@ const DatabaseMaintenance = () => {
           </p>
         </div>
       </div>
+
+      {statsError && (
+        <ErrorBanner message="Failed to load database stats" retry={refetchStats} />
+      )}
 
       {/* Database Stats */}
       <div className="grid gap-4 md:grid-cols-4">
