@@ -102,7 +102,7 @@ export default function BillingSubscriptionPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Subscription & Billing</h1>
+        <h1 className="text-2xl font-semibold">Subscription & Billing</h1>
         <p className="text-muted-foreground">Manage your subscription and billing details</p>
       </div>
 
@@ -129,7 +129,7 @@ export default function BillingSubscriptionPage() {
           <>
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold">{currentPlanData.name} Plan</h2>
+                <h2 className="text-lg font-semibold">{currentPlanData.name} Plan</h2>
                 <p className="text-muted-foreground">Your current subscription</p>
               </div>
               <Badge>{subscription?.status || 'ACTIVE'}</Badge>
@@ -157,7 +157,7 @@ export default function BillingSubscriptionPage() {
 
       {/* Available Plans */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Available Plans</h2>
+        <h2 className="text-lg font-semibold mb-4">Available Plans</h2>
         <div className="grid gap-6 md:grid-cols-3">
           {plans.map((plan) => {
             const isCurrent = plan.id === currentPlanId
@@ -167,7 +167,7 @@ export default function BillingSubscriptionPage() {
                   <Badge className="mb-4">Current Plan</Badge>
                 )}
 
-                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                <h3 className="text-base font-medium mb-2">{plan.name}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
 
                 <div className="flex items-baseline gap-2 mb-6">
@@ -200,7 +200,7 @@ export default function BillingSubscriptionPage() {
 
       {/* Billing History */}
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Billing History</h2>
+        <h2 className="text-lg font-semibold mb-4">Billing History</h2>
 
         {invoices.length === 0 ? (
           <p className="text-muted-foreground py-4">No invoices yet.</p>

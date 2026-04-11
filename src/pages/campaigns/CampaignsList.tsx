@@ -455,7 +455,7 @@ function CampaignsList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Campaigns</h1>
+          <h1 className="text-2xl font-semibold">Campaigns</h1>
           <p className="mt-2 text-muted-foreground">
             Create and manage your marketing campaigns
           </p>

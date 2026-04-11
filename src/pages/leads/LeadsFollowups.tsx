@@ -242,7 +242,7 @@ function LeadsFollowups() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Follow-ups</h1>
+          <h1 className="text-2xl font-semibold">Follow-ups</h1>
           <p className="mt-2 text-muted-foreground">
             Manage your scheduled follow-up tasks and never miss an opportunity
           </p>
@@ -435,7 +435,7 @@ function LeadsFollowups() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Add Follow-up" onKeyDown={(e) => { if (e.key === 'Escape') setShowAddModal(false) }}>
           <Card className="w-full max-w-md p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Add Follow-up</h2>
+              <h2 className="text-lg font-semibold">Add Follow-up</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowAddModal(false)} aria-label="Close">
                 <X className="h-4 w-4" />
               </Button>

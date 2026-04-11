@@ -87,7 +87,7 @@ export function MessageEnhancerModal({
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 id="message-enhancer-title" className="text-lg font-bold text-foreground">AI Message Enhancer</h2>
+              <h2 id="message-enhancer-title" className="text-lg font-semibold text-foreground">AI Message Enhancer</h2>
               <p className="text-sm text-muted-foreground">Transform your message with AI-powered rewriting</p>
             </div>
           </div>

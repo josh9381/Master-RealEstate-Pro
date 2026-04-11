@@ -81,7 +81,7 @@ const HealthCheckDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">System Health Dashboard</h1>
+          <h1 className="text-2xl font-semibold">System Health Dashboard</h1>
           <p className="text-muted-foreground mt-2">
             Monitor system status and performance • Last updated: {lastRefresh.toLocaleTimeString()}
           </p>
@@ -106,7 +106,7 @@ const HealthCheckDashboard = () => {
               )}
             </div>
             <div>
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-lg font-semibold">
                 {overallStatus === 'checking' ? 'Checking Services...' : overallStatus === 'operational' ? 'System Operational' : 'System Issues Detected'}
               </h2>
               <p className="mt-1 text-muted-foreground">

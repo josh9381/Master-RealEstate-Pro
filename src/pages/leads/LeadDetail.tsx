@@ -413,7 +413,7 @@ function LeadDetail() {
       <div className="space-y-6">
         <div className="text-center py-12">
           <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">Lead not found</h2>
+          <h2 className="text-lg font-semibold mb-2">Lead not found</h2>
           <p className="text-muted-foreground mb-4">The lead you're looking for doesn't exist or has been deleted.</p>
           <Button onClick={() => navigate('/leads')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -561,7 +561,7 @@ function LeadDetail() {
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead'}</h1>
+          <h1 className="text-2xl font-semibold">{lead ? `${lead.firstName} ${lead.lastName}` : 'Unknown Lead'}</h1>
           {(lead?.position || lead?.company) && (
             <p className="text-sm text-muted-foreground">
               {lead?.position && lead?.company
@@ -1166,7 +1166,7 @@ function LeadDetail() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Edit Lead</h2>
+              <h2 className="text-lg font-semibold">Edit Lead</h2>
               <Button variant="ghost" size="icon" onClick={() => {
                 setShowEditModal(false)
                 setEditingLead(null)

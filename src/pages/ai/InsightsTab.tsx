@@ -698,7 +698,7 @@ const InsightsTab = () => {
 
           return (
             <>
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-lg font-semibold">
                 {activeTab === 'active' ? 'Active Insights' : activeTab === 'acted' ? 'Acted On Insights' : 'Dismissed Insights'}
                 <span className="text-sm font-normal text-muted-foreground ml-2">
                   ({filtered.length} results)

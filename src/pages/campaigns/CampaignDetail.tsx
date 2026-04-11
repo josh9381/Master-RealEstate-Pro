@@ -350,7 +350,7 @@ function CampaignDetail() {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Campaign Not Found</h2>
+          <h2 className="text-lg font-semibold">Campaign Not Found</h2>
           <p className="mt-2 text-muted-foreground">
             The campaign you're looking for doesn't exist.
           </p>
@@ -374,7 +374,7 @@ function CampaignDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{campaign.name}</h1>
+          <h1 className="text-2xl font-semibold">{campaign.name}</h1>
           <div className="mt-2 flex items-center space-x-2">
             <Badge variant={
               (campaign.status || '').toUpperCase() === 'ACTIVE' ? 'success'
@@ -843,7 +843,7 @@ function CampaignDetail() {
                   <div>
                     <label className="block text-sm font-medium mb-2">Type</label>
                     <select
-                      className="w-full rounded-md border border-input bg-background px-3 py-2"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       value={editForm.type}
                       onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'EMAIL' | 'SMS' | 'PHONE' })}
                     >
@@ -868,7 +868,7 @@ function CampaignDetail() {
                       const options = [currentStatus, ...(validTransitions[currentStatus] || [])];
                       return (
                         <select
-                          className="w-full rounded-md border border-input bg-background px-3 py-2"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           value={editForm.status}
                           onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                         >
@@ -942,7 +942,7 @@ function CampaignDetail() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Preview Content</label>
                   <textarea
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[100px]"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[100px] disabled:opacity-50 disabled:cursor-not-allowed"
                     value={editForm.content}
                     onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
                     placeholder="Enter preview content"
@@ -951,7 +951,7 @@ function CampaignDetail() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Full Content (HTML)</label>
                   <textarea
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[200px] font-mono text-sm"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 min-h-[200px] font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     value={editForm.fullContent}
                     onChange={(e) => setEditForm({ ...editForm, fullContent: e.target.value })}
                     placeholder="Enter full HTML content"

@@ -127,7 +127,7 @@ const DocumentationPages = () => {
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
+          <h1 className="text-2xl font-semibold mb-2">{article.title}</h1>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -160,7 +160,7 @@ const DocumentationPages = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             All Categories
           </Button>
-          <h1 className="text-2xl font-bold">{selectedCategory || 'Search Results'}</h1>
+          <h1 className="text-2xl font-semibold">{selectedCategory || 'Search Results'}</h1>
         </div>
 
         {articlesLoading ? (
@@ -216,7 +216,7 @@ const DocumentationPages = () => {
       {catError && <ErrorBanner message={catErr?.message || 'Failed to load documentation'} retry={refetchCats} />}
 
       <div>
-        <h1 className="text-3xl font-bold">Documentation</h1>
+        <h1 className="text-2xl font-semibold">Documentation</h1>
         <p className="text-muted-foreground mt-2">
           Comprehensive guides and resources to help you succeed
         </p>
@@ -230,7 +230,7 @@ const DocumentationPages = () => {
             <input
               type="text"
               placeholder="Search documentation..."
-              className="w-full pl-10 pr-4 py-3 border rounded-lg text-lg"
+              className="w-full pl-10 pr-4 py-3 border rounded-lg text-lg disabled:opacity-50 disabled:cursor-not-allowed"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
@@ -288,7 +288,7 @@ const DocumentationPages = () => {
 
       {/* Categories */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Browse by Category</h2>
+        <h2 className="text-lg font-semibold mb-4">Browse by Category</h2>
         {catLoading ? (
           <div className="grid gap-4 md:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (

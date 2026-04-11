@@ -52,7 +52,7 @@ export function OrganizationHeader() {
           )}
           
           <div>
-            <h2 className="text-xl font-semibold text-foreground">{name}</h2>
+            <h2 className="text-lg font-semibold text-foreground">{name}</h2>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
               <span>{memberCount || 1} {memberCount === 1 ? 'member' : 'members'}</span>

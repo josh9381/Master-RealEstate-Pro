@@ -325,7 +325,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/80 to-primary mb-4">
                     <Workflow className="h-8 w-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold mb-2">Start Building Your Workflow</h3>
+                  <h3 className="text-lg font-semibold mb-2">Start Building Your Workflow</h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
                     {mode === 'drag' 
                       ? 'Drag components from the sidebar or choose a template to get started'

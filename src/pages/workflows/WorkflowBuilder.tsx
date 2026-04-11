@@ -868,7 +868,7 @@ const WorkflowBuilder = () => {
                 <div className="p-1 bg-primary/10 rounded">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <h3 className="text-sm font-semibold">Performance Metrics</h3>
+                <h3 className="text-base font-medium">Performance Metrics</h3>
               </div>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted transition-colors" onClick={() => setShowMetricsPanel(false)}>
                 <X className="h-3.5 w-3.5" />
@@ -1378,7 +1378,7 @@ const WorkflowBuilder = () => {
               <div className="p-1 bg-primary/10 dark:bg-primary/10 rounded">
                 <Activity className="h-3.5 w-3.5 text-primary dark:text-primary" />
               </div>
-              <h3 className="text-sm font-semibold">Execution Logs</h3>
+              <h3 className="text-base font-medium">Execution Logs</h3>
               {executionLogs.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{executionLogs.length}</Badge>
               )}

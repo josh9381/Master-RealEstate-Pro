@@ -95,7 +95,7 @@ export default function LeadsOverview() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Leads</h1>
+          <h1 className="text-2xl font-semibold">Leads</h1>
           <p className="mt-1 text-muted-foreground">Overview of your lead pipeline and performance</p>
         </div>
       </div>

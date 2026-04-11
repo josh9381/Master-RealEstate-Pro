@@ -18,7 +18,7 @@ export function PageHeader({ title, subtitle, icon, actions, className = '' }: P
           </div>
         )}
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{title}</h1>
           {subtitle && <p className="mt-1 text-sm sm:text-base text-muted-foreground">{subtitle}</p>}
         </div>
       </div>

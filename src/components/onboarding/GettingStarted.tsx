@@ -108,7 +108,7 @@ export function GettingStarted({ totalLeads, totalCampaigns, hasCampaignResults 
             <Sparkles className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-bold">Getting Started</h2>
+            <h2 className="text-lg font-semibold">Getting Started</h2>
             <p className="text-sm text-muted-foreground">
               Complete these {steps.length} steps to set up your business
             </p>

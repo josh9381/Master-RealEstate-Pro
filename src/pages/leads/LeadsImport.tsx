@@ -302,7 +302,7 @@ function LeadsImport() {
     <div className="space-y-6">
 
       <div>
-        <h1 className="text-3xl font-bold">Import Leads</h1>
+        <h1 className="text-2xl font-semibold">Import Leads</h1>
         <p className="mt-2 text-muted-foreground">
           Upload CSV, Excel, or vCard files to import leads with column mapping and duplicate detection
         </p>

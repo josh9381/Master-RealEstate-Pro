@@ -94,7 +94,7 @@ export function PricingSection() {
                 </div>
               )}
 
-              <h3 className="text-xl font-bold text-foreground mb-2">{plan.name}</h3>
+              <h3 className="text-base font-medium text-foreground mb-2">{plan.name}</h3>
               <p className="text-muted-foreground text-sm mb-6">{plan.description}</p>
 
               <div className="mb-8">

@@ -83,7 +83,7 @@ export function HowItWorks() {
                 </span>
               </div>
 
-              <h3 className="text-xl font-bold text-foreground mb-3">{step.title}</h3>
+              <h3 className="text-base font-medium text-foreground mb-3">{step.title}</h3>
               <p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">{step.description}</p>
             </div>
           ))}

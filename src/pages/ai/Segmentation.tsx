@@ -16,7 +16,7 @@ const Segmentation = () => {
         </Button>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold">AI Segmentation</h1>
+            <h1 className="text-2xl font-semibold">AI Segmentation</h1>
             <Badge variant="outline">Coming Soon</Badge>
           </div>
           <p className="text-muted-foreground mt-1">
@@ -31,7 +31,7 @@ const Segmentation = () => {
           <div className="p-4 bg-info/10 rounded-full mb-6">
             <BarChart3 className="h-12 w-12 text-info" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">AI Segmentation is Coming Soon</h2>
+          <h2 className="text-lg font-semibold mb-2">AI Segmentation is Coming Soon</h2>
           <p className="text-muted-foreground max-w-lg mb-8">
             Automatically discover and create audience segments using machine learning.
             AI will analyze your leads' behavior, demographics, and engagement patterns to
@@ -41,21 +41,21 @@ const Segmentation = () => {
           <div className="grid gap-4 md:grid-cols-3 w-full max-w-2xl">
             <div className="flex flex-col items-center p-4 border rounded-lg">
               <Brain className="h-6 w-6 text-primary mb-2" />
-              <h3 className="text-sm font-semibold">Smart Clustering</h3>
+              <h3 className="text-base font-medium">Smart Clustering</h3>
               <p className="text-xs text-muted-foreground mt-1 text-center">
                 ML-driven clustering to group leads by behavior
               </p>
             </div>
             <div className="flex flex-col items-center p-4 border rounded-lg">
               <Users className="h-6 w-6 text-primary mb-2" />
-              <h3 className="text-sm font-semibold">Auto-Segments</h3>
+              <h3 className="text-base font-medium">Auto-Segments</h3>
               <p className="text-xs text-muted-foreground mt-1 text-center">
                 Automatically create and refresh segments
               </p>
             </div>
             <div className="flex flex-col items-center p-4 border rounded-lg">
               <Layers className="h-6 w-6 text-primary mb-2" />
-              <h3 className="text-sm font-semibold">Lookalike Audiences</h3>
+              <h3 className="text-base font-medium">Lookalike Audiences</h3>
               <p className="text-xs text-muted-foreground mt-1 text-center">
                 Find leads that match your best converters
               </p>

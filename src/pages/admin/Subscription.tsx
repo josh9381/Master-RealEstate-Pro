@@ -186,7 +186,7 @@ export default function SubscriptionPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Crown className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold text-foreground mb-2">Admin Access Required</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-2">Admin Access Required</h2>
           <p className="text-muted-foreground">Only administrators can manage subscriptions.</p>
         </div>
       </div>
@@ -237,7 +237,7 @@ export default function SubscriptionPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Subscription Plans</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Subscription Plans</h1>
         <p className="text-muted-foreground mt-2">
           Choose the plan that fits your organization's needs
         </p>

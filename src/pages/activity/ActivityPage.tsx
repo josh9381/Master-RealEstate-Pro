@@ -306,7 +306,7 @@ export default function ActivityPage() {
       {/* Activity Timeline */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Recent Activity</h2>
+          <h2 className="text-lg font-semibold">Recent Activity</h2>
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
         

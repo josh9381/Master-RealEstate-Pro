@@ -169,7 +169,7 @@ const GoalTracking = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
             <Target className="h-7 w-7 text-primary" />
             Goal Tracking
           </h1>
@@ -232,7 +232,7 @@ const GoalTracking = () => {
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder="e.g., Close 10 deals this month"
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -240,7 +240,7 @@ const GoalTracking = () => {
                   <select
                     value={form.metricType}
                     onChange={(e) => setForm({ ...form, metricType: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {METRIC_TYPES.map((mt) => (
                       <option key={mt.value} value={mt.value}>{mt.label}</option>
@@ -258,7 +258,7 @@ const GoalTracking = () => {
                     value={form.targetValue}
                     onChange={(e) => setForm({ ...form, targetValue: e.target.value })}
                     placeholder="e.g., 10"
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -268,7 +268,7 @@ const GoalTracking = () => {
                     required
                     value={form.startDate}
                     onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -279,7 +279,7 @@ const GoalTracking = () => {
                     min={form.startDate || undefined}
                     value={form.endDate}
                     onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -289,7 +289,7 @@ const GoalTracking = () => {
                   <select
                     value={form.period}
                     onChange={(e) => setForm({ ...form, period: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {PERIODS.map((p) => (
                       <option key={p.value} value={p.value}>{p.label}</option>
@@ -303,7 +303,7 @@ const GoalTracking = () => {
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                     placeholder="Any additional context"
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-card dark:border-border dark:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>

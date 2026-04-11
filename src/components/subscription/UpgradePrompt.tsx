@@ -100,7 +100,7 @@ export function UpgradePrompt({
                 <AlertTriangle className="w-6 h-6 text-warning" />
               </div>
               
-              <h3 className="text-xl font-bold text-foreground mb-2">
+              <h3 className="text-base font-medium text-foreground mb-2">
                 Limit Reached
               </h3>
               

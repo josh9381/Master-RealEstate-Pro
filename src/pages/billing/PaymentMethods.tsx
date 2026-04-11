@@ -58,7 +58,7 @@ const PaymentMethods = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Payment Methods</h1>
+          <h1 className="text-2xl font-semibold">Payment Methods</h1>
           <p className="text-muted-foreground mt-2">
             Manage your payment methods and billing information
           </p>
@@ -155,7 +155,7 @@ const PaymentMethods = () => {
 
           {/* Saved Payment Methods */}
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Saved Payment Methods</h2>
+            <h2 className="text-lg font-semibold">Saved Payment Methods</h2>
             {paymentMethods.map((method) => (
               <Card key={method.id} className={method.isDefault ? 'border-primary' : ''}>
                 <CardContent className="pt-6">

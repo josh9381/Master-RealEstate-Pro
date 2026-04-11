@@ -379,7 +379,7 @@ const EmailTemplatesLibrary = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Email Templates Library</h1>
+          <h1 className="text-2xl font-semibold">Email Templates Library</h1>
           <p className="text-muted-foreground mt-2">
             Pre-designed templates for your email campaigns
           </p>
@@ -691,7 +691,7 @@ const EmailTemplatesLibrary = () => {
                   <Mail className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">{editingTemplate ? 'Edit Template' : 'Create New Template'}</h2>
+                  <h2 className="text-lg font-semibold">{editingTemplate ? 'Edit Template' : 'Create New Template'}</h2>
                   <p className="text-xs text-muted-foreground">
                     {editingTemplate ? `Editing "${editingTemplate.name}"` : 'Design your email template with the block editor'}
                   </p>
@@ -988,7 +988,7 @@ const EmailTemplatesLibrary = () => {
           <div className="bg-background rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b">
               <div>
-                <h2 className="text-xl font-bold">{previewTemplate.name}</h2>
+                <h2 className="text-lg font-semibold">{previewTemplate.name}</h2>
                 <p className="text-sm text-muted-foreground mt-1">Subject: {previewTemplate.subject}</p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => { setShowPreviewModal(false); setPreviewTemplate(null); }}>
@@ -1044,7 +1044,7 @@ const EmailTemplatesLibrary = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-label="Delete Template Confirmation">
           <div className="bg-background rounded-lg w-full max-w-md">
             <div className="p-6">
-              <h2 className="text-lg font-bold mb-2">Delete Template</h2>
+              <h2 className="text-lg font-semibold mb-2">Delete Template</h2>
               <p className="text-muted-foreground">
                 Are you sure you want to delete <strong>&ldquo;{deleteTemplateName}&rdquo;</strong>? This action cannot be undone.
               </p>

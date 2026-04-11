@@ -80,7 +80,7 @@ export default function APIIntegrationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">API Integrations</h1>
+          <h1 className="text-2xl font-semibold">API Integrations</h1>
           <p className="text-muted-foreground">Manage your API keys and integrations</p>
         </div>
         <Button onClick={() => setShowCreateForm(true)} disabled={showCreateForm}>
@@ -152,7 +152,7 @@ export default function APIIntegrationsPage() {
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-6">
           <Key className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">API Keys</h2>
+          <h2 className="text-lg font-semibold">API Keys</h2>
         </div>
 
         {isLoading ? (
@@ -224,7 +224,7 @@ export default function APIIntegrationsPage() {
 
       {/* API Documentation */}
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">API Documentation</h2>
+        <h2 className="text-lg font-semibold mb-4">API Documentation</h2>
         
         <div className="space-y-4">
           <div className="p-4 border rounded-lg">
@@ -256,7 +256,7 @@ export default function APIIntegrationsPage() {
       {/* Webhooks */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Webhooks</h2>
+          <h2 className="text-lg font-semibold">Webhooks</h2>
           <Badge variant="secondary">Coming Soon</Badge>
         </div>
 

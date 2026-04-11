@@ -129,7 +129,7 @@ const SystemSettings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">System Settings</h1>
+        <h1 className="text-2xl font-semibold">System Settings</h1>
         <p className="text-muted-foreground mt-2">
           Configure system-wide preferences and options
         </p>
@@ -192,7 +192,7 @@ const SystemSettings = () => {
                 type="text"
                 value={systemName}
                 onChange={(e) => setSystemName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg transition-colors"
+                className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             <div>
@@ -201,7 +201,7 @@ const SystemSettings = () => {
                 type="text"
                 value={systemUrl}
                 onChange={(e) => setSystemUrl(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg transition-colors"
+                className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -211,14 +211,14 @@ const SystemSettings = () => {
               rows={3}
               value={systemDescription}
               onChange={(e) => setSystemDescription(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg transition-colors"
+              className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Default Language</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg transition-colors" 
+                className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
               >
@@ -232,7 +232,7 @@ const SystemSettings = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Default Timezone</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg transition-colors" 
+                className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
               >
@@ -248,7 +248,7 @@ const SystemSettings = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Date Format</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg transition-colors" 
+                className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
                 value={dateFormat}
                 onChange={(e) => setDateFormat(e.target.value)}
               >
@@ -260,7 +260,7 @@ const SystemSettings = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Time Format</label>
               <select 
-                className="w-full px-3 py-2 border rounded-lg transition-colors" 
+                className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
                 value={timeFormat}
                 onChange={(e) => setTimeFormat(e.target.value)}
               >
@@ -289,7 +289,7 @@ const SystemSettings = () => {
                 type="checkbox" 
                 checked={strongPasswords}
                 onChange={(e) => setStrongPasswords(e.target.checked)}
-                className="rounded" 
+                className="rounded disabled:opacity-50 disabled:cursor-not-allowed" 
               />
               <span className="text-sm font-medium">Require strong passwords</span>
             </label>
@@ -303,7 +303,7 @@ const SystemSettings = () => {
                 type="checkbox" 
                 checked={enable2FA}
                 onChange={(e) => setEnable2FA(e.target.checked)}
-                className="rounded" 
+                className="rounded disabled:opacity-50 disabled:cursor-not-allowed" 
               />
               <span className="text-sm font-medium">Enable two-factor authentication</span>
             </label>
@@ -314,7 +314,7 @@ const SystemSettings = () => {
                 type="checkbox" 
                 checked={require2FAAdmins}
                 onChange={(e) => setRequire2FAAdmins(e.target.checked)}
-                className="rounded" 
+                className="rounded disabled:opacity-50 disabled:cursor-not-allowed" 
               />
               <span className="text-sm font-medium">Require 2FA for admins</span>
             </label>
@@ -325,7 +325,7 @@ const SystemSettings = () => {
               type="number"
               value={sessionTimeout}
               onChange={(e) => setSessionTimeout(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border rounded-lg transition-colors"
+              className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
@@ -334,7 +334,7 @@ const SystemSettings = () => {
               type="number"
               value={maxLoginAttempts}
               onChange={(e) => setMaxLoginAttempts(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border rounded-lg transition-colors"
+              className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
@@ -343,7 +343,7 @@ const SystemSettings = () => {
               type="number"
               value={lockoutDuration}
               onChange={(e) => setLockoutDuration(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border rounded-lg transition-colors"
+              className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <Button onClick={handleSaveSecuritySettings} disabled={saveSecurityMutation.isPending}>
@@ -362,25 +362,25 @@ const SystemSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" defaultChecked className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm">Send daily activity summary</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" defaultChecked className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm">Send security alerts</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" defaultChecked className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm">Send backup completion notifications</span>
             </label>
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input type="checkbox" className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm">Send system maintenance notifications</span>
             </label>
           </div>
@@ -390,7 +390,7 @@ const SystemSettings = () => {
               rows={3}
               placeholder="admin1@company.com, admin2@company.com"
               defaultValue="admin@yourcompany.com"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </CardContent>
@@ -405,7 +405,7 @@ const SystemSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" defaultChecked className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm font-medium">Enable caching</span>
             </label>
           </div>
@@ -414,12 +414,12 @@ const SystemSettings = () => {
             <input
               type="number"
               defaultValue="60"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" defaultChecked className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm font-medium">Enable compression</span>
             </label>
           </div>
@@ -428,12 +428,12 @@ const SystemSettings = () => {
             <input
               type="number"
               defaultValue="10"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Database Backup Schedule</label>
-            <select className="w-full px-3 py-2 border rounded-lg" defaultValue="daily">
+            <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" defaultValue="daily">
               <option value="hourly">Hourly</option>
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
@@ -458,7 +458,7 @@ const SystemSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" className="rounded" />
+              <input type="checkbox" className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm font-medium">Enable Maintenance Mode</span>
             </label>
           </div>
@@ -468,7 +468,7 @@ const SystemSettings = () => {
               rows={3}
               placeholder="We're currently performing system maintenance..."
               defaultValue="We're currently performing system maintenance. We'll be back soon!"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </CardContent>
@@ -483,7 +483,7 @@ const SystemSettings = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" defaultChecked className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm font-medium">Enable API access</span>
             </label>
           </div>
@@ -492,12 +492,12 @@ const SystemSettings = () => {
             <input
               type="number"
               defaultValue="1000"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">API Version</label>
-            <select className="w-full px-3 py-2 border rounded-lg" defaultValue="v2">
+            <select className="w-full px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" defaultValue="v2">
               <option value="v1">v1 (Legacy)</option>
               <option value="v2">v2 (Current)</option>
               <option value="v3">v3 (Beta)</option>
@@ -505,7 +505,7 @@ const SystemSettings = () => {
           </div>
           <div>
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded" />
+              <input type="checkbox" defaultChecked className="rounded disabled:opacity-50 disabled:cursor-not-allowed" />
               <span className="text-sm">Require API key for all requests</span>
             </label>
           </div>

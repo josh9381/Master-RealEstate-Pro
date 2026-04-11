@@ -850,7 +850,7 @@ function Dashboard() {
       {/* Page Header with Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
             Welcome back! Here's what's happening with your business.
           </p>

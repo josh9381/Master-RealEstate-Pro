@@ -65,7 +65,7 @@ const SourceROI = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
             <DollarSign className="h-7 w-7 text-success" />
             Source ROI
           </h1>

@@ -100,7 +100,7 @@ function WelcomeStep() {
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-6">
         <Sparkles className="h-10 w-10 text-primary" />
       </div>
-      <h2 className="text-2xl font-bold text-foreground mb-3">Welcome to RealEstate Pro!</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-3">Welcome to RealEstate Pro!</h2>
       <p className="text-muted-foreground max-w-md mx-auto mb-6">
         We'll walk you through setting up the key parts of your account. This only takes a few minutes
         and you can always change these settings later.
@@ -727,7 +727,7 @@ function GoogleStep() {
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
           <Clock className="h-8 w-8 text-primary" />
         </div>
-        <h3 className="text-lg font-bold text-foreground mb-2">Google Integration</h3>
+        <h3 className="text-base font-medium text-foreground mb-2">Google Integration</h3>
         <p className="text-muted-foreground max-w-sm mx-auto mb-4">
           Google OAuth integration requires setup in your organization's Google Cloud Console.
           You can configure this in <strong>Settings → Integrations</strong> once you have your OAuth credentials ready.
@@ -802,7 +802,7 @@ function SecurityStep() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-warning/10 mb-4">
               <Shield className="h-8 w-8 text-warning" />
             </div>
-            <h3 className="text-lg font-bold text-foreground mb-2">Protect your account</h3>
+            <h3 className="text-base font-medium text-foreground mb-2">Protect your account</h3>
             <p className="text-muted-foreground max-w-sm mx-auto">
               Two-factor authentication adds an extra layer of security. We recommend setting this up
               in Settings where you can scan the QR code with your authenticator app.
@@ -852,7 +852,7 @@ function CompleteStep({ skippedSteps }: { skippedSteps: Set<string> }) {
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-success/10 mb-6">
         <Check className="h-10 w-10 text-success" />
       </div>
-      <h2 className="text-2xl font-bold text-foreground mb-3">You're all set!</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-3">You're all set!</h2>
       <p className="text-muted-foreground max-w-md mx-auto mb-6">
         Your account is configured. You can always change any of these settings later from the Settings page.
       </p>
@@ -996,7 +996,7 @@ export function SetupWizard() {
               <step.icon className={`h-5 w-5 ${step.critical ? 'text-warning' : 'text-primary'}`} />
             </div>
             <div>
-              <h3 className="font-bold text-foreground">{step.title}</h3>
+              <h3 className="text-base font-medium text-foreground">{step.title}</h3>
               <p className="text-xs text-muted-foreground">Step {currentStep + 1} of {WIZARD_STEPS.length}</p>
             </div>
           </div>

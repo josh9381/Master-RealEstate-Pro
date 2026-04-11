@@ -50,7 +50,7 @@ export function DashboardCustomizer({ prefs, onToggle, onReset }: DashboardCusto
       {open && (
         <div className="absolute right-0 mt-1 w-72 bg-card border rounded-lg shadow-lg z-20 p-3" role="dialog" aria-label="Dashboard customization">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold">Customize Dashboard</h3>
+            <h3 className="text-base font-medium">Customize Dashboard</h3>
             <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={onReset}>
               <RotateCcw className="h-3 w-3" />
               Reset

@@ -242,7 +242,7 @@ const CampaignSchedule = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Campaign Schedule</h1>
+          <h1 className="text-2xl font-semibold">Campaign Schedule</h1>
           <p className="text-muted-foreground mt-2">
             Manage scheduled and recurring campaigns
           </p>
@@ -308,7 +308,7 @@ const CampaignSchedule = () => {
         <Card className="border-dashed">
           <CardContent className="py-16 text-center">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">No Campaigns Scheduled</h3>
+            <h3 className="text-base font-medium mb-2">No Campaigns Scheduled</h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               You don't have any scheduled, recurring, or recently sent campaigns yet. Create your first campaign to get started.
             </p>

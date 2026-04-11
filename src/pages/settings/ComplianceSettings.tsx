@@ -185,7 +185,7 @@ const ComplianceSettings = () => {
         <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Compliance Settings</h1>
+          <h1 className="text-2xl font-semibold">Compliance Settings</h1>
           <p className="text-muted-foreground mt-2">
             Configure TCPA, DNC, GDPR, and other compliance requirements
           </p>

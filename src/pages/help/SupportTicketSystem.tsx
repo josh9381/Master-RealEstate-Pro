@@ -176,7 +176,7 @@ const SupportTicketSystem = () => {
             Back to Tickets
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">{detail.subject}</h1>
+            <h1 className="text-2xl font-semibold">{detail.subject}</h1>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="secondary" className={STATUS_COLORS[detail.status] || ''}>
                 {STATUS_LABELS[detail.status] || detail.status}
@@ -257,7 +257,7 @@ const SupportTicketSystem = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Tickets
           </Button>
-          <h1 className="text-2xl font-bold">Create New Support Ticket</h1>
+          <h1 className="text-2xl font-semibold">Create New Support Ticket</h1>
         </div>
 
         <Card>
@@ -280,7 +280,7 @@ const SupportTicketSystem = () => {
                   <label htmlFor="ticket-category" className="text-sm font-medium">Category</label>
                   <select
                     id="ticket-category"
-                    className="w-full px-3 py-2 border rounded-lg transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     value={newTicket.category}
                     onChange={(e) => setNewTicket(s => ({ ...s, category: e.target.value }))}
                   >
@@ -292,7 +292,7 @@ const SupportTicketSystem = () => {
                   <label htmlFor="ticket-priority" className="text-sm font-medium">Priority</label>
                   <select
                     id="ticket-priority"
-                    className="w-full px-3 py-2 border rounded-lg transition-colors"
+                    className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     value={newTicket.priority}
                     onChange={(e) => setNewTicket(s => ({ ...s, priority: e.target.value }))}
                   >
@@ -309,7 +309,7 @@ const SupportTicketSystem = () => {
                   id="ticket-subject"
                   type="text"
                   placeholder="Brief description of your issue"
-                  className="w-full px-3 py-2 border rounded-lg transition-colors"
+                  className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   value={newTicket.subject}
                   onChange={(e) => setNewTicket(s => ({ ...s, subject: e.target.value }))}
                   required
@@ -321,7 +321,7 @@ const SupportTicketSystem = () => {
                   id="ticket-description"
                   placeholder="Provide detailed information about your issue..."
                   rows={6}
-                  className="w-full px-3 py-2 border rounded-lg transition-colors"
+                  className="w-full px-3 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   value={newTicket.description}
                   onChange={(e) => setNewTicket(s => ({ ...s, description: e.target.value }))}
                   required
@@ -350,7 +350,7 @@ const SupportTicketSystem = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Support Tickets</h1>
+          <h1 className="text-2xl font-semibold">Support Tickets</h1>
           <p className="text-muted-foreground mt-2">
             View and manage your support requests
           </p>
@@ -370,13 +370,13 @@ const SupportTicketSystem = () => {
               <input
                 type="text"
                 placeholder="Search tickets..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg transition-colors"
+                className="w-full pl-10 pr-4 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 value={filters.search}
                 onChange={(e) => { setFilters(f => ({ ...f, search: e.target.value })); setPage(1); }}
               />
             </div>
             <select
-              className="px-4 py-2 border rounded-lg transition-colors"
+              className="px-4 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               value={filters.status}
               onChange={(e) => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}
             >
@@ -387,7 +387,7 @@ const SupportTicketSystem = () => {
               <option value="CLOSED">Closed</option>
             </select>
             <select
-              className="px-4 py-2 border rounded-lg transition-colors"
+              className="px-4 py-2 border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               value={filters.category}
               onChange={(e) => { setFilters(f => ({ ...f, category: e.target.value })); setPage(1); }}
             >
