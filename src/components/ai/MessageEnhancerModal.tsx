@@ -83,7 +83,7 @@ export function MessageEnhancerModal({
         <div className="relative flex items-center justify-between p-5 border-b overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 dark:from-purple-950/30 dark:via-indigo-950/20 dark:to-blue-950/30" />
           <div className="relative flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-sm shadow-purple-500/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-sm shadow-primary/20">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -116,8 +116,8 @@ export function MessageEnhancerModal({
                   onClick={() => setSelectedTone(tone.value)}
                   className={`p-3 rounded-xl border-2 text-left transition-all ${
                     selectedTone === tone.value
-                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/20 shadow-sm shadow-purple-500/10'
-                      : 'border-border/60 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-muted/50'
+                      ? 'border-primary bg-primary/5 shadow-sm shadow-primary/10'
+                      : 'border-border/60 hover:border-primary/40 hover:bg-muted/50'
                   }`}
                 >
                   <div className="font-medium text-sm">{tone.label}</div>
@@ -144,10 +144,10 @@ export function MessageEnhancerModal({
               <label className="block text-sm font-medium text-foreground mb-2">
                 Enhanced Message
               </label>
-              <div className="border-2 border-purple-300 dark:border-purple-700 rounded-lg p-4 bg-purple-50 dark:bg-purple-950/20 min-h-[200px] max-h-[300px] overflow-y-auto">
+              <div className="border-2 border-primary/30 rounded-lg p-4 bg-primary/5 min-h-[200px] max-h-[300px] overflow-y-auto">
                 {isEnhancing ? (
                   <div className="flex flex-col items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 text-purple-600 animate-spin mb-3" />
+                    <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
                     <p className="text-sm text-muted-foreground">Enhancing your message...</p>
                   </div>
                 ) : enhancedText ? (

@@ -210,13 +210,13 @@ export function AISMSComposer({
                 {/* Message Bubble */}
                 <div className="flex-1 flex items-end">
                   <div className="w-full">
-                    <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-blue-500 px-4 py-2.5 text-white">
+                    <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-white">
                       {isCustom ? (
                         <textarea
                           value={customMessage}
                           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomMessage(e.target.value)}
                           placeholder="Type your message..."
-                          className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-blue-100"
+                          className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-primary-foreground/60"
                           rows={6}
                         />
                       ) : (

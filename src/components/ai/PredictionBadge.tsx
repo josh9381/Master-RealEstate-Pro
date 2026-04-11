@@ -75,7 +75,7 @@ export const PredictionBadge = ({
         const displayValue = value?.toString() || 'N/A';
         return {
           icon: Clock,
-          color: 'bg-purple-100 text-purple-700 border-purple-200',
+          color: 'bg-primary/10 text-primary border-primary/20',
           label: label || 'Best Time',
           displayValue,
         };

@@ -54,12 +54,12 @@ export function MessagePreview({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/10 to-indigo-500/10">
-            <span className="text-purple-600 dark:text-purple-400">{getIcon()}</span>
+            <span className="text-primary">{getIcon()}</span>
           </div>
           <h3 className="font-semibold text-foreground">{getTitle()}</h3>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <span className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full font-medium border border-purple-200/60 dark:border-purple-800/40">
+          <span className="px-2.5 py-1 bg-primary/5 text-primary rounded-full font-medium border border-primary/20">
             {content.tone}
           </span>
           <span className="px-2.5 py-1 bg-muted text-muted-foreground rounded-full">
@@ -105,7 +105,7 @@ export function MessagePreview({
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Button onClick={onApply} size="sm" className="gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-sm shadow-purple-500/20">
+        <Button onClick={onApply} size="sm" className="gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-sm shadow-primary/20">
           <Send className="w-3.5 h-3.5" />
           Apply to Campaign
         </Button>

@@ -619,7 +619,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
           <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
           <div className="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-white/5 blur-xl" />
-          <div className="absolute -top-4 -left-4 h-20 w-20 rounded-full bg-blue-400/10 blur-xl" />
+          <div className="absolute -top-4 -left-4 h-20 w-20 rounded-full bg-primary/10 blur-xl" />
           
           <div className="relative flex items-center space-x-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
@@ -672,11 +672,11 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 <button
                   key={suggestion.id}
                   onClick={suggestion.action}
-                  className="w-full rounded-xl border border-border/60 bg-background p-3 text-left transition-all hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-md hover:shadow-purple-500/5 group"
+                  className="w-full rounded-xl border border-border/60 bg-background p-3 text-left transition-all hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 group"
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 group-hover:from-purple-500/20 group-hover:to-blue-500/20 transition-colors">
-                      <suggestion.icon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <suggestion.icon className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{suggestion.title}</p>
@@ -699,7 +699,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
               {[1, 2, 3].map((i) => (
                 <div key={i} className={cn("flex", i % 2 === 0 ? "justify-end" : "justify-start")}>
                   {i % 2 !== 0 && <div className="h-7 w-7 rounded-lg bg-muted mr-2 shrink-0" />}
-                  <div className={cn("rounded-2xl px-4 py-3", i % 2 === 0 ? "bg-purple-200/30 dark:bg-purple-800/20 w-[65%]" : "bg-muted/70 w-[75%]")}>
+                  <div className={cn("rounded-2xl px-4 py-3", i % 2 === 0 ? "bg-primary/10 w-[65%]" : "bg-muted/70 w-[75%]")}>
                     <div className="h-3 bg-muted-foreground/10 rounded w-full mb-2" />
                     <div className="h-3 bg-muted-foreground/10 rounded w-3/4" />
                   </div>
@@ -718,14 +718,14 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
             >
               {message.role === 'assistant' && (
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/15 to-indigo-500/15 mr-2 mt-0.5">
-                  <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
                 </div>
               )}
               <div
                 className={cn(
                   "max-w-[80%] rounded-2xl px-4 py-2.5",
                   message.role === 'user'
-                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm shadow-purple-500/20"
+                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm shadow-primary/20"
                     : "bg-muted/70 border border-border/40"
                 )}
               >
@@ -822,13 +822,13 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
           {isTyping && (
             <div className="flex justify-start">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/15 to-indigo-500/15 mr-2 mt-0.5">
-                <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 animate-pulse" />
+                <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
               </div>
               <div className="rounded-2xl bg-muted/70 border border-border/40 px-4 py-3">
                 <div className="flex space-x-1.5 items-center">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400/60" style={{ animationDelay: '0ms' }} />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400/60" style={{ animationDelay: '150ms' }} />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-purple-400/60" style={{ animationDelay: '300ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-primary/60" style={{ animationDelay: '0ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-primary/60" style={{ animationDelay: '150ms' }} />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-primary/60" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             </div>
@@ -868,7 +868,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
           <select
             value={selectedTone}
             onChange={(e) => setSelectedTone(e.target.value)}
-            className="text-sm border border-border/60 rounded-xl px-3 py-1.5 w-full bg-background hover:border-purple-300 dark:hover:border-purple-700 transition-colors focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400"
+            className="text-sm border border-border/60 rounded-xl px-3 py-1.5 w-full bg-background hover:border-primary/40 transition-colors focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="PROFESSIONAL">🎯 Professional - Formal & Business-like</option>
             <option value="FRIENDLY">😊 Friendly - Warm & Conversational</option>
@@ -887,7 +887,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 <button
                   key={idx}
                   onClick={() => handleQuickQuestion(action.question)}
-                  className="px-3 py-1.5 text-xs rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 text-purple-700 dark:text-purple-300 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-800/30 dark:hover:to-indigo-800/30 transition-all border border-purple-200/60 dark:border-purple-800/50 hover:shadow-sm font-medium"
+                  className="px-3 py-1.5 text-xs rounded-full bg-primary/5 text-primary hover:bg-primary/10 transition-all border border-primary/20 hover:shadow-sm font-medium"
                 >
                   {action.label}
                 </button>
@@ -898,7 +898,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
 
         {/* Input */}
         <div className="border-t p-4 bg-background">
-          <div className="flex items-center space-x-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1 focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/10 transition-all">
+          <div className="flex items-center space-x-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all">
             <Input
               ref={inputRef}
               value={input}
@@ -912,7 +912,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
               onClick={() => handleSendMessage()} 
               disabled={isTyping || !input.trim()} 
               aria-label="Send message"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm shadow-purple-500/25 disabled:opacity-40 disabled:shadow-none hover:shadow-md hover:shadow-purple-500/30 transition-all disabled:cursor-not-allowed"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm shadow-primary/25 disabled:opacity-40 disabled:shadow-none hover:shadow-md hover:shadow-primary/30 transition-all disabled:cursor-not-allowed"
             >
               <Send className="h-4 w-4" />
             </button>

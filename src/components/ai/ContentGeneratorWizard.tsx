@@ -190,10 +190,10 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     setContentType(type.value as ContentType);
                     setStep('details');
                   }}
-                  className="p-4 border-2 border-border/60 rounded-xl hover:border-purple-400 dark:hover:border-purple-600 hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-all text-left group hover:shadow-md hover:shadow-purple-500/5"
+                  className="p-4 border-2 border-border/60 rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all text-left group hover:shadow-md hover:shadow-primary/5"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/10 to-indigo-500/10 group-hover:from-purple-500/20 group-hover:to-indigo-500/20 transition-colors mb-3">
-                    <Icon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <Icon className="h-5 w-5 text-primary" />
                   </div>
                   <div className="font-medium text-foreground">{type.label}</div>
                   <div className="text-sm text-muted-foreground">{type.description}</div>
@@ -212,7 +212,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             <h3 className="text-lg font-semibold text-foreground">Content Details</h3>
             <button
               onClick={() => setStep('type')}
-              className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+              className="text-sm text-primary hover:text-purple-700 dark:hover:text-purple-300 font-medium"
             >
               Change Type
             </button>
@@ -229,7 +229,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={leadName}
                   onChange={(e) => setLeadName(e.target.value)}
                   placeholder="John Smith"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
               <div>
@@ -241,7 +241,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
                   placeholder="Single Family Home"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
               <div>
@@ -253,7 +253,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   placeholder="e.g., nurture new leads, re-engage cold leads"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   required
                 />
               </div>
@@ -262,7 +262,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                 <select
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 >
                   {toneOptions.map((t) => (
                     <option key={t} value={t}>
@@ -281,7 +281,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   onChange={(e) => setSequenceLength(parseInt(e.target.value))}
                   min="3"
                   max="7"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
             </>
@@ -298,7 +298,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={leadName}
                   onChange={(e) => setLeadName(e.target.value)}
                   placeholder="John Smith"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
               <div>
@@ -310,7 +310,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   placeholder="e.g., schedule showing, confirm appointment"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   required
                 />
               </div>
@@ -319,7 +319,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                 <select
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 >
                   {toneOptions.map((t) => (
                     <option key={t} value={t}>
@@ -340,7 +340,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="123 Main Street, City, State"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   required
                 />
               </div>
@@ -353,7 +353,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
                   placeholder="Single Family Home"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   required
                 />
               </div>
@@ -367,7 +367,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     value={bedrooms}
                     onChange={(e) => setBedrooms(e.target.value)}
                     placeholder="3"
-                    className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   />
                 </div>
                 <div>
@@ -379,7 +379,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     value={bathrooms}
                     onChange={(e) => setBathrooms(e.target.value)}
                     placeholder="2"
-                    className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   />
                 </div>
               </div>
@@ -393,7 +393,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     value={squareFeet}
                     onChange={(e) => setSquareFeet(e.target.value)}
                     placeholder="2000"
-                    className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   />
                 </div>
                 <div>
@@ -403,7 +403,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     placeholder="500000"
-                    className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   />
                 </div>
               </div>
@@ -416,7 +416,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={features}
                   onChange={(e) => setFeatures(e.target.value)}
                   placeholder="Pool, Updated Kitchen, Hardwood Floors"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
               <div>
@@ -428,7 +428,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={neighborhood}
                   onChange={(e) => setNeighborhood(e.target.value)}
                   placeholder="Downtown, near schools and parks"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
             </>
@@ -443,7 +443,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="e.g., new listing, open house, market update"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   required
                 />
               </div>
@@ -456,7 +456,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="123 Main Street"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
               <div>
@@ -476,7 +476,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                             setPlatforms(platforms.filter((p) => p !== platform.value));
                           }
                         }}
-                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-border rounded"
+                        className="h-4 w-4 text-purple-600 focus-visible:ring-ring border-border rounded"
                       />
                       <span className="ml-2 text-sm text-foreground">{platform.label}</span>
                     </label>
@@ -488,7 +488,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                 <select
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 >
                   {toneOptions.map((t) => (
                     <option key={t} value={t}>
@@ -509,7 +509,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="123 Main Street, City, State"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   required
                 />
               </div>
@@ -522,7 +522,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
                   placeholder="Single Family Home"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                   required
                 />
               </div>
@@ -535,7 +535,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   value={estimatedValue}
                   onChange={(e) => setEstimatedValue(e.target.value)}
                   placeholder="500000"
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
               <div>
@@ -547,7 +547,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   onChange={(e) => setMarketTrends(e.target.value)}
                   placeholder="e.g., Sellers market, low inventory, prices up 5%"
                   rows={3}
-                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-background focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 />
               </div>
             </>
@@ -563,7 +563,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             <button
               onClick={handleGenerate}
               disabled={isGenerating || !goal && (contentType === 'email-sequence' || contentType === 'sms')}
-              className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-sm shadow-purple-500/25 hover:shadow-md hover:shadow-purple-500/30"
+              className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-sm shadow-primary/25 hover:shadow-md hover:shadow-primary/30"
             >
               {isGenerating ? (
                 <>
@@ -589,13 +589,13 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             <h3 className="text-lg font-semibold text-foreground">Generated Content</h3>
             <button
               onClick={() => setStep('details')}
-              className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+              className="text-sm text-primary hover:text-purple-700 dark:hover:text-purple-300 font-medium"
             >
               Generate Again
             </button>
           </div>
 
-          <div className="bg-purple-50/50 dark:bg-purple-900/10 border-2 border-purple-200/60 dark:border-purple-800/40 rounded-xl p-4 max-h-96 overflow-y-auto">
+          <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-4 max-h-96 overflow-y-auto">
             {contentType === 'email-sequence' && generatedContent.emails && (
               <div className="space-y-4">
                 {generatedContent.emails.map((email: any, index: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -606,7 +606,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                       </span>
                       <button
                         onClick={() => handleCopy(`Subject: ${email.subject}\n\n${email.body}`)}
-                        className="text-purple-600 hover:text-purple-700"
+                        className="text-primary hover:text-primary/80"
                       >
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
@@ -628,7 +628,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   </span>
                   <button
                     onClick={() => handleCopy(generatedContent.message)}
-                    className="text-purple-600 hover:text-purple-700"
+                    className="text-primary hover:text-primary/80"
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
@@ -645,7 +645,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                   </span>
                   <button
                     onClick={() => handleCopy(generatedContent.description)}
-                    className="text-purple-600 hover:text-purple-700"
+                    className="text-primary hover:text-primary/80"
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
@@ -666,7 +666,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                       </span>
                       <button
                         onClick={() => handleCopy(post)}
-                        className="text-purple-600 hover:text-purple-700"
+                        className="text-primary hover:text-primary/80"
                       >
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
@@ -691,7 +691,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
                       <span className="text-sm font-medium text-muted-foreground">{label}</span>
                       <button
                         onClick={() => handleCopy(generatedContent[key])}
-                        className="text-purple-600 hover:text-purple-700"
+                        className="text-primary hover:text-primary/80"
                       >
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
@@ -714,7 +714,7 @@ export const ContentGeneratorWizard: React.FC<ContentGeneratorProps> = ({
             </button>
             <button
               onClick={handleApplyContent}
-              className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all flex items-center space-x-2 shadow-sm shadow-purple-500/25 hover:shadow-md hover:shadow-purple-500/30"
+              className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all flex items-center space-x-2 shadow-sm shadow-primary/25 hover:shadow-md hover:shadow-primary/30"
             >
               <Check className="h-4 w-4" />
               <span>Use This Content</span>
