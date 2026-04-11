@@ -578,7 +578,7 @@ const SMSTemplatesLibrary = () => {
                           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
                             formCategory === cat
                               ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary/20'
-                              : 'border-border hover:border-primary/30 hover:bg-accent text-muted-foreground hover:text-foreground'
+                              : 'border-border hover:border-primary/30 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground'
                           }`}
                         >
                           <span>{CATEGORY_ICONS[cat] || '📁'}</span>

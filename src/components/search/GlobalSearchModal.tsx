@@ -363,7 +363,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                     index === selectedIndex
                       ? 'bg-accent'
-                      : 'hover:bg-accent/50'
+                      : 'hover:bg-accent/50 transition-colors'
                   }`}
                 >
                   <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">

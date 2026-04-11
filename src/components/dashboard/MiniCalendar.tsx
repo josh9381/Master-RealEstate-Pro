@@ -102,7 +102,7 @@ export function MiniCalendar({ eventDates = [], selectedDate, onDateSelect, clas
                   ? 'bg-primary text-primary-foreground font-semibold'
                   : isToday
                   ? 'bg-accent font-semibold'
-                  : 'hover:bg-accent/50'
+                  : 'hover:bg-accent/50 transition-colors'
               )}
             >
               {day}

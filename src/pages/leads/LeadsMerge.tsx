@@ -383,7 +383,7 @@ const LeadsMerge = () => {
                                   className={`w-full text-left px-3 py-1.5 rounded transition-colors ${
                                     selected === 'primary'
                                       ? 'bg-primary/10 border border-primary text-foreground font-medium'
-                                      : 'hover:bg-muted/50 text-muted-foreground'
+                                      : 'hover:bg-muted/50 transition-colors text-muted-foreground'
                                   }`}
                                 >
                                   {val1 || <span className="italic text-muted-foreground/50">empty</span>}
@@ -395,7 +395,7 @@ const LeadsMerge = () => {
                                   className={`w-full text-left px-3 py-1.5 rounded transition-colors ${
                                     selected === 'secondary'
                                       ? 'bg-primary/10 border border-primary text-foreground font-medium'
-                                      : 'hover:bg-muted/50 text-muted-foreground'
+                                      : 'hover:bg-muted/50 transition-colors text-muted-foreground'
                                   }`}
                                 >
                                   {val2 || <span className="italic text-muted-foreground/50">empty</span>}

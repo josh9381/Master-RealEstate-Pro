@@ -414,7 +414,7 @@ export function NotificationsPage() {
                   className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${
                     !notification.read
                       ? 'bg-primary/5 border-primary/20'
-                      : 'hover:bg-accent/50'
+                      : 'hover:bg-accent/50 transition-colors'
                   } ${selectedIds.includes(notification.id) ? 'ring-2 ring-primary' : ''}`}
                 >
                   <input

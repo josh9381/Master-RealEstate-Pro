@@ -69,7 +69,7 @@ export function CampaignsSubNav({ campaigns, typeFilter, onTypeFilterChange }: C
                 className={`inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium px-3 py-2 transition-colors ${
                   active
                     ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent transition-colors'
                 }`}
               >
                 <Icon className="h-4 w-4" />

@@ -433,7 +433,7 @@ export const WorkflowComponentLibrary: React.FC<WorkflowComponentLibraryProps> =
                 ${borderColor}
                 ${isAdded
                   ? 'bg-success/10 border border-l-[3px] border-success/30'
-                  : 'bg-background hover:bg-accent/50 border border-l-[3px] border-transparent hover:border-border'
+                  : 'bg-background hover:bg-accent/50 transition-colors border border-l-[3px] border-transparent hover:border-border'
                 }
                 ${mode === 'drag' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
               `}

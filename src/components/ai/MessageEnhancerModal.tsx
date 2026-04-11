@@ -117,7 +117,7 @@ export function MessageEnhancerModal({
                   className={`p-3 rounded-xl border-2 text-left transition-all ${
                     selectedTone === tone.value
                       ? 'border-primary bg-primary/5 shadow-sm shadow-primary/10'
-                      : 'border-border/60 hover:border-primary/40 hover:bg-muted/50'
+                      : 'border-border/60 hover:border-primary/40 hover:bg-muted/50 transition-colors'
                   }`}
                 >
                   <div className="font-medium text-sm">{tone.label}</div>

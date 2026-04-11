@@ -54,12 +54,12 @@ const features = [
 ]
 
 const colorMap: Record<string, string> = {
-  blue: 'bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white',
-  purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white',
-  cyan: 'bg-cyan-100 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white',
-  emerald: 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
-  orange: 'bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white',
-  rose: 'bg-rose-100 text-rose-600 group-hover:bg-rose-600 group-hover:text-white',
+  blue: 'bg-blue-100 text-blue-600 group-hover:bg-blue-600 transition-colors group-hover:text-white',
+  purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-600 transition-colors group-hover:text-white',
+  cyan: 'bg-cyan-100 text-cyan-600 group-hover:bg-cyan-600 transition-colors group-hover:text-white',
+  emerald: 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-600 transition-colors group-hover:text-white',
+  orange: 'bg-orange-100 text-orange-600 group-hover:bg-orange-600 transition-colors group-hover:text-white',
+  rose: 'bg-rose-100 text-rose-600 group-hover:bg-rose-600 transition-colors group-hover:text-white',
 }
 
 export function FeaturesGrid() {

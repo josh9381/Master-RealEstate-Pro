@@ -225,7 +225,7 @@ export const CampaignsLayout = ({ children }: CampaignsLayoutProps) => {
                   'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
                   isHub
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    : 'text-muted-foreground hover:bg-accent transition-colors hover:text-foreground'
                 )}
               >
                 <Megaphone className="h-4 w-4" />
@@ -250,7 +250,7 @@ export const CampaignsLayout = ({ children }: CampaignsLayoutProps) => {
                           'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors group',
                           isActive
                             ? 'bg-primary/10 text-primary font-medium'
-                            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                            : 'text-muted-foreground hover:bg-accent transition-colors hover:text-foreground'
                         )}
                       >
                         <Icon className="h-4 w-4 flex-shrink-0" />

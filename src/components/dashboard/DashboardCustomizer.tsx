@@ -67,7 +67,7 @@ export function DashboardCustomizer({ prefs, onToggle, onReset }: DashboardCusto
                       key={widget.key}
                       className={cn(
                         'flex items-center gap-2.5 px-2 py-1.5 rounded-md cursor-pointer transition-colors',
-                        'hover:bg-accent/50'
+                        'hover:bg-accent/50 transition-colors'
                       )}
                     >
                       <input
