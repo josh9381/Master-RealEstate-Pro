@@ -544,7 +544,7 @@ export const ConversationView = ({
 
               <div className="flex gap-2 justify-end">
                 <Button size="sm" variant="outline" onClick={onCancelEnhance}>Cancel</Button>
-                <Button size="sm" onClick={onApplyEnhanced} className="bg-success hover:bg-success/90">Use Enhanced Version</Button>
+                <Button size="sm" onClick={onApplyEnhanced} className="bg-success hover:bg-success/90 transition-colors">Use Enhanced Version</Button>
               </div>
             </div>
           )}
@@ -714,7 +714,7 @@ export const ConversationView = ({
                 <div className="relative">
                   <Button
                     onClick={onSendReply}
-                    className={`${replyChannel === 'sms' ? 'bg-success hover:bg-success/90' : ''} pr-8`}
+                    className={`${replyChannel === 'sms' ? 'bg-success hover:bg-success/90 transition-colors' : ''} pr-8`}
                   >
                     <Send className="h-4 w-4 mr-1" />
                     {replyChannel === 'sms' ? 'SMS' : 'Email'}

@@ -565,7 +565,7 @@ export default function CalendarPage() {
               .slice(0, 5).map(event => (
               <div
                 key={event.id}
-                className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer"
+                className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer"
                 onClick={() => openEditModal(event)}
               >
                 <div className="p-2 rounded-lg bg-primary/10">

@@ -172,7 +172,7 @@ export function CampaignPreviewModal({
                     </thead>
                     <tbody className="divide-y divide-border">
                       {(preview.sampleRecipients || []).map((recipient, idx) => (
-                        <tr key={recipient.id || recipient.email || idx} className="hover:bg-muted/50">
+                        <tr key={recipient.id || recipient.email || idx} className="hover:bg-muted/50 transition-colors">
                           <td className="px-4 py-2 text-foreground">
                             {recipient.name}
                           </td>
@@ -230,7 +230,7 @@ export function CampaignPreviewModal({
           <Button
             onClick={onConfirm}
             disabled={isLoading || noRecipients}
-            className={isHighCost ? 'bg-destructive hover:bg-destructive/90' : ''}
+            className={isHighCost ? 'bg-destructive hover:bg-destructive/90 transition-colors' : ''}
           >
             {isLoading ? (
               <>

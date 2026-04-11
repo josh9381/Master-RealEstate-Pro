@@ -214,7 +214,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary"
+                className="h-6 w-6 p-0 hover:bg-primary/10 transition-colors hover:text-primary"
                 onClick={(e) => { e.stopPropagation(); onDuplicate(node.id); }}
                 title="Duplicate node"
               >
@@ -227,7 +227,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/15 dark:hover:text-primary"
+                className="h-6 w-6 p-0 hover:bg-primary/10 transition-colors hover:text-primary dark:hover:bg-primary/15 dark:hover:text-primary"
                 onClick={(e) => { e.stopPropagation(); onMoveUp(node.id); }}
                 title="Move up"
               >
@@ -239,7 +239,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/15 dark:hover:text-primary"
+                className="h-6 w-6 p-0 hover:bg-primary/10 transition-colors hover:text-primary dark:hover:bg-primary/15 dark:hover:text-primary"
                 onClick={(e) => { e.stopPropagation(); onMoveDown(node.id); }}
                 title="Move down"
               >
@@ -251,7 +251,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className={`h-6 w-6 p-0 ${showDeleteConfirm ? 'bg-destructive text-destructive-foreground animate-pulse' : 'hover:bg-destructive hover:text-destructive-foreground'}`}
+                className={`h-6 w-6 p-0 ${showDeleteConfirm ? 'bg-destructive text-destructive-foreground animate-pulse' : 'hover:bg-destructive transition-colors hover:text-destructive-foreground'}`}
                 onClick={handleDelete}
                 title={showDeleteConfirm ? 'Click again to confirm delete' : 'Delete node'}
               >

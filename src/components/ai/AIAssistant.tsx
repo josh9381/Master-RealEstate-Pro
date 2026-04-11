@@ -800,7 +800,7 @@ export function AIAssistant({ isOpen, onClose, onSuggestionRead }: AIAssistantPr
                 <Button
                   size="sm"
                   onClick={handleConfirm}
-                  className="flex-1 bg-warning hover:bg-warning/90 text-warning-foreground text-xs"
+                  className="flex-1 bg-warning hover:bg-warning/90 transition-colors text-warning-foreground text-xs"
                   disabled={isTyping}
                 >
                   <Check className="h-3 w-3 mr-1" /> Confirm

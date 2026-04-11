@@ -83,12 +83,12 @@ export function EmailPreviewFrame({
               <>
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="p-1.5 rounded hover:bg-accent text-muted-foreground"
+                  className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground"
                   title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                 >
                   {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 </button>
-                <button onClick={onClose} className="p-1.5 rounded hover:bg-accent text-muted-foreground" title="Close">
+                <button onClick={onClose} className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground" title="Close">
                   <X className="h-4 w-4" />
                 </button>
               </>

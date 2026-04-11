@@ -452,7 +452,7 @@ const TwilioSetup = () => {
                     setAccountSid('');
                     setShowAccountSid(false);
                   }}
-                  className="absolute right-10 top-1/2 -translate-y-1/2 px-2 py-1 hover:bg-muted rounded text-xs text-primary border"
+                  className="absolute right-10 top-1/2 -translate-y-1/2 px-2 py-1 hover:bg-muted transition-colors rounded text-xs text-primary border"
                   title="Clear to enter new Account SID"
                 >
                   Clear
@@ -461,7 +461,7 @@ const TwilioSetup = () => {
               <button
                 type="button"
                 onClick={() => setShowAccountSid(!showAccountSid)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted transition-colors rounded"
                 title={showAccountSid ? "Hide Account SID" : "Show Account SID"}
               >
                 {showAccountSid ? (
@@ -496,7 +496,7 @@ const TwilioSetup = () => {
                 <button
                   type="button"
                   onClick={() => setShowAuthToken(!showAuthToken)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted transition-colors rounded"
                   title={showAuthToken ? "Hide Auth Token" : "Show Auth Token"}
                 >
                   {showAuthToken ? (

@@ -862,7 +862,7 @@ function Dashboard() {
             {showExportMenu && (
               <div className="absolute right-0 mt-1 w-40 bg-card border rounded-md shadow-lg z-10" role="menu" aria-label="Export options" onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Escape') { setShowExportMenu(false) } }}>
                 <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-t-md focus:bg-accent focus:outline-none"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors rounded-t-md focus:bg-accent focus:outline-none"
                   onClick={handleExportCSV}
                   role="menuitem"
                   tabIndex={0}
@@ -872,7 +872,7 @@ function Dashboard() {
                   Export CSV
                 </button>
                 <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-b-md focus:bg-accent focus:outline-none"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors rounded-b-md focus:bg-accent focus:outline-none"
                   onClick={handleExportPDF}
                   role="menuitem"
                   tabIndex={0}
@@ -1008,7 +1008,7 @@ function Dashboard() {
           Schedule Meeting
         </Button>
         {overdueTasks > 0 && (
-          <Button onClick={() => navigate('/tasks')} variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 dark:hover:bg-destructive/10">
+          <Button onClick={() => navigate('/tasks')} variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 transition-colors dark:hover:bg-destructive/10">
             <AlertTriangle className="h-3.5 w-3.5" />
             {overdueTasks} Overdue Task{overdueTasks > 1 ? 's' : ''}
           </Button>

@@ -95,7 +95,7 @@ export function MessageEnhancerModal({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="relative hover:bg-background/50 rounded-xl"
+            className="relative hover:bg-background/50 transition-colors rounded-xl"
             aria-label="Close enhancer"
           >
             <X className="h-5 w-5" />
