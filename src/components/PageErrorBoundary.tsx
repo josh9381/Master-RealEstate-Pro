@@ -88,8 +88,8 @@ export class PageErrorBoundary extends Component<Props, State> {
         <div className="flex items-center justify-center min-h-[60vh] p-8">
           <div className="max-w-md w-full">
             <div className="bg-card rounded-lg shadow-lg p-8 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full mb-4">
-                <AlertTriangle className="h-8 w-8 text-yellow-600" />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-warning/10 dark:bg-warning/10 rounded-full mb-4">
+                <AlertTriangle className="h-8 w-8 text-warning" />
               </div>
               
               <h2 className="text-2xl font-bold text-foreground mb-2">

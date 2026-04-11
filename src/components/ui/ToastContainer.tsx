@@ -10,17 +10,17 @@ const icons = {
 }
 
 const colors = {
-  success: 'bg-green-50 border-green-200 text-green-900 dark:bg-green-950/40 dark:border-green-800 dark:text-green-300',
-  error: 'bg-red-50 border-red-200 text-red-900 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300',
-  warning: 'bg-yellow-50 border-yellow-200 text-yellow-900 dark:bg-yellow-950/40 dark:border-yellow-800 dark:text-yellow-300',
-  info: 'bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300',
+  success: 'bg-success/10 border-success/30 text-success dark:bg-success/10 dark:border-success/20 dark:text-success',
+  error: 'bg-destructive/10 border-destructive/30 text-destructive dark:bg-destructive/10 dark:border-destructive/20 dark:text-destructive',
+  warning: 'bg-warning/10 border-warning/30 text-warning dark:bg-warning/10 dark:border-warning/20 dark:text-warning',
+  info: 'bg-info/10 border-info/30 text-info dark:bg-info/10 dark:border-info/20 dark:text-info',
 }
 
 const iconColors = {
-  success: 'text-green-600 dark:text-green-400',
-  error: 'text-red-600 dark:text-red-400',
-  warning: 'text-yellow-600 dark:text-yellow-400',
-  info: 'text-blue-600 dark:text-blue-400',
+  success: 'text-success',
+  error: 'text-destructive',
+  warning: 'text-warning',
+  info: 'text-info',
 }
 
 export function ToastContainer() {

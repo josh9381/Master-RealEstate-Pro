@@ -101,6 +101,7 @@ const AttributionReport = () => {
               <button
                 key={opt.value}
                 onClick={() => setModel(opt.value)}
+                aria-pressed={model === opt.value}
                 className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
                   model === opt.value
                     ? 'bg-primary text-primary-foreground border-primary'

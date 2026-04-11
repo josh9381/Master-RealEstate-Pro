@@ -66,8 +66,8 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <div className="max-w-2xl w-full bg-card rounded-lg shadow-lg p-8">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              <div className="p-3 bg-destructive/10 dark:bg-destructive/10 rounded-full">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">
@@ -80,11 +80,11 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {this.state.error && (
-              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-                <p className="text-sm font-medium text-red-800 dark:text-red-300 mb-2">
+              <div className="bg-destructive/10 dark:bg-destructive/10 border border-destructive/30 dark:border-destructive/20 rounded-lg p-4 mb-6">
+                <p className="text-sm font-medium text-destructive dark:text-destructive mb-2">
                   Error Details:
                 </p>
-                <pre className="text-xs text-red-700 dark:text-red-400 overflow-auto max-h-40">
+                <pre className="text-xs text-destructive/80 dark:text-destructive/80 overflow-auto max-h-40">
                   {this.state.error.toString()}
                 </pre>
               </div>
@@ -120,8 +120,8 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
 
-            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-800 dark:text-blue-300">
+            <div className="mt-6 p-4 bg-info/10 dark:bg-info/10 border border-info/30 dark:border-info/20 rounded-lg">
+              <p className="text-sm text-info dark:text-info">
                 <strong>Tip:</strong> If this error persists, try clearing your browser cache or contact support.
               </p>
             </div>
