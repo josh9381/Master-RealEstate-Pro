@@ -190,7 +190,7 @@ export const ContactList = ({
         </div>
 
         {/* Contact List - Scrollable */}
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto flex-1" aria-live="polite">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />

@@ -42,7 +42,7 @@ export function ActiveFilterChips({ chips, onRemove, onClearAll, resultCount }: 
       ))}
 
       {resultCount !== undefined && (
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-muted-foreground" aria-live="polite">
           • {resultCount} results
         </span>
       )}

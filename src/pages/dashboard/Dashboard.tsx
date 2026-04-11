@@ -1008,7 +1008,7 @@ function Dashboard() {
           Schedule Meeting
         </Button>
         {overdueTasks > 0 && (
-          <Button onClick={() => navigate('/tasks')} variant="outline" size="sm" className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950">
+          <Button onClick={() => navigate('/tasks')} variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 dark:hover:bg-destructive/10">
             <AlertTriangle className="h-3.5 w-3.5" />
             {overdueTasks} Overdue Task{overdueTasks > 1 ? 's' : ''}
           </Button>
@@ -1017,8 +1017,8 @@ function Dashboard() {
 
       {/* Today's Focus — natural language summary */}
       {todaysFocus && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm">
-          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 dark:bg-warning/10 border border-warning/30 dark:border-warning/30 text-sm">
+          <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
           <span dangerouslySetInnerHTML={{ __html: todaysFocus.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
         </div>
       )}
@@ -1027,7 +1027,7 @@ function Dashboard() {
       {statsError ? (
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-red-500 mb-2">Failed to load dashboard stats</p>
+            <p className="text-destructive mb-2">Failed to load dashboard stats</p>
             <Button variant="outline" size="sm" onClick={() => refetchStats()}>Retry</Button>
           </CardContent>
         </Card>
@@ -1644,10 +1644,10 @@ function Dashboard() {
       {/* ===== TAB: Alerts ===== */}
       {activeTab === 'alerts' && (
         prefs.alerts ? (
-        <Card className="border-l-4 border-l-yellow-500 transition-all duration-200 hover:shadow-md" role="region" aria-label="Alerts and notifications">
+        <Card className="border-l-4 border-l-warning transition-all duration-200 hover:shadow-md" role="region" aria-label="Alerts and notifications">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-yellow-600" />
+              <Bell className="h-5 w-5 text-warning" />
               <CardTitle className="text-base">Alerts & Notifications</CardTitle>
             </div>
           </CardHeader>
@@ -1659,12 +1659,12 @@ function Dashboard() {
                     key={alert.message || `alert-${index}`}
                     className={`flex items-start gap-3 rounded-lg border p-3 ${
                       alert.type === 'urgent'
-                        ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'
+                        ? 'border-destructive/30 bg-destructive/10 dark:border-destructive/30 dark:bg-destructive/10'
                         : alert.type === 'warning'
-                        ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950'
+                        ? 'border-warning/30 bg-warning/10 dark:border-warning/30 dark:bg-warning/10'
                         : alert.type === 'success'
-                        ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
-                        : 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
+                        ? 'border-success/30 bg-success/10 dark:border-success/30 dark:bg-success/10'
+                        : 'border-info/30 bg-info/10 dark:border-info/30 dark:bg-info/10'
                     }`}
                   >
                     <div className="flex-1">
