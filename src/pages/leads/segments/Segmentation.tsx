@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { segmentsApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { CHART_COLORS } from '@/lib/chartColors';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -72,9 +73,7 @@ const TAG_OPERATOR_OPTIONS = [
   { value: 'includesAll', label: 'Includes All' },
 ];
 
-const COLOR_OPTIONS = [
-  '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#6366F1',
-];
+const COLOR_OPTIONS = CHART_COLORS;
 
 const Segmentation = () => {
   const { toast } = useToast();
@@ -92,7 +91,7 @@ const Segmentation = () => {
   const [formDescription, setFormDescription] = useState('');
   const [formRules, setFormRules] = useState<SegmentRule[]>([{ field: 'status', operator: 'equals', value: '' }]);
   const [formMatchType, setFormMatchType] = useState('all');
-  const [formColor, setFormColor] = useState('#3B82F6');
+  const [formColor, setFormColor] = useState<string>(CHART_COLORS[0]);
 
   const { data: segments = [], isLoading, refetch: refetchSegments } = useQuery({
     queryKey: ['segments'],
@@ -136,7 +135,7 @@ const Segmentation = () => {
     setFormDescription('');
     setFormRules([{ field: 'status', operator: 'equals', value: '' }]);
     setFormMatchType('all');
-    setFormColor('#3B82F6');
+    setFormColor(CHART_COLORS[0]);
     setEditingSegment(null);
   };
 

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageEmptyState } from '@/components/ui/PageEmptyState'
@@ -255,7 +256,7 @@ export default function ActivityPage() {
         {showMoreFilters && (
           <div className="flex items-end gap-4 pt-2 border-t">
             <div className="flex-1">
-              <label htmlFor="activity-lead-filter" className="text-sm font-medium text-foreground mb-1 block">Lead</label>
+              <Label htmlFor="activity-lead-filter" className="mb-1 block">Lead</Label>
               <select
                 id="activity-lead-filter"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -269,7 +270,7 @@ export default function ActivityPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="activity-date-from" className="text-sm font-medium text-foreground mb-1 block">From</label>
+              <Label htmlFor="activity-date-from" className="mb-1 block">From</Label>
               <Input
                 id="activity-date-from"
                 type="date"
@@ -278,7 +279,7 @@ export default function ActivityPage() {
               />
             </div>
             <div>
-              <label htmlFor="activity-date-to" className="text-sm font-medium text-foreground mb-1 block">To</label>
+              <Label htmlFor="activity-date-to" className="mb-1 block">To</Label>
               <Input
                 id="activity-date-to"
                 type="date"

@@ -105,3 +105,15 @@ export const TAG_PICKER_COLORS = [
 export function getChartColor(index: number): string {
   return CHART_COLORS[index % CHART_COLORS.length]
 }
+
+/** Default color for pipeline stages when none is set */
+export const DEFAULT_STAGE_COLOR = '#6B7280'
+
+/** Default primary color for email templates */
+export const DEFAULT_EMAIL_PRIMARY = '#0066cc'
+
+/** Link color used in generated email HTML */
+export const EMAIL_LINK_COLOR = '#2563eb'
+
+/** Default tag color when none is selected */
+export const DEFAULT_TAG_COLOR = '#0077BB'

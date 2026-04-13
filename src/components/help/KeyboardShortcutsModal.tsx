@@ -111,7 +111,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
   }, {} as Record<string, Shortcut[]>)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Keyboard Shortcuts" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}>
       <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col">
         <CardHeader className="border-b">
           <div className="flex items-center justify-between">

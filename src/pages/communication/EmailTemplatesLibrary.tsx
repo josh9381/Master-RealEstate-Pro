@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/useToast'
 import { templatesApi } from '@/lib/api'
 import api from '@/lib/api'
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor'
+import { DEFAULT_EMAIL_PRIMARY } from '@/lib/chartColors'
 import type { EmailTemplate } from '@/types'
 
 const CATEGORIES = ['Onboarding', 'Marketing', 'Content', 'Ecommerce', 'Transactional', 'Events', 'Custom'];
@@ -81,7 +82,7 @@ const EmailTemplatesLibrary = () => {
   }
   const SETTINGS_DEFAULTS: TemplateSettings = {
     defaultFont: 'Arial',
-    primaryColor: '#0066cc',
+    primaryColor: DEFAULT_EMAIL_PRIMARY,
     logoUrl: '',
     includeUnsubscribe: true,
     enableOpenTracking: true,

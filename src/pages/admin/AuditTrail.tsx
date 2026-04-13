@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Shield, Filter, ChevronDown, ChevronUp, Clock, User, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
 import { Card, CardContent } from '@/components/ui/Card'
 import { adminApi } from '@/lib/api'
 import { format } from 'date-fns'
@@ -113,7 +114,7 @@ export default function AuditTrail() {
         <Card>
           <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Action</label>
+            <Label className="mb-1 block">Action</Label>
             <select
               value={filters.action}
               onChange={(e) => { setFilters(f => ({ ...f, action: e.target.value })); setPage(1); }}
@@ -126,7 +127,7 @@ export default function AuditTrail() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Entity Type</label>
+            <Label className="mb-1 block">Entity Type</Label>
             <select
               value={filters.entityType}
               onChange={(e) => { setFilters(f => ({ ...f, entityType: e.target.value })); setPage(1); }}
@@ -139,7 +140,7 @@ export default function AuditTrail() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Start Date</label>
+            <Label className="mb-1 block">Start Date</Label>
             <Input
               type="date"
               value={filters.startDate}
@@ -147,7 +148,7 @@ export default function AuditTrail() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">End Date</label>
+            <Label className="mb-1 block">End Date</Label>
             <Input
               type="date"
               value={filters.endDate}

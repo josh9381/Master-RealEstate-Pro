@@ -861,7 +861,7 @@ const WorkflowBuilder = () => {
       {/* Performance Metrics - floating panel */}
       {showMetricsPanel && (
         <>
-          <div className="fixed inset-0 z-30" onClick={() => setShowMetricsPanel(false)} />
+          <div className="fixed inset-0 z-30" onClick={() => setShowMetricsPanel(false)} onKeyDown={(e) => { if (e.key === 'Escape') setShowMetricsPanel(false) }} tabIndex={-1} />
           <div className="absolute top-12 right-4 z-40 w-80 bg-card rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 animate-in fade-in slide-in-from-top-2 duration-150">
             <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 rounded-t-xl">
               <div className="flex items-center gap-2">
@@ -1371,7 +1371,7 @@ const WorkflowBuilder = () => {
       {/* Execution Logs - floating panel */}
       {showLogsPanel && (
         <>
-          <div className="fixed inset-0 z-30" onClick={() => setShowLogsPanel(false)} />
+          <div className="fixed inset-0 z-30" onClick={() => setShowLogsPanel(false)} onKeyDown={(e) => { if (e.key === 'Escape') setShowLogsPanel(false) }} tabIndex={-1} />
           <div className="absolute top-12 right-4 z-40 w-96 max-h-[60vh] bg-card rounded-xl shadow-xl border ring-1 ring-black/5 dark:ring-white/10 flex flex-col animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between px-3 py-2.5 border-b bg-muted/30 rounded-t-xl flex-shrink-0">
             <div className="flex items-center gap-2">

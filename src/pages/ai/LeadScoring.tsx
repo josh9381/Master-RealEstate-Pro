@@ -911,7 +911,7 @@ const LeadScoring = () => {
                         labelLine={false}
                         label={({ name, value }) => `${name}: ${value}%`}
                         outerRadius={80}
-                        fill="#8884d8"
+                        fill={CHART_COLORS[0]}
                         dataKey="value"
                       >
                         {chartsData.featureImportance.map((entry, index) => (

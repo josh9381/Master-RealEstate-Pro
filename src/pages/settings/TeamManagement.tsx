@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
 import { useToast } from '@/hooks/useToast';
 import { teamsApi, activitiesApi } from '@/lib/api';
 
@@ -188,7 +189,7 @@ const TeamManagement = () => {
         <>
       {/* Edit Member Modal */}
       {showEditModal && editingMember && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Edit Team Member" onKeyDown={(e) => { if (e.key === 'Escape') { setShowEditModal(false); setEditingMember(null); } }}>
           <Card className="w-full max-w-md mx-4">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -200,15 +201,15 @@ const TeamManagement = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Name</label>
+                <Label className="mb-2 block">Name</Label>
                 <Input value={editingMember.name} disabled />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Email</label>
+                <Label className="mb-2 block">Email</Label>
                 <Input value={editingMember.email} disabled />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Role</label>
+                <Label className="mb-2 block">Role</Label>
                 <select
                   className="w-full px-4 py-2 border rounded-md transition-colors"
                   value={editRole}
@@ -235,7 +236,7 @@ const TeamManagement = () => {
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Invite Team Member" onKeyDown={(e) => { if (e.key === 'Escape') setShowInviteModal(false) }}>
           <Card className="w-full max-w-md mx-4">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -247,7 +248,7 @@ const TeamManagement = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Email Address</label>
+                <Label className="mb-2 block">Email Address</Label>
                 <Input 
                   type="email"
                   value={inviteEmail}
@@ -256,7 +257,7 @@ const TeamManagement = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Role</label>
+                <Label className="mb-2 block">Role</Label>
                 <select 
                   className="w-full px-4 py-2 border rounded-md transition-colors"
                   value={inviteRole}
@@ -283,7 +284,7 @@ const TeamManagement = () => {
 
       {/* Bulk Import Modal */}
       {showBulkImport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Bulk Import Users" onKeyDown={(e) => { if (e.key === 'Escape') setShowBulkImport(false) }}>
           <Card className="w-full max-w-md mx-4">
             <CardHeader>
               <div className="flex items-center justify-between">

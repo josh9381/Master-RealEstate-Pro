@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/Label';
 import { Badge } from '@/components/ui/Badge';
 import { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
+import { DEFAULT_TAG_COLOR } from '@/lib/chartColors';
 import { WorkflowNodeData } from './WorkflowNode';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -750,8 +751,8 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
           {!isRemove && (
             <FieldGroup label="Tag Color" htmlFor="tag-color">
               <div className="flex items-center gap-3">
-                <Input id="tag-color" type="color" className="w-12 h-9 p-1 cursor-pointer" value={config.tagColor as string || '#3B82F6'} onChange={(e) => updateConfig('tagColor', e.target.value)} />
-                <Badge style={{ backgroundColor: config.tagColor as string || '#3B82F6', color: 'white' }} className="text-xs">
+                <Input id="tag-color" type="color" className="w-12 h-9 p-1 cursor-pointer" value={config.tagColor as string || DEFAULT_TAG_COLOR} onChange={(e) => updateConfig('tagColor', e.target.value)} />
+                <Badge style={{ backgroundColor: config.tagColor as string || DEFAULT_TAG_COLOR, color: 'white' }} className="text-xs">
                   {config.tagName as string || 'Preview'}
                 </Badge>
               </div>

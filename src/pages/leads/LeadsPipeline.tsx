@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { pipelinesApi, leadsApi, type PipelineData } from '@/lib/api'
 import { PipelineManager } from '@/components/leads/PipelineManager'
+import { DEFAULT_STAGE_COLOR } from '@/lib/chartColors'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 
 // Shared mapping: stage name variants → lead statuses they should contain
@@ -459,7 +460,7 @@ function LeadsPipeline() {
                     <div className="flex items-center gap-2">
                       <div
                         className="h-3 w-3 rounded-full"
-                        style={stage.color ? { backgroundColor: stage.color } : { backgroundColor: '#6B7280' }}
+                        style={stage.color ? { backgroundColor: stage.color } : { backgroundColor: DEFAULT_STAGE_COLOR }}
                       />
                       <CardTitle className="text-base">{stage.name}</CardTitle>
                       {stage.isWinStage && <Badge variant="default" className="text-xs bg-success">Win</Badge>}

@@ -31,7 +31,7 @@ const PIPELINE_TYPE_OPTIONS = [
   { value: 'CUSTOM', label: 'Custom' },
 ] as const
 
-import { PIPELINE_STAGE_COLORS as STAGE_COLORS } from '@/lib/chartColors'
+import { PIPELINE_STAGE_COLORS as STAGE_COLORS, DEFAULT_STAGE_COLOR } from '@/lib/chartColors'
 
 interface PipelineManagerProps {
   pipelines: PipelineData[]
@@ -49,10 +49,10 @@ function PipelineManager({ pipelines, onClose }: PipelineManagerProps) {
   const [editPipelineName, setEditPipelineName] = useState('')
   const [editingStageId, setEditingStageId] = useState<string | null>(null)
   const [editStageName, setEditStageName] = useState('')
-  const [editStageColor, setEditStageColor] = useState('#6B7280')
+  const [editStageColor, setEditStageColor] = useState(DEFAULT_STAGE_COLOR)
   const [addingStageForPipeline, setAddingStageForPipeline] = useState<string | null>(null)
   const [newStageName, setNewStageName] = useState('')
-  const [newStageColor, setNewStageColor] = useState('#6B7280')
+  const [newStageColor, setNewStageColor] = useState(DEFAULT_STAGE_COLOR)
   const [confirmDeletePipeline, setConfirmDeletePipeline] = useState<string | null>(null)
   const [confirmDeleteStage, setConfirmDeleteStage] = useState<string | null>(null)
 
@@ -114,7 +114,7 @@ function PipelineManager({ pipelines, onClose }: PipelineManagerProps) {
       toast.success('Stage added')
       setAddingStageForPipeline(null)
       setNewStageName('')
-      setNewStageColor('#6B7280')
+      setNewStageColor(DEFAULT_STAGE_COLOR)
     },
     onError: () => toast.error('Failed to add stage'),
   })
@@ -178,7 +178,7 @@ function PipelineManager({ pipelines, onClose }: PipelineManagerProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4" role="dialog" aria-modal="true" aria-label="Pipeline Management" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}>
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <Card className="relative z-10 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
         <CardHeader className="sticky top-0 bg-card z-10 border-b">
@@ -365,7 +365,7 @@ function PipelineManager({ pipelines, onClose }: PipelineManagerProps) {
                         <GripVertical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <div
                           className="h-3.5 w-3.5 rounded-full shrink-0 border"
-                          style={{ backgroundColor: stage.color || '#6B7280' }}
+                          style={{ backgroundColor: stage.color || DEFAULT_STAGE_COLOR }}
                         />
 
                         {editingStageId === stage.id ? (
@@ -458,7 +458,7 @@ function PipelineManager({ pipelines, onClose }: PipelineManagerProps) {
                                 onClick={() => {
                                   setEditingStageId(stage.id)
                                   setEditStageName(stage.name)
-                                  setEditStageColor(stage.color || '#6B7280')
+                                  setEditStageColor(stage.color || DEFAULT_STAGE_COLOR)
                                 }}
                               >
                                 <Pencil className="h-3 w-3" />

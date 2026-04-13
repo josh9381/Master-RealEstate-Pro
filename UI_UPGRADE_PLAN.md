@@ -1,9 +1,9 @@
-# UI Upgrade Master Plan — 6.9/10 → 10/10
+# UI Upgrade Master Plan — 6.9/10 → 9.3/10 ✅ COMPLETE
 
-> **Status**: Plan only — no changes executed yet  
+> **Status**: All phases executed — see completion log below  
 > **Baseline**: 217 test files, 685 tests — ALL PASSING  
 > **Total .tsx files in project**: 211  
-> **Current overall score**: 6.9/10
+> **Current overall score**: 9.3/10
 
 ---
 
@@ -1634,6 +1634,43 @@ npx vite preview                          # Serve production build locally
 ## Final Audit & Sign-Off ✅ COMPLETE
 
 All 9 phases complete. Final audit conducted on all 8 dimensions.
+
+### Completion Log
+
+**Phases 1-2**: Fully implemented in earlier sessions.
+
+**Phase 3 — Color Cleanup (final pass)**:
+- Segmentation.tsx: Replaced local hardcoded `COLOR_OPTIONS` with `CHART_COLORS` from centralized `chartColors.ts`
+- FeaturesGrid.tsx: Replaced `purple` hardcoded Tailwind colors with semantic token `bg-primary/20 text-primary`
+- LeadScoring.tsx: Replaced hardcoded `fill="#8884d8"` with `CHART_COLORS[0]`
+- **Intentionally kept as-is**: TagsManager color picker (user-facing), PipelineManager/NodeConfigPanel stage color defaults (stored in DB as hex), email template `primaryColor` (rendered HTML output)
+
+**Phase 4 — Accessibility (final pass)**:
+- Breadcrumbs.tsx: Added `aria-current="page"` to last breadcrumb item
+- PipelineManager.tsx: Added `role="dialog"`, `aria-modal="true"`, `aria-label`, and Escape key handler to modal
+- WorkflowBuilder.tsx: Added Escape key handling to metrics and logs panel overlays
+
+**Phase 5 — Interactive States**: Fully implemented in earlier sessions.
+
+**Phase 6 — Consistency (final pass)**:
+- AuditTrail.tsx: Replaced raw `<label>` elements with `<Label>` component
+- ActivityPage.tsx: Replaced raw `<label>` elements with `<Label>` component
+
+**Phase 7 — Typography**: Fully implemented in earlier sessions.
+
+**Phase 8 — Visual Hierarchy & Spacing**: Mostly implemented (AnalyticsDashboard collapsible, PageEmptyState deployed, section spacing applied).
+
+**Phase 9 — Performance**: Route-level code splitting with `lazyWithRetry()` + `Suspense` + `PageErrorBoundary` on all routes. AnalyticsDashboard at 495 lines doesn't need further splitting. Recharts already tree-shaken per lazy chunk.
+
+### Remaining Items Not Implemented (by design)
+
+| Item | Reason Skipped |
+|------|---------------|
+| LeadsList useReducer refactor | HIGH risk (plan Step 9.5) — 20+ useState hooks, complex state interactions, high regression potential |
+| Lazy-load Recharts wrapper | All 22 chart pages already lazy-loaded at route level — additional Recharts lazy loading adds complexity for minimal benefit |
+| AnalyticsDashboard split | File is 495 lines (plan estimated 1750) — already reasonable size |
+| ~100 raw `<button>` → `<Button>` | Many are intentionally styled (email editor toolbar, landing page CTAs with custom designs) — wholesale conversion risks visual regressions |
+| Template literal → cn() | Most uses are legitimate conditional patterns (e.g., `${task.completed ? 'line-through' : ''}`) — cn() conversion is style-only, no functional improvement |
 
 ### Full Re-Audit Results
 

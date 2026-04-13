@@ -17,6 +17,7 @@ import {
 } from '@/lib/emailBlocks'
 import { EmailPreviewFrame } from '@/components/email/EmailPreviewFrame'
 import { campaignsApi } from '@/lib/api'
+import { EMAIL_LINK_COLOR } from '@/lib/chartColors'
 
 // ─── Icon mapper ────────────────────────────────────────────────
 
@@ -795,7 +796,7 @@ function renderTextContent(text: string): string {
   // Italic: *text*
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
   // Links: [text](url)
-  html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" style="color:#2563eb">$1</a>')
+  html = html.replace(/\[(.+?)\]\((.+?)\)/g, `<a href="$2" style="color:${EMAIL_LINK_COLOR}">$1</a>`)
   // Bullet lists: lines starting with • or -
   html = html.replace(/^[•-]\s+(.+)$/gm, '<li>$1</li>')
   if (html.includes('<li>')) {

@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EmailBlockEditor } from '@/components/email/EmailBlockEditor';
 import { PageEmptyState } from '@/components/ui/PageEmptyState';
+import { DEFAULT_EMAIL_PRIMARY } from '@/lib/chartColors';
 
 interface CampaignTemplate {
   id: string;
@@ -199,7 +200,7 @@ const CampaignTemplates = () => {
   }
   const SETTINGS_DEFAULTS: TemplateSettings = {
     defaultFont: 'Arial',
-    primaryColor: '#0066cc',
+    primaryColor: DEFAULT_EMAIL_PRIMARY,
     logoUrl: '',
     includeUnsubscribe: true,
     enableOpenTracking: true,
