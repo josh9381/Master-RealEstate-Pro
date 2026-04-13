@@ -73,7 +73,7 @@ import { processRemindersDue } from './jobs/reminderProcessor'
 import { correlationId, requestLogger } from './middleware/logger'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 import { sanitizeInput } from './middleware/sanitize'
-import { generalLimiter } from './middleware/rateLimiter'
+import { generalLimiter, aiLimiter } from './middleware/rateLimiter'
 import { authenticate } from './middleware/auth'
 import { csrfProtection } from './middleware/csrf'
 import { requireAdminOrManager } from './middleware/admin'
@@ -275,6 +275,7 @@ app.use('/api/campaigns', campaignRoutes)
 app.use('/api/tasks', taskRoutes)
 app.use('/api/activities', activityRoutes)
 app.use('/api/analytics', analyticsRoutes)
+app.use('/api/ai', aiLimiter)
 app.use('/api/ai', aiRoutes)
 app.use('/api/intelligence', intelligenceRoutes)
 app.use('/api/ab-tests', abtestRoutes)

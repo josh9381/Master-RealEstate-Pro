@@ -30,6 +30,10 @@ if (REFRESH_TOKEN_SECRET.length < 32) {
 
 // Warn if secrets are the same (should be different)
 if (ACCESS_TOKEN_SECRET === REFRESH_TOKEN_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('❌ FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different in production!');
+    process.exit(1);
+  }
   logger.warn('⚠️  WARNING: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET should be different!');
   logger.warn('Using the same secret for both tokens is not recommended.');
 }
@@ -181,6 +185,7 @@ export async function denyAccessToken(token: string): Promise<void> {
 
 /**
  * Check if an access token has been denied (logged out).
+ * Fail-closed: if Redis is down, deny the token (security over availability).
  */
 export async function isTokenDenied(token: string): Promise<boolean> {
   try {
@@ -190,7 +195,8 @@ export async function isTokenDenied(token: string): Promise<boolean> {
       return result !== null;
     }
     return inMemoryDenylist.has(token);
-  } catch {
-    return false; // Fail-open: if Redis is down, allow the token
+  } catch (err) {
+    logger.error('Token denylist check failed — rejecting token for safety:', err);
+    return true; // Fail-closed: if Redis is down, deny the token
   }
 }

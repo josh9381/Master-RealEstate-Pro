@@ -6,20 +6,35 @@ const _rawKey = process.env.MASTER_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY;
 if (!_rawKey) {
   throw new Error('FATAL: MASTER_ENCRYPTION_KEY or ENCRYPTION_KEY environment variable must be set. Cannot start without encryption key.');
 }
+if (_rawKey.length < 32) {
+  throw new Error(`FATAL: MASTER_ENCRYPTION_KEY must be at least 32 characters (256-bit). Current length: ${_rawKey.length}. Generate with: openssl rand -hex 32`);
+}
 const MASTER_ENCRYPTION_KEY: string = _rawKey;
 const ALGORITHM = 'aes-256-gcm';
 
+// Key rotation support: previous master key for decrypting data encrypted with the old key.
+// Set PREVIOUS_ENCRYPTION_KEY when rotating keys. During rotation:
+// 1. Set PREVIOUS_ENCRYPTION_KEY = old value of MASTER_ENCRYPTION_KEY
+// 2. Set MASTER_ENCRYPTION_KEY = new key
+// 3. Run re-encryption migration script
+// 4. Remove PREVIOUS_ENCRYPTION_KEY once all data is re-encrypted
+const PREVIOUS_ENCRYPTION_KEY: string | undefined = process.env.PREVIOUS_ENCRYPTION_KEY;
+
+// Current key version — incremented each time the master key is rotated
+const KEY_VERSION = parseInt(process.env.ENCRYPTION_KEY_VERSION || '1', 10);
+const VERSION_PREFIX = `v${KEY_VERSION}:`;
+
 /**
- * Derive a user-specific encryption key from the master key and userId
+ * Derive a user-specific encryption key from a master key and userId
  * This ensures that even if one user's data is compromised, others remain safe
+ * @param masterKey - Master key to derive from
  * @param userId - User ID to derive key for
  * @returns 32-byte encryption key specific to this user
  */
-function getUserEncryptionKey(userId: string): Buffer {
-  // Use HKDF (HMAC-based Key Derivation Function) to derive user-specific key
+function deriveUserKey(masterKey: string, userId: string): Buffer {
   return Buffer.from(crypto.hkdfSync(
     'sha256',
-    MASTER_ENCRYPTION_KEY,
+    masterKey,
     userId, // Salt with userId for uniqueness
     'user-api-key-encryption', // Info string for domain separation
     32 // 256 bits = 32 bytes
@@ -27,11 +42,19 @@ function getUserEncryptionKey(userId: string): Buffer {
 }
 
 /**
+ * Derive a user-specific encryption key from the current master key
+ */
+function getUserEncryptionKey(userId: string): Buffer {
+  return deriveUserKey(MASTER_ENCRYPTION_KEY, userId);
+}
+
+/**
  * Encrypt sensitive data for a specific user (RECOMMENDED)
- * Uses user-specific derived key for better security isolation
+ * Uses user-specific derived key for better security isolation.
+ * Output is versioned so data can be re-encrypted when keys are rotated.
  * @param userId - User ID to encrypt for
  * @param text - Plain text to encrypt
- * @returns Encrypted string in format: iv:authTag:encrypted
+ * @returns Encrypted string in format: v{N}:iv:authTag:encrypted
  */
 export function encryptForUser(userId: string, text: string): string {
   if (!text) return '';
@@ -52,8 +75,8 @@ export function encryptForUser(userId: string, text: string): string {
     // Get authentication tag
     const authTag = cipher.getAuthTag();
     
-    // Return format: iv:authTag:encrypted
-    return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+    // Return versioned format: v{N}:iv:authTag:encrypted
+    return `${VERSION_PREFIX}${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
   } catch (error) {
     logger.error('Encryption error:', error);
     throw new Error('Failed to encrypt data');
@@ -61,42 +84,87 @@ export function encryptForUser(userId: string, text: string): string {
 }
 
 /**
+ * Internal: decrypt with a specific key
+ */
+function decryptWithKey(key: Buffer, encryptedPayload: string): string {
+  const parts = encryptedPayload.split(':');
+  
+  if (parts.length !== 3) {
+    throw new Error('Invalid encrypted data format');
+  }
+  
+  const iv = Buffer.from(parts[0], 'hex');
+  const authTag = Buffer.from(parts[1], 'hex');
+  const encrypted = parts[2];
+  
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
+}
+
+/**
  * Decrypt encrypted data for a specific user (RECOMMENDED)
- * Uses user-specific derived key
+ * Supports key rotation: tries current key first, then falls back to
+ * PREVIOUS_ENCRYPTION_KEY if configured. Also handles unversioned legacy data.
  * @param userId - User ID to decrypt for
- * @param encryptedData - Encrypted string in format: iv:authTag:encrypted
+ * @param encryptedData - Encrypted string (versioned v{N}:iv:authTag:encrypted or legacy iv:authTag:encrypted)
  * @returns Decrypted plain text
  */
 export function decryptForUser(userId: string, encryptedData: string): string {
   if (!encryptedData) return '';
   
+  // Strip version prefix if present
+  const versionMatch = encryptedData.match(/^v(\d+):/);
+  const payload = versionMatch ? encryptedData.slice(versionMatch[0].length) : encryptedData;
+  
+  // Try current key first
   try {
     const key = getUserEncryptionKey(userId);
-    
-    // Split the encrypted data
-    const parts = encryptedData.split(':');
-    
-    if (parts.length !== 3) {
-      throw new Error('Invalid encrypted data format');
+    return decryptWithKey(key, payload);
+  } catch {
+    // Current key failed — try previous key if configured (key rotation scenario)
+    if (PREVIOUS_ENCRYPTION_KEY) {
+      try {
+        const previousKey = deriveUserKey(PREVIOUS_ENCRYPTION_KEY, userId);
+        const result = decryptWithKey(previousKey, payload);
+        logger.info(`Decrypted data for user ${userId} using previous encryption key — consider re-encrypting`);
+        return result;
+      } catch (innerError) {
+        logger.error('Decryption failed with both current and previous keys:', innerError);
+        throw new Error('Failed to decrypt data');
+      }
     }
     
-    const iv = Buffer.from(parts[0], 'hex');
-    const authTag = Buffer.from(parts[1], 'hex');
-    const encrypted = parts[2];
-    
-    // Create decipher
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    decipher.setAuthTag(authTag);
-    
-    // Decrypt the text
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return decrypted;
-  } catch (error) {
-    logger.error('Decryption error:', error);
+    logger.error('Decryption error for user:', userId);
     throw new Error('Failed to decrypt data');
   }
+}
+
+/**
+ * Check if encrypted data needs re-encryption (was encrypted with an older key version)
+ * Useful for migration scripts during key rotation
+ */
+export function needsReEncryption(encryptedData: string): boolean {
+  if (!encryptedData) return false;
+  const versionMatch = encryptedData.match(/^v(\d+):/);
+  if (!versionMatch) return true; // Unversioned = legacy = needs re-encryption
+  return parseInt(versionMatch[1], 10) < KEY_VERSION;
+}
+
+/**
+ * Re-encrypt data with the current key (for key rotation migrations)
+ * @param userId - User ID
+ * @param encryptedData - Data encrypted with old key
+ * @returns Data re-encrypted with current key, or original if already current
+ */
+export function reEncryptForUser(userId: string, encryptedData: string): string {
+  if (!encryptedData || !needsReEncryption(encryptedData)) return encryptedData;
+  const plaintext = decryptForUser(userId, encryptedData);
+  return encryptForUser(userId, plaintext);
 }
 
 /**

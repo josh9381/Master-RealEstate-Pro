@@ -63,7 +63,8 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
   const roleFilter = getRoleFilterFromRequest(req);
   
   // Build additional filters
-  const additionalWhere: Record<string, any> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const additionalWhere: Record<string, unknown> = {};
   
   if (status) {
     const statusStr = String(status);
@@ -122,7 +123,7 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
   }
 
   // Apply role-based filtering (ADMIN sees all, USER sees only assigned)
-  const where = getLeadsFilter(roleFilter, additionalWhere);
+  const where = getLeadsFilter(roleFilter, { ...additionalWhere, deletedAt: null });
 
   // Calculate pagination (guard against invalid values)
   const pageNum = Math.max(1, Number(page) || 1);
@@ -191,7 +192,8 @@ export async function getLead(req: Request, res: Response): Promise<void> {
   const lead = await prisma.lead.findFirst({
     where: { 
       id,
-      organizationId: req.user!.organizationId  // CRITICAL: Verify lead belongs to user's org
+      organizationId: req.user!.organizationId,  // CRITICAL: Verify lead belongs to user's org
+      deletedAt: null,  // Only find active leads
     },
     include: {
       assignedTo: {
@@ -224,6 +226,7 @@ export async function getLead(req: Request, res: Response): Promise<void> {
         orderBy: {
           createdAt: 'desc',
         },
+        take: 100, // Latest 100 notes
       },
       activities: {
         include: {
@@ -262,87 +265,92 @@ export async function createLead(req: Request, res: Response): Promise<void> {
   const { firstName, lastName, email, phone, company, position, status, source, value, stage, assignedToId, customFields, notes, tags,
     propertyType, transactionType, budgetMin, budgetMax, preApprovalStatus, moveInTimeline, desiredLocation, bedsMin, bathsMin } = req.body;
 
-  // Check if email already exists within the organization (not globally)
-  const existingLead = await prisma.lead.findFirst({
-    where: { 
-      email,
-      organizationId: req.user!.organizationId  // Check within org only
-    },
-  });
-
-  if (existingLead) {
-    throw new ConflictError('A lead with this email already exists in your organization');
-  }
-
-  // If assignedToId is provided, verify the user exists and belongs to same org
-  if (assignedToId) {
-    const assignedUser = await prisma.user.findFirst({
+  // Use a transaction to prevent race condition: two requests both passing
+  // the "email doesn't exist" check and both inserting the same email
+  const lead = await prisma.$transaction(async (tx) => {
+    // Check if email already exists within the organization (not globally)
+    const existingLead = await tx.lead.findFirst({
       where: { 
-        id: assignedToId,
-        organizationId: req.user!.organizationId  // Verify same org
+        email,
+        organizationId: req.user!.organizationId,  // Check within org only
+        deletedAt: null,  // Ignore soft-deleted leads
       },
     });
 
-    if (!assignedUser) {
-      throw new ValidationError('Assigned user not found in your organization');
+    if (existingLead) {
+      throw new ConflictError('A lead with this email already exists in your organization');
     }
-  }
 
-  // Create the lead with organizationId
-  const lead = await prisma.lead.create({
-    data: {
-      organizationId: req.user!.organizationId,  // CRITICAL: Set organization
-      firstName,
-      lastName,
-      email,
-      phone,
-      company,
-      position,
-      status: status || 'NEW',
-      source,
-      value,
-      stage,
-      assignedToId,
-      customFields,
-      propertyType,
-      transactionType,
-      budgetMin: budgetMin ? parseFloat(budgetMin) : undefined,
-      budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
-      preApprovalStatus,
-      moveInTimeline,
-      desiredLocation,
-      bedsMin: bedsMin ? parseInt(bedsMin) : undefined,
-      bathsMin: bathsMin ? parseInt(bathsMin) : undefined,
-      // Connect existing tags by name if provided
-      ...(Array.isArray(tags) && tags.length > 0 ? {
-        tags: {
-          connectOrCreate: tags.map((tagName: string) => ({
-            where: { 
-              organizationId_name: { 
-                organizationId: req.user!.organizationId, 
-                name: tagName 
-              } 
-            },
-            create: { 
-              name: tagName, 
-              organizationId: req.user!.organizationId 
-            },
-          })),
+    // If assignedToId is provided, verify the user exists and belongs to same org
+    if (assignedToId) {
+      const assignedUser = await tx.user.findFirst({
+        where: { 
+          id: assignedToId,
+          organizationId: req.user!.organizationId  // Verify same org
         },
-      } : {}),
-    },
-    include: {
-      assignedTo: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          avatar: true,
-        },
+      });
+
+      if (!assignedUser) {
+        throw new ValidationError('Assigned user not found in your organization');
+      }
+    }
+
+    // Create the lead with organizationId
+    return await tx.lead.create({
+      data: {
+        organizationId: req.user!.organizationId,  // CRITICAL: Set organization
+        firstName,
+        lastName,
+        email,
+        phone,
+        company,
+        position,
+        status: status || 'NEW',
+        source,
+        value,
+        stage,
+        assignedToId,
+        customFields,
+        propertyType,
+        transactionType,
+        budgetMin: budgetMin ? parseFloat(budgetMin) : undefined,
+        budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
+        preApprovalStatus,
+        moveInTimeline,
+        desiredLocation,
+        bedsMin: bedsMin ? parseInt(bedsMin) : undefined,
+        bathsMin: bathsMin ? parseInt(bathsMin) : undefined,
+        // Connect existing tags by name if provided
+        ...(Array.isArray(tags) && tags.length > 0 ? {
+          tags: {
+            connectOrCreate: tags.map((tagName: string) => ({
+              where: { 
+                organizationId_name: { 
+                  organizationId: req.user!.organizationId, 
+                  name: tagName 
+                } 
+              },
+              create: { 
+                name: tagName, 
+                organizationId: req.user!.organizationId 
+              },
+            })),
+          },
+        } : {}),
       },
-      tags: true,
-    },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        tags: true,
+      },
+    });
   });
 
   // Create initial note if provided
@@ -413,69 +421,77 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
   const updates = req.body;
 
-  // Check if lead exists and belongs to user's organization
-  const existingLead = await prisma.lead.findFirst({
-    where: { 
-      id,
-      organizationId: req.user!.organizationId  // Verify ownership
-    },
-  });
-
-  if (!existingLead) {
-    throw new NotFoundError('Lead not found');
-  }
-
-  // If updating email, check for conflicts within organization
-  if (updates.email && updates.email !== existingLead.email) {
-    const emailExists = await prisma.lead.findFirst({
+  // Use transaction to prevent race conditions on email uniqueness check
+  const { lead, existingLead } = await prisma.$transaction(async (tx) => {
+    // Check if lead exists and belongs to user's organization
+    const existing = await tx.lead.findFirst({
       where: { 
-        email: updates.email,
-        organizationId: req.user!.organizationId  // Check within org
+        id,
+        organizationId: req.user!.organizationId,  // Verify ownership
+        deletedAt: null,  // Only find active leads
       },
     });
 
-    if (emailExists) {
-      throw new ConflictError('A lead with this email already exists in your organization');
+    if (!existing) {
+      throw new NotFoundError('Lead not found');
     }
-  }
 
-  // If updating assignedToId, verify user exists in same org
-  if (updates.assignedToId) {
-    const assignedUser = await prisma.user.findFirst({
-      where: { 
-        id: updates.assignedToId,
-        organizationId: req.user!.organizationId  // Same org
+    // If updating email, check for conflicts within organization
+    if (updates.email && updates.email !== existing.email) {
+      const emailExists = await tx.lead.findFirst({
+        where: { 
+          email: updates.email,
+          organizationId: req.user!.organizationId,  // Check within org
+          deletedAt: null,  // Ignore soft-deleted leads
+        },
+      });
+
+      if (emailExists) {
+        throw new ConflictError('A lead with this email already exists in your organization');
+      }
+    }
+
+    // If updating assignedToId, verify user exists in same org
+    if (updates.assignedToId) {
+      const assignedUser = await tx.user.findFirst({
+        where: { 
+          id: updates.assignedToId,
+          organizationId: req.user!.organizationId  // Same org
+        },
+      });
+
+      if (!assignedUser) {
+        throw new ValidationError('Assigned user not found in your organization');
+      }
+    }
+
+    // Update the lead (organizationId cannot be changed)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { organizationId: _orgId, ...safeUpdates } = updates;
+    const updated = await tx.lead.update({
+      where: { id },
+      data: safeUpdates,
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        tags: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+        },
       },
     });
 
-    if (!assignedUser) {
-      throw new ValidationError('Assigned user not found in your organization');
-    }
-  }
-
-  // Update the lead (organizationId cannot be changed)
-  const { organizationId, ...safeUpdates } = updates;
-  const lead = await prisma.lead.update({
-    where: { id },
-    data: safeUpdates,
-    include: {
-      assignedTo: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          avatar: true,
-        },
-      },
-      tags: {
-        select: {
-          id: true,
-          name: true,
-          color: true,
-        },
-      },
-    },
+    return { lead: updated, existingLead: existing };
   });
 
   // Log activity for significant changes
@@ -578,7 +594,7 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
 }
 
 /**
- * Delete a lead
+ * Delete a lead (soft delete)
  * DELETE /api/leads/:id
  */
 export async function deleteLead(req: Request, res: Response): Promise<void> {
@@ -588,7 +604,8 @@ export async function deleteLead(req: Request, res: Response): Promise<void> {
   const lead = await prisma.lead.findFirst({
     where: { 
       id,
-      organizationId: req.user!.organizationId  // Verify ownership
+      organizationId: req.user!.organizationId,
+      deletedAt: null,  // Only find active leads
     },
   });
 
@@ -596,9 +613,10 @@ export async function deleteLead(req: Request, res: Response): Promise<void> {
     throw new NotFoundError('Lead not found');
   }
 
-  // Delete the lead (cascades to notes and activities)
-  await prisma.lead.delete({
+  // Soft delete — set deletedAt timestamp instead of removing from database
+  await prisma.lead.update({
     where: { id },
+    data: { deletedAt: new Date() },
   });
 
   pushLeadUpdate(req.user!.organizationId, { type: 'deleted', leadId: id });
@@ -616,12 +634,14 @@ export async function deleteLead(req: Request, res: Response): Promise<void> {
 export async function bulkDeleteLeads(req: Request, res: Response): Promise<void> {
   const { leadIds } = req.body;
 
-  // Only delete leads that belong to user's organization
-  const result = await prisma.lead.deleteMany({
+  // Only delete leads that belong to user's organization (soft delete)
+  const result = await prisma.lead.updateMany({
     where: {
       id: { in: leadIds },
-      organizationId: req.user!.organizationId  // Safety check
+      organizationId: req.user!.organizationId,
+      deletedAt: null,  // Only soft-delete active leads
     },
+    data: { deletedAt: new Date() },
   });
 
   if (result.count > 0) {
@@ -671,7 +691,7 @@ export async function bulkUpdateLeads(req: Request, res: Response): Promise<void
           leadIds,
           updates,
           count: result.count,
-        } as any,
+        } as Record<string, unknown>,
       },
     });
   }
@@ -694,7 +714,7 @@ export async function getLeadStats(req: Request, res: Response): Promise<void> {
 
   // Get role-based filter
   const roleFilter = getRoleFilterFromRequest(req);
-  const additionalWhere: Record<string, any> = {};
+  const additionalWhere: Record<string, unknown> = {};
   
   if (assignedToId) {
     additionalWhere.assignedToId = assignedToId as string;
@@ -799,7 +819,7 @@ export async function getLeadStats(req: Request, res: Response): Promise<void> {
  * POST /api/leads/count-filtered
  */
 export async function countFilteredLeads(req: Request, res: Response): Promise<void> {
-  const { filters } = req.body as { filters: Array<{ field: string; operator: string; value: any }> };
+  const { filters } = req.body as { filters: Array<{ field: string; operator: string; value: unknown }> };
 
   if (!filters || !Array.isArray(filters)) {
     res.status(400).json({
@@ -810,7 +830,7 @@ export async function countFilteredLeads(req: Request, res: Response): Promise<v
   }
 
   // Build where clause from filters
-  const where: Record<string, any> = {};
+  const where: Record<string, unknown> = {};
 
   filters.forEach((filter) => {
     const { field, operator, value } = filter;
@@ -1019,7 +1039,7 @@ export async function recalculateAllScores(req: Request, res: Response): Promise
  */
 export async function importLeads(req: Request, res: Response): Promise<void> {
   const organizationId = req.user!.organizationId;
-  const file = (req as any).file; // multer types
+  const file = (req as Record<string, unknown>).file as { originalname: string; buffer: Buffer } | undefined; // multer types
 
   if (!file) {
     res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -1114,7 +1134,7 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
 
   // Process imports in batches for better DB performance
   const BATCH_SIZE = 500;
-  const validLeads: any[] = [];
+  const validLeads: Record<string, unknown>[] = [];
 
   for (let i = 0; i < records.length; i++) {
     const row = records[i];
@@ -1150,6 +1170,7 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
     const chunk = validLeads.slice(batch, batch + BATCH_SIZE);
     try {
       const result = await prisma.lead.createMany({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data: chunk as any,
         skipDuplicates: true,
       });
@@ -1158,6 +1179,7 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
       // Fall back to individual creates for this batch so partial failures are captured
       for (const leadData of chunk) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await prisma.lead.create({ data: leadData as any });
           imported++;
         } catch (innerErr: unknown) {
@@ -1191,7 +1213,7 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
  * POST /api/leads/import/preview
  */
 export async function previewImport(req: Request, res: Response): Promise<void> {
-  const file = (req as any).file;
+  const file = (req as Record<string, unknown>).file as { originalname: string; buffer: Buffer } | undefined;
 
   if (!file) {
     res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -1241,14 +1263,14 @@ export async function previewImport(req: Request, res: Response): Promise<void> 
  */
 export async function checkImportDuplicates(req: Request, res: Response): Promise<void> {
   const organizationId = req.user!.organizationId;
-  const file = (req as any).file;
+  const file = (req as Record<string, unknown>).file as { originalname: string; buffer: Buffer } | undefined;
 
   if (!file) {
     res.status(400).json({ success: false, message: 'No file uploaded' });
     return;
   }
 
-  let bodyMappings = req.body?.columnMappings;
+  const bodyMappings = req.body?.columnMappings;
 
   try {
     const ext = (file.originalname || '').toLowerCase();
@@ -1454,6 +1476,7 @@ export async function mergeLeads(req: Request, res: Response): Promise<void> {
 
     // Build field updates from field selections
     const mergeableFields = ['firstName', 'lastName', 'email', 'phone', 'company', 'position', 'source', 'value', 'stage', 'score', 'status'] as const;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: Record<string, any> = {};
 
     if (fieldSelections && typeof fieldSelections === 'object') {
@@ -1461,6 +1484,7 @@ export async function mergeLeads(req: Request, res: Response): Promise<void> {
         const selection = fieldSelections[field];
         if (selection === 'secondary' && secondaryLeads.length > 0) {
           // Use the first secondary lead's value
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const secValue = (secondaryLeads[0] as any)[field];
           if (secValue !== undefined && secValue !== null) {
             updateData[field] = secValue;
@@ -1473,6 +1497,7 @@ export async function mergeLeads(req: Request, res: Response): Promise<void> {
     // Merge tags (collect unique tags from all leads)
     const allTagIds = new Set<string>();
     for (const lead of leads) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const tag of (lead as any).tags || []) {
         allTagIds.add(tag.id);
       }

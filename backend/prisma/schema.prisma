@@ -87,6 +87,7 @@ model Appointment {
   reminderSent   Boolean           @default(false)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?         // Soft delete — null means active
   organizationId String
   lead           Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -99,6 +100,7 @@ model Appointment {
   @@index([userId])
   @@index([organizationId])
   @@index([organizationId, startTime])
+  @@index([deletedAt])
 }
 
 model CustomFieldDefinition {
@@ -169,6 +171,7 @@ model Campaign {
   createdById      String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?      // Soft delete — null means active
   frequency        String?
   isRecurring      Boolean        @default(false)
   lastSentAt       DateTime?
@@ -206,6 +209,7 @@ model Campaign {
   @@index([organizationId])
   @@index([organizationId, status])
   @@index([segmentId])
+  @@index([deletedAt])
 }
 
 model FeatureFlag {
@@ -305,6 +309,7 @@ model Lead {
   assignedToId      String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+  deletedAt         DateTime?      // Soft delete — null means active
   lastContactAt     DateTime?
   customFields      Json?
   firstName         String
@@ -364,6 +369,7 @@ model Lead {
   @@index([organizationId, createdAt])
   @@index([pipelineId])
   @@index([pipelineStageId])
+  @@index([deletedAt])
 }
 
 model Pipeline {
@@ -441,6 +447,7 @@ model Message {
   archived        Boolean          @default(false)
   trashedAt       DateTime?
   snoozedUntil    DateTime?
+  deletedAt       DateTime?        // Soft delete — null means active
   organizationId  String
   lead            Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
   organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -461,6 +468,7 @@ model Message {
   @@index([organizationId, type])
   @@index([organizationId, createdAt])
   @@index([organizationId, bouncedAt])
+  @@index([deletedAt])
 }
 
 model Note {

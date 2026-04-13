@@ -38,7 +38,7 @@ export const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // Only count failed attempts
+  // Count ALL attempts (successful + failed) to prevent brute-force on valid credentials
   skip: () => isTest,
 });
 
@@ -192,6 +192,24 @@ export const workflowTriggerLimiter = rateLimit({
   message: {
     success: false,
     error: 'Too many workflow triggers, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+});
+
+/**
+ * AI endpoint rate limiter.
+ * AI calls are expensive (token cost + latency) — throttle to prevent abuse.
+ * Production: 30 requests per 15 minutes per IP
+ * Development: 200 per 15 minutes
+ */
+export const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDevelopment ? 200 : 30,
+  message: {
+    success: false,
+    error: 'Too many AI requests, please try again later'
   },
   standardHeaders: true,
   legacyHeaders: false,
